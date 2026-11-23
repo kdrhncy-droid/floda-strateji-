@@ -19,7 +19,7 @@ interface ActiveLiveToast {
   shownAtMs: number;
 }
 
-const AUTO_DISMISS_MS = 5600;
+const AUTO_DISMISS_MS = 3500;
 
 function getEventAccent(type: WorldNewsEvent['type']): {
   border: string;
@@ -30,46 +30,46 @@ function getEventAccent(type: WorldNewsEvent['type']): {
   switch (type) {
     case 'WAR':
       return {
-        border: 'border-rose-500/60',
+        border: 'border-rose-500/55',
         badgeBg: 'bg-rose-500/20 text-rose-300',
         label: 'Savaş',
-        icon: <Swords className="w-3.5 h-3.5 text-rose-400 shrink-0" />,
+        icon: <Swords className="w-3 h-3 text-rose-400 shrink-0" />,
       };
     case 'PEACE':
       return {
-        border: 'border-emerald-500/55',
+        border: 'border-emerald-500/50',
         badgeBg: 'bg-emerald-500/20 text-emerald-300',
         label: 'Barış',
-        icon: <Handshake className="w-3.5 h-3.5 text-emerald-400 shrink-0" />,
+        icon: <Handshake className="w-3 h-3 text-emerald-400 shrink-0" />,
       };
     case 'COALITION':
       return {
-        border: 'border-sky-500/55',
+        border: 'border-sky-500/50',
         badgeBg: 'bg-sky-500/20 text-sky-300',
         label: 'Diplomasi',
-        icon: <Scale className="w-3.5 h-3.5 text-sky-300 shrink-0" />,
+        icon: <Scale className="w-3 h-3 text-sky-300 shrink-0" />,
       };
     case 'REFORM':
       return {
-        border: 'border-amber-500/60',
+        border: 'border-amber-500/55',
         badgeBg: 'bg-amber-500/20 text-amber-300',
         label: 'Reform',
-        icon: <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />,
+        icon: <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />,
       };
     default:
       return {
-        border: 'border-amber-500/50',
+        border: 'border-amber-500/45',
         badgeBg: 'bg-amber-500/20 text-amber-300',
-        label: 'Ekonomi',
-        icon: <ScrollText className="w-3.5 h-3.5 text-amber-300 shrink-0" />,
+        label: 'Haber',
+        icon: <ScrollText className="w-3 h-3 text-amber-300 shrink-0" />,
       };
   }
 }
 
 /**
- * Live world diplomacy/war/peace notification banners.
- * Automatically adapts to desktop, iOS/Android portrait, and mobile landscape
- * without blocking HUD controls, and auto-dismisses after ~5.6 seconds.
+ * Compact AoH3-style live world diplomacy/war/peace notification ribbons.
+ * Non-intrusive, renders above drawers/modals (z-[115]), auto-dismisses in 3.5s,
+ * and can be closed immediately with a single tap on ✕.
  */
 export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
   newsEvents,
@@ -120,7 +120,7 @@ export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
       setLiveToasts((prev) =>
         prev.filter((item) => now - item.shownAtMs < AUTO_DISMISS_MS)
       );
-    }, 350);
+    }, 300);
     return () => window.clearInterval(timer);
   }, [liveToasts.length]);
 
@@ -129,7 +129,7 @@ export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
   return (
     <div
       aria-live="polite"
-      className="hud-world-toast-stack fixed z-30 pointer-events-none flex flex-col gap-1.5 w-[min(320px,calc(100vw-1.25rem))] top-[7.1rem] sm:top-[6.4rem] right-2 sm:right-3"
+      className="hud-world-toast-stack fixed z-[115] pointer-events-none flex flex-col gap-1 w-[min(265px,calc(100vw-1rem))] top-[4.6rem] sm:top-[4.4rem] right-2 sm:right-3"
     >
       {liveToasts.map(({ event }, index) => {
         const accent = getEventAccent(event.type);
@@ -137,12 +137,12 @@ export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
           <div
             key={event.id}
             data-full-text={`${event.title} — ${event.description} (${event.dateStr})`}
-            className={`hud-world-toast-item pointer-events-auto rounded-xl bg-slate-950/92 border ${accent.border} shadow-xl px-2.5 py-2 text-slate-100 transition-all ${
+            className={`hud-world-toast-item pointer-events-auto rounded-lg bg-[#0d111a]/95 border ${accent.border} shadow-lg px-2 py-1.5 text-slate-100 transition-all backdrop-blur-sm ${
               index > 0 ? 'hud-landscape-hide' : ''
             }`}
           >
-            <div className="flex items-start gap-2">
-              <div className="mt-0.5">{accent.icon}</div>
+            <div className="flex items-center gap-1.5">
+              {accent.icon}
               <button
                 type="button"
                 onClick={() => {
@@ -153,17 +153,14 @@ export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
                 }}
                 className="flex-1 min-w-0 text-left"
               >
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 leading-tight mb-0.5">
+                <div className="flex items-center gap-1 text-[9px] text-slate-400 leading-none mb-0.5">
                   <span className={`font-bold ${accent.badgeBg} px-1 py-0.2 rounded`}>
                     {accent.label}
                   </span>
-                  <span className="font-mono-num">{event.dateStr}</span>
+                  <span className="font-mono-num truncate">{event.dateStr}</span>
                 </div>
-                <div className="text-[11px] font-bold text-amber-100 leading-snug line-clamp-1">
+                <div className="text-[10px] font-bold text-amber-100 leading-tight truncate">
                   {event.title}
-                </div>
-                <div className="text-[10px] text-slate-300 leading-snug line-clamp-2 mt-0.5">
-                  {event.description}
                 </div>
               </button>
               <button
@@ -174,9 +171,9 @@ export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
                     prev.filter((x) => x.event.id !== event.id)
                   )
                 }
-                className="w-6 h-6 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 flex items-center justify-center shrink-0"
+                className="w-5 h-5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800/80 flex items-center justify-center shrink-0"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             </div>
           </div>

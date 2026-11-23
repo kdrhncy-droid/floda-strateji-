@@ -160,6 +160,7 @@ function GameAppInner() {
     return params.get('autostart') !== '1';
   });
   const [macroMode, setMacroMode] = useState<MapMacroMode>('NONE');
+  const [economySelectedIds, setEconomySelectedIds] = useState<string[]>([]);
   const [focusCapitalSignal, setFocusCapitalSignal] = useState<number>(0);
   const [inspectedNationId, setInspectedNationId] = useState<string | null>(
     null
@@ -167,6 +168,14 @@ function GameAppInner() {
   const inspectedNationIdRef = useRef<string | null>(null);
   inspectedNationIdRef.current = inspectedNationId;
   const historyGuardPushedRef = useRef<boolean>(false);
+
+  const toggleEconomyCity = (territoryId: string) => {
+    setEconomySelectedIds((prev) =>
+      prev.includes(territoryId)
+        ? prev.filter((id) => id !== territoryId)
+        : [...prev, territoryId]
+    );
+  };
 
   // Warm up IndexedDB (idb-keyval) save payloads & migrate legacy localStorage slots once on boot
   useEffect(() => {
@@ -196,10 +205,10 @@ function GameAppInner() {
     });
   }, []);
 
-  // Auto-dismiss floating toast banner
+  // Auto-dismiss floating toast banner in ~3.4s (AoH3 brisk notification style)
   useEffect(() => {
     if (!toastMessage) return;
-    const durationMs = Math.min(12_000, Math.max(4_000, toastMessage.length * 45));
+    const durationMs = Math.min(5_200, Math.max(3_200, toastMessage.length * 36));
     const t = setTimeout(() => store.showToast(null), durationMs);
     return () => clearTimeout(t);
   }, [toastMessage, store.showToast]);
@@ -377,13 +386,13 @@ function GameAppInner() {
     if (macroMode !== 'NONE' && terr) {
       store.selectTerritoryOnMap(terrId);
       if (terr.ownerId !== playerNationId) {
-        store.showToast('Makro işlem yalnızca kendi eyaletlerimizde kullanılabilir.');
+        store.showToast('Makro işlem yalnızca kendi şehirlerimizde kullanılabilir.');
         return;
       }
       if (macroMode === 'RECRUIT_INFANTRY') {
         store.recruitUnit(terrId, 'infantry', 1000, 150);
       } else if (macroMode === 'BUILD_ECONOMY') {
-        store.upgradeBuilding(terrId, 'factory');
+        toggleEconomyCity(terrId);
       } else if (macroMode === 'BUILD_FORT') {
         store.upgradeBuilding(terrId, 'fortress');
       }
@@ -499,6 +508,15 @@ function GameAppInner() {
           movements={movements}
           tick={tick}
           gameMode={gameMode}
+          aiCommanderEnabled={store.aiCommanderEnabled}
+          isPlayerAtWar={wars.some(
+            (w) =>
+              w.attackerId === playerNationId ||
+              w.defenderId === playerNationId ||
+              w.attackers.includes(playerNationId) ||
+              w.defenders.includes(playerNationId)
+          )}
+          onToggleAiCommander={store.toggleAiCommander}
           onClose={() => setInspectedNationId(null)}
           onSelectInspectedNation={(nId) => setInspectedNationId(nId)}
           onSelectTerritory={store.selectTerritory}
@@ -658,17 +676,25 @@ function GameAppInner() {
           mapMode={mapMode}
           macroMode={macroMode}
           toastMessage={toastMessage}
-          aiCommanderEnabled={store.aiCommanderEnabled}
-          isPlayerAtWar={wars.some(
-            (w) =>
-              w.attackerId === playerNationId ||
-              w.defenderId === playerNationId ||
-              w.attackers.includes(playerNationId) ||
-              w.defenders.includes(playerNationId)
-          )}
+          economySelectedIds={economySelectedIds}
+          territories={territories}
+          playerTreasury={playerNation?.treasury ?? 0}
           onSetMapMode={store.setMapMode}
-          onSetMacroMode={setMacroMode}
-          onToggleAiCommander={store.toggleAiCommander}
+          onSetMacroMode={(nextMode) => {
+            setMacroMode(nextMode);
+            if (
+              nextMode === 'BUILD_ECONOMY' &&
+              economySelectedIds.length === 0 &&
+              selectedTerritory &&
+              selectedTerritory.ownerId === playerNationId
+            ) {
+              setEconomySelectedIds([selectedTerritory.id]);
+            }
+          }}
+          onToggleEconomyCity={toggleEconomyCity}
+          onClearEconomyCities={() => setEconomySelectedIds([])}
+          onInvestSpecialtyProduction={store.investSpecialtyProduction}
+          onDismissToast={() => store.showToast(null)}
         />
 
         {screenState === 'PLAYING' && (
@@ -703,6 +729,7 @@ function GameAppInner() {
             onQuickRecruitInfantry={(tId) =>
               store.recruitUnit(tId, 'infantry', 1000, 150)
             }
+            onAssimilateTerritory={store.assimilateTerritory}
             onMergeArmies={store.mergeNeighborArmies}
             onDisbandArmy={store.disbandArmy}
             onSelectTerritory={store.selectTerritory}

@@ -82,6 +82,85 @@ function prependNews(
   ];
 }
 
+export function applyConquestDiplomaticPenalty(params: {
+  conquerorId: string;
+  victimId: string;
+  provincesTakenCount: number;
+  isFullAnnexation: boolean;
+  nations: Record<string, Nation>;
+  relations: Record<string, DiplomaticRelation>;
+}): {
+  updatedRelations: Record<string, DiplomaticRelation>;
+  affectedNames: string[];
+} {
+  const {
+    conquerorId,
+    victimId,
+    provincesTakenCount,
+    isFullAnnexation,
+    nations,
+    relations,
+  } = params;
+  const victim = nations[victimId];
+  if (!victim) return { updatedRelations: relations, affectedNames: [] };
+
+  const updatedRelations: Record<string, DiplomaticRelation> = { ...relations };
+  const affectedNames: string[] = [];
+  const scale = isFullAnnexation
+    ? 1.25
+    : Math.min(1.3, 0.75 + Math.max(1, provincesTakenCount) * 0.15);
+
+  for (const third of Object.values(nations)) {
+    if (
+      !third ||
+      third.isEliminated ||
+      third.id === conquerorId ||
+      third.id === victimId
+    ) {
+      continue;
+    }
+
+    const relWithVictim = getOrCreateRelation(updatedRelations, third.id, victimId);
+    const isAllyOfVictim = Boolean(
+      relWithVictim.isAllied || relWithVictim.allianceType
+    );
+    const isFriendOrPartner =
+      relWithVictim.hasTradeAgreement ||
+      relWithVictim.hasNonAggression ||
+      relWithVictim.score >= 25;
+    const isSameCultureOrReligion =
+      Boolean(
+        victim.stateReligion && third.stateReligion === victim.stateReligion
+      ) ||
+      Boolean(
+        victim.primaryCulture && third.primaryCulture === victim.primaryCulture
+      );
+
+    let penalty = 0;
+    if (isAllyOfVictim) {
+      penalty = Math.round(35 * scale);
+    } else if (isFriendOrPartner) {
+      penalty = Math.round(20 * scale);
+    } else if (isSameCultureOrReligion) {
+      penalty = Math.round(12 * scale);
+    }
+
+    if (penalty <= 0) continue;
+
+    const key = relationKey(conquerorId, third.id);
+    const curRel = getOrCreateRelation(updatedRelations, conquerorId, third.id);
+    updatedRelations[key] = {
+      ...curRel,
+      score: Math.max(-100, curRel.score - penalty),
+    };
+    if (isAllyOfVictim || isFriendOrPartner) {
+      affectedNames.push(`${third.name} (-${penalty})`);
+    }
+  }
+
+  return { updatedRelations, affectedNames };
+}
+
 export function executeDiplomaticActionDomain(params: {
   targetNationId: string;
   action: DiplomaticActionType;
@@ -500,9 +579,25 @@ export function executeDiplomaticActionDomain(params: {
 
   if (action === 'DECLARE_WAR') {
     if (isAtWar(wars, playerNationId, targetNationId)) return {};
+    if (currentRel.isAllied || currentRel.allianceType) {
+      return {
+        toast: `🛑 ${target.name} ile aktif müttefiklik/pakt bulunuyor! Savaş ilanı için önce ittifakı feshedin.`,
+      };
+    }
+    if (currentRel.hasNonAggression) {
+      return {
+        toast: `🛑 ${target.name} ile Saldırmazlık Paktı aktif! Savaş ilanı için önce paktı iptal edin.`,
+      };
+    }
+    if (currentRel.truceUntilTick > tick) {
+      const remDays = Math.max(1, currentRel.truceUntilTick - tick);
+      return {
+        toast: `🛑 ${target.name} ile ateşkes devam ediyor (${remDays} gün kaldı). Ateşkes bitmeden savaş ilan edilemez.`,
+      };
+    }
     if (currentRel.score > -30) {
       return {
-        toast: `${target.name} devletine savaş ilanı için ilişki puanı -30 veya daha düşük olmalı (Mevcut: ${currentRel.score}).`,
+        toast: `🛑 ${target.name} ile ilişkileriniz yüksek (${currentRel.score > 0 ? `+${currentRel.score}` : currentRel.score})! Savaş ilanı için ilişki -30 veya altında olmalı (Önce 'Hakaret Et' kullanın).`,
       };
     }
     const spent = spendDiplomacyPoints(
@@ -539,8 +634,16 @@ export function executeDiplomaticActionDomain(params: {
     };
 
     const nextWars = [...wars, newWar];
+    const penaltyRes = applyConquestDiplomaticPenalty({
+      conquerorId: playerNationId,
+      victimId: targetNationId,
+      provincesTakenCount: 1,
+      isFullAnnexation: false,
+      nations,
+      relations,
+    });
     const nextRelations: Record<string, DiplomaticRelation> = {
-      ...relations,
+      ...penaltyRes.updatedRelations,
       [key]: {
         ...currentRel,
         isAllied: false,
@@ -594,13 +697,12 @@ export function executeDiplomaticActionDomain(params: {
       }
     }
 
-    const counterAlert = aiCounter?.playerAlerts[0];
     const baseToast =
       defAllyNames.length > 0
-        ? `${target.name} hedefine savaş ilan edildi! Savunma Paktı ortakları (${defAllyNames.join(', ')}) hedefin yanında savaşa girdi!`
+        ? `⚔️ ${target.name} ile savaş başladı (Savunma Paktı: ${defAllyNames.join(', ')})`
         : attAllyNames.length > 0
-        ? `${target.name} hedefine savaş ilan edildi! Saldırı Paktı müttefikleriniz (${attAllyNames.join(', ')}) taarruza katıldı.`
-        : `${target.name} devletine resmen savaş ilan edildi!`;
+        ? `⚔️ ${target.name} ile savaş başladı (Müttefik: ${attAllyNames.join(', ')})`
+        : `⚔️ ${target.name} devletine savaş ilan edildi!`;
     const nextNations = {
       ...(aiCounter?.updatedNations || nations),
       [playerNationId]: spent.nation,
@@ -617,7 +719,7 @@ export function executeDiplomaticActionDomain(params: {
       wars: nextWars,
       relations: nextRelations,
       newsEvents: updatedNews,
-      toast: counterAlert ? `${baseToast} ${counterAlert}` : baseToast,
+      toast: baseToast,
     };
   }
 
@@ -667,6 +769,7 @@ export function resolveTacticalBattleOutcomeDomain(params: {
   if (cur) {
     if (isAttackerWinner) {
       const previousOwnerId = cur.ownerId;
+      const isCoreForConqueror = cur.coreOwnerId === finalBattle.attackerNationId;
       nextTerrs[finalBattle.territoryId] = {
         ...cur,
         ownerId: finalBattle.attackerNationId,
@@ -677,9 +780,11 @@ export function resolveTacticalBattleOutcomeDomain(params: {
           armor: Math.round(outcome.attackerSurvivingTroops * 0.2),
           airDrone: Math.round(outcome.attackerSurvivingTroops * 0.1),
         },
-        unrest: Math.min(80, cur.unrest + 25),
-        isOccupied: true,
-        occupiedById: finalBattle.attackerNationId,
+        unrest: isCoreForConqueror ? Math.max(0, cur.unrest - 10) : Math.min(80, cur.unrest + 25),
+        assimilation: isCoreForConqueror ? 100 : 25,
+        isAssimilating: false,
+        isOccupied: !isCoreForConqueror,
+        occupiedById: isCoreForConqueror ? undefined : finalBattle.attackerNationId,
         castleWallHp: finalBattle.castleWallHp,
       };
 
@@ -818,11 +923,11 @@ export function resolveTacticalBattleOutcomeDomain(params: {
       newsEvents,
       tick,
       gameMode,
-      `🏆 ${finalBattle.territoryName} Meydan Muharebesi Zaferi!`,
-      `${winnerNation?.name} orduları ${finalBattle.territoryName} mevkiinde düşmanı hezimete uğrattı (+${outcome.earnedResearch} 🔬 Harp Bilimi, +${outcome.earnedInfluence} ⚜ Nüfuz).`,
+      `🏆 ${finalBattle.territoryName} Muharebesi Zaferi`,
+      `${winnerNation?.name} orduları ${finalBattle.territoryName} mevkiinde zafer kazandı (+${outcome.earnedResearch} 🔬, +${outcome.earnedInfluence} ⚜).`,
       'WAR'
     );
-    toast = `🏆 Zafer! ${finalBattle.territoryName} Muharebesi kazanıldı (+${outcome.earnedResearch} 🔬 Bilim, +${outcome.earnedInfluence} ⚜ Nüfuz)!`;
+    toast = `🏆 ${finalBattle.territoryName} muharebesi kazanıldı (+${outcome.earnedResearch} 🔬)`;
   } else {
     sound.playDefeat();
     nextNews = prependNews(
@@ -830,10 +935,10 @@ export function resolveTacticalBattleOutcomeDomain(params: {
       tick,
       gameMode,
       `🛑 ${finalBattle.territoryName} Cephesinde Ricat`,
-      `${finalBattle.territoryName} mevkiindeki muharebe kaybedildi, kalan birlikler sınır hattına çekildi.`,
+      `${finalBattle.territoryName} muharebesi kaybedildi, birlikler sınır hattına çekildi.`,
       'WAR'
     );
-    toast = `🛑 ${finalBattle.territoryName} Muharebesi kaybedildi, sağ kalan birlikler sınır eyaletimize çekildi.`;
+    toast = `🛑 ${finalBattle.territoryName} muharebesi kaybedildi`;
   }
 
   return {
@@ -930,19 +1035,25 @@ export function resolvePeaceDealDomain(params: {
 
   const nextNations = { ...nations };
   const nextTerritories = { ...territories };
+  let workingRelations = { ...relations };
   let nextNews = newsEvents;
   let toast = `${enemy?.name} ile Beyaz Barış imzalandı.`;
 
   if (dealType === 'ANNEX_OCCUPIED') {
     const extraProvincesAllowed =
       playerWarScore >= 75 ? 2 : playerWarScore >= 45 ? 1 : 0;
+    let annexedCount = 0;
 
     Object.values(nextTerritories).forEach((t) => {
       if (t.ownerId === playerNationId && t.isOccupied) {
+        const isCore = t.coreOwnerId === playerNationId;
+        annexedCount++;
         nextTerritories[t.id] = {
           ...t,
           isOccupied: false,
           occupiedById: undefined,
+          assimilation: isCore ? 100 : Math.min(t.assimilation ?? 25, 85),
+          isAssimilating: false,
         };
       }
     });
@@ -951,19 +1062,25 @@ export function resolvePeaceDealDomain(params: {
       (t) => t.ownerId === enemyId
     );
     remainingEnemyTerrs.slice(0, extraProvincesAllowed).forEach((t) => {
+      const isCore = t.coreOwnerId === playerNationId;
+      annexedCount++;
       nextTerritories[t.id] = {
         ...t,
         ownerId: playerNationId,
         isCapital: false,
         isOccupied: false,
-        unrest: Math.min(75, t.unrest + 20),
+        occupiedById: undefined,
+        assimilation: isCore ? 100 : 25,
+        isAssimilating: false,
+        unrest: isCore ? Math.max(0, t.unrest - 10) : Math.min(75, t.unrest + 20),
       };
     });
 
     const stillOwned = Object.values(nextTerritories).filter(
       (t) => t.ownerId === enemyId
     );
-    if (stillOwned.length === 0 && nextNations[enemyId]) {
+    const fullAnnex = stillOwned.length === 0;
+    if (fullAnnex && nextNations[enemyId]) {
       nextNations[enemyId] = {
         ...nextNations[enemyId],
         isEliminated: true,
@@ -984,15 +1101,30 @@ export function resolvePeaceDealDomain(params: {
       };
     }
 
+    const penaltyRes = applyConquestDiplomaticPenalty({
+      conquerorId: playerNationId,
+      victimId: enemyId,
+      provincesTakenCount: Math.max(1, annexedCount),
+      isFullAnnexation: fullAnnex,
+      nations: nextNations,
+      relations: workingRelations,
+    });
+    workingRelations = penaltyRes.updatedRelations;
+
+    const diploSuffix =
+      penaltyRes.affectedNames.length > 0
+        ? ` (Dost/Müttefik tepkisi: ${penaltyRes.affectedNames.slice(0, 3).join(', ')})`
+        : '';
+
     nextNews = prependNews(
       newsEvents,
       tick,
       gameMode,
       `${war.name} Sona Erdi`,
-      `${playerNation.name} ve ${enemy?.name} arasında imzalanan barış antlaşmasıyla işgal edilen eyaletler resmen ilhak edildi.`,
+      `${playerNation.name} ve ${enemy?.name} arasında imzalanan barış antlaşmasıyla ${Math.max(1, annexedCount)} eyalet resmen ilhak edildi.${diploSuffix}`,
       'PEACE'
     );
-    toast = `${enemy?.name} ile Barış Antlaşması imzalandı: İşgal edilen eyaletler imparatorluğa katıldı!`;
+    toast = `📜 ${enemy?.name} ile Barış: ${Math.max(1, annexedCount)} eyalet ilhak edildi (Eyalet panelinden Asimile Et başlatabilirsiniz).${diploSuffix}`;
   } else if (dealType === 'VASSALIZE') {
     if (nextNations[enemyId]) {
       nextNations[enemyId] = {
@@ -1000,6 +1132,16 @@ export function resolvePeaceDealDomain(params: {
         vassalOf: playerNationId,
       };
     }
+    const penaltyRes = applyConquestDiplomaticPenalty({
+      conquerorId: playerNationId,
+      victimId: enemyId,
+      provincesTakenCount: 2,
+      isFullAnnexation: false,
+      nations: nextNations,
+      relations: workingRelations,
+    });
+    workingRelations = penaltyRes.updatedRelations;
+
     nextNews = prependNews(
       newsEvents,
       tick,
@@ -1008,7 +1150,7 @@ export function resolvePeaceDealDomain(params: {
       `${enemy?.name}, barış antlaşması şartları gereği ${playerNation.name} himayesine girdi.`,
       'PEACE'
     );
-    toast = `${enemy?.name} barış antlaşmasıyla Vasal Devlet statüsüne alındı!`;
+    toast = `👑 ${enemy?.name} barış antlaşmasıyla Vasal Devlet statüsüne alındı!`;
   } else if (dealType === 'REPARATIONS') {
     const indemnity = Math.min(
       1100,
@@ -1024,7 +1166,7 @@ export function resolvePeaceDealDomain(params: {
         treasury: Math.max(0, nextNations[enemyId].treasury - indemnity),
       };
     }
-    toast = `${enemy?.name} devletinden +${indemnity} Altın savaş tazminatı tahsil edildi!`;
+    toast = `🪙 ${enemy?.name} devletinden +${indemnity} Altın savaş tazminatı tahsil edildi!`;
   } else if (dealType === 'WHITE_PEACE' && playerWarScore < -35) {
     nextNations[playerNationId] = {
       ...playerNation,
@@ -1033,9 +1175,9 @@ export function resolvePeaceDealDomain(params: {
     toast = `${enemy?.name} ile 350 Altın tazminat ödenerek ateşkes imzalandı.`;
   }
 
-  const curRel = getOrCreateRelation(relations, playerNationId, enemyId);
+  const curRel = getOrCreateRelation(workingRelations, playerNationId, enemyId);
   const nextRelations = {
-    ...relations,
+    ...workingRelations,
     [key]: {
       ...curRel,
       truceUntilTick: tick + 90,

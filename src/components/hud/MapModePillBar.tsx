@@ -8,9 +8,13 @@ import {
   Layers3,
   ChevronDown,
   ChevronUp,
-  Bot,
+  X,
 } from 'lucide-react';
-import { MapMode } from '../../types/game';
+import { MapMode, Territory } from '../../types/game';
+import {
+  SPECIALTY_PRODUCTION_OPTIONS,
+  SpecialtyProductionId,
+} from '../../engine/empireAndArmyActions';
 import { sound } from '../../utils/soundEngine';
 import { CULTURES, RELIGIONS } from '../../data/religionAndCultureData';
 import { RESOURCE_INFO } from '../../data/world2026Data';
@@ -25,11 +29,18 @@ interface MapModePillBarProps {
   mapMode: MapMode;
   macroMode?: MapMacroMode;
   toastMessage: string | null;
-  aiCommanderEnabled?: boolean;
-  isPlayerAtWar?: boolean;
+  economySelectedIds?: string[];
+  territories?: Record<string, Territory>;
+  playerTreasury?: number;
   onSetMapMode: (mode: MapMode) => void;
   onSetMacroMode?: (mode: MapMacroMode) => void;
-  onToggleAiCommander?: () => void;
+  onToggleEconomyCity?: (territoryId: string) => void;
+  onClearEconomyCities?: () => void;
+  onInvestSpecialtyProduction?: (
+    territoryIds: string[],
+    specialtyId: SpecialtyProductionId
+  ) => void;
+  onDismissToast?: () => void;
 }
 
 const MAP_MODES: ReadonlyArray<{ id: MapMode; label: string; glyph: string; tone: string }> = [
@@ -49,11 +60,15 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   mapMode,
   macroMode = 'NONE',
   toastMessage,
-  aiCommanderEnabled = false,
-  isPlayerAtWar = false,
+  economySelectedIds = [],
+  territories = {},
+  playerTreasury = 0,
   onSetMapMode,
   onSetMacroMode,
-  onToggleAiCommander,
+  onToggleEconomyCity,
+  onClearEconomyCities,
+  onInvestSpecialtyProduction,
+  onDismissToast,
 }) => {
   const [legendOpen, setLegendOpen] = useState(true);
   const [openTray, setOpenTray] = useState<'NONE' | 'MODES' | 'MACRO'>('NONE');
@@ -66,6 +81,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
     mapMode === 'ASSIMILATION';
   const activeModeMeta = MAP_MODES.find((m) => m.id === mapMode) || MAP_MODES[0];
   const showMacroTray = openTray === 'MACRO' || macroMode !== 'NONE';
+  const selectedCityCount = Math.max(1, economySelectedIds.length);
 
   return (
     <>
@@ -130,50 +146,6 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
               )}
             </button>
           )}
-
-          {onToggleAiCommander && (
-            <button
-              type="button"
-              onClick={() => {
-                sound.playClick();
-                onToggleAiCommander();
-              }}
-              aria-pressed={aiCommanderEnabled}
-              title="Savaş sırasında orduları akıllı YZ komutanına devret (kuşatma kurtarır, cepheyi savunur, avantajlı hedeflere saldırır)"
-              data-full-text="Yapay Zekâya Devret: Savaş sırasında ordularınızı akıllı yapay zekâ yönetir. Kuşatılan şehirleri kurtarır, zayıf sınırları takviye eder ve güçlü olduğu düşman şehirlerine saldırır; ancak asla savaş açmaz, barış imzalamaz veya asker silmez."
-              className={`hud-mapmode-shell hud-surface flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
-                aiCommanderEnabled
-                  ? isPlayerAtWar
-                    ? 'border-emerald-400 bg-emerald-950/90 text-emerald-200'
-                    : 'border-amber-400 bg-amber-950/80 text-amber-200'
-                  : 'border-amber-500/35 text-slate-200 hover:border-amber-400/70'
-              }`}
-            >
-              <Bot
-                className={`w-3.5 h-3.5 shrink-0 ${
-                  aiCommanderEnabled
-                    ? isPlayerAtWar
-                      ? 'text-emerald-300'
-                      : 'text-amber-300'
-                    : 'text-amber-400'
-                }`}
-              />
-              {aiCommanderEnabled && (
-                <span
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    isPlayerAtWar ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-                  }`}
-                />
-              )}
-              <span className="whitespace-nowrap">
-                {aiCommanderEnabled
-                  ? isPlayerAtWar
-                    ? 'YZ Komutan: Açık'
-                    : 'YZ Komutan: Hazır'
-                  : 'Yapay Zekâya Devret'}
-              </span>
-            </button>
-          )}
         </div>
 
         {/* Expandable Row: AoH3 Map Lenses */}
@@ -202,10 +174,10 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
           </div>
         )}
 
-        {/* Expandable Row: AoH3 Mobile Macro-Builder & 1-Tap Map Recruitment Mode */}
+        {/* Expandable Row: AoH3 Mobile Macro-Builder & Multi-City Production Builder */}
         {onSetMacroMode && showMacroTray && (
-          <div className="hud-macro-bar hud-surface pointer-events-auto rounded-xl border border-slate-700/90 shadow-lg overflow-hidden">
-            <div className="flex flex-nowrap items-center gap-1 p-1 max-w-full overflow-x-auto no-scrollbar">
+          <div className="hud-macro-bar hud-surface pointer-events-auto rounded-xl border border-slate-700/90 shadow-lg overflow-hidden flex flex-col gap-1.5 p-1.5">
+            <div className="flex flex-nowrap items-center gap-1 max-w-full overflow-x-auto no-scrollbar">
               <button
                 onClick={() => {
                   sound.playClick();
@@ -248,7 +220,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                     macroMode === 'BUILD_ECONOMY' ? 'NONE' : 'BUILD_ECONOMY'
                   );
                 }}
-                title="AoH3 Makro İnşaat: Haritada kendi eyaletinize dokunarak anında Ekonomi/Atölye inşa edin"
+                title="Şehirleri haritadan seçip İnek Çiftliği, Pamuk Tarlası, Kereste Ocağı veya Maden kurun"
                 className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                   macroMode === 'BUILD_ECONOMY'
                     ? 'bg-amber-500 text-slate-950 shadow'
@@ -277,6 +249,92 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 <span>Kale Kur</span>
               </button>
             </div>
+
+            {/* Multi-City Production & Farm Selector Panel when "Ekonomi Kur" is active */}
+            {macroMode === 'BUILD_ECONOMY' && (
+              <div className="rounded-lg bg-slate-950/90 border border-amber-500/40 p-2 flex flex-col gap-1.5 max-w-[92vw] sm:max-w-[540px]">
+                <div className="flex items-center justify-between gap-2 text-[10px]">
+                  <span className="text-amber-200 font-bold">
+                    1) Haritadan kendi şehirlerinize dokunarak seçin ({economySelectedIds.length} şehir seçili)
+                  </span>
+                  {economySelectedIds.length > 0 && onClearEconomyCities && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playClick();
+                        onClearEconomyCities();
+                      }}
+                      className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold shrink-0"
+                    >
+                      Seçimi Temizle
+                    </button>
+                  )}
+                </div>
+
+                {economySelectedIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {economySelectedIds.map((id) => {
+                      const t = territories[id];
+                      if (!t) return null;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => onToggleEconomyCity?.(id)}
+                          className="px-2 py-0.5 rounded-md bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/50 text-amber-200 text-[10px] font-bold flex items-center gap-1"
+                        >
+                          <span>{t.name.replace(/^★\s*/, '')}</span>
+                          <span className="text-amber-300/80">✕</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-slate-400">
+                    Haritada yatırım yapmak istediğiniz şehirlerinize tıklayın, ardından aşağıdan kurulacak üretim tesisini seçin:
+                  </p>
+                )}
+
+                <div className="text-[10px] text-slate-300 font-semibold">
+                  2) Seçili şehirlere kurulacak üretim tesisi (Maliyet × {selectedCityCount} şehir):
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                  {SPECIALTY_PRODUCTION_OPTIONS.map((opt) => {
+                    const totalCost = opt.costGold * selectedCityCount;
+                    const canAfford =
+                      economySelectedIds.length > 0 && playerTreasury >= totalCost;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        disabled={economySelectedIds.length === 0}
+                        onClick={() => {
+                          onInvestSpecialtyProduction?.(economySelectedIds, opt.id);
+                        }}
+                        title={opt.description}
+                        className={`px-2 py-1.5 rounded-lg border text-left transition-colors flex items-center justify-between gap-1.5 ${
+                          economySelectedIds.length === 0
+                            ? 'bg-slate-900/50 border-slate-800 text-slate-500 cursor-not-allowed'
+                            : canAfford
+                            ? 'bg-slate-900 hover:bg-amber-500/20 border-amber-500/45 text-slate-100'
+                            : 'bg-slate-900/70 border-rose-500/35 text-rose-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="text-xs shrink-0">{opt.icon}</span>
+                          <span className="text-[10px] font-bold truncate">
+                            {opt.shortName}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono-num font-bold text-amber-300 shrink-0">
+                          {totalCost}A
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -453,15 +511,34 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
         </div>
       )}
 
+      {/* AoH3 Compact Notification Pill — z-[120] so it ALWAYS renders ABOVE modals/drawers and is 1-tap dismissible */}
       <div
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className={toastMessage
-          ? 'hud-toast-banner absolute top-20 left-1/2 z-30 px-3.5 py-2 rounded-xl bg-[#090e1a]/96 border border-amber-500/60 text-xs font-semibold text-amber-200 shadow-2xl max-w-[92vw] max-h-[30vh] overflow-y-auto whitespace-normal break-words [overflow-wrap:anywhere] text-center leading-relaxed pointer-events-none'
-          : 'sr-only'}
+        onClick={() => onDismissToast?.()}
+        className={
+          toastMessage
+            ? 'hud-toast-banner fixed top-14 left-1/2 -translate-x-1/2 z-[120] px-3 py-1.5 rounded-xl bg-[#0b101b]/96 border border-amber-500/65 text-[11px] font-semibold text-amber-100 shadow-2xl max-w-[min(460px,92vw)] flex items-center gap-2 pointer-events-auto cursor-pointer backdrop-blur-md'
+            : 'sr-only'
+        }
       >
-        {toastMessage ?? ''}
+        <span className="flex-1 min-w-0 leading-snug break-words">
+          {toastMessage ?? ''}
+        </span>
+        {toastMessage && onDismissToast && (
+          <button
+            type="button"
+            aria-label="Bildirimi kapat"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismissToast();
+            }}
+            className="w-5 h-5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center shrink-0"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
       </div>
     </>
   );

@@ -20,12 +20,12 @@ export default defineConfig(() => {
         ],
         manifest: {
           id: '/',
-          name: 'Imperium 2026: Grand Strategy',
-          short_name: 'Imperium26',
+          name: 'Floda Strateji Oyunu',
+          short_name: 'Floda Strateji',
           description:
-            'Age of History 3 tarzı duraklatılabilir gerçek zamanlı dünya haritası, derin diplomasi, koalisyonlar, ekonomi ve teknoloji ağacı sunan 2D büyük strateji oyunu.',
-          theme_color: '#060B16',
-          background_color: '#060B16',
+            '1440 ve 2026 dönemlerinde duraklatılabilir gerçek zamanlı dünya haritası, derin diplomasi, ekonomi, teknoloji ve ordu yönetimi sunan çevrimdışı büyük strateji oyunu.',
+          theme_color: '#15120F',
+          background_color: '#15120F',
           display: 'standalone',
           orientation: 'any',
           start_url: '/',

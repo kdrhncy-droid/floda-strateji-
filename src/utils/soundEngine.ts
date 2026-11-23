@@ -94,119 +94,150 @@ class SoundEngine {
     });
   }
 
+  private lastHornAtMs = 0;
+  private lastFanfareAtMs = 0;
+
+  private createWarmFilter(cutoffHz: number): BiquadFilterNode | null {
+    if (!this.ctx) return null;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(cutoffHz, this.ctx.currentTime);
+    filter.Q.setValueAtTime(0.7, this.ctx.currentTime);
+    filter.connect(this.ctx.destination);
+    return filter;
+  }
+
   public playMarch() {
     if (!this.enabled) return;
-    this.vibrate(18);
+    this.vibrate(10);
     this.init();
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
+    const filter = this.createWarmFilter(360);
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(140, now);
-    osc.frequency.exponentialRampToValueAtTime(95, now + 0.14);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(125, now);
+    osc.frequency.exponentialRampToValueAtTime(82, now + 0.11);
 
-    gain.gain.setValueAtTime(0.09, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    gain.gain.setValueAtTime(0.042, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(filter || this.ctx.destination);
     osc.start(now);
-    osc.stop(now + 0.16);
+    osc.stop(now + 0.13);
   }
 
   public playWarHorn() {
     if (!this.enabled) return;
-    this.vibrate([35, 50, 60]);
+    const nowMs = Date.now();
+    if (nowMs - this.lastHornAtMs < 550) return;
+    this.lastHornAtMs = nowMs;
+
+    this.vibrate([18, 30, 24]);
     this.init();
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    [110, 165, 220].forEach((freq) => {
+    const filter = this.createWarmFilter(420);
+    // Warm AoH3 deep historical war drum + low horn fifth (no raw sawtooth buzz)
+    [98, 146.83].forEach((freq, idx) => {
       if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
+      osc.type = idx === 0 ? 'sine' : 'triangle';
       osc.frequency.setValueAtTime(freq, now);
-      osc.frequency.linearRampToValueAtTime(freq * 0.96, now + 0.55);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.92, now + 0.34);
 
       gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.06, now + 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      gain.gain.linearRampToValueAtTime(idx === 0 ? 0.042 : 0.028, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
 
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(filter || this.ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.62);
+      osc.stop(now + 0.38);
     });
   }
 
   public playTreaty() {
     if (!this.enabled) return;
-    this.vibrate([10, 25, 10]);
+    this.vibrate([10, 20, 10]);
     this.init();
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    [440, 554.37, 659.25].forEach((freq, i) => {
+    const filter = this.createWarmFilter(680);
+    [330, 415.3, 493.88].forEach((freq, i) => {
       if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + i * 0.07);
-      gain.gain.setValueAtTime(0.08, now + i * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.28);
+      osc.frequency.setValueAtTime(freq, now + i * 0.06);
+      gain.gain.setValueAtTime(0.045, now + i * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.22);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now + i * 0.07);
-      osc.stop(now + i * 0.07 + 0.3);
+      gain.connect(filter || this.ctx.destination);
+      osc.start(now + i * 0.06);
+      osc.stop(now + i * 0.06 + 0.24);
     });
   }
 
   public playVictory() {
     if (!this.enabled) return;
-    this.vibrate([20, 40, 20, 60]);
+    const nowMs = Date.now();
+    if (nowMs - this.lastFanfareAtMs < 500) return;
+    this.lastFanfareAtMs = nowMs;
+
+    this.vibrate([14, 28, 18]);
     this.init();
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    // Triumphant Fanfare (C5, E5, G5, C6)
-    [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+    const filter = this.createWarmFilter(620);
+    // Warm, low-register AoH3 parchment seal chord (C4, E4, G4) — no piercing C6
+    [261.63, 329.63, 392.0].forEach((freq, idx) => {
       if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.09);
-      gain.gain.setValueAtTime(0.09, now + idx * 0.09);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.32);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.065);
+      gain.gain.setValueAtTime(0.04, now + idx * 0.065);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.065 + 0.24);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now + idx * 0.09);
-      osc.stop(now + idx * 0.09 + 0.35);
+      gain.connect(filter || this.ctx.destination);
+      osc.start(now + idx * 0.065);
+      osc.stop(now + idx * 0.065 + 0.26);
     });
   }
 
   public playDefeat() {
     if (!this.enabled) return;
-    this.vibrate([40, 30, 40]);
+    const nowMs = Date.now();
+    if (nowMs - this.lastFanfareAtMs < 500) return;
+    this.lastFanfareAtMs = nowMs;
+
+    this.vibrate([22, 24, 22]);
     this.init();
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    // Descending somber brass chords
-    [220, 196, 174.61, 146.83].forEach((freq, idx) => {
+    const filter = this.createWarmFilter(380);
+    // Soft muted descending interval (A3 -> F3 -> D3)
+    [220, 174.61, 146.83].forEach((freq, idx) => {
       if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
-      gain.gain.setValueAtTime(0.08, now + idx * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.35);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+      gain.gain.setValueAtTime(0.038, now + idx * 0.09);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.24);
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now + idx * 0.12);
-      osc.stop(now + idx * 0.12 + 0.38);
+      gain.connect(filter || this.ctx.destination);
+      osc.start(now + idx * 0.09);
+      osc.stop(now + idx * 0.09 + 0.26);
     });
   }
 }

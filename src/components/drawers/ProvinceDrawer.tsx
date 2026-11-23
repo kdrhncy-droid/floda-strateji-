@@ -403,18 +403,12 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     </div>
                   )}
 
-                  {/* Assimilate Non-Core Province Card (AoH3 Style) */}
+                  {/* Assimilate Non-Core Province Card (AoH3 Style — visible across all sub-tabs) */}
                   {isSelectedPlayerOwned &&
                     (selectedTerritory.coreOwnerId !== playerNation.id ||
-                      selectedTerritory.isAssimilating ||
-                      selectedTerritory.unrest > 10) && (
-                      <div
-                        className={
-                          provinceSubTab === 'ECONOMY'
-                            ? 'block'
-                            : 'hidden lg:block'
-                        }
-                      >
+                      (selectedTerritory.assimilation ?? 100) < 100 ||
+                      selectedTerritory.isAssimilating) && (
+                      <div className="block">
                         {selectedTerritory.isAssimilating ? (
                           <div className="w-full p-3 rounded-xl bg-orange-950/40 border border-orange-500/50 space-y-2">
                             <div className="flex items-center justify-between text-xs font-bold text-orange-200">
@@ -423,11 +417,11 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                                 Asimilasyon & Core Entegrasyonu Devam Ediyor
                               </span>
                               <span className="font-mono-num text-amber-300">
-                                %{Math.round(selectedTerritory.assimilation ?? 30)} (
+                                %{Math.round(selectedTerritory.assimilation ?? 25)} (
                                 {Math.max(
                                   1,
                                   Math.ceil(
-                                    (100 - (selectedTerritory.assimilation ?? 30)) /
+                                    (100 - (selectedTerritory.assimilation ?? 25)) /
                                       1.25
                                   )
                                 )}{' '}
@@ -440,7 +434,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                                 style={{
                                   width: `${Math.max(
                                     5,
-                                    selectedTerritory.assimilation ?? 30
+                                    selectedTerritory.assimilation ?? 25
                                   )}%`,
                                 }}
                               />
@@ -457,9 +451,12 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                             className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/50 text-orange-200 text-xs font-bold flex items-center justify-between transition-colors shadow-sm"
                           >
                             <span className="text-left">
-                              {selectedTerritory.coreOwnerId !== playerNation.id
-                                ? '🤝 Eyaleti Asimile Et (Öz Vatan / Core Yap)'
-                                : '🛡️ Bölgesel Asayiş ve Entegrasyon Paketi'}
+                              🌍 Eyaleti Asimile Et (%
+                              {Math.round(
+                                selectedTerritory.assimilation ??
+                                  (selectedTerritory.coreOwnerId === playerNation.id ? 75 : 25)
+                              )}{' '}
+                              → %100 Öz Vatan Yap)
                             </span>
                             <span className="font-mono-num text-orange-300 shrink-0 ml-2">
                               180 Altın · ~60 Gün

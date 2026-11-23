@@ -3567,3 +3567,164 @@ test('Faz 3.1 & 3.2: City Development Score darkens ECONOMIC map color and build
   });
   assert.equal(resColor, '#34D399', 'RESOURCES map mode must color by resource palette');
 });
+
+import { investSpecialtyProductionDomain } from './empireAndArmyActions';
+import { applyConquestDiplomaticPenalty } from './diplomacyAndWarActions';
+
+test('Faz 3.25: Specialty production investment, conquest diplomatic penalty, conquered nations ledger, and post-war assimilation work end-to-end', () => {
+  const ottoman = mkFaz3Nation('792', {
+    name: 'Osmanlı Devleti',
+    treasury: 1500,
+    stateReligion: 'ISLAM_SUNNI',
+    primaryCulture: 'TURKIC_OGHUZ',
+  });
+  const byzantium = mkFaz3Nation('300', {
+    name: 'Bizans İmparatorluğu',
+    treasury: 400,
+    isEliminated: true,
+    capitalTerritoryId: '300_ist',
+    stateReligion: 'CHRISTIAN_ORTHODOX',
+    primaryCulture: 'GREEK_BYZANTINE',
+  });
+  const serbia = mkFaz3Nation('688', {
+    name: 'Sırbistan Despotluğu',
+    treasury: 500,
+    isEliminated: false,
+    stateReligion: 'CHRISTIAN_ORTHODOX',
+    primaryCulture: 'GREEK_BYZANTINE',
+  });
+  const venice = mkFaz3Nation('380', {
+    name: 'Venedik Cumhuriyeti',
+    treasury: 800,
+    isEliminated: false,
+    stateReligion: 'CHRISTIAN_CATHOLIC',
+    primaryCulture: 'ROMANCE_LATIN',
+  });
+
+  const edirne = mkFaz3Territory('792_edi', {
+    name: 'Edirne',
+    ownerId: '792',
+    coreOwnerId: '792',
+    assimilation: 100,
+    resource: 'TAHIL',
+    baseGdp: 50,
+  });
+  const adana = mkFaz3Territory('792_ada', {
+    name: 'Adana',
+    ownerId: '792',
+    coreOwnerId: '792',
+    assimilation: 100,
+    resource: 'TAHIL',
+    baseGdp: 45,
+  });
+  const istanbul = mkFaz3Territory('300_ist', {
+    name: 'Konstantiniyye',
+    ownerId: '792',
+    coreOwnerId: '300',
+    assimilation: 25,
+    isAssimilating: false,
+    isOccupied: false,
+    unrest: 24,
+  });
+
+  const nations: Record<string, Nation> = {
+    '792': ottoman,
+    '300': byzantium,
+    '688': serbia,
+    '380': venice,
+  };
+  const territories: Record<string, Territory> = {
+    '792_edi': edirne,
+    '792_ada': adana,
+    '300_ist': istanbul,
+  };
+
+  // 1. Multi-city specialty production investment (Cotton Field on Edirne & Adana: 420 * 2 = 840 Gold)
+  const investRes = investSpecialtyProductionDomain({
+    territoryIds: ['792_edi', '792_ada'],
+    specialtyId: 'PAMUK_FIELD',
+    territories,
+    nations,
+    playerNationId: '792',
+  });
+  assert.ok(investRes.territories, 'Specialty production should update territories');
+  assert.equal(investRes.territories!['792_edi'].resource, 'PAMUK');
+  assert.equal(investRes.territories!['792_ada'].resource, 'PAMUK');
+  assert.equal(investRes.nations!['792'].treasury, 1500 - 840);
+  assert.ok(investRes.territories!['792_edi'].baseGdp > edirne.baseGdp);
+
+  // 2. Post-war assimilation on conquered non-core city (300_ist has coreOwnerId: '300', assimilation: 25)
+  const assimRes = assimilateTerritoryDomain({
+    territoryId: '300_ist',
+    territories: investRes.territories!,
+    nations: investRes.nations!,
+    playerNationId: '792',
+  });
+  assert.equal(assimRes.territories?.['300_ist']?.isAssimilating, true);
+  assert.equal(assimRes.territories?.['300_ist']?.unrest, 12);
+
+  // 3. Conquered nations ledger in NationDiplomacySummary
+  const relations: Record<string, DiplomaticRelation> = {
+    '300_380': {
+      nationA: '300',
+      nationB: '380',
+      score: 60,
+      isAllied: true,
+      hasNonAggression: true,
+      hasTradeAgreement: true,
+      hasEmbargo: false,
+      hasMilitaryAccess: false,
+      truceUntilTick: 0,
+    },
+    '300_688': {
+      nationA: '300',
+      nationB: '688',
+      score: 10,
+      isAllied: false,
+      hasNonAggression: false,
+      hasTradeAgreement: false,
+      hasEmbargo: false,
+      hasMilitaryAccess: false,
+      truceUntilTick: 0,
+    },
+  };
+
+  const summary = buildNationDiplomacySummary({
+    targetNationId: '792',
+    nations,
+    territories,
+    relations,
+    wars: [],
+    movements: [],
+    tick: 10,
+    gameMode: 'EMPIRES_1440',
+  });
+  assert.ok(summary);
+  assert.equal(summary!.conqueredNations.length, 1);
+  assert.equal(summary!.conqueredNations[0].nation.id, '300');
+  assert.equal(summary!.conqueredNations[0].isEliminated, true);
+  assert.equal(summary!.conqueredNations[0].capturedProvinceCount, 1);
+
+  // 4. Diplomatic reaction penalty when conquering/attacking a nation with allies & same-religion neighbors
+  const penaltyRes = applyConquestDiplomaticPenalty({
+    conquerorId: '792',
+    victimId: '300',
+    provincesTakenCount: 1,
+    isFullAnnexation: true,
+    nations,
+    relations,
+  });
+  assert.ok(
+    penaltyRes.affectedNames.some((n) => n.includes('Venedik Cumhuriyeti')),
+    'Victim ally Venice must react'
+  );
+  assert.ok(
+    (penaltyRes.updatedRelations['380_792']?.score ?? 0) <= -35,
+    'Venice relation with conqueror must drop sharply'
+  );
+  assert.ok(
+    (penaltyRes.updatedRelations['688_792']?.score ?? 0) <= -12,
+    'Same-religion neighbor Serbia relation with conqueror must drop'
+  );
+});
+

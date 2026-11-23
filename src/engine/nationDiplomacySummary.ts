@@ -26,6 +26,12 @@ export interface DiplomacyPeerEntry {
   embargoDirection?: 'OUTGOING' | 'INCOMING' | 'MUTUAL';
 }
 
+export interface ConqueredNationEntry {
+  nation: Nation;
+  capturedProvinceCount: number;
+  isEliminated: boolean;
+}
+
 export interface NationDiplomacySummary {
   nation: Nation;
   rulerName: string;
@@ -35,6 +41,7 @@ export interface NationDiplomacySummary {
   totalArmy: number;
   overlord: Nation | null;
   vassals: DiplomacyPeerEntry[];
+  conqueredNations: ConqueredNationEntry[];
   activeWars: DiplomacyPeerEntry[];
   offensiveAllies: DiplomacyPeerEntry[];
   defensivePacts: DiplomacyPeerEntry[];
@@ -49,8 +56,8 @@ export interface NationDiplomacySummary {
 
 /**
  * Pure AoH2/AoH3-style diplomatic web builder for ANY nation (player or AI).
- * Groups every active diplomatic treaty, war, truce, vassalage, embargo, and standing
- * so players can inspect their own or any foreign country's complete diplomatic network.
+ * Groups every active diplomatic treaty, war, truce, vassalage, embargo, conquered nation,
+ * and standing so players can inspect their own or any foreign country's complete diplomatic network.
  */
 export function buildNationDiplomacySummary(params: {
   targetNationId: string;
@@ -76,15 +83,59 @@ export function buildNationDiplomacySummary(params: {
   const targetNation = nations[targetNationId];
   if (!targetNation) return null;
 
-  // Precompute province counts and total military strength in a single O(T + M) pass
+  // Precompute province counts, total military strength, and conquered foreign core provinces in a single O(T + M) pass
   const provCountByNation: Record<string, number> = {};
   const garrisonByNation: Record<string, number> = {};
+  const capturedFromByOrigin: Record<string, number> = {};
+
   for (const t of Object.values(territories)) {
     if (!t?.ownerId) continue;
     provCountByNation[t.ownerId] = (provCountByNation[t.ownerId] || 0) + 1;
     garrisonByNation[t.ownerId] =
       (garrisonByNation[t.ownerId] || 0) + (t.garrison || 0);
+
+    if (
+      t.ownerId === targetNationId &&
+      t.coreOwnerId &&
+      t.coreOwnerId !== targetNationId &&
+      nations[t.coreOwnerId]
+    ) {
+      capturedFromByOrigin[t.coreOwnerId] =
+        (capturedFromByOrigin[t.coreOwnerId] || 0) + 1;
+    }
   }
+
+  // Also include eliminated nations whose capital territory is now owned by targetNationId (even if fully assimilated to core)
+  for (const n of Object.values(nations)) {
+    if (!n || n.id === targetNationId) continue;
+    const remProvs = provCountByNation[n.id] || 0;
+    if ((n.isEliminated || remProvs === 0) && !capturedFromByOrigin[n.id]) {
+      const capTerr = territories[n.capitalTerritoryId] || territories[n.id];
+      if (capTerr && capTerr.ownerId === targetNationId) {
+        capturedFromByOrigin[n.id] = 1;
+      }
+    }
+  }
+
+  const conqueredNations: ConqueredNationEntry[] = Object.entries(
+    capturedFromByOrigin
+  )
+    .map(([originId, count]) => {
+      const originNat = nations[originId];
+      if (!originNat) return null;
+      const remProvs = provCountByNation[originId] || 0;
+      return {
+        nation: originNat,
+        capturedProvinceCount: count,
+        isEliminated: Boolean(originNat.isEliminated || remProvs === 0),
+      };
+    })
+    .filter((entry): entry is ConqueredNationEntry => entry !== null)
+    .sort(
+      (a, b) =>
+        Number(b.isEliminated) - Number(a.isEliminated) ||
+        b.capturedProvinceCount - a.capturedProvinceCount
+    );
 
   const marchingByNation: Record<string, number> = {};
   for (const mv of movements) {
@@ -219,6 +270,7 @@ export function buildNationDiplomacySummary(params: {
     totalArmy: totalGarrison + marchingTroops,
     overlord,
     vassals,
+    conqueredNations,
     activeWars,
     offensiveAllies,
     defensivePacts,

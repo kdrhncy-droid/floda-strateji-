@@ -48,6 +48,7 @@ interface SelectedProvinceBarProps {
   onSetMoveRatio: (ratio: number) => void;
   onStartArmyOrder: (territoryId: string | null) => void;
   onQuickRecruitInfantry: (territoryId: string) => void;
+  onAssimilateTerritory?: (territoryId: string) => void;
   onMergeArmies?: (territoryId: string) => void;
   onDisbandArmy?: (territoryId: string, ratio: 0.5 | 1) => void;
   onSelectTerritory: (territoryId: string) => void;
@@ -72,6 +73,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   onSetMoveRatio,
   onStartArmyOrder,
   onQuickRecruitInfantry,
+  onAssimilateTerritory,
   onMergeArmies,
   onDisbandArmy,
   onSelectTerritory,
@@ -500,6 +502,23 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               <span>Asker Sil</span>
             </button>
           )}
+
+          {isPlayerOwned &&
+            onAssimilateTerritory &&
+            !territory.isAssimilating &&
+            (territory.coreOwnerId !== playerNationId ||
+              (territory.assimilation ?? 100) < 100) && (
+              <button
+                type="button"
+                onClick={() => {
+                  onAssimilateTerritory(territory.id);
+                }}
+                title="Fethedilen şehri asimile ederek %100 Öz Vatan (Core) yap ve isyan riskini düşür (180 Altın)"
+                className="min-h-[36px] px-2.5 rounded-xl bg-orange-500/20 hover:bg-orange-500/35 border border-orange-500/55 text-orange-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
+              >
+                <span>🌍 Asimile Et (180A)</span>
+              </button>
+            )}
 
           <button
             type="button"

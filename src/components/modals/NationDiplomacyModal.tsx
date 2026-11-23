@@ -1,9 +1,13 @@
 import React, { useMemo } from 'react';
 import {
+  AlertTriangle,
   Ban,
+  Bot,
   Coins,
   Compass,
   Crown,
+  Flag,
+  Flame,
   Handshake,
   Landmark,
   MapPin,
@@ -44,6 +48,9 @@ interface NationDiplomacyModalProps {
   movements: ArmyMovement[];
   tick: number;
   gameMode: GameModeId;
+  aiCommanderEnabled?: boolean;
+  isPlayerAtWar?: boolean;
+  onToggleAiCommander?: () => void;
   onClose: () => void;
   onSelectInspectedNation: (nationId: string) => void;
   onSelectTerritory: (territoryId: string) => void;
@@ -150,6 +157,9 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
   movements,
   tick,
   gameMode,
+  aiCommanderEnabled = false,
+  isPlayerAtWar = false,
+  onToggleAiCommander,
   onClose,
   onSelectInspectedNation,
   onSelectTerritory,
@@ -203,6 +213,21 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
   const activePlayerWar = !isPlayerNation
     ? isAtWar(wars, playerNationId, summary.nation.id)
     : undefined;
+
+  let warBlockReason: string | null = null;
+  if (!isPlayerNation && !activePlayerWar && playerRel) {
+    if (playerRel.isAllied || playerRel.allianceType) {
+      warBlockReason =
+        'Müttefik ülkeye savaş ilan edilemez (Önce aktif ittifak/paktı feshedin).';
+    } else if (playerRel.hasNonAggression) {
+      warBlockReason =
+        'Saldırmazlık Paktı aktifken savaş ilan edilemez (Önce paktı iptal edin).';
+    } else if (playerRel.truceUntilTick > tick) {
+      warBlockReason = `Aktif barış ateşkesi sürüyor (${Math.max(1, playerRel.truceUntilTick - tick)} gün kaldı).`;
+    } else if (playerRel.score > -30) {
+      warBlockReason = `İlişki puanınız çok yüksek (${playerRel.score > 0 ? `+${playerRel.score}` : playerRel.score}). Savaş ilanı için ilişki -30 veya altında olmalı — 'Hakaret Et' butonunu kullanın.`;
+    }
+  }
 
   const focusNationCapital = () => {
     const capId =
@@ -392,8 +417,60 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
           )}
 
           <p className="text-[11px] text-slate-400">
-            Herhangi bir ülkeye dokunarak o devletin tüm savaşlarını, ittifaklarını, paktlarını ve ateşkeslerini inceleyebilirsiniz.
+            Herhangi bir ülkeye dokunarak o devletin tüm savaşlarını, ittifaklarını, fetihlerini ve ateşkeslerini inceleyebilirsiniz.
           </p>
+
+          {/* Conquered & Annexed Nations Card ("Fethedilen & Tarihe Karışan Ülkeler") */}
+          <section className="rounded-xl bg-amber-950/25 border border-amber-500/40 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                <Flag className="w-3.5 h-3.5 text-amber-400" />
+                <span>Fethedilen & İlhak Edilen Ülkeler</span>
+              </div>
+              <span className="px-1.5 py-0.5 rounded-md bg-slate-900 border border-amber-500/30 font-mono-num text-[10px] font-bold text-amber-200">
+                {summary.conqueredNations.length}
+              </span>
+            </div>
+            {summary.conqueredNations.length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic">
+                Henüz başka bir devletten fethedilen veya ilhak edilen ülke toprağı bulunmuyor.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {summary.conqueredNations.map((item) => {
+                  const conqueredClean = item.nation.name.replace(/\s*\(1440\)\s*$/, '');
+                  return (
+                    <div
+                      key={item.nation.id}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/95 border border-amber-500/35 text-left"
+                    >
+                      <NationFlagCanvasBadge
+                        nationId={item.nation.id}
+                        flagCode={item.nation.flagCode}
+                        color={item.nation.color}
+                        width={22}
+                        height={15}
+                      />
+                      <span className="text-[11px] font-bold text-amber-100 max-w-[140px] truncate">
+                        {conqueredClean}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold ${
+                          item.isEliminated
+                            ? 'bg-rose-500/25 text-rose-200 border border-rose-500/40'
+                            : 'bg-amber-500/20 text-amber-200 border border-amber-500/35'
+                        }`}
+                      >
+                        {item.isEliminated
+                          ? `Tam İlhak (${item.capturedProvinceCount} Eyalet)`
+                          : `+${item.capturedProvinceCount} Eyalet`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {/* 1. Active Wars / Enemies */}
@@ -534,116 +611,194 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
           </div>
         </div>
 
-        {/* Footer Quick Action Strip */}
-        <div className="px-3.5 sm:px-5 py-2.5 bg-slate-950/95 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
-          {isPlayerNation ? (
-            <>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    sound.playClick();
-                    onClose();
-                    onSetActiveTab('GOVERNMENT');
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-sky-600/25 hover:bg-sky-600/35 border border-sky-500/40 text-sky-200 text-xs font-bold flex items-center gap-1.5"
-                >
-                  <Landmark className="w-3.5 h-3.5" />
-                  <span>Divan & Teknoloji</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    sound.playClick();
-                    onClose();
-                    onSetActiveTab('DIPLOMACY');
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/45 text-amber-200 text-xs font-bold flex items-center gap-1.5"
-                >
-                  <ScrollText className="w-3.5 h-3.5" />
-                  <span>Diplomasi Masası</span>
-                </button>
+        {/* Footer Quick Action Strip (Includes Yapay Zekâya Devret in Bottom Area & Inline War Eligibility Alert) */}
+        <div className="px-3.5 sm:px-5 py-2.5 bg-slate-950/95 border-t border-slate-800 flex flex-col gap-2 shrink-0">
+          {!isPlayerNation && warBlockReason && (
+            <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-amber-950/70 border border-amber-500/45 text-[11px] text-amber-200">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="leading-snug">{warBlockReason}</span>
               </div>
-              <button
-                type="button"
-                onClick={focusNationCapital}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5"
-              >
-                <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                <span>Başkente Odakla</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-1.5">
+              {playerRel && playerRel.score > -30 && (
                 <button
                   type="button"
-                  onClick={() => onDiplomaticAction(summary.nation.id, 'IMPROVE')}
-                  className="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/45 text-emerald-200 text-[11px] font-bold"
+                  onClick={() => onDiplomaticAction(summary.nation.id, 'INSULT')}
+                  className="px-2 py-0.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 border border-rose-400/50 text-rose-200 text-[10px] font-bold whitespace-nowrap shrink-0"
                 >
-                  +İlişki
+                  💢 Hakaret Et (-25)
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onDiplomaticAction(summary.nation.id, 'TRADE')}
-                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/45 text-amber-200 text-[11px] font-bold"
-                >
-                  {playerRel?.hasTradeAgreement ? 'Ticaret Aktif' : 'Ticaret'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onDiplomaticAction(summary.nation.id, 'DEFENSIVE_PACT')
-                  }
-                  className="px-2.5 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/45 text-sky-200 text-[11px] font-bold"
-                >
-                  {playerRel?.allianceType === 'DEFENSIVE'
-                    ? '🛡️ Paktı Feshet'
-                    : '🛡️ Savunma Paktı'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onDiplomaticAction(summary.nation.id, 'NON_AGGRESSION')
-                  }
-                  className="px-2.5 py-1.5 rounded-xl bg-teal-600/20 hover:bg-teal-600/35 border border-teal-500/45 text-teal-200 text-[11px] font-bold"
-                >
-                  {playerRel?.hasNonAggression ? 'Saldırmazlık Aktif' : 'Saldırmazlık'}
-                </button>
-                {activePlayerWar ? (
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {isPlayerNation ? (
+              <>
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
                       sound.playClick();
-                      onPeaceDeal(activePlayerWar.id, 'WHITE_PEACE');
+                      onClose();
+                      onSetActiveTab('GOVERNMENT');
                     }}
-                    className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold"
+                    className="px-3 py-1.5 rounded-xl bg-sky-600/25 hover:bg-sky-600/35 border border-sky-500/40 text-sky-200 text-xs font-bold flex items-center gap-1.5"
                   >
-                    🕊️ Beyaz Barış
+                    <Landmark className="w-3.5 h-3.5" />
+                    <span>Divan & Teknoloji</span>
                   </button>
-                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      onClose();
+                      onSetActiveTab('DIPLOMACY');
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/45 text-amber-200 text-xs font-bold flex items-center gap-1.5"
+                  >
+                    <ScrollText className="w-3.5 h-3.5" />
+                    <span>Diplomasi Masası</span>
+                  </button>
+
+                  {onToggleAiCommander && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playClick();
+                        onToggleAiCommander();
+                      }}
+                      aria-pressed={aiCommanderEnabled}
+                      title="Savaş sırasında orduları akıllı YZ komutanına devret (kuşatma kurtarır, cepheyi savunur, avantajlı hedeflere saldırır)"
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                        aiCommanderEnabled
+                          ? isPlayerAtWar
+                            ? 'border-emerald-400 bg-emerald-950/90 text-emerald-200'
+                            : 'border-amber-400 bg-amber-950/80 text-amber-200'
+                          : 'border-amber-500/45 bg-slate-900 hover:bg-slate-800 text-amber-100'
+                      }`}
+                    >
+                      <Bot
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          aiCommanderEnabled
+                            ? isPlayerAtWar
+                              ? 'text-emerald-300'
+                              : 'text-amber-300'
+                            : 'text-amber-400'
+                        }`}
+                      />
+                      {aiCommanderEnabled && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            isPlayerAtWar
+                              ? 'bg-emerald-400 animate-pulse'
+                              : 'bg-amber-400'
+                          }`}
+                        />
+                      )}
+                      <span>
+                        {aiCommanderEnabled
+                          ? isPlayerAtWar
+                            ? 'YZ Komutan: Açık (Durdur)'
+                            : 'YZ Komutan: Hazır (Kapat)'
+                          : 'Yapay Zekâya Devret'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={focusNationCapital}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Başkente Odakla</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => onDiplomaticAction(summary.nation.id, 'IMPROVE')}
+                    className="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/45 text-emerald-200 text-[11px] font-bold"
+                  >
+                    +İlişki
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDiplomaticAction(summary.nation.id, 'INSULT')}
+                    className="px-2.5 py-1.5 rounded-xl bg-orange-600/20 hover:bg-orange-600/35 border border-orange-500/45 text-orange-200 text-[11px] font-bold flex items-center gap-1"
+                    title="İlişkiyi -25 düşürür (Savaş ilanı için ilişkinin -30 veya altında olması gerekir)"
+                  >
+                    <Flame className="w-3 h-3" />
+                    <span>Hakaret Et (-25)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDiplomaticAction(summary.nation.id, 'TRADE')}
+                    className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/45 text-amber-200 text-[11px] font-bold"
+                  >
+                    {playerRel?.hasTradeAgreement ? 'Ticaret Aktif' : 'Ticaret'}
+                  </button>
                   <button
                     type="button"
                     onClick={() =>
-                      onDiplomaticAction(summary.nation.id, 'DECLARE_WAR')
+                      onDiplomaticAction(summary.nation.id, 'DEFENSIVE_PACT')
                     }
-                    className="px-2.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold"
+                    className="px-2.5 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/45 text-sky-200 text-[11px] font-bold"
                   >
-                    ⚔️ Savaş İlan Et
+                    {playerRel?.allianceType === 'DEFENSIVE'
+                      ? '🛡️ Paktı Feshet'
+                      : '🛡️ Savunma Paktı'}
                   </button>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onDiplomaticAction(summary.nation.id, 'NON_AGGRESSION')
+                    }
+                    className="px-2.5 py-1.5 rounded-xl bg-teal-600/20 hover:bg-teal-600/35 border border-teal-500/45 text-teal-200 text-[11px] font-bold"
+                  >
+                    {playerRel?.hasNonAggression ? 'Saldırmazlık Aktif' : 'Saldırmazlık'}
+                  </button>
+                  {activePlayerWar ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playClick();
+                        onPeaceDeal(activePlayerWar.id, 'WHITE_PEACE');
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold"
+                    >
+                      🕊️ Beyaz Barış
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onDiplomaticAction(summary.nation.id, 'DECLARE_WAR')
+                      }
+                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold ${
+                        warBlockReason
+                          ? 'bg-rose-950/80 border border-rose-500/40 text-rose-200 hover:bg-rose-900/80'
+                          : 'bg-rose-600 hover:bg-rose-500 text-white'
+                      }`}
+                    >
+                      ⚔️ Savaş İlan Et
+                    </button>
+                  )}
+                </div>
 
-              <button
-                type="button"
-                onClick={focusNationCapital}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5"
-              >
-                <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                <span>Haritada Gör</span>
-              </button>
-            </>
-          )}
+                <button
+                  type="button"
+                  onClick={focusNationCapital}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Haritada Gör</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

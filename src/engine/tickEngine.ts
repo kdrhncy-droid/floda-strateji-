@@ -426,16 +426,31 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         }
       } else {
         // Ungarrisoned territory with no fortress -> Swift occupation
+        const previousOwnerId = target.ownerId;
+        const isCoreForConqueror = target.coreOwnerId === mv.ownerId;
         writeTerritory(target.id, {
           ...target,
           ownerId: mv.ownerId,
           isCapital: false,
           garrison: mv.troops,
           units: mv.units || { infantry: mv.troops, armor: 0, airDrone: 0 },
-          unrest: Math.min(80, target.unrest + 18),
-          isOccupied: true,
-          occupiedById: mv.ownerId,
+          unrest: isCoreForConqueror ? Math.max(0, target.unrest - 10) : Math.min(80, target.unrest + 18),
+          assimilation: isCoreForConqueror ? 100 : 25,
+          isAssimilating: false,
+          isOccupied: !isCoreForConqueror,
+          occupiedById: isCoreForConqueror ? undefined : mv.ownerId,
         });
+
+        const remainingPrevProvs = Object.values(nextTerritories).filter(
+          (t) => t && t.ownerId === previousOwnerId
+        );
+        const prevNation = nextNations[previousOwnerId];
+        if (prevNation && remainingPrevProvs.length === 0) {
+          writeNation(previousOwnerId, {
+            ...prevNation,
+            isEliminated: true,
+          });
+        }
       }
     }
   }
@@ -607,6 +622,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       if (attackerWon) {
         const previousOwnerId = target.ownerId;
         const survivors = Math.max(900, attTroops);
+        const isCoreForConqueror = target.coreOwnerId === btl.attackerId;
 
         writeTerritory(target.id, {
           ...target,
@@ -614,9 +630,11 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           isCapital: false,
           garrison: survivors,
           units: scaleUnits(attUnits, survivors / Math.max(1, attTroops)),
-          unrest: Math.min(80, target.unrest + 24),
-          isOccupied: true,
-          occupiedById: btl.attackerId,
+          unrest: isCoreForConqueror ? Math.max(0, target.unrest - 10) : Math.min(80, target.unrest + 24),
+          assimilation: isCoreForConqueror ? 100 : 25,
+          isAssimilating: false,
+          isOccupied: !isCoreForConqueror,
+          occupiedById: isCoreForConqueror ? undefined : btl.attackerId,
           castleWallHp: wallHp,
         });
 
@@ -654,23 +672,19 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
               clanInfluence: (pNat.clanInfluence ?? 120) + 15,
             });
           }
-          sounds.push('WAR_HORN');
-          toasts.push(
-            `⚔️ FETİH ZAFERİ: ${target.name} ordumuz tarafından ele geçirildi!`
-          );
+          sounds.push('SELECT_TERRITORY');
+          toasts.push(`⚔️ ${target.name} ele geçirildi`);
           appendNews(
-            `⚔️ ${target.name} Fethedildi!`,
-            `${attackerNation.name} ordusu ${target.name} muharebesinde ${defenderNation.name} garnizonunu mağlup ederek şehri fethetti.`,
+            `⚔️ ${target.name} Fethedildi`,
+            `${attackerNation.name}, ${target.name} eyaletini ele geçirdi.`,
             'WAR'
           );
         } else if (previousOwnerId === playerNationId) {
-          sounds.push('WAR_HORN');
-          toasts.push(
-            `⚠️ EYALET DÜŞTÜ: ${target.name} eyaletimiz ${attackerNation.name} ordusu tarafından işgal edildi!`
-          );
+          sounds.push('MARCH');
+          toasts.push(`⚠️ ${target.name} düştü (${attackerNation.name})`);
           appendNews(
             `⚠️ ${target.name} İşgal Edildi`,
-            `${attackerNation.name} ordusu ${target.name} savunmasını aşarak eyaleti kontrol altına aldı.`,
+            `${attackerNation.name} ordusu ${target.name} eyaletini kontrol altına aldı.`,
             'WAR'
           );
         }
@@ -738,13 +752,9 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         }
 
         if (btl.defenderId === playerNationId) {
-          toasts.push(
-            `🛡️ SAVUNMA ZAFERİ: ${target.name} önlerindeki ${attackerNation.name} ordusu püskürtüldü!`
-          );
+          toasts.push(`🛡️ ${target.name} savunması başarılı`);
         } else if (btl.attackerId === playerNationId) {
-          toasts.push(
-            `⚠️ TAARRUZ PÜSKÜRTÜLDÜ: ${target.name} önlerindeki ordumuz ağır direnişle karşılaşıp geri çekildi.`
-          );
+          toasts.push(`⚠️ ${target.name} taarruzu püskürtüldü`);
         }
 
         nextWars = nextWars.map((w) => {
@@ -806,6 +816,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       // Siege WON! Fortress capitulates to besieger
       const previousOwnerId = terr.ownerId;
       const survivors = Math.max(800, siege.attackerTroops);
+      const isCoreForConqueror = terr.coreOwnerId === siege.attackerId;
 
       writeTerritory(terr.id, {
         ...terr,
@@ -817,31 +828,40 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           armor: 0,
           airDrone: 0,
         },
-        unrest: Math.min(80, terr.unrest + 22),
-        isOccupied: true,
-        occupiedById: siege.attackerId,
+        unrest: isCoreForConqueror ? Math.max(0, terr.unrest - 10) : Math.min(80, terr.unrest + 22),
+        assimilation: isCoreForConqueror ? 100 : 25,
+        isAssimilating: false,
+        isOccupied: !isCoreForConqueror,
+        occupiedById: isCoreForConqueror ? undefined : siege.attackerId,
         castleWallHp: 15,
         siege: null,
       });
 
+      const remainingPrevProvs = Object.values(nextTerritories).filter(
+        (t) => t && t.ownerId === previousOwnerId
+      );
+      const prevNation = nextNations[previousOwnerId];
+      if (prevNation && remainingPrevProvs.length === 0) {
+        writeNation(previousOwnerId, {
+          ...prevNation,
+          isEliminated: true,
+        });
+      }
+
       if (siege.attackerId === playerNationId) {
-        toasts.push(
-          `♜ KUŞATMA ZAFERİ: ${terr.name} kalesi ve surları düştü, eyalet fethedildi!`
-        );
-        sounds.push('WAR_HORN');
+        toasts.push(`♜ ${terr.name} kalesi fethedildi`);
+        sounds.push('SELECT_TERRITORY');
         appendNews(
-          `♜ ${terr.name} Kalesi Düştü!`,
-          `${attackerNation.name} ordusu ${terr.name} kuşatmasını başarıyla tamamlayarak şehri teslim aldı.`,
+          `♜ ${terr.name} Kalesi Düştü`,
+          `${attackerNation.name} ordusu ${terr.name} kuşatmasını tamamladı.`,
           'WAR'
         );
       } else if (previousOwnerId === playerNationId) {
-        toasts.push(
-          `⚠️ KALE DÜŞTÜ: ${terr.name} kalesi düşman kuşatmasına dayanamayarak teslim oldu!`
-        );
-        sounds.push('WAR_HORN');
+        toasts.push(`⚠️ ${terr.name} kalesi düştü`);
+        sounds.push('MARCH');
         appendNews(
           `⚠️ ${terr.name} Kalesi Teslim Oldu`,
-          `${attackerNation.name} ordusu ${terr.name} surlarını aşarak eyaleti ele geçirdi.`,
+          `${attackerNation.name} ordusu ${terr.name} surlarını aştı.`,
           'WAR'
         );
       }
@@ -902,12 +922,13 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         appendNews(item.title, item.description, item.type);
       }
       if (wartimeAi.playerAlerts.length > 0) {
-        sounds.push('WAR_HORN');
+        sounds.push('MARCH');
         toasts.push(...wartimeAi.playerAlerts);
       }
     }
 
-    if (input.aiCommanderEnabled) {
+    // Run Player AI Commander strictly once per full day transition (zero sub-day FPS overhead)
+    if (dayWrapped && input.aiCommanderEnabled) {
       const playerAiRes = evaluatePlayerAiCommander({
         tick: nextTick,
         playerNationId,
@@ -918,13 +939,10 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         battles: nextBattles,
         movements: nextMovements,
       });
-      if (playerAiRes) {
+      if (playerAiRes && playerAiRes.newMovements.length > 0) {
         nextTerritories = playerAiRes.updatedTerritories;
         territoriesCloned = true;
-        if (playerAiRes.newMovements.length > 0) {
-          nextMovements = [...nextMovements, ...playerAiRes.newMovements];
-          sounds.push('MARCH');
-        }
+        nextMovements = [...nextMovements, ...playerAiRes.newMovements];
       }
     }
   }

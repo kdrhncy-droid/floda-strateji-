@@ -335,6 +335,173 @@ export function upgradeBuildingDomain(params: {
   };
 }
 
+export type SpecialtyProductionId =
+  | 'SIGIR_FARM'
+  | 'PAMUK_FIELD'
+  | 'KERESTE_MILL'
+  | 'TAHIL_GRANARY'
+  | 'DEMIR_FOUNDRY'
+  | 'ALTIN_MINT'
+  | 'PETROL_REFINERY';
+
+export interface SpecialtyProductionOption {
+  id: SpecialtyProductionId;
+  name: string;
+  shortName: string;
+  icon: string;
+  resource: Territory['resource'];
+  buildingBoost: BuildingType;
+  costGold: number;
+  gdpBonus: number;
+  description: string;
+}
+
+export const SPECIALTY_PRODUCTION_OPTIONS: ReadonlyArray<SpecialtyProductionOption> = [
+  {
+    id: 'SIGIR_FARM',
+    name: 'İnek & Sığır Çiftliği',
+    shortName: 'İnek Çiftliği',
+    icon: '🐄',
+    resource: 'SIGIR',
+    buildingBoost: 'supplyDepot',
+    costGold: 350,
+    gdpBonus: 14,
+    description: 'Şehre Sığır & Hayvancılık üretimi kurar, +1 İkmal/Mera seviyesi ve +%36 üretim değeri sağlar.',
+  },
+  {
+    id: 'PAMUK_FIELD',
+    name: 'Pamuk Tarlası & Dokuma',
+    shortName: 'Pamuk Tarlası',
+    icon: '🌿',
+    resource: 'PAMUK',
+    buildingBoost: 'factory',
+    costGold: 420,
+    gdpBonus: 18,
+    description: 'Şehre Pamuk Tarlası ve Dokuma Atölyesi kurar, +1 Sanayi seviyesi ve +%38 üretim değeri sağlar.',
+  },
+  {
+    id: 'KERESTE_MILL',
+    name: 'Kereste & Odun Ocağı',
+    shortName: 'Kereste Ocağı',
+    icon: '🪵',
+    resource: 'KERESTE',
+    buildingBoost: 'factory',
+    costGold: 360,
+    gdpBonus: 15,
+    description: 'Şehre Kereste & Odun İşletmesi kurar, +1 Sanayi/Atölye seviyesi ve +%36 üretim değeri sağlar.',
+  },
+  {
+    id: 'TAHIL_GRANARY',
+    name: 'Tahıl Tarlası & Sulama',
+    shortName: 'Tahıl Tarlası',
+    icon: '🌾',
+    resource: 'TAHIL',
+    buildingBoost: 'supplyDepot',
+    costGold: 340,
+    gdpBonus: 13,
+    description: 'Şehre sulamalı Tahıl & Buğday Tarlası kurar, +1 Erzak Ambarı seviyesi ve +%35 üretim değeri sağlar.',
+  },
+  {
+    id: 'DEMIR_FOUNDRY',
+    name: 'Demir & Maden Ocağı',
+    shortName: 'Demir Ocağı',
+    icon: '⛏',
+    resource: 'DEMIR_CELIK',
+    buildingBoost: 'factory',
+    costGold: 450,
+    gdpBonus: 20,
+    description: 'Şehre Demir & Çelik Dökümhanesi kurar, +1 Sanayi seviyesi ve +%38 üretim değeri sağlar.',
+  },
+  {
+    id: 'ALTIN_MINT',
+    name: 'Altın Madeni & Darphane',
+    shortName: 'Altın Ocağı',
+    icon: '🪙',
+    resource: 'ALTIN',
+    buildingBoost: 'tradeHub',
+    costGold: 480,
+    gdpBonus: 22,
+    description: 'Şehre Altın Madeni & Darphane kurar, +1 Ticaret Merkezi seviyesi ve +%40 üretim değeri sağlar.',
+  },
+  {
+    id: 'PETROL_REFINERY',
+    name: 'Petrol & Enerji Rafinerisi',
+    shortName: 'Rafineri',
+    icon: '🛢',
+    resource: 'PETROL',
+    buildingBoost: 'factory',
+    costGold: 520,
+    gdpBonus: 25,
+    description: 'Şehre Petrol & Enerji Tesisi kurar, +1 Sanayi seviyesi ve +%42 üretim değeri sağlar.',
+  },
+];
+
+export function investSpecialtyProductionDomain(params: {
+  territoryIds: string[];
+  specialtyId: SpecialtyProductionId;
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  playerNationId: string;
+}): EmpireActionPatch {
+  const { territoryIds, specialtyId, territories, nations, playerNationId } = params;
+  const p = nations[playerNationId];
+  const opt = SPECIALTY_PRODUCTION_OPTIONS.find((o) => o.id === specialtyId);
+  if (!p || !opt) return {};
+
+  const validTerrs = Array.from(new Set(territoryIds))
+    .map((id) => territories[id])
+    .filter((t): t is Territory => Boolean(t && t.ownerId === playerNationId));
+
+  if (validTerrs.length === 0) {
+    return {
+      toastMessage: 'Önce haritadan yatırım yapılacak kendi şehirlerinizi seçin.',
+    };
+  }
+
+  const totalCost = opt.costGold * validTerrs.length;
+  if (p.treasury < totalCost) {
+    return {
+      toastMessage: `Yetersiz hazine! ${validTerrs.length} şehirde ${opt.name} için ${totalCost.toLocaleString('tr-TR')} Altın gerekli (Mevcut: ${Math.floor(p.treasury).toLocaleString('tr-TR')}).`,
+    };
+  }
+
+  const bDef = BUILDINGS.find((b) => b.id === opt.buildingBoost);
+  const maxLvl = bDef?.maxLevel ?? 5;
+  const nextTerritories = { ...territories };
+
+  for (const t of validTerrs) {
+    const curLvl = t.buildings[opt.buildingBoost] || 0;
+    const nextLvl = Math.min(maxLvl, curLvl + 1);
+    nextTerritories[t.id] = {
+      ...t,
+      resource: opt.resource,
+      baseGdp: Math.round((t.baseGdp || 40) + opt.gdpBonus),
+      buildings: {
+        ...t.buildings,
+        [opt.buildingBoost]: nextLvl,
+      },
+    };
+  }
+
+  sound.playBuild();
+  const cityNames =
+    validTerrs.length <= 2
+      ? validTerrs.map((t) => t.name).join(', ')
+      : `${validTerrs.slice(0, 2).map((t) => t.name).join(', ')} +${validTerrs.length - 2} şehir`;
+
+  return {
+    nations: {
+      ...nations,
+      [playerNationId]: {
+        ...p,
+        treasury: p.treasury - totalCost,
+      },
+    },
+    territories: nextTerritories,
+    toastMessage: `${opt.icon} ${cityNames}: ${opt.name} kuruldu (-${totalCost.toLocaleString('tr-TR')} Altın).`,
+  };
+}
+
 export function assimilateTerritoryDomain(params: {
   territoryId: string;
   territories: Record<string, Territory>;
@@ -361,6 +528,11 @@ export function assimilateTerritoryDomain(params: {
     return { toastMessage: `Asimilasyon idari fonu için ${cost} Altın gerekli.` };
   }
 
+  const startingAssimilation =
+    t.coreOwnerId !== playerNationId
+      ? Math.min(t.assimilation ?? 25, 75)
+      : Math.min(t.assimilation ?? 75, 90);
+
   sound.playTreaty();
   return {
     nations: {
@@ -371,11 +543,14 @@ export function assimilateTerritoryDomain(params: {
       ...territories,
       [territoryId]: {
         ...t,
+        isOccupied: false,
+        occupiedById: undefined,
         isAssimilating: true,
-        assimilation: t.assimilation ?? (t.coreOwnerId === playerNationId ? 75 : 25),
+        assimilation: startingAssimilation,
+        unrest: Math.max(0, t.unrest - 12),
       },
     },
-    toastMessage: `${t.name} eyaletinde entegrasyon ve asimilasyon başlatıldı! Gün gün Öz Vatan olacak.`,
+    toastMessage: `🌍 ${t.name}: Asimilasyon başlatıldı (%${Math.round(startingAssimilation)} → %100 Öz Vatan).`,
   };
 }
 

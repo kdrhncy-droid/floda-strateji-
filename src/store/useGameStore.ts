@@ -68,12 +68,14 @@ import {
   enactReformDomain,
   executeArmyMoveDomain,
   formEmpireDomain,
+  investSpecialtyProductionDomain,
   mergeNeighborArmiesDomain,
   modernizeNationalArmyDomain,
   recruitOrAssignGeneralDomain,
   recruitUnitDomain,
   resolveCrisisDomain,
   siegeBombardmentDomain,
+  SpecialtyProductionId,
   startMissionaryDomain,
   startResearchDomain,
   unlockTechDomain,
@@ -165,6 +167,10 @@ export interface GameStoreState {
   ) => void;
   recruitOrAssignGeneral: (generalId: string) => void;
   upgradeBuilding: (territoryId: string, building: BuildingType) => void;
+  investSpecialtyProduction: (
+    territoryIds: string[],
+    specialtyId: SpecialtyProductionId
+  ) => void;
   assimilateTerritory: (territoryId: string) => void;
   startMissionary: (territoryId: string) => void;
   formEmpire: (empireId: string) => void;
@@ -903,6 +909,17 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       upgradeBuildingDomain({
         territoryId,
         building,
+        territories: s.territories,
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+      })
+    ),
+
+  investSpecialtyProduction: (territoryIds, specialtyId) =>
+    set((s) =>
+      investSpecialtyProductionDomain({
+        territoryIds,
+        specialtyId,
         territories: s.territories,
         nations: s.nations,
         playerNationId: s.playerNationId,
