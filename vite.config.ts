@@ -11,13 +11,8 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: [
-          'icon.svg',
-          'apple-touch-icon.png',
-          'pwa-192x192.png',
-          'pwa-512x512.png',
-          'pwa-maskable-512x512.png',
-        ],
+        injectRegister: 'auto',
+        includeManifestIcons: false,
         manifest: {
           id: '/',
           name: 'Floda Strateji Oyunu',
@@ -56,13 +51,16 @@ export default defineConfig(() => {
           clientsClaim: true,
           skipWaiting: true,
           navigateFallback: '/index.html',
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff,woff2}'],
+          navigateFallbackDenylist: [/^\/api\//],
+          ignoreURLParametersMatching: [/.*/],
+          globPatterns: [
+            '**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,json,woff,woff2}',
+          ],
           globIgnores: [
             '**/game_map_*.png',
             '**/game_screenshot_*.png',
-            '**/assets/aistudio/**',
           ],
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
