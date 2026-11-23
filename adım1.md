@@ -131,17 +131,17 @@
     - Savaş sırasında geçici işgal edilen (`isOccupied: true`) şehirlerle barış antlaşmasıyla/fetihle alınan şehirler ayrıştırıldı; fethedilen her yabancı şehrin `assimilation` değeri net biçimde `%25` ve `coreOwnerId` değeri eski sahibi olarak işaretleniyor.
     - Mobil ve masaüstünde eyalet çekmecesinin hangi sekmesinde olunursa olunsun (ve hızlı şehir çubuğunda) yabancı/entegre olmamış şehirler için **"Asimile Et (180 Altın + Canlı % İlerleme)"** butonu doğrudan görünür oldu; zaten `%100 Core` olan öz vatan şehirlerinde hatalı asimilasyon butonu çıkmıyor.
   - [x] **İşgal ve İlhakta Dost/Müttefik Ülkelerle İlişki Düşüşü (Diplomatik Tepki):** Oyuncu (veya bir devlet) bir ülkeye savaş açtığında, şehirlerini ilhak ettiğinde veya vasallaştırdığında; kurban ülkenin **müttefikleri (`-35`), ticaret/saldırmazlık ortakları ve dostları (`score >= 25` olanlar `-20`), aynı din/kültürden komşuları (`-12`)** ile işgalcinin diplomatik ilişkisi otomatik düşüyor ve koalisyon/tepki bildirimi oluşuyor.
-- [ ] **3.3. Canlı Savaş Rozeti (HUD), Tek Merkezli Savaş Masası & Puan Bütçeli Barış Konferansı (Eski Dağınık Savaş Arayüzlerinin Kaldırılması):**
-  - [ ] Oyuncu bir ülkeyle savaştayken ekranda (yatay ve dikey mobil güvenli konumda) **[Oyuncu Bayrağı ⚔ Rakip Bayrağı]** savaş rozeti ve hemen altında anlık **Savaş Skoru %** göstergesi çıkacak.
-  - [ ] Toprak alan / üstünlük kuran taraf oyuncuysa yüzde artıp gitgide **yeşile** dönecek; toprak kaybeden / geriye düşen taraf oyuncuysa eksi (`-`) değere düşüp gitgide **kırmızıya** dönecek.
-  - [ ] Rozete tıklandığında **Tek Merkezli Savaş Masası** açılacak: ana taraflar, savaşa katılan tüm müttefikler, **Savaşa Müttefik Çağır** butonu, tarafların asker kayıpları, işgal edilen eyalet sayısı, canlı güç dengesi çubuğu ve **Barış Talebi / Galipsiz Barış (Beyaz Barış) / Teslim Ol** butonları tek merkezde sunulacak.
-  - [ ] **Savaş Puanı Bütçeli Barış Konferansı:** Savaşta kazanılan puan kadar barış bütçesi (`Harcanan / Kazanılan Puan`) oluşacak; her şehrin gelişim puanına göre puan maliyeti olacak. Aynı masada şu seçenekler puan yettiğince birleştirilebilecek:
-    - [ ] **Şehir / Toprak Talep Etme** (tek tek seçim + **Tek Tıkla İşgal Edilenleri Seç** kısayolu).
-    - [ ] **Komple İlhak Et** (tek tek basmadan tüm ülkeyi tek tuşla alma — puan bütçesi yettiğinde ve yüksek AE bedeliyle).
-    - [ ] **Vasal Yap** (rakibi bağlı devlete dönüştürme).
-    - [ ] **Haraca Bağla & Savaş Tazminatı** (düzenli gelir payı / yıllık haraç + nakit tazminat).
-    - [ ] Canlı kabul göstergesi (*Kabul Eder / Puan Aşıldı*) ile net onay akışı.
-  - [ ] Eski dağınık/mükerrer savaş ve barış erişim katmanları temizlenip tüm savaş akışı bu tek merkezli sisteme bağlanacak.
+- [x] **3.3. Canlı Savaş Rozeti (HUD), Tek Merkezli Savaş Masası & Puan Bütçeli Barış Konferansı (Eski Dağınık Savaş Arayüzlerinin Kaldırılması) *(Tamamlandı)*:**
+  - [x] Oyuncu bir ülkeyle savaştayken ekranda (yatay ve dikey mobil güvenli konumda) **[Oyuncu Bayrağı ⚔ Rakip Bayrağı]** savaş rozeti ve hemen altında anlık **Savaş Skoru %** göstergesi çıkıyor.
+  - [x] Toprak alan / üstünlük kuran taraf oyuncuysa yüzde artıp gitgide **yeşile** dönüyor; toprak kaybeden / geriye düşen taraf oyuncuysa eksi (`-`) değere düşüp gitgide **kırmızıya** dönüyor.
+  - [x] Rozete tıklandığında **Tek Merkezli Savaş Masası (`UnifiedWarAndPeaceModal`)** açılıyor: ana taraflar, savaşa katılan tüm müttefikler, **Savaşa Müttefik Çağır** butonu, tarafların asker kayıpları, işgal edilen eyalet sayısı, canlı güç dengesi çubuğu ve **Barış Talebi / Galipsiz Barış (Beyaz Barış) / Teslim Ol** butonları tek merkezde sunuluyor.
+  - [x] **Savaş Puanı Bütçeli Barış Konferansı:** Savaşta kazanılan puan kadar barış bütçesi (`Harcanan / Kazanılan Puan`) oluşuyor; her şehrin gelişim puanına göre puan maliyeti var. Aynı masada şu seçenekler puan yettiğince birleştirilebiliyor:
+    - [x] **Şehir / Toprak Talep Etme** (tek tek seçim + **Tek Tıkla İşgal Edilenleri Seç** kısayolu).
+    - [x] **Komple İlhak Et** (tek tek basmadan tüm ülkeyi tek tuşla alma — puan bütçesi yettiğinde ve yüksek AE bedeliyle).
+    - [x] **Vasal Yap** (rakibi bağlı devlete dönüştürme).
+    - [x] **Haraca Bağla & Savaş Tazminatı** (düzenli gelir payı / yıllık haraç + nakit tazminat).
+    - [x] Canlı kabul göstergesi (*Kabul Eder / Puan Aşıldı*) ile net onay akışı.
+  - [x] Eski dağınık/mükerrer savaş ve barış erişim katmanları temizlenip tüm savaş akışı bu tek merkezli sisteme bağlandı.
 - [ ] **3.4. Kıyı Şehirlerine Özel Liman İnşası + Genişletilmiş İnşa ve Araştırma Seçenekleri:**
   - [ ] Denizle sınırı olan şehirler (`isCoastal`) otomatik/coğrafi olarak işaretlenecek ve **yalnızca kıyı şehirlerinde Liman / Tersane** inşa edilebilecek (deniz ticareti geliri, denizden ikmal, çıkarma ve stratejik liman puanı sağlar).
   - [ ] İnşa seçenekleri zenginleştirilecek (Mevcut 6 binaya ek olarak **Liman/Tersane**, **Hammadde & Üretim Tesisi (İnek Çiftliği / Pamuk Tarlası / Kereste Ocağı / Maden)**, **Çiftlik / Erzak Ambarı**, **Darphane / Vergi Dairesi** vb. — toplam 10 dengeli ve ayırt edici bina).

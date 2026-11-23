@@ -3569,7 +3569,13 @@ test('Faz 3.1 & 3.2: City Development Score darkens ECONOMIC map color and build
 });
 
 import { investSpecialtyProductionDomain } from './empireAndArmyActions';
-import { applyConquestDiplomaticPenalty } from './diplomacyAndWarActions';
+import {
+  applyConquestDiplomaticPenalty,
+  calculateProvincePeaceScoreCost,
+  calculateWarPeaceBudget,
+  callAllyToWarDomain,
+  resolvePeaceConferenceDomain,
+} from './diplomacyAndWarActions';
 
 test('Faz 3.25: Specialty production investment, conquest diplomatic penalty, conquered nations ledger, and post-war assimilation work end-to-end', () => {
   const ottoman = mkFaz3Nation('792', {
@@ -3727,4 +3733,189 @@ test('Faz 3.25: Specialty production investment, conquest diplomatic penalty, co
     'Same-religion neighbor Serbia relation with conqueror must drop'
   );
 });
+
+test('Faz 3.3: Unified War Table ally calling and point-budget Peace Conference (provinces, full annexation, reparations, tribute, white peace, surrender)', () => {
+  const ottoman = mkFaz3Nation('792', {
+    name: 'Osmanlı Devleti',
+    treasury: 1000,
+    diplomacyPoints: 40,
+    capitalTerritoryId: '792_edi',
+  });
+  const byzantium = mkFaz3Nation('300', {
+    name: 'Bizans İmparatorluğu',
+    treasury: 800,
+    capitalTerritoryId: '300_ist',
+  });
+  const wallachia = mkFaz3Nation('642', {
+    name: 'Eflak Voyvodalığı',
+    treasury: 400,
+    capitalTerritoryId: '642_buc',
+  });
+
+  const edirne = mkFaz3Territory('792_edi', {
+    name: 'Edirne',
+    ownerId: '792',
+    coreOwnerId: '792',
+    isCapital: true,
+    garrison: 8000,
+  });
+  const selanik = mkFaz3Territory('300_sel', {
+    name: 'Selanik',
+    ownerId: '792',
+    coreOwnerId: '300',
+    isOccupied: true,
+    baseGdp: 45,
+    garrison: 3000,
+  });
+  const istanbul = mkFaz3Territory('300_ist', {
+    name: 'Konstantiniyye',
+    ownerId: '300',
+    coreOwnerId: '300',
+    isCapital: true,
+    baseGdp: 95,
+    garrison: 4000,
+  });
+  const mora = mkFaz3Territory('300_mor', {
+    name: 'Mora',
+    ownerId: '300',
+    coreOwnerId: '300',
+    baseGdp: 40,
+    garrison: 2000,
+  });
+
+  const nations: Record<string, Nation> = {
+    '792': ottoman,
+    '300': byzantium,
+    '642': wallachia,
+  };
+  const territories: Record<string, Territory> = {
+    '792_edi': edirne,
+    '300_sel': selanik,
+    '300_ist': istanbul,
+    '300_mor': mora,
+  };
+  const relations: Record<string, DiplomaticRelation> = {
+    '642_792': {
+      nationA: '642',
+      nationB: '792',
+      score: 55,
+      isAllied: true,
+      allianceType: 'OFFENSIVE',
+      hasNonAggression: true,
+      hasTradeAgreement: true,
+      hasEmbargo: false,
+      hasMilitaryAccess: true,
+      truceUntilTick: 0,
+    },
+  };
+
+  const war: ActiveWar = {
+    id: 'war_792_300',
+    name: 'Osmanlı - Bizans Savaşı',
+    attackerId: '792',
+    defenderId: '300',
+    attackers: ['792'],
+    defenders: ['300'],
+    startedTick: 1,
+    attackerWarScore: 48,
+    casualtiesAttacker: 1200,
+    casualtiesDefender: 3400,
+  };
+
+  // 1. Call ally to war
+  const callAllyRes = callAllyToWarDomain({
+    warId: war.id,
+    allyNationId: '642',
+    playerNationId: '792',
+    tick: 5,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    relations,
+    wars: [war],
+    newsEvents: [],
+  });
+  assert.ok(callAllyRes.wars, 'Ally should join war');
+  assert.ok(callAllyRes.wars![0].attackers.includes('642'));
+
+  // 2. Peace budget & province cost calculation
+  const budget = calculateWarPeaceBudget(
+    callAllyRes.wars![0],
+    '792',
+    territories,
+    '300'
+  );
+  assert.ok(
+    budget.availableBudget >= 58,
+    'Peace budget should include war score + occupied province bonus'
+  );
+  const occupiedSelanikCost = calculateProvincePeaceScoreCost(
+    selanik,
+    ottoman,
+    true
+  );
+  const unoccupiedIstanbulCost = calculateProvincePeaceScoreCost(
+    istanbul,
+    ottoman,
+    false
+  );
+  assert.ok(
+    occupiedSelanikCost < unoccupiedIstanbulCost,
+    'Occupied non-capital province must cost fewer peace points than unoccupied enemy capital'
+  );
+
+  // 3. Over-budget peace demand should be rejected
+  const overBudgetRes = resolvePeaceConferenceDomain({
+    request: {
+      warId: war.id,
+      mode: 'PEACE_DEMANDS',
+      demandedTerritoryIds: ['300_sel', '300_ist', '300_mor'],
+      fullAnnexation: true,
+      vassalizeEnemy: true,
+      demandTribute: true,
+      demandReparations: true,
+    },
+    playerNationId: '792',
+    tick: 8,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    territories,
+    relations,
+    wars: callAllyRes.wars!,
+    battles: [],
+    movements: [],
+    newsEvents: [],
+  });
+  assert.equal(overBudgetRes.wars, undefined, 'Over-budget demand must be rejected');
+
+  // 4. Valid point-budget peace conference (claim occupied Selanik + Mora + war reparations)
+  const validPeaceRes = resolvePeaceConferenceDomain({
+    request: {
+      warId: war.id,
+      mode: 'PEACE_DEMANDS',
+      demandedTerritoryIds: ['300_sel', '300_mor'],
+      fullAnnexation: false,
+      vassalizeEnemy: false,
+      demandTribute: false,
+      demandReparations: true,
+    },
+    playerNationId: '792',
+    tick: 8,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    territories,
+    relations,
+    wars: callAllyRes.wars!,
+    battles: [],
+    movements: [],
+    newsEvents: [],
+  });
+  assert.equal(validPeaceRes.wars?.length, 0, 'War should conclude on signed peace treaty');
+  assert.equal(validPeaceRes.territories?.['300_sel']?.ownerId, '792');
+  assert.equal(validPeaceRes.territories?.['300_sel']?.isOccupied, false);
+  assert.equal(validPeaceRes.territories?.['300_sel']?.assimilation, 25);
+  assert.equal(validPeaceRes.territories?.['300_mor']?.ownerId, '792');
+  assert.equal(validPeaceRes.territories?.['300_mor']?.coreOwnerId, '300');
+  assert.ok((validPeaceRes.nations?.['792']?.treasury ?? 0) > ottoman.treasury);
+});
+
 

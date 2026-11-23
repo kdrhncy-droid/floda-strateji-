@@ -75,6 +75,7 @@ export interface CommandDrawersProps {
   onPeaceDeal: (warId: string, dealType: PeaceDealType) => void;
   onSelectTerritory: (territoryId: string) => void;
   onInspectNation?: (nationId: string) => void;
+  onOpenWarModal?: (warId: string) => void;
   onModernizeNationalArmy: () => void;
   onAssignFiefLord: (territoryId: string, lordId: string | null) => void;
   onBestowFavorOnLord?: (lordId: string) => void;

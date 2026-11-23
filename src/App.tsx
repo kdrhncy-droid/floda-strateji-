@@ -25,7 +25,10 @@ import { CommandDrawers } from './components/CommandDrawers';
 import { CrisisAndNewsModal } from './components/CrisisAndNewsModal';
 import { SystemAndSaveModal } from './components/SystemAndSaveModal';
 import { TacticalBattleModal } from './components/TacticalBattleModal';
-import { AoH3BattleOverviewModal } from './components/AoH3BattleOverviewModal';
+import {
+  AoH3BattleOverviewModal,
+  UnifiedWarAndPeaceModal,
+} from './components/AoH3BattleOverviewModal';
 import { CampaignOutcomeModal } from './components/modals/CampaignOutcomeModal';
 import { NationDiplomacyModal } from './components/modals/NationDiplomacyModal';
 import { getClockSpeedProfile } from './engine/gameSettings';
@@ -144,6 +147,7 @@ function GameAppInner() {
     activeCrisis,
     activeTacticalBattle,
     activeBattleOverviewTerritoryId,
+    activeWarModalId,
     pendingWarMove,
     showNewsDrawer,
     showSystemModal,
@@ -248,6 +252,7 @@ function GameAppInner() {
   const hasDismissibleOverlay =
     screenState === 'PLAYING' &&
     (Boolean(pendingWarMove) ||
+      Boolean(activeWarModalId) ||
       Boolean(inspectedNationId) ||
       showSystemModal ||
       showNewsDrawer ||
@@ -276,6 +281,9 @@ function GameAppInner() {
       let closedSomething = false;
       if (st.pendingWarMove) {
         st.setPendingWarMove(null);
+        closedSomething = true;
+      } else if (st.activeWarModalId) {
+        st.setActiveWarModalId(null);
         closedSomething = true;
       } else if (inspectedNationIdRef.current) {
         setInspectedNationId(null);
@@ -523,8 +531,34 @@ function GameAppInner() {
           onSetActiveTab={store.setActiveTab}
           onDiplomaticAction={store.diplomaticAction}
           onPeaceDeal={store.peaceDeal}
+          onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
         />
       )}
+
+      {activeWarModalId &&
+        wars.some((w) => w.id === activeWarModalId) && (
+          <UnifiedWarAndPeaceModal
+            key={activeWarModalId}
+            war={wars.find((w) => w.id === activeWarModalId)!}
+            playerWars={wars.filter(
+              (w) =>
+                w.attackerId === playerNationId ||
+                w.defenderId === playerNationId ||
+                w.attackers.includes(playerNationId) ||
+                w.defenders.includes(playerNationId)
+            )}
+            playerNationId={playerNationId}
+            nations={nations}
+            territories={territories}
+            relations={relations}
+            movements={movements}
+            tick={tick}
+            onSelectWar={(warId) => store.setActiveWarModalId(warId)}
+            onClose={() => store.setActiveWarModalId(null)}
+            onCallAllyToWar={store.callAllyToWar}
+            onResolvePeaceConference={store.resolvePeaceConference}
+          />
+        )}
 
       {/* AoH3-Style Border Violation & War Declaration Confirmation Modal */}
       {pendingWarMove && pendingTargetNation && pendingFromTerritory && pendingToTerritory && (
@@ -709,6 +743,7 @@ function GameAppInner() {
             onSelectTerritory={store.selectTerritory}
             onSetActiveTab={store.setActiveTab}
             onStartArmyOrder={store.setArmyOrderSourceId}
+            onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
           />
         )}
 
@@ -796,6 +831,7 @@ function GameAppInner() {
             onPeaceDeal={store.peaceDeal}
             onSelectTerritory={store.selectTerritory}
             onInspectNation={(nId) => setInspectedNationId(nId)}
+            onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
             fogOfWarEnabled={settings.fogOfWarEnabled}
             onModernizeNationalArmy={store.modernizeNationalArmy}
             onAssignFiefLord={store.assignFiefLord}

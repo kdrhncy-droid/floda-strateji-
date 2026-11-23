@@ -60,6 +60,7 @@ interface NationDiplomacyModalProps {
     action: DiplomaticActionType
   ) => void;
   onPeaceDeal: (warId: string, dealType: PeaceDealType) => void;
+  onOpenWarModal?: (warId: string) => void;
 }
 
 interface SectionProps {
@@ -166,6 +167,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
   onSetActiveTab,
   onDiplomaticAction,
   onPeaceDeal,
+  onOpenWarModal,
 }) => {
   const dialogRef = useAccessibleDialog(isOpen, onClose);
   const targetId = inspectedNationId || playerNationId;
@@ -765,11 +767,17 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                       type="button"
                       onClick={() => {
                         sound.playClick();
-                        onPeaceDeal(activePlayerWar.id, 'WHITE_PEACE');
+                        if (onOpenWarModal) {
+                          onClose();
+                          onOpenWarModal(activePlayerWar.id);
+                        } else {
+                          onPeaceDeal(activePlayerWar.id, 'WHITE_PEACE');
+                        }
                       }}
-                      className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold"
+                      className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-extrabold flex items-center gap-1"
                     >
-                      🕊️ Beyaz Barış
+                      <Swords className="w-3.5 h-3.5" />
+                      <span>⚔️ Savaş & Barış Masası</span>
                     </button>
                   ) : (
                     <button

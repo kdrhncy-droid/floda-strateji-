@@ -24,6 +24,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
   onPeaceDeal,
   onSelectTerritory,
   onInspectNation,
+  onOpenWarModal,
   gameMode = "EMPIRES_1440",
 }) => {
   const [diploFilter, setDiploFilter] = useState<"ALL" | "WARS" | "NEIGHBORS">("ALL");
@@ -228,10 +229,16 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                               <>
                                 {war ? (
                                   <button
-                                    onClick={() => setDiploViewMode('DIPLOMACY_DETAILED')}
+                                    onClick={() => {
+                                      if (onOpenWarModal) {
+                                        onOpenWarModal(war.id);
+                                      } else {
+                                        setDiploViewMode('DIPLOMACY_DETAILED');
+                                      }
+                                    }}
                                     className="flex-1 min-h-[44px] py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-transform active:scale-95 shadow-md flex items-center justify-center gap-1.5"
                                   >
-                                    <span>🕊️ Barış Masasına Git</span>
+                                    <span>⚔️ Savaş & Barış Masası</span>
                                   </button>
                                 ) : (
                                   <button
@@ -347,33 +354,17 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                           {isPlayerInvolved && (
                             <div className="flex flex-wrap gap-2 pt-1">
                               <button
-                                onClick={() =>
-                                  onPeaceDeal(w.id, 'ANNEX_OCCUPIED')
-                                }
-                                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold"
-                                title="En az 1 işgal edilen eyalet veya +%25 Savaş Skoru gerekir"
+                                onClick={() => {
+                                  if (onOpenWarModal) {
+                                    onOpenWarModal(w.id);
+                                  } else {
+                                    onPeaceDeal(w.id, 'WHITE_PEACE');
+                                  }
+                                }}
+                                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 text-xs font-extrabold shadow flex items-center justify-center gap-1.5"
                               >
-                                Toprak İlhak Et (≥%25 / İşgal)
-                              </button>
-                              <button
-                                onClick={() => onPeaceDeal(w.id, 'VASSALIZE')}
-                                className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold"
-                                title="En az +%50 Savaş Skoru gerekir"
-                              >
-                                Vasallaştır (≥%50 Skor)
-                              </button>
-                              <button
-                                onClick={() => onPeaceDeal(w.id, 'REPARATIONS')}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"
-                                title="En az +%20 Savaş Skoru gerekir"
-                              >
-                                Savaş Tazminatı (≥%20 Skor)
-                              </button>
-                              <button
-                                onClick={() => onPeaceDeal(w.id, 'WHITE_PEACE')}
-                                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
-                              >
-                                Beyaz Barış
+                                <Swords className="w-3.5 h-3.5" />
+                                <span>⚔️ Savaş & Barış Masasını Aç (Müttefik Çağır / Eyalet Seç)</span>
                               </button>
                             </div>
                           )}

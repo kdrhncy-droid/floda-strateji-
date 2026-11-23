@@ -83,7 +83,10 @@ import {
 } from '../engine/empireAndArmyActions';
 import { evaluatePlayerAiCommander } from '../engine/playerAiCommander';
 import {
+  callAllyToWarDomain,
   executeDiplomaticActionDomain,
+  PeaceConferenceRequest,
+  resolvePeaceConferenceDomain,
   resolvePeaceDealDomain,
   resolveTacticalBattleOutcomeDomain,
 } from '../engine/diplomacyAndWarActions';
@@ -119,6 +122,7 @@ export interface GameStoreState {
   activeCrisis: CrisisEventDefinition | null;
   activeTacticalBattle: TacticalBattleState | null;
   activeBattleOverviewTerritoryId: string | null;
+  activeWarModalId: string | null;
   showNewsDrawer: boolean;
   showSystemModal: boolean;
   campaignOutcome: 'VICTORY' | 'DEFEAT' | null;
@@ -142,6 +146,7 @@ export interface GameStoreState {
   setShowNewsDrawer: (open: boolean) => void;
   setShowSystemModal: (open: boolean) => void;
   setActiveBattleOverviewTerritoryId: (id: string | null) => void;
+  setActiveWarModalId: (id: string | null) => void;
   applyTacticalOrder: (
     territoryId: string,
     tactic: 'TURAN' | 'BOMBARD' | 'RETREAT'
@@ -202,6 +207,8 @@ export interface GameStoreState {
   ) => void;
   applyBattleOutcome: (finalBattle: TacticalBattleState) => void;
   peaceDeal: (warId: string, dealType: PeaceDealType) => void;
+  callAllyToWar: (warId: string, allyNationId: string) => void;
+  resolvePeaceConference: (request: PeaceConferenceRequest) => void;
 }
 
 const initialBundle = initializeWorld2026('EMPIRES_1440');
@@ -253,6 +260,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   activeCrisis: null,
   activeTacticalBattle: null,
   activeBattleOverviewTerritoryId: null,
+  activeWarModalId: null,
   showNewsDrawer: false,
   showSystemModal: false,
   campaignOutcome: null,
@@ -367,6 +375,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   setShowSystemModal: (showSystemModal) => set({ showSystemModal }),
   setActiveBattleOverviewTerritoryId: (activeBattleOverviewTerritoryId) =>
     set({ activeBattleOverviewTerritoryId }),
+  setActiveWarModalId: (activeWarModalId) => set({ activeWarModalId }),
   applyTacticalOrder: (territoryId, tactic) =>
     set((s) => {
       const btlIdx = s.battles.findIndex((b) => b.territoryId === territoryId);
@@ -1406,6 +1415,66 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ...(patch.territories ? { territories: patch.territories } : {}),
       ...(patch.relations ? { relations: patch.relations } : {}),
       ...(patch.wars ? { wars: patch.wars } : {}),
+      ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.toast ? { toastMessage: patch.toast } : {}),
+      ...(patch.wars ? { activeWarModalId: null } : {}),
+      ...(outcome
+        ? {
+            campaignOutcome: outcome,
+            screenState: 'VICTORY_SUMMARY' as GameScreenState,
+            speed: 0 as SpeedLevel,
+          }
+        : {}),
+    });
+  },
+
+  callAllyToWar: (warId, allyNationId) => {
+    const s = get();
+    const patch = callAllyToWarDomain({
+      warId,
+      allyNationId,
+      playerNationId: s.playerNationId,
+      tick: s.tick,
+      gameMode: s.gameMode,
+      nations: s.nations,
+      relations: s.relations,
+      wars: s.wars,
+      newsEvents: s.newsEvents,
+    });
+    set({
+      ...(patch.wars ? { wars: patch.wars } : {}),
+      ...(patch.relations ? { relations: patch.relations } : {}),
+      ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.toast ? { toastMessage: patch.toast } : {}),
+    });
+  },
+
+  resolvePeaceConference: (request) => {
+    const s = get();
+    const patch = resolvePeaceConferenceDomain({
+      request,
+      playerNationId: s.playerNationId,
+      tick: s.tick,
+      gameMode: s.gameMode,
+      nations: s.nations,
+      territories: s.territories,
+      relations: s.relations,
+      wars: s.wars,
+      newsEvents: s.newsEvents,
+    });
+
+    const nextTerritories = patch.territories || s.territories;
+    const outcome = evaluateCampaignOutcome(
+      nextTerritories,
+      s.playerNationId,
+      s.dismissedVictoryBanner
+    );
+
+    set({
+      ...(patch.nations ? { nations: patch.nations } : {}),
+      ...(patch.territories ? { territories: patch.territories } : {}),
+      ...(patch.relations ? { relations: patch.relations } : {}),
+      ...(patch.wars ? { wars: patch.wars, activeWarModalId: null } : {}),
       ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
       ...(patch.toast ? { toastMessage: patch.toast } : {}),
       ...(outcome

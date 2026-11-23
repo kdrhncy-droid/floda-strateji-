@@ -206,8 +206,8 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     return (b.garrison || 0) - (a.garrison || 0);
   });
 
-  // 0. AoH3 Grand Strategy Country Realm Names (Rendered at overview / normal zoom < 2.05)
-  if (transform.k < 2.05) {
+  // 0. AoH3 Grand Strategy Country Realm Names (Rendered at overview / normal zoom < 2.15)
+  if (transform.k < 2.15) {
     const nationClusters: Record<
       string,
       { pts: [number, number][]; count: number }
@@ -218,7 +218,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       if (!pt) continue;
       const sx = pt[0] * transform.k + transform.x;
       const sy = pt[1] * transform.k + transform.y;
-      if (sx < -100 || sx > width + 100 || sy < -100 || sy > height + 100)
+      if (sx < -80 || sx > width + 80 || sy < -80 || sy > height + 80)
         continue;
       if (!nationClusters[t.ownerId]) {
         nationClusters[t.ownerId] = { pts: [], count: 0 };
@@ -227,61 +227,141 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       nationClusters[t.ownerId].count += 1;
     }
 
-    Object.entries(nationClusters).forEach(([nationId, cluster]) => {
-      const nat = nations[nationId];
-      if (!nat || cluster.pts.length === 0) return;
+    const sortedNationClusters = Object.entries(nationClusters).sort(
+      ([idA, a], [idB, b]) => {
+        if (idA === playerNationId) return -1;
+        if (idB === playerNationId) return 1;
+        return b.count - a.count;
+      }
+    );
 
+    for (const [nationId, cluster] of sortedNationClusters) {
+      const nat = nations[nationId];
+      if (!nat || cluster.pts.length === 0) continue;
+
+      // Use capital or median center to filter out far-flung outlier provinces
       let sumX = 0;
       let sumY = 0;
       for (const [x, y] of cluster.pts) {
         sumX += x;
         sumY += y;
       }
-      const cx = sumX / cluster.pts.length;
-      const cy = sumY / cluster.pts.length;
+      const avgX = sumX / cluster.pts.length;
+      const avgY = sumY / cluster.pts.length;
+      const maxClusterRadius = Math.max(95, 165 * transform.k);
+      const corePts = cluster.pts.filter(
+        ([x, y]) => Math.hypot(x - avgX, y - avgY) <= maxClusterRadius
+      );
+      const activePts = corePts.length > 0 ? corePts : cluster.pts;
 
-      // Clean nation name: remove "(1440)" and format spaced uppercase
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+      let cSumX = 0;
+      let cSumY = 0;
+      for (const [x, y] of activePts) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        cSumX += x;
+        cSumY += y;
+      }
+      const cx = cSumX / activePts.length;
+      const cy = cSumY / activePts.length;
+
+      // Estimated screen-space width of this nation's territory cluster
+      const singleProvRadius = (isMobileViewport ? 22 : 28) * transform.k;
+      const spanW = Math.max(
+        singleProvRadius * 1.6,
+        maxX - minX + singleProvRadius * 1.4
+      );
+
       const rawName = nat.name
         .replace(/\s*\(1440\)\s*$/, '')
-        .replace(/\s*\(2026\)\s*$/, '');
-      const spacedName = rawName
-        .toUpperCase()
-        .split('')
-        .join(' ')
-        .replace(/\s{3,}/g, '   ');
+        .replace(/\s*\(2026\)\s*$/, '')
+        .trim();
+      const shortName =
+        rawName
+          .replace(
+            /\s+(Cihan Devleti|İmparatorluğu|Krallığı|Sultanlığı|Cumhuriyeti|Federasyonu|Konfederasyonu|Despotluğu|Prensliği|Hanlığı|Beyliği|Devleti)$/i,
+            ''
+          )
+          .trim() || rawName;
 
       const isPlayer = nationId === playerNationId;
       const isAtWarWithPlayer = Boolean(
         isAtWar(wars, playerNationId, nationId)
       );
 
-      const baseSize = Math.min(
-        22,
-        Math.max(
-          10.5,
-          8.0 + Math.sqrt(cluster.count) * 3.6 + transform.k * 2.0
-        )
+      // Proportional font size that scales DOWN smoothly when zoomed out
+      const maxFontCap = isMobileViewport ? 12.5 : 14.5;
+      const zoomFactor = Math.max(0.45, Math.min(1.35, transform.k * 0.78));
+      let fontSize = Math.min(
+        maxFontCap,
+        (6.4 + Math.sqrt(activePts.length) * 1.45) * zoomFactor
       );
 
+      let displayLabel =
+        transform.k < 0.95 || spanW < 95
+          ? shortName.toLocaleUpperCase('tr-TR')
+          : rawName.toLocaleUpperCase('tr-TR');
+
       ctx.save();
-      ctx.font = `700 ${baseSize.toFixed(1)}px "Cinzel", "Georgia", "Times New Roman", serif`;
+      ctx.font = `700 ${fontSize.toFixed(1)}px "Cinzel", "Georgia", serif`;
+      let measuredW = ctx.measureText(displayLabel).width;
+
+      // If full name is wider than the country's on-screen span, switch to short name first
+      const maxAllowedW = Math.max(isPlayer ? 56 : 44, spanW * 1.22);
+      if (measuredW > maxAllowedW && displayLabel !== shortName.toLocaleUpperCase('tr-TR')) {
+        displayLabel = shortName.toLocaleUpperCase('tr-TR');
+        measuredW = ctx.measureText(displayLabel).width;
+      }
+
+      // Shrink font size proportionally so the label fits inside the nation's screen footprint
+      if (measuredW > maxAllowedW && measuredW > 0) {
+        fontSize = Math.max(5.8, fontSize * (maxAllowedW / measuredW));
+        ctx.font = `700 ${fontSize.toFixed(1)}px "Cinzel", "Georgia", serif`;
+        measuredW = ctx.measureText(displayLabel).width;
+      }
+
+      // Skip tiny unreadable labels when deeply zoomed out
+      if (fontSize < (isPlayer ? 6.0 : 6.4)) {
+        ctx.restore();
+        continue;
+      }
+
+      const boxPadX = 4;
+      const boxPadY = 2;
+      const nationBox: PlacedBox = {
+        x1: cx - measuredW / 2 - boxPadX,
+        y1: cy - fontSize / 2 - boxPadY,
+        x2: cx + measuredW / 2 + boxPadX,
+        y2: cy + fontSize / 2 + boxPadY,
+      };
+
+      if (!isPlayer && collides(nationBox)) {
+        ctx.restore();
+        continue;
+      }
+      placedBoxes.push(nationBox);
+
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(1.8, fontSize * 0.22);
+      ctx.strokeStyle = 'rgba(8, 10, 16, 0.92)';
+      ctx.strokeText(displayLabel, cx, cy);
 
-      // Deep dark border for ultra readability over any political terrain
-      ctx.lineWidth = 4.2;
-      ctx.strokeStyle = 'rgba(4, 10, 22, 0.95)';
-      ctx.strokeText(spacedName, cx, cy);
-
-      // Grand strategy warm ivory/gold typography
       ctx.fillStyle = isPlayer
-        ? 'rgba(254, 240, 138, 0.95)'
+        ? 'rgba(253, 230, 138, 0.96)'
         : isAtWarWithPlayer
-        ? 'rgba(254, 202, 202, 0.92)'
-        : 'rgba(255, 255, 255, 0.85)';
-      ctx.fillText(spacedName, cx, cy);
+        ? 'rgba(254, 202, 202, 0.94)'
+        : 'rgba(245, 238, 220, 0.88)';
+      ctx.fillText(displayLabel, cx, cy);
       ctx.restore();
-    });
+    }
   }
 
   for (const t of sortedForLabels) {

@@ -18,6 +18,9 @@ import {
 } from '../../types/game';
 import { sound } from '../../utils/soundEngine';
 
+import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
+import { calculateWarPeaceBudget } from '../../engine/diplomacyAndWarActions';
+
 interface AoH3OutlinerWidgetProps {
   playerNationId: string;
   nations: Record<string, Nation>;
@@ -29,6 +32,61 @@ interface AoH3OutlinerWidgetProps {
   onSelectTerritory: (id: string) => void;
   onSetActiveTab: (tab: BottomDrawerTab) => void;
   onStartArmyOrder: (id: string) => void;
+  onOpenWarModal?: (warId: string) => void;
+}
+
+function getWarScoreColorStyle(score: number): {
+  pillBg: string;
+  pillBorder: string;
+  textColor: string;
+} {
+  if (score >= 55) {
+    return {
+      pillBg: 'rgba(6, 78, 59, 0.96)',
+      pillBorder: '#10B981',
+      textColor: '#6EE7B7',
+    };
+  }
+  if (score >= 20) {
+    return {
+      pillBg: 'rgba(6, 95, 70, 0.92)',
+      pillBorder: '#34D399',
+      textColor: '#A7F3D0',
+    };
+  }
+  if (score > 0) {
+    return {
+      pillBg: 'rgba(15, 62, 48, 0.9)',
+      pillBorder: 'rgba(52, 211, 153, 0.65)',
+      textColor: '#D1FAE5',
+    };
+  }
+  if (score <= -55) {
+    return {
+      pillBg: 'rgba(127, 29, 29, 0.96)',
+      pillBorder: '#F43F5E',
+      textColor: '#FDA4AF',
+    };
+  }
+  if (score <= -20) {
+    return {
+      pillBg: 'rgba(136, 19, 55, 0.92)',
+      pillBorder: '#FB7185',
+      textColor: '#FECDD3',
+    };
+  }
+  if (score < 0) {
+    return {
+      pillBg: 'rgba(76, 17, 36, 0.9)',
+      pillBorder: 'rgba(251, 113, 133, 0.65)',
+      textColor: '#FFE4E6',
+    };
+  }
+  return {
+    pillBg: 'rgba(24, 21, 17, 0.94)',
+    pillBorder: 'rgba(202, 161, 90, 0.55)',
+    textColor: '#FDE68A',
+  };
 }
 
 export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
@@ -42,8 +100,10 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
   onSelectTerritory,
   onSetActiveTab,
   onStartArmyOrder,
+  onOpenWarModal,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const playerNation = nations[playerNationId];
 
   const playerWars = useMemo(
     () =>
@@ -85,179 +145,283 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
     [territories, playerNationId]
   );
 
-  const totalAlerts =
-    playerWars.length + relevantMovements.length + relevantBattles.length;
-
   return (
-    <aside className="hud-outliner absolute top-14 right-2.5 z-20 flex flex-col items-end pointer-events-none">
-      {/* Compact Toggle Button (AoH3 Right Outliner Tab) */}
-      <button
-        onClick={() => {
-          sound.playClick();
-          setIsOpen((prev) => !prev);
-        }}
-        className={`pointer-events-auto min-h-[36px] px-2.5 py-1.5 rounded-xl border shadow-xl flex items-center gap-1.5 text-xs font-bold transition-all ${
-          relevantBattles.length > 0
-            ? 'bg-amber-500 text-slate-950 border-amber-300'
-            : playerWars.length > 0
-            ? 'bg-rose-950/95 border-rose-500/70 text-rose-200 hover:bg-rose-900'
-            : isOpen
-            ? 'bg-amber-500 text-slate-950 border-amber-400'
-            : 'bg-[#090e1a]/95 border-amber-500/40 text-amber-300 hover:border-amber-400'
-        }`}
-        title="Age of History 3 Hareket & Ordu Takip Çubuğu (Outliner)"
-      >
-        <Swords className="w-3.5 h-3.5 shrink-0" />
-        <span className="whitespace-nowrap">
-          {relevantBattles.length > 0
-            ? `Muharebe (${relevantBattles.length})`
-            : playerWars.length > 0
-            ? `Savaş (${playerWars.length})`
-            : 'Ordu & Cephe'}
-        </span>
-        {relevantMovements.length > 0 && (
-          <span className="px-1.5 py-0.2 rounded bg-amber-500/25 border border-amber-400/50 text-[10px] font-mono-num text-amber-200">
-            {relevantMovements.length} Hareket
-          </span>
-        )}
-        {isOpen ? (
-          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-        ) : (
-          <ChevronLeft className="w-3.5 h-3.5 shrink-0" />
-        )}
-      </button>
+    <>
+      {/* Faz 3.3: Canlı Savaş Rozetleri (HUD) — [Oyuncu Bayrağı ⚔ Rakip Bayrağı] + Altında Yeşil/Kırmızı Savaş Skoru % */}
+      {playerWars.length > 0 && playerNation && (
+        <div
+          data-testid="live-war-hud-badges"
+          className="absolute top-14 left-2.5 z-25 flex flex-wrap items-start gap-2 pointer-events-none max-w-[calc(100vw-11rem)]"
+        >
+          {playerWars.map((war) => {
+            const isAttacker =
+              war.attackerId === playerNationId ||
+              war.attackers.includes(playerNationId);
+            const enemyId = isAttacker ? war.defenderId : war.attackerId;
+            const enemy = nations[enemyId];
+            if (!enemy) return null;
 
-      {/* Expanded AoH3 Outliner Panel */}
-      {isOpen && (
-        <div className="pointer-events-auto mt-1.5 w-64 sm:w-72 max-h-[58vh] overflow-y-auto rounded-2xl bg-[#090e1a]/96 border border-amber-500/45 shadow-2xl p-2.5 space-y-2.5 text-xs">
-          {/* Section 0: Live On-Map Battles */}
-          {relevantBattles.length > 0 && (
-            <div>
-              <div className="px-1 pb-1 border-b border-slate-800 text-[10px] font-bold text-amber-300">
-                ⚔️ SÜREN HARİTA MUHAREBELERİ ({relevantBattles.length})
-              </div>
-              <div className="space-y-1.5 mt-1.5">
-                {relevantBattles.map((btl) => {
-                  const terrName =
-                    territories[btl.territoryId]?.name.replace(/^★\s*/, '') ||
-                    btl.territoryId;
-                  const total = Math.max(
-                    1,
-                    btl.attackerTroops + btl.defenderTroops
-                  );
-                  const attPct = Math.round((btl.attackerTroops / total) * 100);
-                  return (
-                    <button
-                      key={btl.id}
-                      onClick={() => {
-                        sound.playSelectTerritory();
-                        onSelectTerritory(btl.territoryId);
-                      }}
-                      className="w-full p-2 rounded-xl bg-amber-950/50 border border-amber-500/60 text-left"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-bold text-amber-200">
-                        <span className="truncate">⚔️ {terrName}</span>
-                        <span className="font-mono-num text-[10px]">
-                          {(btl.attackerTroops / 1000).toFixed(1)}B vs{' '}
-                          {(btl.defenderTroops / 1000).toFixed(1)}B
-                        </span>
-                      </div>
-                      <div className="mt-1 w-full h-1.5 rounded-full bg-blue-600 overflow-hidden">
-                        <div
-                          className="h-full bg-rose-500"
-                          style={{ width: `${attPct}%` }}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {/* Section 1: Active Wars */}
-          <div>
-            <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800 text-[10px] font-bold text-amber-400">
-              <span>AKTİF SAVAŞLAR ({playerWars.length})</span>
-              {totalAlerts > 0 && (
-                <button
-                  onClick={() => {
-                    sound.playClick();
+            const budgetInfo = calculateWarPeaceBudget(
+              war,
+              playerNationId,
+              territories
+            );
+            // Effective display score combines battlefield war score + occupied territory advantage
+            const displayScore =
+              budgetInfo.signedWarScore >= 0
+                ? Math.max(budgetInfo.signedWarScore, budgetInfo.availableBudget)
+                : budgetInfo.signedWarScore;
+            const colorStyle = getWarScoreColorStyle(displayScore);
+            const cleanEnemyName = enemy.name.replace(/\s*\((1440|2026)\)\s*$/, '');
+
+            return (
+              <button
+                key={war.id}
+                type="button"
+                data-testid={`war-hud-badge-${war.id}`}
+                onClick={() => {
+                  sound.playClick();
+                  if (onOpenWarModal) {
+                    onOpenWarModal(war.id);
+                  } else {
                     onSetActiveTab('DIPLOMACY');
+                  }
+                }}
+                title={`${cleanEnemyName} Savaşı (${displayScore > 0 ? `+${displayScore}` : displayScore}%) — Savaş Masası & Barış Konferansı için tıklayın`}
+                className="pointer-events-auto group flex flex-col items-center rounded-xl p-1.5 pb-1 transition-transform active:scale-95 hover:scale-[1.03] shadow-2xl cursor-pointer border"
+                style={{
+                  backgroundColor: 'rgba(16, 14, 12, 0.94)',
+                  borderColor: colorStyle.pillBorder,
+                }}
+              >
+                {/* Top Row: [Player Flag] ⚔ [Enemy Flag] */}
+                <div className="flex items-center gap-1.5 px-1">
+                  <NationFlagCanvasBadge
+                    nationId={playerNation.id}
+                    flagCode={playerNation.flagCode}
+                    color={playerNation.color}
+                    width={24}
+                    height={16}
+                  />
+                  <span className="text-[11px] font-bold text-amber-400 drop-shadow">
+                    ⚔
+                  </span>
+                  <NationFlagCanvasBadge
+                    nationId={enemy.id}
+                    flagCode={enemy.flagCode}
+                    color={enemy.color}
+                    width={24}
+                    height={16}
+                  />
+                </div>
+
+                {/* Bottom Row: Dynamic Green / Red War Score Percentage */}
+                <div
+                  className="mt-1 w-full px-2 py-0.5 rounded-md border text-[10px] font-mono-num font-extrabold text-center tracking-tight transition-colors"
+                  style={{
+                    backgroundColor: colorStyle.pillBg,
+                    borderColor: colorStyle.pillBorder,
+                    color: colorStyle.textColor,
                   }}
-                  className="text-emerald-400 hover:underline"
                 >
-                  Barış Masası →
-                </button>
-              )}
-            </div>
-            {playerWars.length === 0 ? (
-              <div className="py-1.5 px-1 text-[11px] text-slate-400">
-                Devletimiz şu an barış içinde.
-              </div>
-            ) : (
-              <div className="space-y-1.5 mt-1.5">
-                {playerWars.map((war) => {
-                  const isAttacker =
-                    war.attackerId === playerNationId ||
-                    war.attackers.includes(playerNationId);
-                  const enemyId = isAttacker ? war.defenderId : war.attackerId;
-                  const enemy = nations[enemyId];
-                  if (!enemy) return null;
-                  const playerScore = isAttacker
-                    ? war.attackerWarScore
-                    : -war.attackerWarScore;
-                  return (
-                    <div
-                      key={war.id}
-                      className="p-2 rounded-xl bg-slate-950/90 border border-rose-500/40 flex items-center justify-between gap-2"
-                    >
+                  {displayScore > 0 ? `+${displayScore}%` : `${displayScore}%`}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <aside className="hud-outliner absolute top-14 right-2.5 z-20 flex flex-col items-end pointer-events-none">
+        {/* Compact Toggle Button (AoH3 Right Outliner Tab) */}
+        <button
+          onClick={() => {
+            sound.playClick();
+            setIsOpen((prev) => !prev);
+          }}
+          className={`pointer-events-auto min-h-[36px] px-2.5 py-1.5 rounded-xl border shadow-xl flex items-center gap-1.5 text-xs font-bold transition-all ${
+            relevantBattles.length > 0
+              ? 'bg-amber-500 text-slate-950 border-amber-300'
+              : playerWars.length > 0
+              ? 'bg-rose-950/95 border-rose-500/70 text-rose-200 hover:bg-rose-900'
+              : isOpen
+              ? 'bg-amber-500 text-slate-950 border-amber-400'
+              : 'bg-[#090e1a]/95 border-amber-500/40 text-amber-300 hover:border-amber-400'
+          }`}
+          title="Age of History 3 Hareket & Ordu Takip Çubuğu (Outliner)"
+        >
+          <Swords className="w-3.5 h-3.5 shrink-0" />
+          <span className="whitespace-nowrap">
+            {relevantBattles.length > 0
+              ? `Muharebe (${relevantBattles.length})`
+              : playerWars.length > 0
+              ? `Savaş (${playerWars.length})`
+              : 'Ordu & Cephe'}
+          </span>
+          {relevantMovements.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded bg-amber-500/25 border border-amber-400/50 text-[10px] font-mono-num text-amber-200">
+              {relevantMovements.length} Hareket
+            </span>
+          )}
+          {isOpen ? (
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+          ) : (
+            <ChevronLeft className="w-3.5 h-3.5 shrink-0" />
+          )}
+        </button>
+
+        {/* Expanded AoH3 Outliner Panel */}
+        {isOpen && (
+          <div className="pointer-events-auto mt-1.5 w-64 sm:w-72 max-h-[58vh] overflow-y-auto rounded-2xl bg-[#090e1a]/96 border border-amber-500/45 shadow-2xl p-2.5 space-y-2.5 text-xs">
+            {/* Section 0: Live On-Map Battles */}
+            {relevantBattles.length > 0 && (
+              <div>
+                <div className="px-1 pb-1 border-b border-slate-800 text-[10px] font-bold text-amber-300">
+                  ⚔️ SÜREN HARİTA MUHAREBELERİ ({relevantBattles.length})
+                </div>
+                <div className="space-y-1.5 mt-1.5">
+                  {relevantBattles.map((btl) => {
+                    const terrName =
+                      territories[btl.territoryId]?.name.replace(/^★\s*/, '') ||
+                      btl.territoryId;
+                    const total = Math.max(
+                      1,
+                      btl.attackerTroops + btl.defenderTroops
+                    );
+                    const attPct = Math.round((btl.attackerTroops / total) * 100);
+                    return (
                       <button
+                        key={btl.id}
                         onClick={() => {
                           sound.playSelectTerritory();
-                          const capId = enemy.capitalTerritoryId || enemy.id;
-                          if (territories[capId]) {
-                            onSelectTerritory(capId);
-                          }
+                          onSelectTerritory(btl.territoryId);
                         }}
-                        className="flex items-center gap-2 min-w-0 text-left flex-1"
+                        className="w-full p-2 rounded-xl bg-amber-950/50 border border-amber-500/60 text-left"
                       >
-                        <span
-                          className="w-6 h-6 rounded-md flex items-center justify-center font-display font-bold text-[10px] text-white shrink-0"
-                          style={{ backgroundColor: enemy.color }}
-                        >
-                          {enemy.flagCode}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="font-bold text-white truncate text-[11px]">
-                            {enemy.name.replace(/\s*\(1440\)\s*$/, '')}
-                          </div>
+                        <div className="flex items-center justify-between text-[11px] font-bold text-amber-200">
+                          <span className="truncate">⚔️ {terrName}</span>
+                          <span className="font-mono-num text-[10px]">
+                            {(btl.attackerTroops / 1000).toFixed(1)}B vs{' '}
+                            {(btl.defenderTroops / 1000).toFixed(1)}B
+                          </span>
+                        </div>
+                        <div className="mt-1 w-full h-1.5 rounded-full bg-blue-600 overflow-hidden">
                           <div
-                            className={`text-[10px] font-mono-num font-bold ${
-                              playerScore >= 0
-                                ? 'text-emerald-400'
-                                : 'text-rose-400'
-                            }`}
-                          >
-                            Skor: {playerScore >= 0 ? `+${playerScore}%` : `${playerScore}%`}
-                          </div>
+                            className="h-full bg-rose-500"
+                            style={{ width: `${attPct}%` }}
+                          />
                         </div>
                       </button>
-                      <button
-                        onClick={() => {
-                          sound.playClick();
-                          onSetActiveTab('DIPLOMACY');
-                        }}
-                        className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center gap-1 shrink-0"
-                      >
-                        <Handshake className="w-3 h-3" />
-                        <span>Barış</span>
-                      </button>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
-          </div>
+            {/* Section 1: Active Wars */}
+            <div>
+              <div className="flex items-center justify-between px-1 pb-1 border-b border-slate-800 text-[10px] font-bold text-amber-400">
+                <span>AKTİF SAVAŞLAR ({playerWars.length})</span>
+                {playerWars.length > 0 && (
+                  <button
+                    onClick={() => {
+                      sound.playClick();
+                      if (onOpenWarModal) {
+                        onOpenWarModal(playerWars[0].id);
+                      } else {
+                        onSetActiveTab('DIPLOMACY');
+                      }
+                    }}
+                    className="text-emerald-400 hover:underline cursor-pointer"
+                  >
+                    Savaş Masası →
+                  </button>
+                )}
+              </div>
+              {playerWars.length === 0 ? (
+                <div className="py-1.5 px-1 text-[11px] text-slate-400">
+                  Devletimiz şu an barış içinde.
+                </div>
+              ) : (
+                <div className="space-y-1.5 mt-1.5">
+                  {playerWars.map((war) => {
+                    const isAttacker =
+                      war.attackerId === playerNationId ||
+                      war.attackers.includes(playerNationId);
+                    const enemyId = isAttacker ? war.defenderId : war.attackerId;
+                    const enemy = nations[enemyId];
+                    if (!enemy) return null;
+                    const budgetInfo = calculateWarPeaceBudget(
+                      war,
+                      playerNationId,
+                      territories
+                    );
+                    const playerScore =
+                      budgetInfo.signedWarScore >= 0
+                        ? Math.max(
+                            budgetInfo.signedWarScore,
+                            budgetInfo.availableBudget
+                          )
+                        : budgetInfo.signedWarScore;
+                    return (
+                      <div
+                        key={war.id}
+                        className="p-2 rounded-xl bg-slate-950/90 border border-rose-500/40 flex items-center justify-between gap-2"
+                      >
+                        <button
+                          onClick={() => {
+                            sound.playClick();
+                            if (onOpenWarModal) {
+                              onOpenWarModal(war.id);
+                            } else {
+                              const capId = enemy.capitalTerritoryId || enemy.id;
+                              if (territories[capId]) {
+                                onSelectTerritory(capId);
+                              }
+                            }
+                          }}
+                          className="flex items-center gap-2 min-w-0 text-left flex-1 cursor-pointer"
+                        >
+                          <span
+                            className="w-6 h-6 rounded-md flex items-center justify-center font-display font-bold text-[10px] text-white shrink-0"
+                            style={{ backgroundColor: enemy.color }}
+                          >
+                            {enemy.flagCode}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-bold text-white truncate text-[11px]">
+                              {enemy.name.replace(/\s*\(1440\)\s*$/, '')}
+                            </div>
+                            <div
+                              className={`text-[10px] font-mono-num font-bold ${
+                                playerScore >= 0
+                                  ? 'text-emerald-400'
+                                  : 'text-rose-400'
+                              }`}
+                            >
+                              Skor: {playerScore > 0 ? `+${playerScore}%` : `${playerScore}%`}
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => {
+                            sound.playClick();
+                            if (onOpenWarModal) {
+                              onOpenWarModal(war.id);
+                            } else {
+                              onSetActiveTab('DIPLOMACY');
+                            }
+                          }}
+                          className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+                        >
+                          <Handshake className="w-3 h-3" />
+                          <span>Masaya Git</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
           {/* Section 2: Moving Armies */}
           {relevantMovements.length > 0 && (
@@ -371,5 +535,6 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
         </div>
       )}
     </aside>
+    </>
   );
 };
