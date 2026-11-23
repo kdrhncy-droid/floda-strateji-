@@ -4,18 +4,19 @@ import {
   DiplomaticRelation,
   GameModeId,
   Nation,
+  TacticalBattleState,
   Territory,
   WorldNewsEvent,
 } from '../types/game';
-import { TacticalBattleState } from '../types/tacticalBattle';
 import {
   DiplomaticActionType,
   PeaceDealType,
 } from '../components/drawers/drawerTypes';
 import { relationKey } from './worldBuilder';
-import { getEmbargoingNationIds } from './embargoUtils';
 import {
+  adjustAggressiveExpansionGain,
   formatGameDate,
+  getEmbargoingNationIds,
   getOrCreateRelation,
   isAtWar,
   resolveWarParticipants,
@@ -23,7 +24,6 @@ import {
 import { evaluateWartimeAiOperations } from './aiAndRebellionEngine';
 import { autoResolveTacticalBattle } from './tacticalBattleEngine';
 import { withUpdatedLordLoyalty } from './pashaAndFiefEngine';
-import { adjustAggressiveExpansionGain } from './technologyEffects';
 import { sound } from '../utils/soundEngine';
 
 export interface DomainActionPatch {

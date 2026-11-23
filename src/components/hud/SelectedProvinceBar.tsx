@@ -1,18 +1,27 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
   Eye,
   Globe,
   Landmark,
+  Layers,
+  Navigation,
+  Scissors,
   SlidersHorizontal,
   Swords,
+  Trash2,
   UserPlus,
   X,
 } from 'lucide-react';
+import { RESOURCE_INFO } from '../../data/world2026Data';
 import { computeVisibleTerritoryIds } from '../../engine/fogOfWarEngine';
 import { TERRAIN_INFO } from '../../engine/pashaAndFiefEngine';
-import { getOrCreateRelation, isAtWar } from '../../engine/simulationEngine';
+import {
+  calculateProvinceDevelopment,
+  getOrCreateRelation,
+  isAtWar,
+} from '../../engine/simulationEngine';
 import { getProvinceStraitBadge } from '../../engine/straitsAndTradeEngine';
 import {
   ActiveBattle,
@@ -39,6 +48,8 @@ interface SelectedProvinceBarProps {
   onSetMoveRatio: (ratio: number) => void;
   onStartArmyOrder: (territoryId: string | null) => void;
   onQuickRecruitInfantry: (territoryId: string) => void;
+  onMergeArmies?: (territoryId: string) => void;
+  onDisbandArmy?: (territoryId: string, ratio: 0.5 | 1) => void;
   onSelectTerritory: (territoryId: string) => void;
   onOpenFullDrawer: () => void;
   onOpenDiplomacyDrawer: () => void;
@@ -61,6 +72,8 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   onSetMoveRatio,
   onStartArmyOrder,
   onQuickRecruitInfantry,
+  onMergeArmies,
+  onDisbandArmy,
   onSelectTerritory,
   onOpenFullDrawer,
   onOpenDiplomacyDrawer,
@@ -68,7 +81,15 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   onOpenBattleOverview,
   onClear,
 }) => {
-  const [actionsOpen, setActionsOpen] = React.useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [disbandOpen, setDisbandOpen] = useState(false);
+
+  useEffect(() => {
+    setSplitOpen(false);
+    setDisbandOpen(false);
+  }, [territory.id]);
+
   const owner = nations[territory.ownerId];
   if (!owner) return null;
 
@@ -118,8 +139,18 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   const titleText = territory.isCapital ? `★ ${cleanName}` : cleanName;
   const terrainMeta =
     TERRAIN_INFO[territory.terrain || 'OVA'] || TERRAIN_INFO.OVA;
+  const resMeta = RESOURCE_INFO[territory.resource] || RESOURCE_INFO.TAHIL;
+  const dev = calculateProvinceDevelopment(territory, owner);
   const straitBadge = getProvinceStraitBadge(territory.id, territories, wars);
   const isOrderActive = armyOrderSourceId === territory.id;
+  const isUnderCombat =
+    battles.some((b) => b.territoryId === territory.id) ||
+    Boolean(territory.siege);
+  const sendableTroops = Math.max(0, Math.floor(territory.garrison - 500));
+  const plannedSendTroops = Math.min(
+    sendableTroops,
+    Math.round(sendableTroops * (Number.isFinite(moveRatio) ? moveRatio : 1))
+  );
 
   const infK = (
     (territory.units?.infantry ?? territory.garrison) / 1000
@@ -128,30 +159,98 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   const airK = ((territory.units?.airDrone ?? 0) / 1000).toFixed(1);
 
   return (
-    <div className="hud-province-quickbar absolute bottom-2.5 left-2.5 right-14 sm:right-auto sm:w-[620px] z-20 rounded-2xl bg-[#090e1a]/96 border border-amber-500/50 shadow-2xl px-3 py-2 flex flex-col gap-2">
-      {/* Optional AoH3 Army Split Ratio Bar when ordering a march */}
+    <div className="hud-province-quickbar absolute bottom-2.5 left-2.5 right-14 sm:right-auto sm:w-[680px] sm:max-w-[calc(100vw-8rem)] z-20 rounded-2xl bg-[#090e1a]/96 border border-amber-500/50 shadow-2xl px-3 py-2 flex flex-col gap-2">
+      {/* Direct Movement Prompt Banner (No Forced Percentage Split!) */}
       {isOrderActive && (
         <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-sky-950/90 border border-sky-400/50 text-[11px]">
           <span className="font-bold text-sky-200 truncate">
-            🎯 Haritadan hedef eyalete dokunun · Sefer Oranı:
+            🎯 Hedef şehre dokunun · %{Math.round(moveRatio * 100)} (
+            {plannedSendTroops.toLocaleString('tr-TR')} asker doğrudan ilerleyecek)
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              onStartArmyOrder(null);
+            }}
+            className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-bold border border-slate-700 whitespace-nowrap shrink-0"
+          >
+            İptal
+          </button>
+        </div>
+      )}
+
+      {/* Optional Split Ratio Strip ("Böl") */}
+      {splitOpen && isPlayerOwned && (
+        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-amber-950/85 border border-amber-500/50 text-[11px]">
+          <span className="font-bold text-amber-200 truncate">
+            ✂️ Bölünerek gönderilecek ordu oranı:
           </span>
           <div className="flex items-center gap-1 shrink-0">
-            {[0.25, 0.5, 0.75, 1].map((r) => (
+            {[0.25, 0.5, 0.75].map((r) => (
               <button
                 key={r}
+                type="button"
                 onClick={() => {
                   sound.playClick();
                   onSetMoveRatio(r);
+                  setSplitOpen(false);
+                  onStartArmyOrder(territory.id);
                 }}
-                className={`px-2 py-0.5 rounded-lg font-mono-num text-[10px] font-bold transition-colors ${
-                  Math.abs(moveRatio - r) < 0.05
+                className={`px-2 py-0.5 rounded-lg font-mono-num text-[10px] font-bold whitespace-nowrap shrink-0 transition-colors ${
+                  Math.abs(moveRatio - r) < 0.05 && isOrderActive
                     ? 'bg-amber-400 text-slate-950'
-                    : 'bg-slate-900 text-sky-200 hover:bg-slate-800'
+                    : 'bg-slate-900 text-amber-200 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40'
                 }`}
               >
                 %{Math.round(r * 100)}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setSplitOpen(false)}
+              className="px-2 py-0.5 rounded-lg bg-slate-900 text-slate-300 text-[10px] font-bold border border-slate-700 whitespace-nowrap shrink-0"
+            >
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Safe Disband Confirmation Strip ("Asker Sil") */}
+      {disbandOpen && isPlayerOwned && !isUnderCombat && (
+        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-[11px]">
+          <span className="font-bold text-rose-200 truncate">
+            🪖 Terhis (%75 İnsan Gücü İadesi):
+          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                onDisbandArmy?.(territory.id, 0.5);
+                setDisbandOpen(false);
+              }}
+              className="px-2 py-0.5 rounded-lg bg-rose-600/80 hover:bg-rose-500 text-white text-[10px] font-bold whitespace-nowrap shrink-0"
+            >
+              %50 Sil
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onDisbandArmy?.(territory.id, 1);
+                setDisbandOpen(false);
+              }}
+              className="px-2 py-0.5 rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-[10px] font-bold whitespace-nowrap shrink-0"
+            >
+              Tamamını Sil
+            </button>
+            <button
+              type="button"
+              onClick={() => setDisbandOpen(false)}
+              className="px-2 py-0.5 rounded-lg bg-slate-900 text-slate-300 text-[10px] font-bold border border-slate-700 whitespace-nowrap shrink-0"
+            >
+              Vazgeç
+            </button>
           </div>
         </div>
       )}
@@ -252,8 +351,22 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                     ? `${(territory.garrison / 1000).toFixed(1)}B (${infK}P/${armK}Z/${airK}T)`
                     : '? İstihbarat'}
                 </span>
+                <span className="text-slate-600">·</span>
+                <span
+                  className="text-amber-300 font-bold shrink-0"
+                  title={`Şehir Gelişim Puanı: ${dev.developmentScore} (${dev.tierLabel})`}
+                >
+                  ★{dev.developmentScore}P
+                </span>
+                <span className="text-slate-600">·</span>
+                <span
+                  className="text-emerald-300 font-bold shrink-0 font-sans"
+                  title={`${resMeta.name}: Ham ${dev.baseResourceValue}A → Yatırımlı ${dev.effectiveResourceValue} Altın/gün (×${dev.totalInvestmentMult} Yatırım Çarpanı)`}
+                >
+                  {resMeta.icon} {resMeta.shortName} {dev.effectiveResourceValue}A
+                </span>
                 <span className="hidden md:inline text-slate-600">·</span>
-                <span className="hidden md:inline text-emerald-300 truncate max-w-[85px] font-sans">
+                <span className="hidden md:inline text-slate-300 truncate max-w-[85px] font-sans">
                   {terrainMeta.name}
                 </span>
               </div>
@@ -284,31 +397,116 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
           </button>
         </div>
 
-        {/* Bottom Row (Portrait) / Right Block (Landscape): AoH3 1-Tap Mobile Quick Actions */}
+        {/* Bottom Row (Portrait) / Right Block (Landscape): Direct Army Actions + Province Controls */}
         <div className="hud-province-actions flex items-center gap-1.5 shrink-0 overflow-x-auto no-scrollbar">
-          {(battles.some((b) => b.territoryId === territory.id) ||
-            Boolean(territory.siege)) &&
-            onOpenBattleOverview && (
-              <button
-                onClick={() => {
-                  sound.playWarHorn();
-                  onOpenBattleOverview();
-                }}
-                className="flex-1 sm:flex-initial min-h-[36px] px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-[11px] font-bold flex items-center justify-center gap-1 shadow-lg shadow-red-950/60 animate-pulse transition-all"
-              >
-                <Swords className="w-3.5 h-3.5 shrink-0" />
-                <span>
-                  {territory.siege ? '♜ Kuşatma' : '⚔️ Muharebe'}
-                </span>
-              </button>
-            )}
+          {isUnderCombat && onOpenBattleOverview && (
+            <button
+              onClick={() => {
+                sound.playWarHorn();
+                onOpenBattleOverview();
+              }}
+              className="min-h-[36px] px-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-[11px] font-bold flex items-center justify-center gap-1 shadow-lg shadow-red-950/60 animate-pulse transition-all whitespace-nowrap shrink-0"
+            >
+              <Swords className="w-3.5 h-3.5 shrink-0" />
+              <span>{territory.siege ? '♜ Kuşatma' : '⚔️ Muharebe'}</span>
+            </button>
+          )}
+
+          {isPlayerOwned && territory.garrison >= 300 && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                setSplitOpen(false);
+                setDisbandOpen(false);
+                onSetMoveRatio(1);
+                onStartArmyOrder(isOrderActive ? null : territory.id);
+              }}
+              title="Ordunun tamamını (%100) doğrudan seçeceğiniz şehre hareket ettirin"
+              className={`min-h-[36px] px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 ${
+                isOrderActive
+                  ? 'bg-sky-500 text-slate-950 animate-pulse'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+              }`}
+            >
+              <Navigation className="w-3.5 h-3.5 shrink-0" />
+              <span>{isOrderActive ? 'Hedef Seç' : 'Hareket'}</span>
+            </button>
+          )}
+
+          {isPlayerOwned && territory.garrison >= 1500 && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                setDisbandOpen(false);
+                setSplitOpen((prev) => !prev);
+              }}
+              title="Ordudan %25, %50 veya %75 ayırarak hareket ettir"
+              className={`min-h-[36px] px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 ${
+                splitOpen
+                  ? 'bg-amber-500/25 border-amber-400 text-amber-200'
+                  : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700 text-slate-200'
+              }`}
+            >
+              <Scissors className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Böl</span>
+            </button>
+          )}
+
+          {isPlayerOwned && onMergeArmies && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                setSplitOpen(false);
+                setDisbandOpen(false);
+                onMergeArmies(territory.id);
+              }}
+              title="Komşu şehirlerdeki güvenli yedek birlikleri bu merkezde birleştir"
+              className="min-h-[36px] px-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-sky-500/40 text-sky-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
+            >
+              <Layers className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+              <span>Birleştir</span>
+            </button>
+          )}
+
+          {isPlayerOwned && onDisbandArmy && territory.garrison > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                if (isUnderCombat) {
+                  onDisbandArmy(territory.id, 0.5);
+                  return;
+                }
+                setSplitOpen(false);
+                setDisbandOpen((prev) => !prev);
+              }}
+              title={
+                isUnderCombat
+                  ? 'Muharebe veya kuşatma sırasında asker silinemez'
+                  : 'Gereksiz askerleri terhis edip %75 İnsan Gücü iadesi al'
+              }
+              className={`min-h-[36px] px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 ${
+                isUnderCombat
+                  ? 'bg-slate-900/50 border-slate-800 text-slate-500 cursor-not-allowed'
+                  : disbandOpen
+                  ? 'bg-rose-600/30 border-rose-400 text-rose-200'
+                  : 'bg-slate-900/90 hover:bg-rose-950/60 border-rose-500/40 text-rose-300'
+              }`}
+            >
+              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Asker Sil</span>
+            </button>
+          )}
 
           <button
             type="button"
             onClick={() => setActionsOpen((open) => !open)}
             aria-expanded={actionsOpen}
             aria-label="Eyalet eylemlerini aç veya kapat"
-            className={`min-h-[36px] px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1 transition-colors ${
+            className={`min-h-[36px] px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 ${
               actionsOpen
                 ? 'bg-sky-500 text-slate-950 border-sky-400'
                 : 'bg-slate-900/90 text-slate-300 border-slate-700 hover:text-white'
@@ -318,31 +516,14 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             <span>{actionsOpen ? 'Kapat' : 'Eylemler'}</span>
           </button>
 
-          {actionsOpen && isPlayerOwned && territory.garrison >= 300 && (
-            <button
-              onClick={() => {
-                sound.playClick();
-                onStartArmyOrder(isOrderActive ? null : territory.id);
-              }}
-              className={`flex-1 sm:flex-initial min-h-[36px] px-2.5 sm:px-3 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-colors ${
-                isOrderActive
-                  ? 'bg-sky-500 text-slate-950 animate-pulse'
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-              }`}
-            >
-              <Swords className="w-3.5 h-3.5 shrink-0" />
-              <span>{isOrderActive ? 'Hedef Seç' : 'Sefer'}</span>
-            </button>
-          )}
-
           {actionsOpen && isPlayerOwned && (
             <button
               onClick={() => {
                 sound.playClick();
                 onQuickRecruitInfantry(territory.id);
               }}
-              title="AoH3 Hızlı Asker Topla: +1.000 Piyade (150 Altın)"
-              className="flex-1 sm:flex-initial min-h-[36px] px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition-colors"
+              title="Hızlı Asker Topla: +1.000 Piyade (150 Altın)"
+              className="min-h-[36px] px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
             >
               <UserPlus className="w-3.5 h-3.5 shrink-0" />
               <span>+1B Asker</span>
@@ -355,7 +536,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                 sound.playClick();
                 onOpenDiplomacyDrawer();
               }}
-              className="flex-1 sm:flex-initial min-h-[36px] px-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors"
+              className="min-h-[36px] px-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
             >
               <Swords className="w-3.5 h-3.5 shrink-0" />
               <span>Diplomasi</span>

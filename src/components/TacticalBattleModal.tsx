@@ -14,12 +14,13 @@ import {
   CheckCircle2,
   Skull,
 } from 'lucide-react';
-import { Nation, Territory } from '../types/game';
 import {
+  Nation,
   TacticalBattleState,
   TacticalFormationCard,
   TacticalFormationId,
-} from '../types/tacticalBattle';
+  Territory,
+} from '../types/game';
 import {
   TACTICAL_FORMATION_CARDS,
   autoResolveTacticalBattle,

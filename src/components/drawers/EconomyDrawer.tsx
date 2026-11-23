@@ -1,6 +1,8 @@
 import React from 'react';
-import { Anchor, Compass, Swords } from 'lucide-react';
+import { Anchor, Compass, Swords, TrendingUp } from 'lucide-react';
 import { CommandDrawersProps } from './drawerTypes';
+import { RESOURCE_INFO } from '../../data/world2026Data';
+import { calculateProvinceDevelopment } from '../../engine/simulationEngine';
 import {
   evaluateActiveStraits,
   TRADE_RAID_INFLUENCE_COST,
@@ -41,6 +43,15 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
     Boolean(onRaidEnemyTradeRoutes) &&
     (playerNation.clanInfluence ?? 120) >= TRADE_RAID_INFLUENCE_COST &&
     playerNation.manpower >= TRADE_RAID_MANPOWER_COST;
+
+  const ownedTerritoryDevRows = Object.values(territories)
+    .filter((t) => t && t.ownerId === playerNation.id)
+    .map((t) => ({
+      territory: t,
+      resMeta: RESOURCE_INFO[t.resource] || RESOURCE_INFO.TAHIL,
+      dev: calculateProvinceDevelopment(t, playerNation),
+    }))
+    .sort((a, b) => b.dev.developmentScore - a.dev.developmentScore);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -434,6 +445,63 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Stage 3.1 & 3.2: City Development Scores & Investment-Driven Resource Production Table */}
+      <div className="lg:col-span-12 bg-slate-950/85 border border-emerald-500/35 rounded-2xl p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+          <div>
+            <h3 className="text-sm font-bold text-emerald-300 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                Şehir Gelişim Puanları ve Yatırım Odaklı Kaynak Üretimi ({ownedTerritoryDevRows.length} Eyalet)
+              </span>
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Her şehrin ham üretim kaynağı vardır (🪵 Odun, 🐄 Sığır, 🌿 Pamuk, 🌾 Tahıl, ⛏ Demir, 🪙 Altın, 🛢 Petrol); ancak <strong>Sanayi, Liman ve Teknoloji yatırımı</strong> yapılan şehirler, yatırımsız kalan zengin madenleri geride bırakır.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[240px] overflow-y-auto pr-1">
+          {ownedTerritoryDevRows.map(({ territory: t, resMeta, dev }) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onSelectTerritory(t.id)}
+              className="text-left p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/50 transition-colors flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white truncate">
+                    {t.isCapital ? '★ ' : ''}
+                    {t.name.replace(/^★\s*/, '')}
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono-num font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+                    ★{dev.developmentScore}P
+                  </span>
+                </div>
+                <div className="text-[11px] text-amber-200/95 truncate mt-0.5 flex items-center gap-1">
+                  <span>{resMeta.icon}</span>
+                  <span className="truncate">{resMeta.name}</span>
+                </div>
+                <div className="text-[10px] font-mono-num text-slate-400 mt-0.5">
+                  Ham {dev.baseResourceValue}A →{' '}
+                  <strong className="text-emerald-400">
+                    {dev.effectiveResourceValue}A/gün
+                  </strong>{' '}
+                  (×{dev.totalInvestmentMult})
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-xs font-mono-num font-bold text-amber-300">
+                  +{dev.effectiveDailyGdp}
+                </div>
+                <div className="text-[9px] text-slate-400">Günlük GDP</div>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </div>

@@ -6,8 +6,8 @@ import {
   getOrCreateRelation,
   getWarScoreForNation,
   isAtWar,
+  isNationEmbargoing,
 } from "../../engine/simulationEngine";
-import { isNationEmbargoing } from "../../engine/embargoUtils";
 import { sound } from "../../utils/soundEngine";
 
 interface ProvinceForeignDiplomacyPanelProps {

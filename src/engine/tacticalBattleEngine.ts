@@ -3,12 +3,14 @@ import {
   getArmyGenerationInfo,
   getNationModernizedTier,
 } from '../data/world2026Data';
-import { Nation, Territory, UnitComposition } from '../types/game';
 import {
+  Nation,
   TacticalBattleState,
   TacticalFormationCard,
   TacticalFormationId,
-} from '../types/tacticalBattle';
+  Territory,
+  UnitComposition,
+} from '../types/game';
 import { TERRAIN_INFO } from './pashaAndFiefEngine';
 
 export const TACTICAL_FORMATION_CARDS: Record<

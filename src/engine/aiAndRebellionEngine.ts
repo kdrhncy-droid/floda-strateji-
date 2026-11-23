@@ -19,12 +19,12 @@ import { AiAggressivenessLevel } from './gameSettings';
 import { findArmyRouteAStar } from './pathfindingEngine';
 import { STRATEGIC_STRAITS } from './straitsAndTradeEngine';
 import {
+  adjustOccupiedUnrestDrift,
   getOrCreateRelation,
   isAtWar,
   resolveWarParticipants,
 } from './simulationEngine';
 import { relationKey } from './worldBuilder';
-import { adjustOccupiedUnrestDrift } from './technologyEffects';
 
 function scaleUnitComp(units: UnitComposition, ratio: number): UnitComposition {
   return {

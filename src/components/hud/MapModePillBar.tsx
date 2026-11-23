@@ -8,10 +8,12 @@ import {
   Layers3,
   ChevronDown,
   ChevronUp,
+  Bot,
 } from 'lucide-react';
 import { MapMode } from '../../types/game';
 import { sound } from '../../utils/soundEngine';
 import { CULTURES, RELIGIONS } from '../../data/religionAndCultureData';
+import { RESOURCE_INFO } from '../../data/world2026Data';
 
 export type MapMacroMode =
   | 'NONE'
@@ -23,33 +25,42 @@ interface MapModePillBarProps {
   mapMode: MapMode;
   macroMode?: MapMacroMode;
   toastMessage: string | null;
+  aiCommanderEnabled?: boolean;
+  isPlayerAtWar?: boolean;
   onSetMapMode: (mode: MapMode) => void;
   onSetMacroMode?: (mode: MapMacroMode) => void;
+  onToggleAiCommander?: () => void;
 }
 
 const MAP_MODES: ReadonlyArray<{ id: MapMode; label: string; glyph: string; tone: string }> = [
   { id: 'POLITICAL', label: 'Siyasi', glyph: '◈', tone: 'text-amber-300' },
+  { id: 'ECONOMIC', label: 'Ekonomi', glyph: '◉', tone: 'text-emerald-300' },
+  { id: 'RESOURCES', label: 'Kaynaklar', glyph: '⛏', tone: 'text-yellow-300' },
+  { id: 'DIPLOMATIC', label: 'Diplomasi', glyph: '⚖', tone: 'text-sky-300' },
+  { id: 'MILITARY', label: 'Askeri', glyph: '⚔', tone: 'text-rose-300' },
   { id: 'RELIGION', label: 'Din', glyph: '☪', tone: 'text-emerald-300' },
   { id: 'CULTURE', label: 'Kültür', glyph: '🏹', tone: 'text-violet-300' },
   { id: 'ASSIMILATION', label: 'Asimilasyon', glyph: '✦', tone: 'text-orange-300' },
   { id: 'TERRAIN', label: 'Arazi', glyph: '⌁', tone: 'text-lime-300' },
-  { id: 'DIPLOMATIC', label: 'Diplomasi', glyph: '⚖', tone: 'text-sky-300' },
-  { id: 'ECONOMIC', label: 'Ekonomi', glyph: '◉', tone: 'text-yellow-300' },
   { id: 'IDEOLOGY', label: 'İdeoloji', glyph: '◆', tone: 'text-fuchsia-300' },
-  { id: 'MILITARY', label: 'Askeri', glyph: '⚔', tone: 'text-rose-300' },
 ];
 
 export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   mapMode,
   macroMode = 'NONE',
   toastMessage,
+  aiCommanderEnabled = false,
+  isPlayerAtWar = false,
   onSetMapMode,
   onSetMacroMode,
+  onToggleAiCommander,
 }) => {
   const [legendOpen, setLegendOpen] = useState(true);
   const [openTray, setOpenTray] = useState<'NONE' | 'MODES' | 'MACRO'>('NONE');
 
   const hasLegend =
+    mapMode === 'ECONOMIC' ||
+    mapMode === 'RESOURCES' ||
     mapMode === 'RELIGION' ||
     mapMode === 'CULTURE' ||
     mapMode === 'ASSIMILATION';
@@ -59,7 +70,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   return (
     <>
       <div className="hud-mapmode-bar absolute top-2 left-2 z-20 flex flex-col gap-1.5 max-w-[calc(100vw-130px)] sm:max-w-[calc(100vw-220px)] pointer-events-none">
-        {/* Compact Single-Row Trigger Bar (Frees vertical map viewport on mobile) */}
+        {/* Compact Single-Row Trigger Bar (Directly under Nation Flag on top-left) */}
         <div className="flex items-center gap-1.5 pointer-events-auto flex-wrap">
           <button
             type="button"
@@ -67,7 +78,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
               sound.playClick();
               setOpenTray((prev) => (prev === 'MODES' ? 'NONE' : 'MODES'));
             }}
-            className={`hud-mapmode-shell hud-surface flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold shadow-lg transition-colors ${
+            className={`hud-mapmode-shell hud-surface flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
               openTray === 'MODES'
                 ? 'border-amber-400 text-amber-200'
                 : 'border-amber-500/35 text-slate-200 hover:border-amber-400/70'
@@ -80,9 +91,9 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
               {activeModeMeta.glyph} {activeModeMeta.label}
             </span>
             {openTray === 'MODES' ? (
-              <ChevronUp className="w-3 h-3 text-slate-400" />
+              <ChevronUp className="w-3 h-3 text-slate-400 shrink-0" />
             ) : (
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
             )}
           </button>
 
@@ -98,7 +109,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   setOpenTray((prev) => (prev === 'MACRO' ? 'NONE' : 'MACRO'));
                 }
               }}
-              className={`hud-macro-bar hud-surface flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold shadow-lg transition-colors ${
+              className={`hud-macro-bar hud-surface flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
                 macroMode !== 'NONE'
                   ? 'border-emerald-400 bg-emerald-950/90 text-emerald-200'
                   : openTray === 'MACRO'
@@ -113,10 +124,54 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 {macroMode === 'NONE' ? 'Hızlı İşlem' : 'Aktif İşlem ✕'}
               </span>
               {showMacroTray ? (
-                <ChevronUp className="w-3 h-3 text-slate-400" />
+                <ChevronUp className="w-3 h-3 text-slate-400 shrink-0" />
               ) : (
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
               )}
+            </button>
+          )}
+
+          {onToggleAiCommander && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                onToggleAiCommander();
+              }}
+              aria-pressed={aiCommanderEnabled}
+              title="Savaş sırasında orduları akıllı YZ komutanına devret (kuşatma kurtarır, cepheyi savunur, avantajlı hedeflere saldırır)"
+              data-full-text="Yapay Zekâya Devret: Savaş sırasında ordularınızı akıllı yapay zekâ yönetir. Kuşatılan şehirleri kurtarır, zayıf sınırları takviye eder ve güçlü olduğu düşman şehirlerine saldırır; ancak asla savaş açmaz, barış imzalamaz veya asker silmez."
+              className={`hud-mapmode-shell hud-surface flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
+                aiCommanderEnabled
+                  ? isPlayerAtWar
+                    ? 'border-emerald-400 bg-emerald-950/90 text-emerald-200'
+                    : 'border-amber-400 bg-amber-950/80 text-amber-200'
+                  : 'border-amber-500/35 text-slate-200 hover:border-amber-400/70'
+              }`}
+            >
+              <Bot
+                className={`w-3.5 h-3.5 shrink-0 ${
+                  aiCommanderEnabled
+                    ? isPlayerAtWar
+                      ? 'text-emerald-300'
+                      : 'text-amber-300'
+                    : 'text-amber-400'
+                }`}
+              />
+              {aiCommanderEnabled && (
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    isPlayerAtWar ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                  }`}
+                />
+              )}
+              <span className="whitespace-nowrap">
+                {aiCommanderEnabled
+                  ? isPlayerAtWar
+                    ? 'YZ Komutan: Açık'
+                    : 'YZ Komutan: Hazır'
+                  : 'Yapay Zekâya Devret'}
+              </span>
             </button>
           )}
         </div>
@@ -239,6 +294,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
               <Info aria-hidden="true" className="w-3.5 h-3.5 text-amber-400" />
               <span>
+                {mapMode === 'ECONOMIC' && 'Şehir Gelişim Puanı & Ekonomi'}
+                {mapMode === 'RESOURCES' && 'Üretim Kaynakları & Değerleri'}
                 {mapMode === 'RELIGION' && 'Din Haritası Lejantı'}
                 {mapMode === 'CULTURE' && 'Kültür Haritası Lejantı'}
                 {mapMode === 'ASSIMILATION' && 'Asimilasyon (Core) Lejantı'}
@@ -255,6 +312,55 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
 
           {legendOpen && (
             <div id="map-mode-legend-content" className="p-2 flex flex-col gap-1.5 max-h-[175px] sm:max-h-[210px] overflow-y-auto no-scrollbar text-[11px]">
+              {mapMode === 'ECONOMIC' && (
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[10px] text-amber-200/90 leading-snug">
+                    Bina ve teknoloji yatırımı arttıkça şehrin <strong>Gelişim Puanı (★P)</strong> yükselir ve harita rengi koyu zümrüte döner:
+                  </p>
+                  {[
+                    { color: '#042F2E', title: '88+ Puan · İmparatorluk Metropolü', desc: 'Çok koyu zümrüt — en yüksek üretim ve vergi merkezi' },
+                    { color: '#064E3B', title: '70–87 Puan · Kalkınmış Sanayi Şehri', desc: 'Koyu zümrüt — gelişmiş sanayi ve liman yatırımı' },
+                    { color: '#047857', title: '54–69 Puan · Gelişen Ticaret Sancağı', desc: 'Derin yeşil — orta-üst ekonomik kapasite' },
+                    { color: '#10B981', title: '28–53 Puan · Orta Ölçekli Eyalet', desc: 'Canlı yeşil — yatırıma açık gelişmekte olan şehir' },
+                    { color: '#6EE7B7', title: '<28 Puan · Kırsal Taşra', desc: 'Açık nane — henüz bina yatırımı yapılmamış bölge' },
+                  ].map((tier) => (
+                    <div key={tier.title} className="flex items-center gap-2 p-1 rounded bg-slate-800/50 border border-slate-700/50">
+                      <span className="w-3.5 h-3.5 rounded-sm shrink-0 border border-white/20" style={{ backgroundColor: tier.color }} />
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-100 block truncate">{tier.title}</span>
+                        <span className="text-[9px] text-slate-400 block truncate">{tier.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {mapMode === 'RESOURCES' && (
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[10px] text-amber-200/90 leading-snug">
+                    Her kaynağın ham taban değeri vardır; ancak <strong>Sanayi, Liman ve Teknoloji yatırımı</strong> yapılan bir Pamuk/Odun şehri, yatırımsız Petrol/Altın şehrini geçer!
+                  </p>
+                  {Object.entries(RESOURCE_INFO).map(([resId, r]) => (
+                    <div
+                      key={resId}
+                      className="flex items-center justify-between gap-1.5 p-1 rounded bg-slate-800/45 border border-slate-700/40"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className="w-4 h-4 rounded flex items-center justify-center text-[10px] shrink-0"
+                          style={{ backgroundColor: `${r.color}33`, border: `1px solid ${r.color}` }}
+                        >
+                          {r.icon}
+                        </span>
+                        <span className="font-bold text-slate-100 truncate">{r.name}</span>
+                      </div>
+                      <span className="text-[10px] font-mono-num text-amber-300 font-bold shrink-0">
+                        Ham {r.baseValue}A
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {mapMode === 'RELIGION' &&
                 Object.values(RELIGIONS).map((r) => (
                   <div

@@ -15,11 +15,10 @@ import { music } from './engine/musicEngine';
 import { TopHudBar } from './components/hud/TopHudBar';
 import { MapMacroMode, MapModePillBar } from './components/hud/MapModePillBar';
 import { SelectedProvinceBar } from './components/hud/SelectedProvinceBar';
-import { BottomNavBar } from './components/hud/BottomNavBar';
+import { BottomNavBar, OfflineStatusBanner } from './components/hud/BottomNavBar';
 import { AoH3OutlinerWidget } from './components/hud/AoH3OutlinerWidget';
 import { MehterhaneDock } from './components/hud/MehterhaneDock';
 import { QuickOnboardingOverlay } from './components/hud/QuickOnboardingOverlay';
-import { OfflineStatusBanner } from './components/hud/OfflineStatusBanner';
 import { TitleMenuModal } from './components/TitleMenuModal';
 import { WorldMapCanvas } from './components/WorldMapCanvas';
 import { CommandDrawers } from './components/CommandDrawers';
@@ -29,7 +28,7 @@ import { TacticalBattleModal } from './components/TacticalBattleModal';
 import { AoH3BattleOverviewModal } from './components/AoH3BattleOverviewModal';
 import { CampaignOutcomeModal } from './components/modals/CampaignOutcomeModal';
 import { NationDiplomacyModal } from './components/modals/NationDiplomacyModal';
-import { getClockSpeedProfile } from './engine/gameClockConfig';
+import { getClockSpeedProfile } from './engine/gameSettings';
 import { WorldEventToastStack } from './components/hud/WorldEventToastStack';
 import { FullTextTooltipOverlay } from './components/hud/FullTextTooltipOverlay';
 import { LoadingSplashScreen } from './components/LoadingSplashScreen';
@@ -597,7 +596,7 @@ function GameAppInner() {
                   onClick={() => store.setPendingWarMove(null)}
                   className="w-full py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs cursor-pointer"
                 >
-                  Sefer Emrini İptal Et
+                  Hareket Emrini İptal Et
                 </button>
               </div>
             </div>
@@ -659,8 +658,17 @@ function GameAppInner() {
           mapMode={mapMode}
           macroMode={macroMode}
           toastMessage={toastMessage}
+          aiCommanderEnabled={store.aiCommanderEnabled}
+          isPlayerAtWar={wars.some(
+            (w) =>
+              w.attackerId === playerNationId ||
+              w.defenderId === playerNationId ||
+              w.attackers.includes(playerNationId) ||
+              w.defenders.includes(playerNationId)
+          )}
           onSetMapMode={store.setMapMode}
           onSetMacroMode={setMacroMode}
+          onToggleAiCommander={store.toggleAiCommander}
         />
 
         {screenState === 'PLAYING' && (
@@ -695,6 +703,8 @@ function GameAppInner() {
             onQuickRecruitInfantry={(tId) =>
               store.recruitUnit(tId, 'infantry', 1000, 150)
             }
+            onMergeArmies={store.mergeNeighborArmies}
+            onDisbandArmy={store.disbandArmy}
             onSelectTerritory={store.selectTerritory}
             onOpenFullDrawer={() => store.setActiveTab('TERRITORY')}
             onOpenDiplomacyDrawer={() => store.setActiveTab('DIPLOMACY')}

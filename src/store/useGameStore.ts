@@ -15,11 +15,11 @@ import {
   Nation,
   PendingWarMoveRequest,
   SpeedLevel,
+  TacticalBattleState,
   Territory,
   UnitType,
   WorldNewsEvent,
 } from '../types/game';
-import { TacticalBattleState } from '../types/tacticalBattle';
 import {
   DiplomaticActionType,
   PeaceDealType,
@@ -28,7 +28,6 @@ import {
   COMMANDERS,
   getCommandersForMode,
 } from '../data/world2026Data';
-import { getClockSpeedProfile } from '../engine/gameClockConfig';
 import {
   GeoCountryFeature,
   initializeWorld2026,
@@ -50,6 +49,7 @@ import {
 } from '../engine/saveManager';
 import {
   GameSettings,
+  getClockSpeedProfile,
   loadGameSettings,
   saveGameSettings,
 } from '../engine/gameSettings';
@@ -64,9 +64,11 @@ import {
   boostResearchDomain,
   cancelResearchDomain,
   changeIdeologyDomain,
+  disbandArmyDomain,
   enactReformDomain,
   executeArmyMoveDomain,
   formEmpireDomain,
+  mergeNeighborArmiesDomain,
   modernizeNationalArmyDomain,
   recruitOrAssignGeneralDomain,
   recruitUnitDomain,
@@ -77,6 +79,7 @@ import {
   unlockTechDomain,
   upgradeBuildingDomain,
 } from '../engine/empireAndArmyActions';
+import { evaluatePlayerAiCommander } from '../engine/playerAiCommander';
 import {
   executeDiplomaticActionDomain,
   resolvePeaceDealDomain,
@@ -107,6 +110,7 @@ export interface GameStoreState {
   armyOrderSourceId: string | null;
   pendingWarMove: PendingWarMoveRequest | null;
   moveRatio: number;
+  aiCommanderEnabled: boolean;
   soundEnabled: boolean;
   settings: GameSettings;
   toastMessage: string | null;
@@ -129,6 +133,7 @@ export interface GameStoreState {
   setPendingWarMove: (req: PendingWarMoveRequest | null) => void;
   confirmPendingWarMove: () => void;
   setMoveRatio: (ratio: number) => void;
+  toggleAiCommander: () => void;
   toggleSound: () => void;
   updateSettings: (partial: Partial<GameSettings>) => void;
   showToast: (msg: string | null) => void;
@@ -164,6 +169,8 @@ export interface GameStoreState {
   startMissionary: (territoryId: string) => void;
   formEmpire: (empireId: string) => void;
   executeArmyMove: (fromId: string, toId: string) => void;
+  mergeNeighborArmies: (targetTerritoryId: string) => void;
+  disbandArmy: (territoryId: string, ratio: 0.5 | 1) => void;
   modernizeNationalArmy: () => void;
   assignFiefLord: (territoryId: string, lordId: string | null) => void;
   bestowFavorOnLord: (lordId: string) => void;
@@ -232,7 +239,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   selectedTerritoryId: '792',
   armyOrderSourceId: null,
   pendingWarMove: null,
-  moveRatio: 0.5,
+  moveRatio: 1,
+  aiCommanderEnabled: false,
   soundEnabled: true,
   settings: loadGameSettings(),
   toastMessage: null,
@@ -280,10 +288,62 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       return {
         ...patch,
         pendingWarMove: null,
+        moveRatio: 1,
         ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
       };
     }),
   setMoveRatio: (moveRatio) => set({ moveRatio }),
+  toggleAiCommander: () =>
+    set((s) => {
+      const nextEnabled = !s.aiCommanderEnabled;
+      sound.playClick();
+      if (!nextEnabled) {
+        return {
+          aiCommanderEnabled: false,
+          toastMessage: 'Yapay Zekâ Komutanı kapatıldı; ordu kontrolü tamamen sizde.',
+        };
+      }
+      const inWar = s.wars.some(
+        (w) =>
+          w.attackerId === s.playerNationId ||
+          w.defenderId === s.playerNationId ||
+          w.attackers.includes(s.playerNationId) ||
+          w.defenders.includes(s.playerNationId)
+      );
+      if (!inWar) {
+        return {
+          aiCommanderEnabled: true,
+          toastMessage:
+            '🤖 Yapay Zekâ Komutanı hazır! Barıştasınız — yeni bir savaşta savunma ve taarruzu otomatik yönetecek.',
+        };
+      }
+      const immediateRes = evaluatePlayerAiCommander({
+        tick: s.tick,
+        playerNationId: s.playerNationId,
+        nations: s.nations,
+        territories: s.territories,
+        relations: s.relations,
+        wars: s.wars,
+        battles: s.battles,
+        movements: s.movements,
+      });
+      if (immediateRes) {
+        sound.playMarch();
+        return {
+          aiCommanderEnabled: true,
+          territories: immediateRes.updatedTerritories,
+          movements: [...s.movements, ...immediateRes.newMovements],
+          toastMessage:
+            immediateRes.summaryToast ||
+            '🤖 Yapay Zekâ Komutanı aktif! Savaş cepheleri devralındı.',
+        };
+      }
+      return {
+        aiCommanderEnabled: true,
+        toastMessage:
+          '🤖 Yapay Zekâ Komutanı aktif! Uygun cephe fırsatı oluştuğunda birlikleri otomatik yönetecek.',
+      };
+    }),
   toggleSound: () =>
     set((s) => {
       const next = !s.soundEnabled;
@@ -629,6 +689,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       selectedTerritoryId: null,
       armyOrderSourceId: null,
       pendingWarMove: null,
+      moveRatio: 1,
+      aiCommanderEnabled: false,
       activeTab: 'NONE',
       activeCrisis: null,
       activeTacticalBattle: null,
@@ -692,6 +754,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       selectedTerritoryId: hydrated.playerNationId,
       armyOrderSourceId: null,
       pendingWarMove: null,
+      moveRatio: 1,
+      aiCommanderEnabled: false,
       activeTab: 'NONE',
       speed: 0,
       campaignOutcome: null,
@@ -740,6 +804,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       movements: s.movements,
       newsEvents: s.newsEvents,
       settings: s.settings,
+      aiCommanderEnabled: s.aiCommanderEnabled,
     });
 
     for (const cue of out.sounds) {
@@ -882,9 +947,35 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       const patch = executeArmyMoveDomain({ ...s, fromId, toId });
       return {
         ...patch,
+        ...(patch.movements ? { moveRatio: 1 } : {}),
         ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
       };
     }),
+
+  mergeNeighborArmies: (targetTerritoryId) =>
+    set((s) =>
+      mergeNeighborArmiesDomain({
+        targetTerritoryId,
+        territories: s.territories,
+        wars: s.wars,
+        battles: s.battles,
+        movements: s.movements,
+        playerNationId: s.playerNationId,
+        speed: s.speed,
+      })
+    ),
+
+  disbandArmy: (territoryId, ratio) =>
+    set((s) =>
+      disbandArmyDomain({
+        territoryId,
+        ratio,
+        territories: s.territories,
+        nations: s.nations,
+        battles: s.battles,
+        playerNationId: s.playerNationId,
+      })
+    ),
 
   modernizeNationalArmy: () => set((s) => modernizeNationalArmyDomain(s)),
 

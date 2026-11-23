@@ -1,5 +1,5 @@
 import { GeoProjection } from 'd3-geo';
-import { IDEOLOGIES } from '../data/world2026Data';
+import { IDEOLOGIES, RESOURCE_INFO } from '../data/world2026Data';
 import {
   CULTURES,
   RELIGIONS,
@@ -7,7 +7,10 @@ import {
   resolveTerritoryReligion,
 } from '../data/religionAndCultureData';
 import { TERRAIN_INFO } from '../engine/pashaAndFiefEngine';
-import { isAtWar } from '../engine/simulationEngine';
+import {
+  calculateProvinceDevelopment,
+  isAtWar,
+} from '../engine/simulationEngine';
 import {
   evaluateActiveStraits,
   TRADE_CORRIDORS,
@@ -74,12 +77,20 @@ export function resolveTerritoryFillColor(params: {
   }
 
   if (mapMode === 'ECONOMIC') {
-    const effectiveGdp = t.baseGdp * (1 + t.buildings.factory * 0.25);
-    if (effectiveGdp >= 320) return '#10B981';
-    if (effectiveGdp >= 220) return '#22C55E';
-    if (effectiveGdp >= 150) return '#84CC16';
-    if (effectiveGdp >= 100) return '#EAB308';
-    return '#64748B';
+    // Progressive darkening emerald gradient: more developed cities have visibly darker/richer green tones
+    const dev = calculateProvinceDevelopment(t, owner);
+    const score = dev.developmentScore;
+    if (score >= 88 || dev.effectiveDailyGdp >= 340) return '#042F2E'; // En Koyu Zümrüt (İmparatorluk Metropolü)
+    if (score >= 70 || dev.effectiveDailyGdp >= 245) return '#064E3B'; // Çok Koyu Yeşil (Kalkınmış Sanayi Şehri)
+    if (score >= 54 || dev.effectiveDailyGdp >= 175) return '#047857'; // Koyu Zümrüt (Gelişen Ticaret Sancağı)
+    if (score >= 40 || dev.effectiveDailyGdp >= 120) return '#059669'; // Orta Zümrüt (Orta Ölçekli Eyalet)
+    if (score >= 28 || dev.effectiveDailyGdp >= 80) return '#10B981';  // Canlı Yeşil
+    if (score >= 20) return '#6EE7B7';                                 // Açık Nane Yeşili (Az Gelişmiş)
+    return '#94A3B8';                                                  // Kırsal / Yatırımsız Taşra
+  }
+
+  if (mapMode === 'RESOURCES') {
+    return RESOURCE_INFO[t.resource]?.color || '#10B981';
   }
 
   if (mapMode === 'IDEOLOGY') {
@@ -197,9 +208,8 @@ export function renderOceanAndPolygons(params: {
     ctx.stroke(cache.graticulePath);
   }
 
-  const sourceOrderTerritory = armyOrderSourceId
-    ? territories[armyOrderSourceId]
-    : null;
+  const _unusedOrderId = armyOrderSourceId;
+  void _unusedOrderId;
 
   const zoomBorderScale = Math.min(
     1.85,
@@ -218,9 +228,6 @@ export function renderOceanAndPolygons(params: {
     const isEnemyTerritory =
       t.ownerId !== playerNationId &&
       Boolean(isAtWar(wars, playerNationId, t.ownerId));
-    const isValidMoveTarget = Boolean(
-      sourceOrderTerritory && sourceOrderTerritory.neighbors.includes(t.id)
-    );
 
     ctx.fillStyle = resolveTerritoryFillColor({
       territory: t,
@@ -270,26 +277,16 @@ export function renderOceanAndPolygons(params: {
       ctx.fill(path2d);
     }
 
-    if (isValidMoveTarget) {
-      ctx.fillStyle =
-        t.ownerId === playerNationId
-          ? 'rgba(56, 189, 248, 0.48)'
-          : isEnemyTerritory
-          ? 'rgba(239, 68, 68, 0.58)'
-          : 'rgba(245, 158, 11, 0.45)';
-      ctx.fill(path2d);
-    }
-
     ctx.globalAlpha = 1;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
     if (classifiedBorders) {
-      // Only accent active move-target or enemy-war highlight polygons here;
+      // Only accent active enemy-war highlight polygons here;
       // actual sovereign/internal/coastal borders render in clean dedicated passes below.
-      if (isValidMoveTarget || isEnemyTerritory) {
-        ctx.lineWidth = ((isValidMoveTarget ? 1.65 : 1.35) * zoomBorderScale) / transform.k;
-        ctx.strokeStyle = isValidMoveTarget ? '#38BDF8' : 'rgba(248, 113, 113, 0.72)';
+      if (isEnemyTerritory) {
+        ctx.lineWidth = (1.35 * zoomBorderScale) / transform.k;
+        ctx.strokeStyle = 'rgba(248, 113, 113, 0.72)';
         ctx.stroke(path2d);
       }
     } else {
@@ -298,21 +295,16 @@ export function renderOceanAndPolygons(params: {
         const n = territories[nId];
         return n && n.ownerId !== t.ownerId;
       });
-      const isExternalBorder =
-        hasForeignNeighbor || isEnemyTerritory || isValidMoveTarget;
+      const isExternalBorder = hasForeignNeighbor || isEnemyTerritory;
       ctx.lineWidth =
-        ((isValidMoveTarget
-          ? 1.6
-          : isEnemyTerritory
+        ((isEnemyTerritory
           ? 1.45
           : isExternalBorder
           ? 1.25
           : 0.65) *
           zoomBorderScale) /
         transform.k;
-      ctx.strokeStyle = isValidMoveTarget
-        ? '#38BDF8'
-        : isEnemyTerritory
+      ctx.strokeStyle = isEnemyTerritory
         ? '#F87171'
         : isExternalBorder
         ? isPlayerOwned
@@ -473,30 +465,6 @@ export function renderOceanAndPolygons(params: {
       ctx.fillText('⚓', anchorPt[0], anchorPt[1]);
       ctx.restore();
     });
-  }
-
-  // 3. Neighbor target link lines in Army Order Mode
-  if (sourceOrderTerritory) {
-    const pFrom = projection(sourceOrderTerritory.centroid);
-    if (pFrom) {
-      sourceOrderTerritory.neighbors.forEach((nId) => {
-        const nTerr = territories[nId];
-        if (!nTerr) return;
-        const pTo = projection(nTerr.centroid);
-        if (!pTo) return;
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.setLineDash([4 / transform.k, 4 / transform.k]);
-        ctx.moveTo(pFrom[0], pFrom[1]);
-        ctx.lineTo(pTo[0], pTo[1]);
-        ctx.lineWidth = 1.7 / transform.k;
-        ctx.strokeStyle =
-          nTerr.ownerId === playerNationId ? '#38BDF8' : '#F59E0B';
-        ctx.stroke();
-        ctx.restore();
-      });
-    }
   }
 
   // Exit World Space back to crisp Screen Space

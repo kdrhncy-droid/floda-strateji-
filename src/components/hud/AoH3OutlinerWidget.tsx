@@ -105,7 +105,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
             ? 'bg-amber-500 text-slate-950 border-amber-400'
             : 'bg-[#090e1a]/95 border-amber-500/40 text-amber-300 hover:border-amber-400'
         }`}
-        title="Age of History 3 Sefer & Ordu Takip Çubuğu (Outliner)"
+        title="Age of History 3 Hareket & Ordu Takip Çubuğu (Outliner)"
       >
         <Swords className="w-3.5 h-3.5 shrink-0" />
         <span className="whitespace-nowrap">
@@ -117,7 +117,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
         </span>
         {relevantMovements.length > 0 && (
           <span className="px-1.5 py-0.2 rounded bg-amber-500/25 border border-amber-400/50 text-[10px] font-mono-num text-amber-200">
-            {relevantMovements.length} Sefer
+            {relevantMovements.length} Hareket
           </span>
         )}
         {isOpen ? (
@@ -357,11 +357,11 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                         onSelectTerritory(terr.id);
                         onStartArmyOrder(terr.id);
                       }}
-                      title="Bu Eyaletten Sefer Emri Başlat"
+                      title="Bu Eyaletten Hareket Emri Başlat"
                       className="px-2 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] flex items-center gap-1 shrink-0"
                     >
                       <Crosshair className="w-3 h-3" />
-                      <span>Sefer</span>
+                      <span>Hareket</span>
                     </button>
                   </div>
                 );

@@ -1,8 +1,65 @@
+import { SpeedLevel } from '../types/game';
+
 export type AutoSaveIntervalOption = 0 | 30 | 90 | 180 | 300 | 365;
 export type AiAggressivenessLevel = 'PASSIVE' | 'NORMAL' | 'AGGRESSIVE' | 'CHAOS';
 export type CrisisFrequencyOption = 0 | 32 | 60 | 90;
 export type MapLabelDensityOption = 'COMPACT' | 'BALANCED' | 'DETAILED';
 export type UiScaleOption = 'COMPACT' | 'STANDARD' | 'LARGE';
+
+export interface ClockSpeedProfile {
+  speed: SpeedLevel;
+  /** Real-time milliseconds between simulation steps */
+  intervalMs: number;
+  /** In-game hours advanced per simulation step */
+  hoursStep: number;
+  /** Short Turkish rate label for HUD */
+  rateLabel: string;
+}
+
+export const CLOCK_SPEED_PROFILES: Record<SpeedLevel, ClockSpeedProfile> = {
+  0: {
+    speed: 0,
+    intervalMs: 0,
+    hoursStep: 0,
+    rateLabel: 'DURAKLATILDI',
+  },
+  1: {
+    speed: 1,
+    intervalMs: 720,
+    hoursStep: 1,
+    rateLabel: 'HIZ: 1x (+1 Saat)',
+  },
+  2: {
+    speed: 2,
+    intervalMs: 520,
+    hoursStep: 2,
+    rateLabel: 'HIZ: 2x (+2 Saat)',
+  },
+  4: {
+    speed: 4,
+    intervalMs: 380,
+    hoursStep: 3,
+    rateLabel: 'HIZ: 4x (+3 Saat)',
+  },
+  5: {
+    speed: 5,
+    intervalMs: 270,
+    hoursStep: 4,
+    rateLabel: 'HIZ: 5x (+4 Saat)',
+  },
+};
+
+export function getClockSpeedProfile(speed: SpeedLevel): ClockSpeedProfile {
+  return CLOCK_SPEED_PROFILES[speed] || CLOCK_SPEED_PROFILES[1];
+}
+
+export function getRealSecondsPerGameYear(speed: SpeedLevel): number {
+  const profile = getClockSpeedProfile(speed);
+  if (profile.intervalMs <= 0 || profile.hoursStep <= 0) return Infinity;
+  const ticksPerDay = 24 / profile.hoursStep;
+  const secondsPerDay = (ticksPerDay * profile.intervalMs) / 1000;
+  return secondsPerDay * 365;
+}
 
 export const MAP_LABEL_DENSITY_OPTIONS: {
   value: MapLabelDensityOption;

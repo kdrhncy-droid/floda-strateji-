@@ -1,4 +1,5 @@
 import {
+  ActiveBattle,
   ActiveWar,
   ArmyMovement,
   BuildingType,
@@ -16,7 +17,6 @@ import {
   WorldNewsEvent,
 } from '../types/game';
 import { RELIGIONS, resolveTerritoryReligion } from '../data/religionAndCultureData';
-import { adjustAggressiveExpansionGain } from './technologyEffects';
 import {
   BUILDINGS,
   COMMANDERS,
@@ -30,6 +30,7 @@ import {
   getTechTreeForMode,
 } from '../data/world2026Data';
 import {
+  adjustAggressiveExpansionGain,
   calculateNationEconomy,
   formatGameDate,
   getOrCreateRelation,
@@ -645,7 +646,7 @@ export function executeArmyMoveDomain(params: {
   if (sendTroops < 1000) {
     return {
       toastMessage:
-        'Sefer için en az 1.000 asker sevk edilmeli; kaynak eyalette 500 savunma askeri kalır.',
+        'Hareket için en az 1.000 asker sevk edilmeli; kaynak eyalette 500 savunma askeri kalır.',
     };
   }
 
@@ -710,12 +711,12 @@ export function executeArmyMoveDomain(params: {
     sound.playWarHorn();
     toast =
       defAllyNames.length > 0
-        ? `${targetNation?.name} hedefine sefer başladı! Savunma Paktı (${defAllyNames.join(', ')}) savaşa dahil oldu!`
-        : `${targetNation?.name} hedefine sefer başlatıldı ve savaş ilan edildi!`;
+        ? `${targetNation?.name} hedefine hareket başladı! Savunma Paktı (${defAllyNames.join(', ')}) savaşa dahil oldu!`
+        : `${targetNation?.name} hedefine hareket başlatıldı ve savaş ilan edildi!`;
   } else {
     sound.playMarch();
     if (route.hops.length > 1) {
-      toast = `🧭 Ordu ${route.hops.length} eyaletlik güzergâh üzerinden ${toT.name} hedefine intikale başladı!`;
+      toast = `🧭 Ordu ${route.hops.length} eyaletlik güzergâh üzerinden ${toT.name} hedefine harekete geçti!`;
     }
   }
 
@@ -739,7 +740,7 @@ export function executeArmyMoveDomain(params: {
   if (lordRetinueBonus > 0) {
     sentUnits.infantry += Math.round(lordRetinueBonus * 0.75);
     sentUnits.armor += Math.round(lordRetinueBonus * 0.25);
-    toast = `Sancak Lordları sefere katıldı! (+${lordRetinueBonus.toLocaleString('tr-TR')} Lord Muhafızı orduya eklendi)`;
+    toast = `Sancak Lordları harekete katıldı! (+${lordRetinueBonus.toLocaleString('tr-TR')} Lord Muhafızı orduya eklendi)`;
   }
 
   let workingNations: Record<string, Nation> =
@@ -1220,3 +1221,168 @@ export function changeIdeologyDomain(params: {
     toastMessage: `Devlet ideolojisi ${IDEOLOGIES[newIdeology].name} olarak güncellendi.`,
   };
 }
+
+/**
+ * Gathers excess safe reserve troops from adjacent friendly provinces straight into `targetTerritoryId`.
+ * Respects active battles and sieges so frontline defenders are never stripped mid-combat.
+ */
+export function mergeNeighborArmiesDomain(params: {
+  targetTerritoryId: string;
+  territories: Record<string, Territory>;
+  wars: ActiveWar[];
+  battles: ActiveBattle[];
+  movements: ArmyMovement[];
+  playerNationId: string;
+  speed: SpeedLevel;
+}): EmpireActionPatch {
+  const {
+    targetTerritoryId,
+    territories,
+    wars,
+    battles,
+    movements,
+    playerNationId,
+    speed,
+  } = params;
+
+  const target = territories[targetTerritoryId];
+  if (!target || target.ownerId !== playerNationId) {
+    return {
+      toastMessage: 'Orduları yalnızca kendi kontrolünüzdeki bir şehirde birleştirebilirsiniz.',
+    };
+  }
+
+  const battleTerrIds = new Set(battles.map((b) => b.territoryId));
+  const nextTerritories = { ...territories };
+  const addedMovements: ArmyMovement[] = [];
+  let totalMergedTroops = 0;
+  let mergedSourceCount = 0;
+
+  for (const nbId of target.neighbors) {
+    const nb = nextTerritories[nbId];
+    if (!nb || nb.ownerId !== playerNationId) continue;
+    if (nb.siege || battleTerrIds.has(nbId)) continue;
+
+    const bordersActiveEnemy = nb.neighbors.some((n2Id) => {
+      const n2 = nextTerritories[n2Id];
+      return Boolean(
+        n2 &&
+          n2.ownerId !== playerNationId &&
+          isAtWar(wars, playerNationId, n2.ownerId)
+      );
+    });
+    const reserve = bordersActiveEnemy ? 1000 : 500;
+    const sendable = Math.floor(nb.garrison - reserve);
+    if (sendable < 500) continue;
+
+    const ratio = sendable / Math.max(1, nb.garrison);
+    const srcUnits = nb.units || { infantry: nb.garrison, armor: 0, airDrone: 0 };
+    const sentUnits = scaleUnits(srcUnits, ratio);
+    const remainingUnits = {
+      infantry: Math.max(0, srcUnits.infantry - sentUnits.infantry),
+      armor: Math.max(0, srcUnits.armor - sentUnits.armor),
+      airDrone: Math.max(0, srcUnits.airDrone - sentUnits.airDrone),
+    };
+
+    nextTerritories[nbId] = {
+      ...nb,
+      garrison: Math.max(0, nb.garrison - sendable),
+      units: remainingUnits,
+    };
+
+    addedMovements.push({
+      id: `mv_merge_${Date.now()}_${nbId}_${Math.random().toString(36).slice(2, 6)}`,
+      ownerId: playerNationId,
+      fromTerritoryId: nbId,
+      toTerritoryId: targetTerritoryId,
+      finalDestinationId: targetTerritoryId,
+      troops: sendable,
+      units: sentUnits,
+      progress: 22,
+      isAttack: false,
+    });
+
+    totalMergedTroops += sendable;
+    mergedSourceCount++;
+  }
+
+  if (addedMovements.length === 0) {
+    return {
+      toastMessage:
+        'Komşu eyaletlerde birleştirilebilecek güvenli yedek birlik yok (Savaş/kuşatma altındaki veya yalnız sınır nöbetçileri yerinde kalır).',
+    };
+  }
+
+  sound.playMarch();
+  return {
+    territories: nextTerritories,
+    movements: [...movements, ...addedMovements],
+    ...(speed === 0 ? { speed: 1 as SpeedLevel } : {}),
+    toastMessage: `🛡️ ${mergedSourceCount} komşu şehirden ${totalMergedTroops.toLocaleString('tr-TR')} asker ${target.name} merkezinde birleşmek üzere harekete geçti!`,
+  };
+}
+
+/**
+ * Disbands 50% or 100% of stationed garrison on peaceful owned territory and refunds 75% to manpower pool.
+ * Strictly blocked during active combat or siege to prevent war-score denial exploits.
+ */
+export function disbandArmyDomain(params: {
+  territoryId: string;
+  ratio: 0.5 | 1;
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  battles: ActiveBattle[];
+  playerNationId: string;
+}): EmpireActionPatch {
+  const { territoryId, ratio, territories, nations, battles, playerNationId } = params;
+  const terr = territories[territoryId];
+  const playerNation = nations[playerNationId];
+  if (!terr || !playerNation || terr.ownerId !== playerNationId) return {};
+
+  if (terr.siege || battles.some((b) => b.territoryId === territoryId)) {
+    return {
+      toastMessage:
+        '⚔️ Aktif muharebe veya kuşatma altındaki bir şehirde asker silinemez (terhis engellendi)!',
+    };
+  }
+
+  if (terr.garrison <= 0) {
+    return { toastMessage: 'Bu şehirde silinecek / terhis edilecek asker yok.' };
+  }
+
+  const disbandedTroops =
+    ratio >= 1
+      ? Math.max(0, Math.floor(terr.garrison))
+      : Math.max(0, Math.floor(terr.garrison * ratio));
+  if (disbandedTroops <= 0) return {};
+
+  const remainingTroops = Math.max(0, terr.garrison - disbandedTroops);
+  const srcUnits = terr.units || { infantry: terr.garrison, armor: 0, airDrone: 0 };
+  const remainingUnits =
+    remainingTroops === 0
+      ? { infantry: 0, armor: 0, airDrone: 0 }
+      : scaleUnits(srcUnits, remainingTroops / Math.max(1, terr.garrison));
+
+  const refundedManpower = Math.round(disbandedTroops * 0.75);
+  sound.playClick();
+
+  return {
+    nations: {
+      ...nations,
+      [playerNationId]: {
+        ...playerNation,
+        manpower: playerNation.manpower + refundedManpower,
+      },
+    },
+    territories: {
+      ...territories,
+      [territoryId]: {
+        ...terr,
+        garrison: remainingTroops,
+        units: remainingUnits,
+      },
+    },
+    toastMessage: `🪖 ${terr.name}: ${disbandedTroops.toLocaleString('tr-TR')} asker silindi/terhis edildi (+${refundedManpower.toLocaleString('tr-TR')} İnsan Gücü rezerve iade edildi).`,
+  };
+}
+

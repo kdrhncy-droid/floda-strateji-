@@ -24,7 +24,7 @@ import {
   formatGameDate,
   NationEconomyBreakdown,
 } from '../../engine/simulationEngine';
-import { getClockSpeedProfile } from '../../engine/gameClockConfig';
+import { getClockSpeedProfile } from '../../engine/gameSettings';
 import { music } from '../../engine/musicEngine';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
 import { sound } from '../../utils/soundEngine';

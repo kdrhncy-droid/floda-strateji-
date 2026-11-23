@@ -14,11 +14,13 @@ export interface PathfindingResult {
   blockedReason?: string;
 }
 
-function geoDistApprox(a: [number, number], b: [number, number]): number {
+export function sphericalDegDist(a: [number, number], b: [number, number]): number {
   let dLon = Math.abs(a[0] - b[0]);
   if (dLon > 180) dLon = 360 - dLon;
   const dLat = a[1] - b[1];
-  return Math.hypot(dLon, dLat);
+  const avgLatRad = ((a[1] + b[1]) * 0.5 * Math.PI) / 180;
+  const cosLat = Math.max(0.15, Math.cos(avgLatRad));
+  return Math.hypot(dLon * cosLat, dLat);
 }
 
 /**
@@ -122,36 +124,43 @@ export function findArmyRouteAStar(params: {
     return { reachable: false, hops: [], blockedReason: 'Bölge bulunamadı.' };
   }
 
-  // Direct neighbor fast-path (still enforces Strait Naval Blockade!)
+  let lastStraitBlockReason: string | undefined;
+
+  // Direct neighbor fast-path if legal and not blocked by hostile naval blockade
   if (start.neighbors.includes(toId)) {
-    const straitCheck = checkStraitMilitaryBlockade({
-      fromId,
+    const directAccess = classifyTerritoryTraversal({
+      terr: goal,
       toId,
       moverNationId,
-      territories,
+      nations,
+      relations,
       wars,
+      allowTargetWarDeclaration,
     });
-    if (straitCheck.blocked) {
-      return {
-        reachable: false,
-        hops: [],
-        blockedReason: straitCheck.reason,
-      };
+    if (directAccess !== 'BLOCKED') {
+      const straitCheck = checkStraitMilitaryBlockade({
+        fromId,
+        toId,
+        moverNationId,
+        territories,
+        wars,
+      });
+      if (!straitCheck.blocked) {
+        return { reachable: true, hops: [toId] };
+      }
+      lastStraitBlockReason = straitCheck.reason;
     }
-    return { reachable: true, hops: [toId] };
   }
-
-  let lastStraitBlockReason: string | undefined;
 
   const openSet = new Set<string>([fromId]);
   const cameFrom: Record<string, string> = {};
   const gScore: Record<string, number> = { [fromId]: 0 };
   const fScore: Record<string, number> = {
-    [fromId]: geoDistApprox(start.centroid, goal.centroid),
+    [fromId]: sphericalDegDist(start.centroid, goal.centroid),
   };
 
   let visitedCount = 0;
-  const MAX_VISITED = 600;
+  const MAX_VISITED = 1500;
 
   while (openSet.size > 0 && visitedCount < MAX_VISITED) {
     visitedCount++;
@@ -231,8 +240,8 @@ export function findArmyRouteAStar(params: {
       }
 
       const stepDist = Math.max(
-        1,
-        geoDistApprox(curTerr.centroid, nbTerr.centroid) *
+        0.05,
+        sphericalDegDist(curTerr.centroid, nbTerr.centroid) *
           terrainCostMultiplier(nbTerr.terrain)
       );
       const tentativeG = (gScore[currentId] ?? Infinity) + stepDist;
@@ -241,7 +250,7 @@ export function findArmyRouteAStar(params: {
         cameFrom[nbId] = currentId;
         gScore[nbId] = tentativeG;
         fScore[nbId] =
-          tentativeG + geoDistApprox(nbTerr.centroid, goal.centroid);
+          tentativeG + sphericalDegDist(nbTerr.centroid, goal.centroid);
         openSet.add(nbId);
       }
     }
@@ -255,3 +264,4 @@ export function findArmyRouteAStar(params: {
       'Hedefe ulaşılabilir kara/deniz koridoru yok! (Aradaki tarafsız ülkelerden Askeri Geçiş İzni alın veya sınır kalelerini önce fethedin.)',
   };
 }
+

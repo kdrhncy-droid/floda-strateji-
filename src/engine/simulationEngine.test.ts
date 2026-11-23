@@ -1,14 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  adjustAggressiveExpansionGain,
+  adjustOccupiedUnrestDrift,
   calculateNationEconomy,
+  calculateProvinceDevelopment,
   formatGameDate,
   getOrCreateRelation,
   getWarScoreForNation,
   isAtWar,
+  isNationEmbargoed,
   resolveWarParticipants,
 } from './simulationEngine';
-import { isNationEmbargoed } from './embargoUtils';
 import {
   calculateBlockadedCorridorIncome,
   calculateNationTradeAndStraits,
@@ -33,10 +36,6 @@ import {
   startResearchDomain,
   upgradeBuildingDomain,
 } from './empireAndArmyActions';
-import {
-  adjustAggressiveExpansionGain,
-  adjustOccupiedUnrestDrift,
-} from './technologyEffects';
 import { ActiveBattle, ActiveWar, DiplomaticRelation, Nation, Territory } from '../types/game';
 import { resolveTerritoryFillColor } from '../map/mapPolygonRenderer';
 import {
@@ -2985,7 +2984,7 @@ test('upgraded AI relieves besieged capitals, builds peacetime economy, and sign
 });
 
 test('gameClockConfig enforces realistic time pacing even at 5x speed', async () => {
-  const { getClockSpeedProfile, getRealSecondsPerGameYear } = await import('./gameClockConfig');
+  const { getClockSpeedProfile, getRealSecondsPerGameYear } = await import('./gameSettings');
 
   const p1 = getClockSpeedProfile(1);
   const p5 = getClockSpeedProfile(5);
@@ -3185,5 +3184,386 @@ test('saveManager v6 validates checksums, migrates legacy saves, and preserves r
   deleteSaveSlot('SLOT_3');
 });
 
+function mkFaz3Nation(id: string, overrides: Partial<Nation> = {}): Nation {
+  return {
+    id,
+    name: id,
+    flagCode: id,
+    color: '#B91C1C',
+    capitalTerritoryId: `${id}_0`,
+    ideology: 'MONARCHY',
+    treasury: 1000,
+    manpower: 10000,
+    stability: 80,
+    inflation: 2,
+    researchPoints: 50,
+    taxRate: 25,
+    budget: { military: 30, economy: 30, research: 20, welfare: 20 },
+    aggressiveExpansion: 0,
+    unlockedTechs: [],
+    enactedReforms: [],
+    recruitedGeneralIds: [],
+    activeGeneralId: null,
+    isEliminated: false,
+    ...overrides,
+  };
+}
 
+function mkFaz3Territory(id: string, overrides: Partial<Territory> = {}): Territory {
+  return {
+    id,
+    name: id,
+    ownerId: 'TUR',
+    coreOwnerId: overrides.ownerId || 'TUR',
+    population: 100,
+    baseGdp: 30,
+    resource: 'TAHIL',
+    buildings: {
+      factory: 1,
+      barracks: 1,
+      fortress: 0,
+      university: 0,
+      tradeHub: 0,
+      supplyDepot: 0,
+    },
+    garrison: 3000,
+    units: {
+      infantry: overrides.garrison ?? 3000,
+      armor: 0,
+      airDrone: 0,
+    },
+    unrest: 0,
+    isOccupied: false,
+    centroid: [30, 39],
+    neighbors: [],
+    ...overrides,
+  };
+}
 
+test('polygon adjacency builds connected sub-provinces and spherical A* finds shortest direct path', async () => {
+  const { buildPolygonAdjacencyNeighbors } = await import('./worldBuilder');
+  const { findArmyRouteAStar } = await import('./pathfindingEngine');
+
+  const makeSquareFeature = (id: string, x0: number, y0: number, x1: number, y1: number) => ({
+    type: 'Feature' as const,
+    id,
+    properties: { name: id },
+    geometry: {
+      type: 'Polygon' as const,
+      coordinates: [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]],
+    },
+  });
+
+  const feats = [
+    makeSquareFeature('A', 28, 39, 29, 40),
+    makeSquareFeature('B', 29, 39, 30, 40),
+    makeSquareFeature('C', 30, 39, 31, 40),
+    makeSquareFeature('D', 31, 39, 32, 40),
+    makeSquareFeature('N', 28.5, 42, 31.5, 44), // distant northern province NOT touching A..D
+  ];
+
+  const nations: Record<string, Nation> = {
+    TUR: mkFaz3Nation('TUR', { name: 'Osmanlı', capitalTerritoryId: 'A' }),
+  };
+  const territories: Record<string, Territory> = {
+    A: mkFaz3Territory('A', { ownerId: 'TUR', centroid: [28.5, 39.5], garrison: 10000 }),
+    B: mkFaz3Territory('B', { ownerId: 'TUR', centroid: [29.5, 39.5], garrison: 3000 }),
+    C: mkFaz3Territory('C', { ownerId: 'TUR', centroid: [30.5, 39.5], garrison: 3000 }),
+    D: mkFaz3Territory('D', { ownerId: 'TUR', centroid: [31.5, 39.5], garrison: 3000 }),
+    N: mkFaz3Territory('N', { ownerId: 'TUR', centroid: [30.0, 43.0], garrison: 3000 }),
+  };
+
+  buildPolygonAdjacencyNeighbors(feats, territories, (a, b) => {
+    if (!territories[a].neighbors.includes(b)) territories[a].neighbors.push(b);
+    if (!territories[b].neighbors.includes(a)) territories[b].neighbors.push(a);
+  });
+
+  assert.ok(territories.A.neighbors.includes('B') && territories.B.neighbors.includes('C') && territories.C.neighbors.includes('D'));
+  assert.equal(territories.A.neighbors.includes('N'), false);
+
+  // Add optional distant northern shortcut to confirm spherical A* still chooses shorter direct corridor A-B-C-D
+  territories.A.neighbors.push('N');
+  territories.N.neighbors.push('A', 'D');
+  territories.D.neighbors.push('N');
+
+  const res = findArmyRouteAStar({
+    fromId: 'A',
+    toId: 'D',
+    moverNationId: 'TUR',
+    territories,
+    nations,
+    relations: {},
+    wars: [],
+  });
+
+  assert.equal(res.reachable, true);
+  assert.deepEqual(res.hops, ['B', 'C', 'D'], 'A* must take the shorter A-B-C-D southern corridor over the distant northern N detour');
+});
+
+test('mergeNeighborArmiesDomain and disbandArmyDomain respect safety reserves, battles, sieges, and manpower refund', async () => {
+  const { mergeNeighborArmiesDomain, disbandArmyDomain } = await import('./empireAndArmyActions');
+
+  const nations: Record<string, Nation> = {
+    TUR: mkFaz3Nation('TUR', { name: 'Osmanlı', manpower: 5000, capitalTerritoryId: 'P1' }),
+    BYZ: mkFaz3Nation('BYZ', { name: 'Bizans', capitalTerritoryId: 'E1' }),
+  };
+  const territories: Record<string, Territory> = {
+    P1: mkFaz3Territory('P1', { ownerId: 'TUR', isCapital: true, neighbors: ['P2', 'P3', 'P4'], garrison: 4000 }),
+    P2: mkFaz3Territory('P2', { ownerId: 'TUR', neighbors: ['P1'], garrison: 3000 }), // Peaceful neighbor -> sends 2500 (leaves 500)
+    P3: mkFaz3Territory('P3', { ownerId: 'TUR', neighbors: ['P1'], garrison: 3000, siege: { territoryId: 'P3', attackerId: 'BYZ', defenderId: 'TUR', attackerTroops: 2000, progress: 25, wallIntegrity: 80, startedTick: 1 } }), // Under siege -> skipped!
+    P4: mkFaz3Territory('P4', { ownerId: 'TUR', neighbors: ['P1', 'E1'], garrison: 2500 }), // Borders war enemy -> keeps 1000, sends 1500
+    E1: mkFaz3Territory('E1', { ownerId: 'BYZ', neighbors: ['P4'], garrison: 1500 }),
+  };
+  const wars: ActiveWar[] = [
+    {
+      id: 'war_1',
+      name: 'Osmanlı - Bizans Savaşı',
+      attackerId: 'TUR',
+      defenderId: 'BYZ',
+      attackers: ['TUR'],
+      defenders: ['BYZ'],
+      startedTick: 1,
+      attackerWarScore: 0,
+      casualtiesAttacker: 0,
+      casualtiesDefender: 0,
+    },
+  ];
+
+  const merged = mergeNeighborArmiesDomain({
+    targetTerritoryId: 'P1',
+    territories,
+    wars,
+    battles: [],
+    movements: [],
+    playerNationId: 'TUR',
+    speed: 0,
+  });
+
+  assert.equal(merged.movements?.length, 2, 'Should gather safe troops from P2 and P4 while skipping besieged P3');
+  assert.equal(merged.territories?.P2.garrison, 500);
+  assert.equal(merged.territories?.P3.garrison, 3000);
+  assert.equal(merged.territories?.P4.garrison, 1000);
+
+  // Disband blocked during active siege on P3
+  const blockedSiege = disbandArmyDomain({
+    territoryId: 'P3',
+    ratio: 0.5,
+    territories,
+    nations,
+    battles: [],
+    playerNationId: 'TUR',
+  });
+  assert.equal(blockedSiege.territories, undefined);
+
+  // Disband blocked during active battle on P1
+  const activeBattleMock: ActiveBattle = {
+    id: 'btl_1',
+    territoryId: 'P1',
+    attackerId: 'BYZ',
+    defenderId: 'TUR',
+    attackerTroops: 2000,
+    attackerUnits: { infantry: 2000, armor: 0, airDrone: 0 },
+    defenderTroops: 4000,
+    defenderUnits: { infantry: 4000, armor: 0, airDrone: 0 },
+    round: 1,
+  };
+  const blockedBattle = disbandArmyDomain({
+    territoryId: 'P1',
+    ratio: 1,
+    territories,
+    nations,
+    battles: [activeBattleMock],
+    playerNationId: 'TUR',
+  });
+  assert.equal(blockedBattle.territories, undefined);
+
+  // Disband 100% cleanly on peaceful P2 and verify 75% manpower refund
+  const disbandedFull = disbandArmyDomain({
+    territoryId: 'P2',
+    ratio: 1,
+    territories,
+    nations,
+    battles: [],
+    playerNationId: 'TUR',
+  });
+  assert.equal(disbandedFull.territories?.P2.garrison, 0);
+  assert.equal(disbandedFull.nations?.TUR.manpower, 5000 + Math.round(3000 * 0.75));
+});
+
+test('evaluatePlayerAiCommander operates strictly at war, relieves sieges first, attacks winnable targets, and advances reserves', async () => {
+  const { evaluatePlayerAiCommander } = await import('./playerAiCommander');
+
+  const nations: Record<string, Nation> = {
+    TUR: mkFaz3Nation('TUR', { name: 'Osmanlı', capitalTerritoryId: 'CAP' }),
+    ENM: mkFaz3Nation('ENM', { name: 'Düşman', capitalTerritoryId: 'E_FORT' }),
+  };
+
+  const baseFort = mkFaz3Territory('x').buildings;
+  const territories: Record<string, Territory> = {
+    REAR: mkFaz3Territory('REAR', { ownerId: 'TUR', neighbors: ['CAP'], centroid: [28, 39], garrison: 8000 }),
+    CAP: mkFaz3Territory('CAP', {
+      ownerId: 'TUR',
+      isCapital: true,
+      neighbors: ['REAR', 'FRONT'],
+      centroid: [29, 39],
+      garrison: 2000,
+      siege: { territoryId: 'CAP', attackerId: 'ENM', defenderId: 'TUR', attackerTroops: 5000, progress: 45, wallIntegrity: 60, startedTick: 2 },
+    }),
+    FRONT: mkFaz3Territory('FRONT', { ownerId: 'TUR', neighbors: ['CAP', 'E_WEAK', 'E_FORT'], centroid: [30, 39], garrison: 9000 }),
+    E_WEAK: mkFaz3Territory('E_WEAK', { ownerId: 'ENM', neighbors: ['FRONT'], centroid: [31, 39], garrison: 2000, units: { infantry: 2000, armor: 0, airDrone: 0 } }),
+    E_FORT: mkFaz3Territory('E_FORT', { ownerId: 'ENM', neighbors: ['FRONT'], centroid: [31, 40], garrison: 12000, buildings: { ...baseFort, fortress: 3 } }),
+  };
+
+  // Returns null during peacetime
+  const peaceRes = evaluatePlayerAiCommander({
+    tick: 10,
+    playerNationId: 'TUR',
+    nations,
+    territories,
+    relations: {},
+    wars: [],
+    battles: [],
+    movements: [],
+  });
+  assert.equal(peaceRes, null);
+
+  const warRes = evaluatePlayerAiCommander({
+    tick: 10,
+    playerNationId: 'TUR',
+    nations,
+    territories,
+    relations: {},
+    wars: [
+      {
+        id: 'war_ai',
+        name: 'Osmanlı - Düşman Savaşı',
+        attackerId: 'TUR',
+        defenderId: 'ENM',
+        attackers: ['TUR'],
+        defenders: ['ENM'],
+        startedTick: 1,
+        attackerWarScore: 0,
+        casualtiesAttacker: 0,
+        casualtiesDefender: 0,
+      },
+    ],
+    battles: [],
+    movements: [],
+  });
+
+  assert.ok(warRes && warRes.newMovements.length >= 2, 'AI commander must dispatch siege relief and winnable offensive movements');
+  assert.ok(
+    warRes.newMovements.some((m) => m.finalDestinationId === 'CAP'),
+    'AI commander must prioritize relieving besieged capital CAP'
+  );
+  assert.ok(
+    warRes.newMovements.some((m) => m.fromTerritoryId === 'FRONT' && m.toTerritoryId === 'E_WEAK'),
+    'AI commander must attack weak E_WEAK'
+  );
+  assert.equal(
+    warRes.newMovements.some((m) => m.toTerritoryId === 'E_FORT'),
+    false,
+    'AI commander must avoid suicidal attack into fortified E_FORT'
+  );
+});
+
+test('Faz 3.1 & 3.2: City Development Score darkens ECONOMIC map color and building/tech investments allow Cotton/Timber to outproduce uninvested Gold/Oil', () => {
+  const uninvestedNation = mkFaz3Nation('OIL_NAT', {
+    unlockedTechs: [],
+    enactedReforms: [],
+  });
+  const investedNation = mkFaz3Nation('COT_NAT', {
+    unlockedTechs: ['eco_1', 'eco_2', 'eco_3', 'sci_2', 'sci_4'],
+    enactedReforms: ['ref_free_trade_zones'],
+  });
+
+  const uninvestedOilCity = mkFaz3Territory('OIL_1', {
+    ownerId: 'OIL_NAT',
+    coreOwnerId: 'OIL_NAT',
+    resource: 'PETROL',
+    baseGdp: 55,
+    buildings: {
+      factory: 0,
+      barracks: 0,
+      fortress: 0,
+      university: 0,
+      tradeHub: 0,
+      supplyDepot: 0,
+    },
+  });
+
+  const investedCottonCity = mkFaz3Territory('COT_1', {
+    ownerId: 'COT_NAT',
+    coreOwnerId: 'COT_NAT',
+    resource: 'PAMUK',
+    baseGdp: 85,
+    isCapital: true,
+    buildings: {
+      factory: 4,
+      barracks: 2,
+      fortress: 2,
+      university: 3,
+      tradeHub: 3,
+      supplyDepot: 2,
+    },
+  });
+
+  const oilDev = calculateProvinceDevelopment(uninvestedOilCity, uninvestedNation);
+  const cottonDev = calculateProvinceDevelopment(investedCottonCity, investedNation);
+
+  assert.ok(
+    oilDev.baseResourceValue > cottonDev.baseResourceValue,
+    'Raw base value of Oil (44A) must exceed raw base value of Cotton (26A)'
+  );
+  assert.ok(
+    cottonDev.effectiveResourceValue > oilDev.effectiveResourceValue * 1.8,
+    `Invested Cotton city (${cottonDev.effectiveResourceValue}A) must outproduce uninvested Oil city (${oilDev.effectiveResourceValue}A)`
+  );
+  assert.ok(
+    cottonDev.developmentScore >= 90 && cottonDev.developmentScore > oilDev.developmentScore + 50,
+    `Invested city development score (${cottonDev.developmentScore}) must significantly exceed uninvested city (${oilDev.developmentScore})`
+  );
+
+  const nations = { OIL_NAT: uninvestedNation, COT_NAT: investedNation };
+  const territories = { OIL_1: uninvestedOilCity, COT_1: investedCottonCity };
+
+  const lowEcoColor = resolveTerritoryFillColor({
+    territory: uninvestedOilCity,
+    mapMode: 'ECONOMIC',
+    nations,
+    territories,
+    relations: {},
+    wars: [],
+    playerNationId: 'COT_NAT',
+    selectedTerritoryId: null,
+  });
+  const highEcoColor = resolveTerritoryFillColor({
+    territory: investedCottonCity,
+    mapMode: 'ECONOMIC',
+    nations,
+    territories,
+    relations: {},
+    wars: [],
+    playerNationId: 'COT_NAT',
+    selectedTerritoryId: null,
+  });
+
+  assert.notEqual(
+    lowEcoColor,
+    highEcoColor,
+    'ECONOMIC map mode must shade high-development cities darker emerald than low-development cities'
+  );
+  assert.equal(highEcoColor, '#042F2E');
+
+  const resColor = resolveTerritoryFillColor({
+    territory: investedCottonCity,
+    mapMode: 'RESOURCES',
+    nations,
+    territories,
+    relations: {},
+    wars: [],
+    playerNationId: 'COT_NAT',
+    selectedTerritoryId: null,
+  });
+  assert.equal(resColor, '#34D399', 'RESOURCES map mode must color by resource palette');
+});

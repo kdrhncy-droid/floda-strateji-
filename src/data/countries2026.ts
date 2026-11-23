@@ -572,8 +572,12 @@ const PALETTE_COLORS = [
 ];
 
 const RESOURCE_LIST: ResourceType[] = [
+  'KERESTE',
+  'SIGIR',
+  'PAMUK',
   'TAHIL',
   'DEMIR_CELIK',
+  'ALTIN',
   'PETROL',
   'DOGALGAZ',
   'NADIR_TOPRAK',

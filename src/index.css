@@ -303,7 +303,7 @@
     top: 0.35rem !important;
     left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
     gap: 0.35rem !important;
-    max-width: min(62vw, 540px) !important;
+    max-width: min(68vw, 620px) !important;
   }
   .hud-mapmode-shell,
   .hud-macro-bar {
@@ -316,7 +316,7 @@
     padding-right: 0.55rem !important;
   }
   .hud-macro-bar {
-    max-width: min(62vw, 540px) !important;
+    max-width: min(68vw, 620px) !important;
   }
   .hud-toast-banner {
     top: calc(env(safe-area-inset-top, 0px) + 2.9rem) !important;

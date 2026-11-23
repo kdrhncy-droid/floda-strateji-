@@ -1,5 +1,5 @@
 import { ArmyMovement, SpeedLevel } from '../types/game';
-import { getClockSpeedProfile } from '../engine/gameClockConfig';
+import { getClockSpeedProfile } from '../engine/gameSettings';
 
 export interface MovementTweenState {
   fromProgress: number;

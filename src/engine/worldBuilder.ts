@@ -10,6 +10,8 @@ import {
   DiplomaticRelation,
   GameModeId,
   Nation,
+  ResourceType,
+  TerrainType,
   Territory,
 } from '../types/game';
 import {
@@ -39,6 +41,291 @@ export interface InitialWorldBundle {
 
 export function relationKey(a: string, b: string): string {
   return a < b ? `${a}_${b}` : `${b}_${a}`;
+}
+
+function diversifyProvinceResource(
+  provId: string,
+  baseResource: ResourceType,
+  terrain: TerrainType,
+  isCapital: boolean,
+  lon: number,
+  lat: number,
+  isCuratedSubSeed: boolean
+): ResourceType {
+  // Keep explicitly curated sub-province resources for Türkiye/Balkans or special hubs
+  if (
+    isCuratedSubSeed &&
+    (baseResource === 'KERESTE' ||
+      baseResource === 'SIGIR' ||
+      baseResource === 'PAMUK' ||
+      baseResource === 'ALTIN' ||
+      baseResource === 'TICARET_BOGAZI' ||
+      baseResource === 'FINANS_MERKEZI' ||
+      baseResource === 'YARI_ILETKEN' ||
+      baseResource === 'PETROL')
+  ) {
+    return baseResource;
+  }
+
+  let hash = 0;
+  for (let i = 0; i < provId.length; i++) {
+    hash = (hash * 31 + provId.charCodeAt(i)) >>> 0;
+  }
+
+  if (terrain === 'ORMAN') {
+    const forestPool: ResourceType[] = ['KERESTE', 'KERESTE', 'SIGIR', 'PAMUK'];
+    return forestPool[hash % forestPool.length];
+  }
+  if (terrain === 'DAGLIK') {
+    const mountainPool: ResourceType[] = [
+      'DEMIR_CELIK',
+      'ALTIN',
+      'SIGIR',
+      'DEMIR_CELIK',
+      'NADIR_TOPRAK',
+    ];
+    return mountainPool[hash % mountainPool.length];
+  }
+  if (terrain === 'COL') {
+    const desertPool: ResourceType[] = [
+      'PETROL',
+      'PETROL',
+      'DOGALGAZ',
+      'ALTIN',
+      'PAMUK',
+    ];
+    return desertPool[hash % desertPool.length];
+  }
+  if (terrain === 'METROPOL' || isCapital) {
+    if (
+      baseResource === 'FINANS_MERKEZI' ||
+      baseResource === 'TICARET_BOGAZI' ||
+      baseResource === 'YARI_ILETKEN' ||
+      baseResource === 'PETROL'
+    ) {
+      return baseResource;
+    }
+  }
+
+  // OVA (Plains): mix of Grain, Cotton (warmer latitudes), Livestock, and Timber
+  const isWarmBelt = Math.abs(lat) < 40 || (lon > 25 && lon < 95 && lat < 44);
+  const plainsPool: ResourceType[] = isWarmBelt
+    ? ['PAMUK', 'TAHIL', 'SIGIR', 'PAMUK', 'KERESTE', 'ALTIN']
+    : ['TAHIL', 'SIGIR', 'KERESTE', 'TAHIL', 'DEMIR_CELIK', 'SIGIR'];
+  return plainsPool[hash % plainsPool.length];
+}
+
+interface RingBBox {
+  ring: [number, number][];
+  minLon: number;
+  maxLon: number;
+  minLat: number;
+  maxLat: number;
+}
+
+function extractOuterRingBBoxes(geometry: Geometry | null | undefined): RingBBox[] {
+  if (!geometry) return [];
+  const rawOuterRings: number[][][] =
+    geometry.type === 'Polygon'
+      ? geometry.coordinates[0]
+        ? [geometry.coordinates[0]]
+        : []
+      : geometry.type === 'MultiPolygon'
+      ? geometry.coordinates.map((p) => p[0]).filter((r): r is number[][] => Boolean(r))
+      : [];
+
+  const out: RingBBox[] = [];
+  for (const raw of rawOuterRings) {
+    if (raw.length < 3) continue;
+    const ring: [number, number][] = [];
+    let minLon = Infinity;
+    let maxLon = -Infinity;
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    const limit =
+      raw.length > 3 &&
+      raw[0][0] === raw[raw.length - 1][0] &&
+      raw[0][1] === raw[raw.length - 1][1]
+        ? raw.length - 1
+        : raw.length;
+    for (let i = 0; i < limit; i++) {
+      const lon = raw[i][0];
+      const lat = raw[i][1];
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+      ring.push([lon, lat]);
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+    if (ring.length >= 3) {
+      out.push({ ring, minLon, maxLon, minLat, maxLat });
+    }
+  }
+  return out;
+}
+
+function pointToSegmentDistSq(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  if (Math.abs(dx) > 30) return Infinity;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq <= 1e-12) {
+    const ex = px - ax;
+    const ey = py - ay;
+    return ex * ex + ey * ey;
+  }
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+  const ddx = px - projX;
+  const ddy = py - projY;
+  return ddx * ddx + ddy * ddy;
+}
+
+function ringsTouchAtBoundary(
+  boxA: RingBBox,
+  boxB: RingBBox,
+  thresholdDegSq: number
+): boolean {
+  const ringA = boxA.ring;
+  const ringB = boxB.ring;
+  const lenA = ringA.length;
+  const lenB = ringB.length;
+
+  for (let i = 0; i < lenA; i++) {
+    const p = ringA[i];
+    if (
+      p[0] < boxB.minLon - 0.1 ||
+      p[0] > boxB.maxLon + 0.1 ||
+      p[1] < boxB.minLat - 0.1 ||
+      p[1] > boxB.maxLat + 0.1
+    ) {
+      continue;
+    }
+    for (let j = 0; j < lenB; j++) {
+      const a = ringB[j];
+      const b = ringB[(j + 1) % lenB];
+      if (pointToSegmentDistSq(p[0], p[1], a[0], a[1], b[0], b[1]) <= thresholdDegSq) {
+        return true;
+      }
+    }
+  }
+
+  for (let i = 0; i < lenB; i++) {
+    const p = ringB[i];
+    if (
+      p[0] < boxA.minLon - 0.1 ||
+      p[0] > boxA.maxLon + 0.1 ||
+      p[1] < boxA.minLat - 0.1 ||
+      p[1] > boxA.maxLat + 0.1
+    ) {
+      continue;
+    }
+    for (let j = 0; j < lenA; j++) {
+      const a = ringA[j];
+      const b = ringA[(j + 1) % lenA];
+      if (pointToSegmentDistSq(p[0], p[1], a[0], a[1], b[0], b[1]) <= thresholdDegSq) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Links every pair of province polygons whose boundaries physically touch or share an edge
+ * (tolerance 0.055° ≈ 6 km), preventing artificial centroid-slice detours across newly added cities.
+ */
+export function buildPolygonAdjacencyNeighbors(
+  features: GeoCountryFeature[],
+  territories: Record<string, Territory>,
+  linkFn: (idA: string, idB: string) => void
+): Set<string> {
+  const thresholdDeg = 0.055;
+  const thresholdSq = thresholdDeg * thresholdDeg;
+  const pad = 0.08;
+
+  const entries: {
+    id: string;
+    boxes: RingBBox[];
+    minLon: number;
+    maxLon: number;
+    minLat: number;
+    maxLat: number;
+  }[] = [];
+
+  for (const feat of features) {
+    if (!territories[feat.id]) continue;
+    const boxes = extractOuterRingBBoxes(feat.geometry);
+    if (boxes.length === 0) continue;
+    let minLon = Infinity;
+    let maxLon = -Infinity;
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    for (const b of boxes) {
+      if (b.minLon < minLon) minLon = b.minLon;
+      if (b.maxLon > maxLon) maxLon = b.maxLon;
+      if (b.minLat < minLat) minLat = b.minLat;
+      if (b.maxLat > maxLat) maxLat = b.maxLat;
+    }
+    entries.push({ id: feat.id, boxes, minLon, maxLon, minLat, maxLat });
+  }
+
+  const linkedCountryPairs = new Set<string>();
+
+  for (let i = 0; i < entries.length; i++) {
+    const eA = entries[i];
+    for (let j = i + 1; j < entries.length; j++) {
+      const eB = entries[j];
+      if (
+        eB.maxLon < eA.minLon - pad ||
+        eB.minLon > eA.maxLon + pad ||
+        eB.maxLat < eA.minLat - pad ||
+        eB.minLat > eA.maxLat + pad
+      ) {
+        continue;
+      }
+
+      let touches = false;
+      for (const bA of eA.boxes) {
+        for (const bB of eB.boxes) {
+          if (
+            bB.maxLon < bA.minLon - pad ||
+            bB.minLon > bA.maxLon + pad ||
+            bB.maxLat < bA.minLat - pad ||
+            bB.minLat > bA.maxLat + pad
+          ) {
+            continue;
+          }
+          if (ringsTouchAtBoundary(bA, bB, thresholdSq)) {
+            touches = true;
+            break;
+          }
+        }
+        if (touches) break;
+      }
+
+      if (touches) {
+        linkFn(eA.id, eB.id);
+        const cA = eA.id.split('_')[0];
+        const cB = eB.id.split('_')[0];
+        if (cA !== cB) {
+          linkedCountryPairs.add(relationKey(cA, cB));
+        }
+      }
+    }
+  }
+
+  return linkedCountryPairs;
 }
 
 export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
@@ -180,6 +467,16 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
           provGdp
         );
 
+        const resolvedResource = diversifyProvinceResource(
+          provId,
+          piece.seed.resource || seed.resource,
+          terrain,
+          Boolean(piece.seed.isCapital),
+          validCentroid[0],
+          validCentroid[1],
+          piece.seed.resource !== undefined
+        );
+
         territories[provId] = {
           id: provId,
           name: piece.seed.name,
@@ -191,7 +488,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
           castleWallHp: 100,
           population: Math.round(seed.population * share),
           baseGdp: provGdp,
-          resource: piece.seed.resource || seed.resource,
+          resource: resolvedResource,
           buildings: {
             factory: piece.seed.isCapital && isMajorPower ? 2 : 1,
             barracks: piece.seed.isCapital ? 2 : 1,
@@ -241,6 +538,16 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
         seed.baseGdp
       );
 
+      const resolvedResource = diversifyProvinceResource(
+        cf.id,
+        seed.resource,
+        terrain,
+        true,
+        validCentroid[0],
+        validCentroid[1],
+        false
+      );
+
       territories[cf.id] = {
         id: cf.id,
         name: seed.name,
@@ -252,7 +559,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
         castleWallHp: 100,
         population: seed.population,
         baseGdp: seed.baseGdp,
-        resource: seed.resource,
+        resource: resolvedResource,
         buildings: {
           factory: isMajorPower ? 2 : 1,
           barracks: isMajorPower ? 2 : 1,
@@ -286,28 +593,62 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
     }
   };
 
-  // 1. Connect sister provinces inside each multi-province country
+  // 1. Link ALL physically touching sister & cross-border province polygons
+  const linkedCountryPairs = buildPolygonAdjacencyNeighbors(
+    provinceFeatures,
+    territories,
+    linkProvinces
+  );
+
+  // 2. Ensure internal sister-province connectivity if a country has island/detached sub-provinces
   Object.values(countryToProvinces).forEach((provList) => {
     if (provList.length <= 1) return;
-    provList.forEach((pA) => {
-      const cA = territories[pA].centroid;
-      const sortedSisters = provList
-        .filter((pB) => pB !== pA)
-        .map((pB) => {
+    const provSet = new Set(provList);
+    const visited = new Set<string>([provList[0]]);
+    const queue = [provList[0]];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      for (const nb of territories[cur]?.neighbors || []) {
+        if (provSet.has(nb) && !visited.has(nb)) {
+          visited.add(nb);
+          queue.push(nb);
+        }
+      }
+    }
+    while (visited.size < provList.length) {
+      let bestA = '';
+      let bestB = '';
+      let bestDistSq = Infinity;
+      for (const pA of provList) {
+        if (visited.has(pA)) continue;
+        const cA = territories[pA].centroid;
+        for (const pB of visited) {
           const cB = territories[pB].centroid;
-          return {
-            pB,
-            distSq: (cA[0] - cB[0]) ** 2 + (cA[1] - cB[1]) ** 2,
-          };
-        })
-        .sort((a, b) => a.distSq - b.distSq)
-        .slice(0, Math.min(3, provList.length - 1));
-
-      sortedSisters.forEach((s) => linkProvinces(pA, s.pB));
-    });
+          const distSq = (cA[0] - cB[0]) ** 2 + (cA[1] - cB[1]) ** 2;
+          if (distSq < bestDistSq) {
+            bestDistSq = distSq;
+            bestA = pA;
+            bestB = pB;
+          }
+        }
+      }
+      if (!bestA || !bestB) break;
+      linkProvinces(bestA, bestB);
+      visited.add(bestA);
+      const q2 = [bestA];
+      while (q2.length > 0) {
+        const cur = q2.shift()!;
+        for (const nb of territories[cur]?.neighbors || []) {
+          if (provSet.has(nb) && !visited.has(nb)) {
+            visited.add(nb);
+            q2.push(nb);
+          }
+        }
+      }
+    }
   });
 
-  // 2. Connect neighboring countries' closest border provinces
+  // 3. Fallback for any TopoJSON country pair whose boundaries lacked shared points at 110m scale
   countryFeatures.forEach((cf, idx) => {
     const rawIdx = indexMap[idx];
     const neighborCountryIds = (topoNeighbors[rawIdx] || [])
@@ -315,28 +656,27 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
       .filter((id): id is string => Boolean(id && id !== cf.id));
 
     const provsA = countryToProvinces[cf.id] || [cf.id];
-
     neighborCountryIds.forEach((otherCountryId) => {
+      if (linkedCountryPairs.has(relationKey(cf.id, otherCountryId))) return;
       const provsB = countryToProvinces[otherCountryId] || [otherCountryId];
-      // Find the 2 closest pairs of provinces between Country A and Country B
-      const pairs: { a: string; b: string; distSq: number }[] = [];
-      provsA.forEach((pA) => {
+      let bestPair: { a: string; b: string; distSq: number } | null = null;
+      for (const pA of provsA) {
         const cA = territories[pA].centroid;
-        provsB.forEach((pB) => {
+        for (const pB of provsB) {
           const cB = territories[pB].centroid;
-          pairs.push({
-            a: pA,
-            b: pB,
-            distSq: (cA[0] - cB[0]) ** 2 + (cA[1] - cB[1]) ** 2,
-          });
-        });
-      });
-      pairs.sort((x, y) => x.distSq - y.distSq);
-      pairs.slice(0, 2).forEach((pair) => linkProvinces(pair.a, pair.b));
+          const distSq = (cA[0] - cB[0]) ** 2 + (cA[1] - cB[1]) ** 2;
+          if (!bestPair || distSq < bestPair.distSq) {
+            bestPair = { a: pA, b: pB, distSq };
+          }
+        }
+      }
+      if (bestPair) {
+        linkProvinces(bestPair.a, bestPair.b);
+      }
     });
   });
 
-  // 3. Explicit Strategic World Straits + Maritime fallback so every province has >=2 neighbors
+  // 4. Explicit Strategic World Straits + Maritime fallback so every island province has >=2 neighbors
   STRATEGIC_STRAITS.forEach((st) => {
     st.crossingEdges.forEach(([a, b]) => linkProvinces(a, b));
   });
@@ -359,6 +699,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
         .forEach((item) => linkProvinces(pId, item.otherId));
     }
   });
+
 
   // Initialize key diplomatic relations
   const relations: Record<string, DiplomaticRelation> = {};

@@ -1,16 +1,14 @@
-import React, { useState } from "react";
-import { Award, Swords, Crown, TrendingUp } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Award, MapPin, TrendingUp, UserPlus } from "lucide-react";
 import { CommandDrawersProps } from "./drawerTypes";
 import { ArmyModernizationCard } from "./ArmyModernizationCard";
 import {
-  IDEOLOGIES,
   getArmyGenerationInfo,
   getCommandersForMode,
   getNationModernizedTier,
 } from "../../data/world2026Data";
 import {
   BESTOW_FAVOR_GOLD_COST,
-  getLordArchetype,
   getLordLoyaltySummary,
   getLordRetinueTroops,
 } from "../../engine/pashaAndFiefEngine";
@@ -22,6 +20,7 @@ import {
 export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   playerNation,
   playerEconomy,
+  selectedTerritory,
   territories,
   nations,
   onRecruitUnit,
@@ -33,14 +32,173 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   gameMode = "EMPIRES_1440",
 }) => {
   const [rankingSortBy, setRankingSortBy] = useState<"SCORE" | "GDP" | "ARMY" | "PROVINCES">("SCORE");
+  const ownedProvinces = useMemo(
+    () =>
+      Object.values(territories)
+        .filter((t) => t.ownerId === playerNation.id)
+        .sort((a, b) => Number(b.isCapital) - Number(a.isCapital) || b.garrison - a.garrison),
+    [territories, playerNation.id]
+  );
+
+  const preferredCityId =
+    selectedTerritory && selectedTerritory.ownerId === playerNation.id
+      ? selectedTerritory.id
+      : territories[playerNation.capitalTerritoryId]?.ownerId === playerNation.id
+      ? playerNation.capitalTerritoryId
+      : ownedProvinces[0]?.id || "";
+
+  const [recruitCityId, setRecruitCityId] = useState<string>(preferredCityId);
+
+  useEffect(() => {
+    if (
+      !recruitCityId ||
+      !territories[recruitCityId] ||
+      territories[recruitCityId].ownerId !== playerNation.id
+    ) {
+      setRecruitCityId(preferredCityId);
+    }
+  }, [recruitCityId, territories, playerNation.id, preferredCityId]);
+
+  const activeRecruitCity =
+    territories[recruitCityId] &&
+    territories[recruitCityId].ownerId === playerNation.id
+      ? territories[recruitCityId]
+      : territories[preferredCityId] || null;
+
   const eraCommanders = getCommandersForMode(gameMode);
   const modernizedTier = getNationModernizedTier(playerNation);
   const activeArmyGen = getArmyGenerationInfo(gameMode, modernizedTier);
 
   return (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              {/* Left 6 Cols: Army Modernization, Generals & National Unit Composition */}
+              {/* Left 6 Cols: Direct Recruitment, Army Modernization, Generals & National Unit Composition */}
               <div className="lg:col-span-6 space-y-4">
+                {activeRecruitCity && (
+                  <div className="bg-slate-950/90 border border-amber-500/40 rounded-2xl p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <UserPlus className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>Asker Bas &amp; Birlik Seferberliği</span>
+                      </h3>
+                      <div className="flex items-center gap-2 text-[11px] font-mono-num">
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold">
+                          🪙 {Math.round(playerNation.treasury).toLocaleString('tr-TR')} Altın
+                        </span>
+                        <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold">
+                          👥 {Math.round(playerNation.manpower).toLocaleString('tr-TR')} İG
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <label htmlFor="military-recruit-city" className="text-[11px] font-semibold text-slate-300 shrink-0">
+                        Kışla / Şehir Seçimi:
+                      </label>
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <select
+                          id="military-recruit-city"
+                          value={activeRecruitCity.id}
+                          onChange={(e) => setRecruitCityId(e.target.value)}
+                          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-amber-400"
+                        >
+                          {ownedProvinces.map((prov) => (
+                            <option key={prov.id} value={prov.id}>
+                              {prov.isCapital ? '★ ' : ''}
+                              {prov.name.replace(/^★\s*/, '')} ({(prov.garrison / 1000).toFixed(1)}B Asker)
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => onSelectTerritory(activeRecruitCity.id)}
+                          title="Seçili şehri haritada göster"
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-semibold text-slate-200 flex items-center gap-1 whitespace-nowrap shrink-0"
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span>Odaklan</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        {
+                          key: 'inf1',
+                          unitType: 'infantry' as const,
+                          amount: 1000,
+                          gold: 150,
+                          label: `+1B ${activeArmyGen.infantryShort}`,
+                          tone: 'emerald',
+                        },
+                        {
+                          key: 'inf5',
+                          unitType: 'infantry' as const,
+                          amount: 5000,
+                          gold: 250,
+                          label: `+5B ${activeArmyGen.infantryShort}`,
+                          tone: 'emerald',
+                        },
+                        {
+                          key: 'arm25',
+                          unitType: 'armor' as const,
+                          amount: 2500,
+                          gold: 420,
+                          label: `+2.5B ${activeArmyGen.armorShort}`,
+                          tone: 'amber',
+                        },
+                        {
+                          key: 'air1',
+                          unitType: 'airDrone' as const,
+                          amount: 1000,
+                          gold: 500,
+                          label: `+1B ${activeArmyGen.airArtilleryShort}`,
+                          tone: 'sky',
+                        },
+                      ].map((opt) => {
+                        const affordable =
+                          playerNation.treasury >= opt.gold &&
+                          playerNation.manpower >= opt.amount;
+                        const toneClass =
+                          !affordable
+                            ? 'bg-slate-900/60 border-slate-800 text-slate-500 cursor-not-allowed'
+                            : opt.tone === 'amber'
+                            ? 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/45 text-amber-200'
+                            : opt.tone === 'sky'
+                            ? 'bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/45 text-sky-200'
+                            : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/45 text-emerald-200';
+                        return (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            disabled={!affordable}
+                            onClick={() =>
+                              onRecruitUnit(
+                                activeRecruitCity.id,
+                                opt.unitType,
+                                opt.amount,
+                                opt.gold
+                              )
+                            }
+                            className={`p-2 rounded-xl border text-center flex flex-col items-center justify-center gap-1 transition-colors ${toneClass}`}
+                          >
+                            <UnitTypeIllustrationSvg
+                              unitType={opt.unitType}
+                              modeId={gameMode}
+                              className="w-7 h-7"
+                            />
+                            <span className="text-[11px] font-bold leading-tight">
+                              {opt.label}
+                            </span>
+                            <span className="text-[10px] font-mono-num opacity-90">
+                              {opt.gold}A · {(opt.amount / 1000).toFixed(opt.amount % 1000 === 0 ? 0 : 1)}B İG
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <ArmyModernizationCard
                   playerNation={playerNation}
                   totalGarrison={playerEconomy.totalGarrison}

@@ -1,4 +1,5 @@
 import { GeoProjection } from 'd3-geo';
+import { RESOURCE_INFO } from '../data/world2026Data';
 import {
   ActiveBattle,
   ActiveWar,
@@ -7,7 +8,11 @@ import {
   Nation,
   Territory,
 } from '../types/game';
-import { getOrCreateRelation, isAtWar } from '../engine/simulationEngine';
+import {
+  calculateProvinceDevelopment,
+  getOrCreateRelation,
+  isAtWar,
+} from '../engine/simulationEngine';
 import type { MapLabelDensityOption } from '../engine/gameSettings';
 import { TERRAIN_INFO } from '../engine/pashaAndFiefEngine';
 import { GeoCountryFeature } from '../engine/worldBuilder';
@@ -461,9 +466,74 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       }
     }
 
+    // 1C. Compact Resource Icon & Investment Value Badge (in RESOURCES or ECONOMIC MapMode)
+    const isResourceOrEcoLens =
+      mapMode === 'RESOURCES' || mapMode === 'ECONOMIC';
+    if (isResourceOrEcoLens && !battleTerritorySet.has(t.id) && !t.siege) {
+      const resMeta = RESOURCE_INFO[t.resource] || RESOURCE_INFO.TAHIL;
+      const dev = calculateProvinceDevelopment(t, owner);
+      const showResourceBadge =
+        isSelected ||
+        isPlayerTerritory ||
+        isCapital ||
+        transform.k >= (isMobileViewport ? 1.15 : 1.05);
+
+      if (showResourceBadge) {
+        const resY = namePlaced ? sy + 8 : sy;
+        const showDetailText = isSelected || transform.k >= 2.25;
+        const pillText =
+          mapMode === 'RESOURCES'
+            ? showDetailText
+              ? `${resMeta.icon} ${resMeta.shortName} ${dev.effectiveResourceValue}A`
+              : `${resMeta.icon} ${dev.effectiveResourceValue}A`
+            : showDetailText
+            ? `★${dev.developmentScore}P · ${resMeta.icon}${dev.effectiveResourceValue}A`
+            : `★${dev.developmentScore}P`;
+
+        ctx.save();
+        const fontPx = isSelected ? 10 : transform.k >= 1.8 ? 9.2 : 8.4;
+        ctx.font = `700 ${fontPx}px "JetBrains Mono", "Plus Jakarta Sans", sans-serif`;
+        const textW = ctx.measureText(pillText).width;
+        const pillW = Math.max(34, textW + 10);
+        const pillH = isSelected ? 17 : 15;
+        const rBox: PlacedBox = {
+          x1: sx - pillW / 2 - 1,
+          y1: resY - pillH / 2 - 1,
+          x2: sx + pillW / 2 + 1,
+          y2: resY + pillH / 2 + 1,
+        };
+
+        if (isSelected || !collides(rBox)) {
+          placedBoxes.push(rBox);
+          const rx = sx - pillW / 2;
+          const ry = resY - pillH / 2;
+
+          ctx.fillStyle = 'rgba(7, 12, 24, 0.92)';
+          ctx.strokeStyle =
+            mapMode === 'RESOURCES'
+              ? resMeta.color
+              : dev.developmentScore >= 68
+              ? '#34D399'
+              : '#F59E0B';
+          ctx.lineWidth = isSelected ? 1.6 : 1.15;
+          ctx.beginPath();
+          ctx.roundRect(rx, ry, pillW, pillH, 5);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = isSelected ? '#FEF08A' : '#F8FAFC';
+          ctx.fillText(pillText, sx, resY + 0.5);
+        }
+        ctx.restore();
+      }
+    }
+
     // 2. AoH3-Style Army Counter Shield with Graphical National Flag & Soldier Unit Miniature
     const garrison = t.garrison || 0;
     const wantsArmyShield =
+      !isResourceOrEcoLens &&
       !battleTerritorySet.has(t.id) &&
       !t.siege &&
       (isSelected ||

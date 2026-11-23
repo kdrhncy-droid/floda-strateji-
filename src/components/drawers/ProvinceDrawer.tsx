@@ -19,7 +19,10 @@ import {
   resolveTerritoryCulture,
   resolveTerritoryReligion,
 } from "../../data/religionAndCultureData";
-import { isAtWar } from "../../engine/simulationEngine";
+import {
+  calculateProvinceDevelopment,
+  isAtWar,
+} from "../../engine/simulationEngine";
 import { computeVisibleTerritoryIds } from "../../engine/fogOfWarEngine";
 import { TERRAIN_INFO } from "../../engine/pashaAndFiefEngine";
 import {
@@ -98,6 +101,12 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   const culDef = CULTURES[provCul];
   const playerStateRel = playerNation.stateReligion || 'ISLAM_SUNNI';
   const isDifferentReligion = provRel !== playerStateRel;
+  const resMeta =
+    RESOURCE_INFO[selectedTerritory.resource] || RESOURCE_INFO.TAHIL;
+  const provDev = calculateProvinceDevelopment(
+    selectedTerritory,
+    selectedOwner
+  );
 
   return (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -185,11 +194,38 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                       </div>
                     </div>
                     <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-2.5">
-                      <div className="text-[11px] text-slate-400">
-                        Stratejik Kaynak
+                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Üretim Kaynağı & Değer</span>
+                        <span className="text-[10px] font-mono-num text-emerald-300 font-bold">
+                          ×{provDev.totalInvestmentMult} Yatırım
+                        </span>
                       </div>
-                      <div className="text-xs font-bold text-amber-400 mt-0.5 truncate">
-                        {RESOURCE_INFO[selectedTerritory.resource]?.name ?? selectedTerritory.resource}
+                      <div className="text-xs font-bold text-amber-300 mt-0.5 truncate">
+                        {resMeta.icon} {resMeta.name}
+                      </div>
+                      <div className="text-[10px] font-mono-num text-slate-300 mt-0.5">
+                        Ham {provDev.baseResourceValue}A →{' '}
+                        <strong className="text-emerald-400">
+                          {provDev.effectiveResourceValue} Altın/gün
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* City Development Score & Investment Breakdown Strip */}
+                  <div className="bg-emerald-950/35 border border-emerald-500/35 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
+                    <div className="min-w-0">
+                      <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+                        <span>★ Şehir Gelişim Puanı: {provDev.developmentScore}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] text-emerald-200 border border-emerald-500/30">
+                          {provDev.tierLabel}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-300 mt-0.5">
+                        Bina Yatırımı ×{provDev.buildingInvestmentMult} · Teknoloji ×{provDev.techInvestmentMult} · Toplam Günlük Katkı:{' '}
+                        <strong className="font-mono-num text-amber-300">
+                          +{provDev.effectiveDailyGdp} GDP
+                        </strong>
                       </div>
                     </div>
                   </div>
@@ -334,7 +370,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                       >
                         <span className="text-sm leading-none">⚔️</span>
                         <span>Ordu</span>
-                        <span className="text-[9px] font-medium opacity-70">Sefer & birlik</span>
+                        <span className="text-[9px] font-medium opacity-70">Hareket & birlik</span>
                       </button>
                       <button
                         role="tab"
@@ -633,13 +669,13 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                           className="w-full min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
                         >
                           <Swords className="w-4 h-4" />
-                          🧭 Haritadan Hedef Seç & Ordu Yürüt (Akıllı Rota)
+                          <span>🧭 Haritadan Hedef Seç & Hareket Et (Doğrudan Rota)</span>
                         </button>
 
                         {/* Quick Neighbor Target Buttons */}
                         <div className="pt-1">
                           <div className="text-[11px] text-slate-400 mb-1.5">
-                            Komşu Bölgelere Hızlı Yürüyüş Emri:
+                            Komşu Bölgelere Hızlı Hareket Emri:
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {selectedTerritory.neighbors.map((nId) => {

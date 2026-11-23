@@ -7,11 +7,12 @@ import {
   Territory,
 } from '../types/game';
 import { getNationRulerName } from './pashaAndFiefEngine';
-import { isNationEmbargoed, isNationEmbargoing } from './embargoUtils';
 import {
   getOrCreateRelation,
   getWarScoreForNation,
   isAtWar,
+  isNationEmbargoed,
+  isNationEmbargoing,
 } from './simulationEngine';
 
 export interface DiplomacyPeerEntry {

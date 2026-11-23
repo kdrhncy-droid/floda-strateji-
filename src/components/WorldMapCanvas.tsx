@@ -503,7 +503,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-amber-950/95 border border-amber-500/50 text-amber-100 shadow-xl max-w-[94vw]">
           <Crosshair className="w-4 h-4 text-amber-400 shrink-0" />
           <span className="text-xs font-medium truncate">
-            <strong>{territories[armyOrderSourceId].name}</strong> ordusu için hedef eyalete dokunun (Akıllı rota aktif)
+            <strong>{territories[armyOrderSourceId].name}</strong> ordusu için haritadan hedef şehir seçin (Doğrudan hareket)
           </span>
           <button
             onClick={onCancelArmyOrder}

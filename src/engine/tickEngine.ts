@@ -9,11 +9,11 @@ import {
   Nation,
   QueuedBuildingConstruction,
   SpeedLevel,
+  TacticalBattleState,
   Territory,
   UnitComposition,
   WorldNewsEvent,
 } from '../types/game';
-import { TacticalBattleState } from '../types/tacticalBattle';
 import {
   BUILDINGS,
   COMMANDERS,
@@ -42,6 +42,7 @@ import {
   checkStraitMilitaryBlockade,
   evaluateActiveStraits,
 } from './straitsAndTradeEngine';
+import { evaluatePlayerAiCommander } from './playerAiCommander';
 import { GameSettings } from './gameSettings';
 
 export function scaleUnits(
@@ -95,6 +96,7 @@ export interface GameTickInput {
   movements: ArmyMovement[];
   newsEvents: WorldNewsEvent[];
   settings: GameSettings;
+  aiCommanderEnabled?: boolean;
 }
 
 export interface GameTickOutput {
@@ -902,6 +904,27 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       if (wartimeAi.playerAlerts.length > 0) {
         sounds.push('WAR_HORN');
         toasts.push(...wartimeAi.playerAlerts);
+      }
+    }
+
+    if (input.aiCommanderEnabled) {
+      const playerAiRes = evaluatePlayerAiCommander({
+        tick: nextTick,
+        playerNationId,
+        nations: nextNations,
+        territories: nextTerritories,
+        relations: nextRelations,
+        wars: nextWars,
+        battles: nextBattles,
+        movements: nextMovements,
+      });
+      if (playerAiRes) {
+        nextTerritories = playerAiRes.updatedTerritories;
+        territoriesCloned = true;
+        if (playerAiRes.newMovements.length > 0) {
+          nextMovements = [...nextMovements, ...playerAiRes.newMovements];
+          sounds.push('MARCH');
+        }
       }
     }
   }

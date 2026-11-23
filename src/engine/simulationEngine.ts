@@ -16,12 +16,79 @@ import {
   UnitComposition,
 } from '../types/game';
 import { relationKey } from './worldBuilder';
-import { isNationEmbargoed } from './embargoUtils';
 import { TERRAIN_INFO } from './pashaAndFiefEngine';
 import {
   calculateNationTradeAndStraits,
   NationTradeAndStraitsSummary,
 } from './straitsAndTradeEngine';
+
+type NationTechState = Pick<Nation, 'unlockedTechs'> | null | undefined;
+
+/** ADM_1 reduces only positive unrest drift in non-core provinces by 30%. */
+export function adjustOccupiedUnrestDrift(
+  nation: NationTechState,
+  baseDrift: number
+): number {
+  if (baseDrift <= 0 || !nation?.unlockedTechs?.includes('adm_1')) {
+    return baseDrift;
+  }
+  return Number((baseDrift * 0.7).toFixed(2));
+}
+
+/** ADM_2 reduces positive aggressive-expansion gains by 25%; losses are unchanged. */
+export function adjustAggressiveExpansionGain(
+  nation: NationTechState,
+  baseGain: number
+): number {
+  if (baseGain <= 0 || !nation?.unlockedTechs?.includes('adm_2')) {
+    return baseGain;
+  }
+  return Number((baseGain * 0.75).toFixed(2));
+}
+
+type EmbargoRelation = Pick<
+  DiplomaticRelation,
+  'nationA' | 'nationB' | 'hasEmbargo' | 'embargoingNationIds'
+>;
+
+export function getEmbargoingNationIds(
+  relation: EmbargoRelation
+): string[] {
+  if (Array.isArray(relation.embargoingNationIds)) {
+    return Array.from(
+      new Set(
+        relation.embargoingNationIds.filter(
+          (nationId) =>
+            nationId === relation.nationA || nationId === relation.nationB
+        )
+      )
+    );
+  }
+  return relation.hasEmbargo ? [relation.nationA] : [];
+}
+
+export function isNationEmbargoing(
+  relation: EmbargoRelation,
+  nationId: string
+): boolean {
+  return getEmbargoingNationIds(relation).includes(nationId);
+}
+
+export function isNationEmbargoed(
+  relation: EmbargoRelation,
+  targetNationId: string
+): boolean {
+  const embargoingNationId =
+    targetNationId === relation.nationA
+      ? relation.nationB
+      : targetNationId === relation.nationB
+        ? relation.nationA
+        : null;
+
+  return embargoingNationId
+    ? isNationEmbargoing(relation, embargoingNationId)
+    : false;
+}
 
 export interface NationEconomyBreakdown {
   territoryCount: number;
@@ -55,20 +122,171 @@ type ResourceEconomicEffect = {
   militaryUpkeepReductionPct?: number;
 };
 
-// AOH3-style resource identity: owning the leading source of a resource gives
-// one national specialization bonus. GDP output remains territory-local below.
+// AOH3-style resource identity: owning a source of a resource gives
+// one national specialization bonus. Local resource value scales strongly with province buildings & tech investment.
 const RESOURCE_ECONOMIC_EFFECTS: Partial<
   Record<ResourceType, ResourceEconomicEffect>
 > = {
+  KERESTE: { productionPct: 5, militaryUpkeepReductionPct: 3 },
+  SIGIR: { manpowerPct: 7, productionPct: 3 },
+  PAMUK: { productionPct: 6, tradePct: 6 },
+  TAHIL: { manpowerPct: 8 },
+  DEMIR_CELIK: { militaryUpkeepReductionPct: 5 },
+  ALTIN: { taxPct: 10, productionPct: 5 },
   PETROL: { productionPct: 8 },
   DOGALGAZ: { productionPct: 6, tradePct: 4 },
   YARI_ILETKEN: { researchFlat: 2.5 },
-  DEMIR_CELIK: { militaryUpkeepReductionPct: 5 },
-  TAHIL: { manpowerPct: 8 },
   TICARET_BOGAZI: { tradePct: 12 },
   NADIR_TOPRAK: { productionPct: 4, researchFlat: 1.5 },
   FINANS_MERKEZI: { taxPct: 12 },
 };
+
+export interface ProvinceDevelopmentBreakdown {
+  developmentScore: number;
+  tierLabel:
+    | 'İmparatorluk Metropolü'
+    | 'Kalkınmış Sanayi Şehri'
+    | 'Gelişen Ticaret Sancağı'
+    | 'Orta Ölçekli Eyalet'
+    | 'Kırsal Bölge';
+  baseResourceValue: number;
+  buildingInvestmentMult: number;
+  techInvestmentMult: number;
+  totalInvestmentMult: number;
+  effectiveResourceValue: number;
+  effectiveDailyGdp: number;
+  totalBuildingLevels: number;
+}
+
+/**
+ * Calculates a province's Development Score (Gelişim Puanı) and Investment-Driven Resource Output.
+ * Crucially, where a player invests (buildings + Economy/Science technologies) scales local resource
+ * value up to 3.5x+, allowing a heavily invested Cotton, Timber, or Livestock province to outproduce
+ * an uninvested Gold or Oil province.
+ */
+export function calculateProvinceDevelopment(
+  territory: Territory,
+  ownerNation?: Pick<Nation, 'unlockedTechs' | 'enactedReforms' | 'budget'> | null
+): ProvinceDevelopmentBreakdown {
+  const resMeta = RESOURCE_INFO[territory.resource] || RESOURCE_INFO.TAHIL;
+  const baseResourceValue = resMeta?.baseValue ?? 21;
+  const resGdpMult = resMeta?.gdpMultiplier ?? 1.12;
+
+  const bld = territory.buildings || {
+    factory: 0,
+    barracks: 0,
+    fortress: 0,
+    university: 0,
+    tradeHub: 0,
+    supplyDepot: 0,
+  };
+  const totalBuildingLevels =
+    (bld.factory || 0) +
+    (bld.tradeHub || 0) +
+    (bld.university || 0) +
+    (bld.supplyDepot || 0) +
+    (bld.barracks || 0) +
+    (bld.fortress || 0);
+
+  // Local building investment multiplier (Sanayi, Liman, İkmal, Üniversite)
+  const buildingInvestmentMult = Number(
+    (
+      1 +
+      (bld.factory || 0) * 0.36 +
+      (bld.tradeHub || 0) * 0.22 +
+      (bld.supplyDepot || 0) * 0.14 +
+      (bld.university || 0) * 0.12
+    ).toFixed(2)
+  );
+
+  // National technology & reform investment multiplier
+  const unlockedTechs = ownerNation?.unlockedTechs || [];
+  const enactedReforms = ownerNation?.enactedReforms || [];
+  let techMult = 1.0;
+  if (unlockedTechs.includes('eco_1')) techMult += 0.12;
+  if (unlockedTechs.includes('eco_2')) techMult += 0.22;
+  if (unlockedTechs.includes('eco_3')) techMult += 0.15;
+  if (unlockedTechs.includes('eco_4')) techMult += 0.18;
+  if (unlockedTechs.includes('sci_1')) techMult += 0.08;
+  if (unlockedTechs.includes('sci_2')) techMult += 0.15;
+  if (unlockedTechs.includes('sci_4')) techMult += 0.25;
+  if (enactedReforms.includes('ref_free_trade_zones')) techMult += 0.12;
+  const techInvestmentMult = Number(techMult.toFixed(2));
+
+  const totalInvestmentMult = Number(
+    (buildingInvestmentMult * techInvestmentMult).toFixed(2)
+  );
+  const unrestPenalty = Math.max(0.35, 1 - (territory.unrest || 0) * 0.006);
+
+  const effectiveResourceValue = Math.max(
+    5,
+    Math.round(baseResourceValue * totalInvestmentMult * unrestPenalty)
+  );
+
+  const baseGdp = territory.baseGdp || 40;
+  const effectiveDailyGdp = Math.max(
+    15,
+    Math.round(
+      (baseGdp * resGdpMult * (1 + (bld.factory || 0) * 0.25) +
+        (effectiveResourceValue - baseResourceValue) * 0.9) *
+        unrestPenalty
+    )
+  );
+
+  // Development score (Gelişim Puanı): combines base urbanization, buildings, tech investment, and stability
+  const popTerm = Math.min(
+    18,
+    Math.round(Math.sqrt(Math.max(10_000, territory.population || 200_000) / 120_000) * 3.2)
+  );
+  const gdpTerm = Math.min(34, Math.round(baseGdp * 0.19));
+  const buildingTerm =
+    (bld.factory || 0) * 9 +
+    (bld.tradeHub || 0) * 7 +
+    (bld.university || 0) * 6 +
+    (bld.supplyDepot || 0) * 5 +
+    (bld.barracks || 0) * 3 +
+    (bld.fortress || 0) * 3;
+  const techTerm = Math.round((techInvestmentMult - 1) * 28);
+  const capitalBonus = territory.isCapital ? 8 : 0;
+  const coreBonus =
+    territory.coreOwnerId === territory.ownerId || (territory.assimilation ?? 100) >= 100
+      ? 4
+      : 0;
+  const unrestMod =
+    (territory.unrest || 0) <= 10
+      ? 3
+      : (territory.unrest || 0) >= 35
+      ? -6
+      : 0;
+
+  const developmentScore = Math.max(
+    10,
+    popTerm + gdpTerm + buildingTerm + techTerm + capitalBonus + coreBonus + unrestMod
+  );
+
+  const tierLabel: ProvinceDevelopmentBreakdown['tierLabel'] =
+    developmentScore >= 90
+      ? 'İmparatorluk Metropolü'
+      : developmentScore >= 68
+      ? 'Kalkınmış Sanayi Şehri'
+      : developmentScore >= 50
+      ? 'Gelişen Ticaret Sancağı'
+      : developmentScore >= 34
+      ? 'Orta Ölçekli Eyalet'
+      : 'Kırsal Bölge';
+
+  return {
+    developmentScore,
+    tierLabel,
+    baseResourceValue,
+    buildingInvestmentMult,
+    techInvestmentMult,
+    totalInvestmentMult,
+    effectiveResourceValue,
+    effectiveDailyGdp,
+    totalBuildingLevels,
+  };
+}
 
 export function getOrCreateRelation(
   relations: Record<string, DiplomaticRelation>,
@@ -239,7 +457,7 @@ export function calculateNationEconomy(
       totalUnits.airDrone += t.units.airDrone || 0;
     }
 
-    const resMult = RESOURCE_INFO[t.resource]?.gdpMultiplier || 1.0;
+    const dev = calculateProvinceDevelopment(t, nation);
     const bld = t.buildings || {
       factory: 0,
       barracks: 0,
@@ -248,10 +466,8 @@ export function calculateNationEconomy(
       tradeHub: 0,
       supplyDepot: 0,
     };
-    const factoryMult = 1 + (bld.factory || 0) * 0.25;
-    const unrestPenalty = Math.max(0.35, 1 - (t.unrest || 0) * 0.006);
 
-    baseProduction += (t.baseGdp || 40) * resMult * factoryMult * unrestPenalty;
+    baseProduction += dev.effectiveDailyGdp;
     universityOutput += (bld.university || 0) * 4.5;
     barracksManpower += (bld.barracks || 0) * 350;
     tradeHubBonus += (bld.tradeHub || 0) * 0.2;

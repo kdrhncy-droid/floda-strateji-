@@ -5,8 +5,7 @@ import {
   Nation,
   Territory,
 } from '../types/game';
-import { getOrCreateRelation, isAtWar } from './simulationEngine';
-import { isNationEmbargoed } from './embargoUtils';
+import { getOrCreateRelation, isAtWar, isNationEmbargoed } from './simulationEngine';
 
 export interface StrategicStraitDef {
   id: string;
