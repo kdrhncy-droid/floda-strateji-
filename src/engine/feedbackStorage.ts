@@ -101,7 +101,7 @@ export function buildFeedbackDiagnostics(params: {
     (typeof window !== 'undefined' ? Math.round(window.innerHeight) : 800);
 
   return {
-    appName: 'Floda Strateji Oyunu',
+    appName: 'Floda Strategy',
     schemaVersion: params.schemaVersion,
     viewport: `${w}×${h}`,
     orientation: w >= h ? 'Yatay' : 'Dikey',
@@ -127,7 +127,7 @@ export function formatFeedbackReport(
     'Geri Bildirim';
 
   const lines: string[] = [
-    `Floda Strateji Oyunu — ${catLabel}`,
+    `Floda Strategy — ${catLabel}`,
     `Konu: ${draft.subject.trim()}`,
     '',
     draft.message.trim(),
@@ -155,7 +155,7 @@ export function buildFeedbackMailtoHref(
   const catLabel =
     FEEDBACK_CATEGORIES.find((c) => c.id === draft.category)?.label ??
     'Geri Bildirim';
-  const mailSubject = `[Floda Strateji - ${catLabel}] ${draft.subject.trim()}`;
+  const mailSubject = `[Floda Strategy - ${catLabel}] ${draft.subject.trim()}`;
   const body = formatFeedbackReport(draft, diagnostics);
   return `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(
     mailSubject

@@ -161,7 +161,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
 
               <div id="pwa-guide-description" className="text-xs text-[#cfc3ae] space-y-2.5 leading-relaxed">
                 <p>
-                  <strong>Floda Strateji Oyunu</strong>, telefonunuza tam ekran bir mobil oyun olarak kurulabilir ve internetsiz oynanabilir:
+                  <strong>Floda Strategy</strong>, telefonunuza tam ekran bir mobil oyun olarak kurulabilir ve internetsiz oynanabilir:
                 </p>
                 {offlineStatus === 'READY' && (
                   <div className="rounded-lg bg-emerald-950/60 border border-emerald-500/40 px-3 py-2 text-emerald-200 font-semibold">

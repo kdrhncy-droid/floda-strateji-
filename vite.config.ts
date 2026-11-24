@@ -15,7 +15,7 @@ export default defineConfig(() => {
         includeManifestIcons: true,
         manifest: {
           id: '/',
-          name: 'Floda Strateji Oyunu',
+          name: 'Floda Strategy',
           short_name: 'Floda',
           description:
             '1440 ve 2026 dönemlerinde duraklatılabilir gerçek zamanlı dünya haritası, derin diplomasi, ekonomi, teknoloji ve ordu yönetimi sunan çevrimdışı büyük strateji oyunu.',

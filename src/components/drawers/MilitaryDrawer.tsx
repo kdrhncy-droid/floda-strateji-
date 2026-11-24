@@ -179,7 +179,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="text-sm font-display font-bold text-amber-200 flex items-center gap-2">
                         <UserPlus className="w-4 h-4 text-amber-400 shrink-0" />
-                        <span>AoH3 Ordugah &amp; Kiralık Asker Karargâhı</span>
+                        <span>Ordugah &amp; Kiralık Asker Karargâhı</span>
                       </h3>
                       <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono-num">
                         <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold">

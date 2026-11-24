@@ -268,7 +268,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                       macroMode === 'RECRUIT_INFANTRY' ? 'NONE' : 'RECRUIT_INFANTRY'
                     );
                   }}
-                  title="AoH3 Asker Bas & Toplu Seferberlik: Birlik sınıfı seçip haritadan şehirlerinize dokunun veya sınırlara/tüm ülkeye toplu asker basın"
+                  title="Asker Bas & Toplu Seferberlik: Birlik sınıfı seçip haritadan şehirlerinize dokunun veya sınırlara/tüm ülkeye toplu asker basın"
                   className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                     macroMode === 'RECRUIT_INFANTRY'
                       ? 'bg-emerald-500 text-slate-950 shadow'
@@ -312,7 +312,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                       macroMode === 'BUILD_FORT' ? 'NONE' : 'BUILD_FORT'
                     );
                   }}
-                  title="AoH3 Makro Tahkimat: Haritada kendi eyaletinize dokunarak Kale/Hisar yükseltin"
+                  title="Makro Tahkimat: Haritada kendi eyaletinize dokunarak Kale/Hisar yükseltin"
                   className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                     macroMode === 'BUILD_FORT'
                       ? 'bg-sky-500 text-slate-950 shadow'

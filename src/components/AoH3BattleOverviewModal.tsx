@@ -134,7 +134,7 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
               <div className="flex items-center gap-2">
                 <h2 id="battle-overview-title" className="text-base sm:text-lg font-bold font-serif text-amber-200 uppercase tracking-wide">
                   {battle
-                    ? `${territory.name} Muharebesi (AoH3 Canlı Meydan)`
+                    ? `${territory.name} Muharebesi (Canlı Meydan)`
                     : `${territory.name} Kuşatması & Sur Direnişi`}
                 </h2>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">

@@ -176,7 +176,7 @@ export const AoH3PeaceConferenceModal: React.FC<
             </div>
             <div className="min-w-0">
               <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 truncate">
-                <span>AoH3 Barış Konferansı Masası</span>
+                <span>Barış Konferansı Masası</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono font-semibold shrink-0">
                   {war.name}
                 </span>

@@ -3148,7 +3148,7 @@ test('feedbackStorage enforces strict validation and formats offline report & ma
     includeDiagnostics: true,
   };
   const report = formatFeedbackReport(draft, diag);
-  assert.ok(report.includes('Floda Strateji Oyunu'));
+  assert.ok(report.includes('Floda Strategy'));
   assert.ok(report.includes('844×390 (Yatay)'));
 
   const href = buildFeedbackMailtoHref(draft, diag);

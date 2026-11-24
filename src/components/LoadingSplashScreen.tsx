@@ -261,7 +261,7 @@ export const LoadingSplashScreen: React.FC<LoadingSplashScreenProps> = ({
             className="font-display text-2xl sm:text-4xl font-extrabold tracking-[0.08em] text-[#f5ecd9] drop-shadow"
             style={{ textWrap: 'balance' }}
           >
-            FLODA STRATEJİ OYUNU
+            FLODA STRATEGY
           </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#e0bc78]">
             <span>{activeSlide.caption}</span>

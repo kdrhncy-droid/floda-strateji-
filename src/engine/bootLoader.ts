@@ -92,7 +92,7 @@ export const STRATEGY_LOADING_TIPS: { title: string; body: string }[] = [
   },
   {
     title: 'Çevrimdışı Güvenli Kayıt',
-    body: 'Floda Strateji Oyunu tamamen çevrimdışı çalışır. Önemli bir savaştan önce manuel kayıt yuvasına kaydet; eski sürüm kayıtların otomatik olarak korunur.',
+    body: 'Floda Strategy tamamen çevrimdışı çalışır. Önemli bir savaştan önce manuel kayıt yuvasına kaydet; eski sürüm kayıtların otomatik olarak korunur.',
   },
   {
     title: 'Ekonomi Haritasıyla Zengin Sancakları Bul',
