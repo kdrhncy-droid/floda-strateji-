@@ -40,6 +40,8 @@ import {
   evaluateWeeklyUnrestAndRebellions,
 } from './aiAndRebellionEngine';
 import {
+  computeEncircledProvinceIds,
+  evaluateAntiHegemonCoalitions,
   evaluateAutomaticCapitulations,
   evaluateWeeklySupplyAndSeasonAttrition,
   getGameSeason,
@@ -1265,10 +1267,14 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
     }
   }
 
-  // 1A. AoH3 Real-Time On-Map Battle Simulation (Frontline vs Backline, Combat Width, and Morale)
+  // 1A. AoH3 Real-Time On-Map Battle Simulation (Frontline vs Backline, Combat Width, Morale, and Encirclement Supply Penalty)
   if (nextBattles.length > 0) {
     const ongoingBattles: ActiveBattle[] = [];
     const roundsToSimulate = isSubDayMode ? 1 : 4;
+    const encircledProvsInBattle = computeEncircledProvinceIds(
+      nextTerritories,
+      nextNations
+    );
 
     for (const btl of nextBattles) {
       const target = nextTerritories[btl.territoryId];
@@ -1289,6 +1295,8 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       let wallHp = target.castleWallHp ?? 100;
 
       const cWidth = btl.combatWidth || 25000;
+      const isDefEncircled = encircledProvsInBattle.has(target.id);
+      const encirclementDefMult = isDefEncircled ? 0.75 : 1.0;
       const terrainDefMult =
         target.terrain === 'DAGLIK'
           ? 1.25
@@ -1339,6 +1347,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           (1 + getNationModernizedTier(defenderNation) * 0.12) *
           terrainDefMult *
           fortBonus *
+          encirclementDefMult *
           (defMorale / 100) *
           (1 + defTuranPowerBonus / 100);
 
@@ -1383,7 +1392,8 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       );
       const defPowerFinal =
         computeUnitWeightedPower(defUnits, defTroops, defenderNation) *
-        terrainDefMult;
+        terrainDefMult *
+        encirclementDefMult;
 
       const battleFinished =
         attTroops <= 400 ||
@@ -2305,13 +2315,14 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           );
         }
       });
-      // 2D. Weekly Supply Limit & Harsh-Season/Terrain Attrition
+      // 2D. Weekly Supply Limit, Encirclement & Harsh-Season/Terrain Attrition
       const seasonInfo = getGameSeason(nextTick, gameMode);
       const attritionRes = evaluateWeeklySupplyAndSeasonAttrition({
         territories: nextTerritories,
         nations: nextNations,
         season: seasonInfo,
         playerNationId,
+        wars: nextWars,
       });
       if (attritionRes.changed) {
         nextTerritories = attritionRes.updatedTerritories;
@@ -2322,11 +2333,11 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           ? `${attritionRes.worstPlayerProvinceName} başta olmak üzere `
           : '';
         toasts.push(
-          `❄️ ${seasonInfo.name} İkmal Yıpranması: ${provLabel}-${attritionRes.playerTotalLoss.toLocaleString('tr-TR')} asker kaybı (İkmal Deposu/Ambar kurun veya birlikleri dağıtın).`
+          `❄️ ${seasonInfo.name} İkmal/Çember Yıpranması: ${provLabel}-${attritionRes.playerTotalLoss.toLocaleString('tr-TR')} asker kaybı (İkmal hattını koruyun veya İkmal Deposu/Ambar kurun).`
         );
       }
 
-      // 2E. Bi-Weekly Dead Alliance Pruning (Every 14 Days)
+      // 2E. Bi-Weekly Dead Alliance Pruning & Anti-Hegemon Coalition Formation (Every 14 Days)
       if (nextTick % 14 === 0) {
         const pruneRes = pruneDeadAlliances({
           nations: nextNations,
@@ -2336,6 +2347,31 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         });
         if (pruneRes.prunedCount > 0) {
           nextRelations = pruneRes.updatedRelations;
+        }
+
+        const coalRes = evaluateAntiHegemonCoalitions({
+          nations: nextNations,
+          territories: nextTerritories,
+          relations: nextRelations,
+          wars: nextWars,
+          playerNationId,
+        });
+        if (coalRes.formedCoalitions.length > 0) {
+          nextRelations = coalRes.updatedRelations;
+          for (const coal of coalRes.formedCoalitions) {
+            const membersStr = coal.memberNames.join(', ');
+            appendNews(
+              `🛡️ Koalisyon Paktı: ${coal.hegemonName} Karşıtı İttifak`,
+              `${membersStr} devletleri, ${coal.hegemonName} devletinin yüksek agresif genişlemesine karşı ortak savunma koalisyonu imzaladı!`,
+              'COALITION'
+            );
+            if (coal.isAgainstPlayer) {
+              sounds.push('WAR_HORN');
+              toasts.push(
+                `⚠️ KOALİSYON PAKTI! Yüksek agresif genişlememiz nedeniyle ${membersStr} bize karşı ortak savunma koalisyonu kurdu!`
+              );
+            }
+          }
         }
       }
     }

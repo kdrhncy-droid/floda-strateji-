@@ -7361,3 +7361,232 @@ test('evaluatePlayerAiCommander finishes off last enemy pockets via coordinated 
   );
 });
 
+test('computeEncircledProvinceIds detects cut-off inland pockets and applies wartime encirclement attrition', async () => {
+  const {
+    computeEncircledProvinceIds,
+    evaluateWeeklySupplyAndSeasonAttrition,
+    getGameSeason,
+  } = await import('./seasonSupplyAndAiProfile');
+
+  const nations: Record<string, Nation> = {
+    A: mkFaz3Nation('A', { capitalTerritoryId: 'A_CAP' }),
+    B: mkFaz3Nation('B', { capitalTerritoryId: 'B_BRIDGE' }),
+  };
+
+  // A owns A_CAP and A_POCKET, separated by enemy-controlled B_BRIDGE (and A_POCKET is inland)
+  const territories: Record<string, Territory> = {
+    A_CAP: mkFaz3Territory('A_CAP', {
+      ownerId: 'A',
+      isCapital: true,
+      isCoastal: false,
+      neighbors: ['B_BRIDGE'],
+      garrison: 6000,
+    }),
+    B_BRIDGE: mkFaz3Territory('B_BRIDGE', {
+      ownerId: 'B',
+      isCapital: true,
+      isCoastal: false,
+      neighbors: ['A_CAP', 'A_POCKET'],
+      garrison: 8000,
+    }),
+    A_POCKET: mkFaz3Territory('A_POCKET', {
+      ownerId: 'A',
+      isCapital: false,
+      isCoastal: false,
+      neighbors: ['B_BRIDGE'],
+      garrison: 4000,
+    }),
+  };
+
+  const encircled = computeEncircledProvinceIds(territories, nations);
+  assert.equal(
+    encircled.has('A_POCKET'),
+    true,
+    'Inland province cut off from its capital and ports must be marked encircled'
+  );
+  assert.equal(
+    encircled.has('A_CAP'),
+    false,
+    'Capital province must never be marked encircled'
+  );
+
+  const war: ActiveWar = {
+    id: 'w_enc',
+    name: 'Encirclement War',
+    attackerId: 'B',
+    defenderId: 'A',
+    attackers: ['B'],
+    defenders: ['A'],
+    startedTick: 1,
+    attackerWarScore: 10,
+    casualtiesAttacker: 0,
+    casualtiesDefender: 0,
+  };
+
+  const attRes = evaluateWeeklySupplyAndSeasonAttrition({
+    territories,
+    nations,
+    season: getGameSeason(60, 'EMPIRES_1440'),
+    playerNationId: 'A',
+    wars: [war],
+  });
+
+  assert.equal(attRes.changed, true);
+  assert.ok(
+    attRes.updatedTerritories['A_POCKET'].garrison < 4000,
+    'Encircled wartime garrison must suffer weekly encirclement attrition even below normal supply limit'
+  );
+  assert.equal(
+    attRes.updatedTerritories['A_CAP'].garrison,
+    6000,
+    'Supplied capital below supply limit must not suffer encirclement attrition'
+  );
+});
+
+test('covert espionage operations (sabotage fort, incite revolt, siphon treasury) and anti-hegemon coalitions work end-to-end', async () => {
+  const { evaluateAntiHegemonCoalitions } = await import(
+    './seasonSupplyAndAiProfile'
+  );
+
+  const nations: Record<string, Nation> = {
+    PLR: mkFaz3Nation('PLR', {
+      name: 'Osmanlı',
+      treasury: 1200,
+      diplomacyPoints: 95,
+      researchPoints: 40,
+      aggressiveExpansion: 78,
+    }),
+    ENM: mkFaz3Nation('ENM', {
+      name: 'Venedik',
+      treasury: 1000,
+      stability: 75,
+    }),
+    NB1: mkFaz3Nation('NB1', { name: 'Macaristan' }),
+    NB2: mkFaz3Nation('NB2', { name: 'Avusturya' }),
+  };
+
+  const territories: Record<string, Territory> = {
+    P1: mkFaz3Territory('P1', {
+      ownerId: 'PLR',
+      neighbors: ['E1', 'N1', 'N2'],
+    }),
+    P2: mkFaz3Territory('P2', { ownerId: 'PLR', neighbors: ['P1'] }),
+    P3: mkFaz3Territory('P3', { ownerId: 'PLR', neighbors: ['P1'] }),
+    E1: mkFaz3Territory('E1', {
+      ownerId: 'ENM',
+      name: 'Girit Kalesi',
+      neighbors: ['P1'],
+      garrison: 5000,
+      castleWallHp: 100,
+      unrest: 20,
+      buildings: {
+        ...mkFaz3Territory('x').buildings,
+        fortress: 3,
+      },
+    }),
+    N1: mkFaz3Territory('N1', { ownerId: 'NB1', neighbors: ['P1', 'N2'] }),
+    N2: mkFaz3Territory('N2', { ownerId: 'NB2', neighbors: ['P1', 'N1'] }),
+  };
+
+  // 1. Sabotage Fortress
+  const sabRes = executeDiplomaticActionDomain({
+    targetNationId: 'ENM',
+    action: 'ESPIONAGE_SABOTAGE_FORT',
+    playerNationId: 'PLR',
+    totalPlayerGarrison: 10000,
+    tick: 20,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    territories,
+    relations: {},
+    wars: [],
+    newsEvents: [],
+  });
+  assert.ok(
+    (sabRes.territories?.E1.castleWallHp ?? 100) <= 45 &&
+      (sabRes.territories?.E1.garrison ?? 5000) < 5000,
+    'ESPIONAGE_SABOTAGE_FORT must damage enemy fortress wall integrity and reduce garrison'
+  );
+
+  // 2. Incite Revolt
+  const revRes = executeDiplomaticActionDomain({
+    targetNationId: 'ENM',
+    action: 'ESPIONAGE_INCITE_REVOLT',
+    playerNationId: 'PLR',
+    totalPlayerGarrison: 10000,
+    tick: 21,
+    gameMode: 'EMPIRES_1440',
+    nations: sabRes.nations!,
+    territories: sabRes.territories!,
+    relations: sabRes.relations!,
+    wars: [],
+    newsEvents: [],
+  });
+  assert.ok(
+    (revRes.territories?.E1.unrest ?? 0) >= 60,
+    'ESPIONAGE_INCITE_REVOLT must spike target province unrest by +42'
+  );
+
+  // 3. Siphon Treasury & Science
+  const sipRes = executeDiplomaticActionDomain({
+    targetNationId: 'ENM',
+    action: 'ESPIONAGE_SIPHON_TREASURY',
+    playerNationId: 'PLR',
+    totalPlayerGarrison: 10000,
+    tick: 22,
+    gameMode: 'EMPIRES_1440',
+    nations: revRes.nations!,
+    territories: revRes.territories!,
+    relations: revRes.relations!,
+    wars: [],
+    newsEvents: [],
+  });
+  assert.ok(
+    (sipRes.nations?.PLR.treasury ?? 0) > (revRes.nations?.PLR.treasury ?? 0) &&
+      (sipRes.nations?.PLR.researchPoints ?? 0) === 75,
+    'ESPIONAGE_SIPHON_TREASURY must yield net positive gold and +35 research points'
+  );
+
+  // 4. Anti-Hegemon Coalition forms between threatened neighbors NB1 and NB2 against high-AE PLR (AE=78)
+  const relationsWithThreat: Record<string, DiplomaticRelation> = {
+    NB1_PLR: {
+      nationA: 'NB1',
+      nationB: 'PLR',
+      score: -45,
+      isAllied: false,
+      hasNonAggression: false,
+      hasTradeAgreement: false,
+      hasEmbargo: false,
+      hasMilitaryAccess: false,
+      truceUntilTick: 0,
+    },
+    NB2_PLR: {
+      nationA: 'NB2',
+      nationB: 'PLR',
+      score: -40,
+      isAllied: false,
+      hasNonAggression: false,
+      hasTradeAgreement: false,
+      hasEmbargo: false,
+      hasMilitaryAccess: false,
+      truceUntilTick: 0,
+    },
+  };
+
+  const coalRes = evaluateAntiHegemonCoalitions({
+    nations,
+    territories,
+    relations: relationsWithThreat,
+    wars: [],
+    playerNationId: 'PLR',
+  });
+  assert.equal(coalRes.formedCoalitions.length, 1);
+  assert.equal(coalRes.formedCoalitions[0].isAgainstPlayer, true);
+  assert.equal(
+    coalRes.updatedRelations.NB1_NB2?.allianceType,
+    'DEFENSIVE',
+    'Threatened neighbors of high-AE hegemon must form a mutual Defensive Coalition Pact'
+  );
+});
+
+

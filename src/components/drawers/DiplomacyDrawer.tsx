@@ -654,6 +654,45 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                     <span>📍</span>
                   </button>
                 </div>
+
+                {/* Covert Espionage & Sabotage Row (AoH3 Dark Gold/Obsidian Theme) */}
+                {!isPlayer && (
+                  <div className="pt-1.5 border-t border-[#caa15a]/15 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-[#b8a990] uppercase tracking-wider mr-1">
+                      🕵️ Casusluk:
+                    </span>
+                    <button
+                      data-testid={`diplo-spy-fort-${realm.id}`}
+                      onClick={() =>
+                        onDiplomaticAction(realm.id, 'ESPIONAGE_SABOTAGE_FORT')
+                      }
+                      title="Kale Sabotajı (25 DP · 220 Altın): Düşman kalesinin surlarını %35'e indirir ve garnizonu yıpratır"
+                      className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#19130e] hover:bg-[#251c14] border border-[#caa15a]/30 text-[10px] font-semibold text-[#f3ead7] cursor-pointer"
+                    >
+                      🏰 Kale Sabotajı (220A)
+                    </button>
+                    <button
+                      data-testid={`diplo-spy-revolt-${realm.id}`}
+                      onClick={() =>
+                        onDiplomaticAction(realm.id, 'ESPIONAGE_INCITE_REVOLT')
+                      }
+                      title="İsyan Kışkırtma (30 DP · 260 Altın): Hedef eyalette huzursuzluğu +42 artırır ve milis ayaklanması çıkarır"
+                      className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#19130e] hover:bg-[#251c14] border border-[#caa15a]/30 text-[10px] font-semibold text-[#f3ead7] cursor-pointer"
+                    >
+                      🔥 İsyan Kışkırt (260A)
+                    </button>
+                    <button
+                      data-testid={`diplo-spy-siphon-${realm.id}`}
+                      onClick={() =>
+                        onDiplomaticAction(realm.id, 'ESPIONAGE_SIPHON_TREASURY')
+                      }
+                      title="Hazine & Bilim Sızdır (20 DP · 150 Altın): Hedef hazineden altın ve +35 Araştırma Puanı sızdırır"
+                      className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#19130e] hover:bg-[#251c14] border border-[#caa15a]/30 text-[10px] font-semibold text-amber-200 cursor-pointer"
+                    >
+                      📜 Hazine &amp; Bilim Sızdır (150A)
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })

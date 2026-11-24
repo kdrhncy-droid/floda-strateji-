@@ -285,24 +285,98 @@ export interface SupplyAttritionResult {
   playerAffectedCount: number;
   playerTotalLoss: number;
   worstPlayerProvinceName: string | null;
+  encircledProvinceIds?: Set<string>;
 }
 
 /**
- * Evaluates weekly supply-limit and harsh-season/terrain attrition on oversized garrisons & sieges.
+ * Computes the set of province IDs that are completely cut off (encircled) from their owner's
+ * capital and coastal ports. A nation with only 1 province is never considered encircled from itself.
+ */
+export function computeEncircledProvinceIds(
+  territories: Record<string, Territory>,
+  nations: Record<string, Nation>
+): Set<string> {
+  const byOwner = new Map<string, Territory[]>();
+  for (const t of Object.values(territories)) {
+    if (!t || !t.ownerId) continue;
+    const list = byOwner.get(t.ownerId);
+    if (list) list.push(t);
+    else byOwner.set(t.ownerId, [t]);
+  }
+
+  const encircled = new Set<string>();
+
+  for (const [ownerId, provs] of byOwner.entries()) {
+    if (provs.length <= 1) continue;
+    const nation = nations[ownerId];
+    const ownedSet = new Set(provs.map((p) => p.id));
+
+    // Supply roots: nation's capital (if owned) + any owned coastal port
+    const supplyRoots: string[] = [];
+    for (const p of provs) {
+      const isCap =
+        p.isCapital || (nation?.capitalTerritoryId && p.id === nation.capitalTerritoryId);
+      if (isCap || isTerritoryCoastal(p)) {
+        supplyRoots.push(p.id);
+      }
+    }
+
+    // Fallback if capital was lost and all remaining provinces are inland: largest province acts as emergency HQ
+    if (supplyRoots.length === 0) {
+      const fallbackRoot = [...provs].sort((a, b) => b.garrison - a.garrison)[0];
+      if (fallbackRoot) supplyRoots.push(fallbackRoot.id);
+    }
+
+    const supplied = new Set<string>(supplyRoots);
+    const queue = [...supplyRoots];
+    while (queue.length > 0) {
+      const curId = queue.shift()!;
+      const curTerr = territories[curId];
+      if (!curTerr) continue;
+      for (const nbId of curTerr.neighbors) {
+        if (ownedSet.has(nbId) && !supplied.has(nbId)) {
+          supplied.add(nbId);
+          queue.push(nbId);
+        }
+      }
+    }
+
+    for (const p of provs) {
+      if (!supplied.has(p.id)) {
+        encircled.add(p.id);
+      }
+    }
+  }
+
+  return encircled;
+}
+
+export function isTerritoryEncircled(
+  territoryId: string,
+  territories: Record<string, Territory>,
+  nations: Record<string, Nation>
+): boolean {
+  return computeEncircledProvinceIds(territories, nations).has(territoryId);
+}
+
+/**
+ * Evaluates weekly supply-limit, harsh-season/terrain attrition, and wartime encirclement attrition.
  */
 export function evaluateWeeklySupplyAndSeasonAttrition(params: {
   territories: Record<string, Territory>;
   nations: Record<string, Nation>;
   season: GameSeasonInfo;
   playerNationId: string;
+  wars?: ActiveWar[];
 }): SupplyAttritionResult {
-  const { territories, nations, season, playerNationId } = params;
+  const { territories, nations, season, playerNationId, wars = [] } = params;
   let nextTerrs = territories;
   let cloned = false;
   let playerAffectedCount = 0;
   let playerTotalLoss = 0;
   let worstLoss = 0;
   let worstPlayerProvinceName: string | null = null;
+  const encircledIds = computeEncircledProvinceIds(territories, nations);
 
   const writeTerr = (id: string, terr: Territory) => {
     if (!cloned) {
@@ -315,24 +389,47 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
   for (const t of Object.values(territories)) {
     if (!t) continue;
     const owner = nations[t.ownerId];
-    const supplyLimit = calculateProvinceSupplyLimit(t, owner, season);
+    const isEncircled = encircledIds.has(t.id);
+    const ownerAtWar = wars.some(
+      (w) =>
+        w.attackerId === t.ownerId ||
+        w.defenderId === t.ownerId ||
+        w.attackers.includes(t.ownerId) ||
+        w.defenders.includes(t.ownerId)
+    );
+    // Encircled provinces have 35% lower effective supply limit
+    const supplyLimit = Math.round(
+      calculateProvinceSupplyLimit(t, owner, season) * (isEncircled ? 0.65 : 1.0)
+    );
 
     let nextGarrison = t.garrison;
     let nextUnits = t.units;
     let nextSiege = t.siege;
     let modified = false;
 
-    // 1. Oversized garrison exceeding local supply limit suffers attrition
-    if (t.garrison > supplyLimit && t.garrison > 1500) {
-      const excessRatio = (t.garrison - supplyLimit) / Math.max(1, supplyLimit);
+    // 1. Oversized garrison exceeding local supply limit OR encircled wartime pocket suffers attrition
+    if (
+      (t.garrison > supplyLimit && t.garrison > 1500) ||
+      (isEncircled && ownerAtWar && t.garrison > 1000)
+    ) {
+      const excessRatio = Math.max(
+        0,
+        (t.garrison - supplyLimit) / Math.max(1, supplyLimit)
+      );
       const terrainHarshness =
         t.terrain === 'DAGLIK' || t.terrain === 'COL' ? 1.25 : 1.0;
+      const encirclementBonusRate = isEncircled && ownerAtWar ? 0.038 : 0;
       const rate = Math.min(
-        0.065,
-        (0.012 + excessRatio * 0.032) * season.attritionMultiplier * terrainHarshness
+        0.085,
+        (0.012 + excessRatio * 0.032 + encirclementBonusRate) *
+          season.attritionMultiplier *
+          terrainHarshness
       );
-      const rawLoss = Math.max(150, Math.round(t.garrison * rate));
-      const floor = Math.max(1500, Math.round(supplyLimit * 0.92));
+      const rawLoss = Math.max(120, Math.round(t.garrison * rate));
+      const floor =
+        isEncircled && ownerAtWar
+          ? 800
+          : Math.max(1500, Math.round(supplyLimit * 0.92));
       const clampedNext = Math.max(floor, t.garrison - rawLoss);
       const actualLoss = t.garrison - clampedNext;
       if (actualLoss > 0) {
@@ -409,6 +506,7 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
     playerAffectedCount,
     playerTotalLoss,
     worstPlayerProvinceName,
+    encircledProvinceIds: encircledIds,
   };
 }
 
@@ -680,3 +778,112 @@ export function pruneDeadAlliances(params: {
 
   return { updatedRelations: nextRelations, prunedCount };
 }
+
+/**
+ * Evaluates Anti-Hegemon Coalition Pacts: when an expansionist superpower accumulates
+ * high Aggressive Expansion (>= 68) and holds >= 4 provinces, threatened neighbors
+ * automatically form mutual Defensive Coalition Pacts to preserve late-game balance.
+ */
+export function evaluateAntiHegemonCoalitions(params: {
+  nations: Record<string, Nation>;
+  territories: Record<string, Territory>;
+  relations: Record<string, DiplomaticRelation>;
+  wars: ActiveWar[];
+  playerNationId: string;
+}): {
+  updatedRelations: Record<string, DiplomaticRelation>;
+  formedCoalitions: { hegemonName: string; memberNames: string[]; isAgainstPlayer: boolean }[];
+} {
+  const { nations, territories, relations, wars, playerNationId } = params;
+  const provCountByNation: Record<string, number> = {};
+  const neighborsByNation = new Map<string, Set<string>>();
+
+  for (const t of Object.values(territories)) {
+    if (!t || !t.ownerId) continue;
+    provCountByNation[t.ownerId] = (provCountByNation[t.ownerId] || 0) + 1;
+    let nbSet = neighborsByNation.get(t.ownerId);
+    if (!nbSet) {
+      nbSet = new Set<string>();
+      neighborsByNation.set(t.ownerId, nbSet);
+    }
+    for (const nbId of t.neighbors) {
+      const nbOwner = territories[nbId]?.ownerId;
+      if (nbOwner && nbOwner !== t.ownerId) {
+        nbSet.add(nbOwner);
+      }
+    }
+  }
+
+  let nextRelations = relations;
+  let cloned = false;
+  const formedCoalitions: {
+    hegemonName: string;
+    memberNames: string[];
+    isAgainstPlayer: boolean;
+  }[] = [];
+
+  const hegemons = Object.values(nations).filter(
+    (n) =>
+      n &&
+      !n.isEliminated &&
+      (n.aggressiveExpansion || 0) >= 68 &&
+      (provCountByNation[n.id] || 0) >= 3
+  );
+
+  for (const hegemon of hegemons) {
+    const neighborIds = Array.from(neighborsByNation.get(hegemon.id) || []);
+    const threatened = neighborIds
+      .map((id) => nations[id])
+      .filter((n): n is Nation => {
+        if (!n || n.isEliminated || n.id === playerNationId) return false;
+        if ((provCountByNation[n.id] || 0) === 0) return false;
+        if (n.vassalOf === hegemon.id) return false;
+        const relWithHeg = getOrCreateRelation(nextRelations, n.id, hegemon.id);
+        if (relWithHeg.isAllied || relWithHeg.allianceType) return false;
+        return relWithHeg.score <= -18 || Boolean(isAtWar(wars, n.id, hegemon.id));
+      })
+      .slice(0, 4);
+
+    if (threatened.length < 2) continue;
+
+    let newLinks = 0;
+    const memberNamesSet = new Set<string>();
+
+    for (let i = 0; i < threatened.length; i++) {
+      for (let j = i + 1; j < threatened.length; j++) {
+        const a = threatened[i];
+        const b = threatened[j];
+        if (isAtWar(wars, a.id, b.id)) continue;
+        const rKey = relationKey(a.id, b.id);
+        const curRel = getOrCreateRelation(nextRelations, a.id, b.id);
+        if (curRel.isAllied || curRel.allianceType || curRel.score < -35) continue;
+
+        if (!cloned) {
+          nextRelations = { ...relations };
+          cloned = true;
+        }
+        nextRelations[rKey] = {
+          ...curRel,
+          isAllied: true,
+          allianceType: 'DEFENSIVE',
+          hasNonAggression: true,
+          score: Math.min(100, Math.max(35, curRel.score + 30)),
+        };
+        newLinks++;
+        memberNamesSet.add(a.name);
+        memberNamesSet.add(b.name);
+      }
+    }
+
+    if (newLinks > 0) {
+      formedCoalitions.push({
+        hegemonName: hegemon.name,
+        memberNames: Array.from(memberNamesSet),
+        isAgainstPlayer: hegemon.id === playerNationId,
+      });
+    }
+  }
+
+  return { updatedRelations: nextRelations, formedCoalitions };
+}
+

@@ -24,6 +24,7 @@ import {
 import {
   calculateProvinceSupplyLimit,
   getGameSeason,
+  isTerritoryEncircled,
 } from "../../engine/seasonSupplyAndAiProfile";
 import { computeVisibleTerritoryIds } from "../../engine/fogOfWarEngine";
 import { TERRAIN_INFO } from "../../engine/pashaAndFiefEngine";
@@ -115,10 +116,17 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
     selectedOwner
   );
   const seasonInfo = getGameSeason(tick, gameMode);
-  const supplyLimit = calculateProvinceSupplyLimit(
-    selectedTerritory,
-    selectedOwner,
-    seasonInfo
+  const isEncircled = isTerritoryEncircled(
+    selectedTerritory.id,
+    territories,
+    nations
+  );
+  const supplyLimit = Math.round(
+    calculateProvinceSupplyLimit(
+      selectedTerritory,
+      selectedOwner,
+      seasonInfo
+    ) * (isEncircled ? 0.65 : 1.0)
   );
   const isOverSupply = hasSelectedIntel && selectedTerritory.garrison > supplyLimit;
 
@@ -296,6 +304,13 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {isEncircled && (
+                    <div className="mx-3 px-2.5 py-1.5 rounded-xl bg-rose-950/75 border border-rose-500/45 text-[11px] text-rose-200 font-semibold flex items-center justify-between">
+                      <span>⚠️ Kuşatma Çemberi (Başkent/Liman İkmali Kesik)</span>
+                      <span className="font-mono-num text-rose-300 font-bold">-%25 Savunma · -%35 İkmal</span>
+                    </div>
+                  )}
 
                   {/* Terrain & Castle Wall Integrity Bar (AoH3 + Bannerlord Siege Info) */}
                   {(() => {

@@ -4,7 +4,7 @@ import App from './App.tsx';
 import './index.css';
 
 // Register VitePWA Workbox Service Worker and broadcast offline-ready status for Vercel/iOS/Android play
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+if ('serviceWorker' in navigator) {
   const updateSW = registerSW({
     immediate: true,
     onOfflineReady() {

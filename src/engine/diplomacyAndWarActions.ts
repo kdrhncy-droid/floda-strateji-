@@ -53,6 +53,9 @@ const DIPLOMACY_POINT_COSTS: Partial<Record<DiplomaticActionType, number>> = {
   OFFENSIVE_PACT: 50,
   EMBARGO: 15,
   DECLARE_WAR: 10,
+  ESPIONAGE_SABOTAGE_FORT: 25,
+  ESPIONAGE_INCITE_REVOLT: 30,
+  ESPIONAGE_SIPHON_TREASURY: 20,
 };
 
 function spendDiplomacyPoints(
@@ -771,6 +774,233 @@ export function executeDiplomaticActionDomain(params: {
       relations: nextRelations,
       newsEvents: updatedNews,
       toast: baseToast,
+    };
+  }
+
+  // =========================================================================
+  // COVERT ESPIONAGE OPERATIONS (Kale Sabotajı, İsyan Kışkırtma, Hazine/Bilim Sızdırma)
+  // =========================================================================
+  if (action === 'ESPIONAGE_SABOTAGE_FORT') {
+    const goldCost = 220;
+    if (playerNation.treasury < goldCost) {
+      return {
+        toast: `🕵️ Kale Sabotajı için ${goldCost} Altın gerekli (Mevcut: ${Math.floor(playerNation.treasury)}).`,
+      };
+    }
+    const spent = spendDiplomacyPoints(
+      playerNation,
+      DIPLOMACY_POINT_COSTS.ESPIONAGE_SABOTAGE_FORT || 25
+    );
+    if ('error' in spent) return { toast: spent.error };
+
+    const targetProvs = Object.values(territories).filter(
+      (t) => t && t.ownerId === targetNationId
+    );
+    if (targetProvs.length === 0) return {};
+
+    // Prioritize besieged enemy province, or border province facing player, or enemy capital
+    const bestFortProv = [...targetProvs].sort((a, b) => {
+      const aSiege = a.siege ? 1 : 0;
+      const bSiege = b.siege ? 1 : 0;
+      if (aSiege !== bSiege) return bSiege - aSiege;
+      const aBordersPlayer = a.neighbors.some(
+        (nId) => territories[nId]?.ownerId === playerNationId
+      )
+        ? 1
+        : 0;
+      const bBordersPlayer = b.neighbors.some(
+        (nId) => territories[nId]?.ownerId === playerNationId
+      )
+        ? 1
+        : 0;
+      if (aBordersPlayer !== bBordersPlayer) return bBordersPlayer - aBordersPlayer;
+      return (
+        (b.buildings?.fortress || 0) - (a.buildings?.fortress || 0) ||
+        Number(b.isCapital) - Number(a.isCapital) ||
+        b.garrison - a.garrison
+      );
+    })[0];
+
+    const newGarrison = Math.max(400, Math.round(bestFortProv.garrison * 0.86));
+    const ratio = newGarrison / Math.max(1, bestFortProv.garrison);
+    const casualties = bestFortProv.garrison - newGarrison;
+    const nextWallHp = Math.min(35, Math.max(15, (bestFortProv.castleWallHp ?? 100) - 55));
+    const nextSiege = bestFortProv.siege
+      ? {
+          ...bestFortProv.siege,
+          progress: Math.min(95, bestFortProv.siege.progress + 35),
+          wallIntegrity: Math.min(35, bestFortProv.siege.wallIntegrity - 45),
+        }
+      : bestFortProv.siege;
+
+    sound.playClick();
+    return {
+      nations: {
+        ...nations,
+        [playerNationId]: {
+          ...spent.nation,
+          treasury: spent.nation.treasury - goldCost,
+        },
+      },
+      territories: {
+        ...territories,
+        [bestFortProv.id]: {
+          ...bestFortProv,
+          castleWallHp: nextWallHp,
+          garrison: newGarrison,
+          units: bestFortProv.units
+            ? {
+                infantry: Math.round(bestFortProv.units.infantry * ratio),
+                armor: Math.round(bestFortProv.units.armor * ratio),
+                airDrone: Math.round(bestFortProv.units.airDrone * ratio),
+              }
+            : { infantry: newGarrison, armor: 0, airDrone: 0 },
+          siege: nextSiege,
+        },
+      },
+      relations: {
+        ...relations,
+        [key]: {
+          ...currentRel,
+          score: Math.max(-100, currentRel.score - 15),
+        },
+      },
+      newsEvents: prependNews(
+        newsEvents,
+        tick,
+        gameMode,
+        `🕵️ Kale Sabotajı: ${bestFortProv.name}`,
+        `Casuslarımız ${target.name} kontrolündeki ${bestFortProv.name} kalesinin barut mahzenlerini havaya uçurdu! Sur sağlamlığı %${nextWallHp} seviyesine indi (-${casualties.toLocaleString('tr-TR')} garnizon).`,
+        'WAR'
+      ),
+      toast: `🕵️ Kale Sabotajı Başarılı: ${bestFortProv.name} surları %${nextWallHp} seviyesine düşürüldü (-${casualties.toLocaleString('tr-TR')} düşman askeri)!`,
+    };
+  }
+
+  if (action === 'ESPIONAGE_INCITE_REVOLT') {
+    const goldCost = 260;
+    if (playerNation.treasury < goldCost) {
+      return {
+        toast: `🕵️ İsyan Kışkırtma için ${goldCost} Altın gerekli (Mevcut: ${Math.floor(playerNation.treasury)}).`,
+      };
+    }
+    const spent = spendDiplomacyPoints(
+      playerNation,
+      DIPLOMACY_POINT_COSTS.ESPIONAGE_INCITE_REVOLT || 30
+    );
+    if ('error' in spent) return { toast: spent.error };
+
+    const targetProvs = Object.values(territories).filter(
+      (t) => t && t.ownerId === targetNationId
+    );
+    if (targetProvs.length === 0) return {};
+
+    // Target province with highest unrest or non-core province first
+    const revoltProv = [...targetProvs].sort((a, b) => {
+      const aNonCore = a.coreOwnerId !== targetNationId ? 1 : 0;
+      const bNonCore = b.coreOwnerId !== targetNationId ? 1 : 0;
+      if (aNonCore !== bNonCore) return bNonCore - aNonCore;
+      return (b.unrest || 0) - (a.unrest || 0);
+    })[0];
+
+    const nextUnrest = Math.min(100, Math.round((revoltProv.unrest || 10) + 42));
+    const revoltDamage = Math.min(
+      Math.max(300, Math.round(revoltProv.garrison * 0.22)),
+      Math.max(0, revoltProv.garrison - 400)
+    );
+    const nextGarrison = Math.max(400, revoltProv.garrison - revoltDamage);
+    const ratio = nextGarrison / Math.max(1, revoltProv.garrison);
+
+    sound.playClick();
+    return {
+      nations: {
+        ...nations,
+        [playerNationId]: {
+          ...spent.nation,
+          treasury: spent.nation.treasury - goldCost,
+        },
+        [targetNationId]: {
+          ...target,
+          stability: Math.max(15, (target.stability || 70) - 8),
+        },
+      },
+      territories: {
+        ...territories,
+        [revoltProv.id]: {
+          ...revoltProv,
+          unrest: nextUnrest,
+          garrison: nextGarrison,
+          units: revoltProv.units
+            ? {
+                infantry: Math.round(revoltProv.units.infantry * ratio),
+                armor: Math.round(revoltProv.units.armor * ratio),
+                airDrone: Math.round(revoltProv.units.airDrone * ratio),
+              }
+            : { infantry: nextGarrison, armor: 0, airDrone: 0 },
+        },
+      },
+      relations: {
+        ...relations,
+        [key]: {
+          ...currentRel,
+          score: Math.max(-100, currentRel.score - 18),
+        },
+      },
+      newsEvents: prependNews(
+        newsEvents,
+        tick,
+        gameMode,
+        `🔥 Kışkırtılan Ayaklanma: ${revoltProv.name}`,
+        `${revoltProv.name} (${target.name}) eyaletinde gizli ajanların kışkırttığı silahlı milisler ayaklandı! Huzursuzluk %${nextUnrest} seviyesine çıktı (-${revoltDamage.toLocaleString('tr-TR')} garnizon kaybı).`,
+        'WAR'
+      ),
+      toast: `🔥 ${revoltProv.name} (${target.name}) eyaletinde isyan kışkırtıldı! Huzursuzluk %${nextUnrest}, -${revoltDamage.toLocaleString('tr-TR')} düşman askeri.`,
+    };
+  }
+
+  if (action === 'ESPIONAGE_SIPHON_TREASURY') {
+    const goldCost = 150;
+    if (playerNation.treasury < goldCost) {
+      return {
+        toast: `🕵️ İstihbarat Sızdırma operasyonu için ${goldCost} Altın gerekli.`,
+      };
+    }
+    const spent = spendDiplomacyPoints(
+      playerNation,
+      DIPLOMACY_POINT_COSTS.ESPIONAGE_SIPHON_TREASURY || 20
+    );
+    if ('error' in spent) return { toast: spent.error };
+
+    const stolenGold = Math.min(
+      520,
+      Math.max(210, Math.round((target.treasury || 600) * 0.22))
+    );
+    const stolenResearch = 35;
+
+    sound.playTreaty();
+    return {
+      nations: {
+        ...nations,
+        [playerNationId]: {
+          ...spent.nation,
+          treasury: spent.nation.treasury - goldCost + stolenGold,
+          researchPoints: Number(
+            ((spent.nation.researchPoints || 0) + stolenResearch).toFixed(1)
+          ),
+        },
+        [targetNationId]: {
+          ...target,
+          treasury: Math.max(0, (target.treasury || 0) - stolenGold),
+        },
+      },
+      relations: {
+        ...relations,
+        [key]: {
+          ...currentRel,
+          score: Math.max(-100, currentRel.score - 12),
+        },
+      },
+      toast: `🕵️ Hazine & Bilim Sızdırıldı (${target.name}): Net +${stolenGold - goldCost} Altın ve +${stolenResearch} Araştırma Puanı ele geçirildi!`,
     };
   }
 

@@ -28,7 +28,10 @@ export type DiplomaticActionType =
   | 'EMBARGO'
   | 'ULTIMATUM_VASSAL'
   | 'ANNEX_VASSAL'
-  | 'DECLARE_WAR';
+  | 'DECLARE_WAR'
+  | 'ESPIONAGE_SABOTAGE_FORT'
+  | 'ESPIONAGE_INCITE_REVOLT'
+  | 'ESPIONAGE_SIPHON_TREASURY';
 
 export type PeaceDealType =
   | 'ANNEX_OCCUPIED'
