@@ -1128,12 +1128,18 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                         decoding="sync"
                                         draggable={false}
                                         referrerPolicy="no-referrer"
-                                        onError={() =>
+                                        onError={(e) => {
+                                          const el = e.currentTarget;
+                                          if (!el.dataset.retried) {
+                                            el.dataset.retried = '1';
+                                            el.src = `${artwork.src}${artwork.src.includes('?') ? '&' : '?'}r=1`;
+                                            return;
+                                          }
                                           setBrokenArtworkIds((prev) => ({
                                             ...prev,
                                             [tech.id]: true,
-                                          }))
-                                        }
+                                          }));
+                                        }}
                                         style={{
                                           objectPosition: artwork.objectPosition,
                                         }}
