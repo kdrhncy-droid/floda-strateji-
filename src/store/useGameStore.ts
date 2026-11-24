@@ -62,6 +62,10 @@ import {
 import { executeWartimeTradeRaidDomain } from '../engine/straitsAndTradeEngine';
 import {
   assimilateTerritoryDomain,
+  batchAssimilateDomain,
+  batchBorderMobilizationDomain,
+  batchStabilityFestivalDomain,
+  batchUpgradeBuildingDomain,
   boostResearchDomain,
   cancelResearchDomain,
   changeIdeologyDomain,
@@ -183,6 +187,13 @@ export interface GameStoreState {
     specialtyId: SpecialtyProductionId
   ) => void;
   assimilateTerritory: (territoryId: string) => void;
+  batchAssimilate: () => void;
+  batchStabilityFestival: () => void;
+  batchUpgradeBuilding: (
+    building: BuildingType,
+    territoryIds?: string[]
+  ) => void;
+  batchBorderMobilization: () => void;
   startMissionary: (territoryId: string) => void;
   formEmpire: (empireId: string) => void;
   executeArmyMove: (fromId: string, toId: string) => void;
@@ -990,6 +1001,44 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     set((s) =>
       assimilateTerritoryDomain({
         territoryId,
+        territories: s.territories,
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+      })
+    ),
+
+  batchAssimilate: () =>
+    set((s) =>
+      batchAssimilateDomain({
+        territories: s.territories,
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+      })
+    ),
+
+  batchStabilityFestival: () =>
+    set((s) =>
+      batchStabilityFestivalDomain({
+        territories: s.territories,
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+      })
+    ),
+
+  batchUpgradeBuilding: (building, territoryIds) =>
+    set((s) =>
+      batchUpgradeBuildingDomain({
+        territories: s.territories,
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+        building,
+        territoryIds,
+      })
+    ),
+
+  batchBorderMobilization: () =>
+    set((s) =>
+      batchBorderMobilizationDomain({
         territories: s.territories,
         nations: s.nations,
         playerNationId: s.playerNationId,

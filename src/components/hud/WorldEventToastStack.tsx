@@ -13,6 +13,7 @@ import { WorldNewsEvent } from '../../types/game';
 interface WorldEventToastStackProps {
   newsEvents: WorldNewsEvent[];
   toastMessage?: string | null;
+  isDrawerOpen?: boolean;
   onDismissToast?: () => void;
   onOpenNewsFeed: () => void;
 }
@@ -77,6 +78,7 @@ function getEventAccent(type: WorldNewsEvent['type']): {
 export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
   newsEvents,
   toastMessage,
+  isDrawerOpen = false,
   onDismissToast,
   onOpenNewsFeed,
 }) => {
@@ -135,7 +137,11 @@ export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
   return (
     <div
       aria-live="polite"
-      className="hud-world-toast-stack absolute z-[28] pointer-events-none flex flex-col items-end gap-1 w-[min(220px,calc(100vw-1rem))] sm:w-[255px] top-[3.05rem] sm:top-[3.15rem] right-2"
+      className={`hud-world-toast-stack absolute z-[55] pointer-events-none flex flex-col items-end gap-1 w-[min(220px,calc(100vw-1rem))] sm:w-[255px] right-2 ${
+        isDrawerOpen
+          ? 'top-1.5 sm:top-[3.15rem]'
+          : 'top-[3.05rem] sm:top-[3.15rem]'
+      }`}
     >
       {/* Unified AoH3 Horizontal Action / War Toast Ribbon */}
       <div

@@ -251,7 +251,9 @@ export function evaluateActiveStraits(
     for (const s of shoreOwners) {
       countsByOwner[s.ownerId] = (countsByOwner[s.ownerId] || 0) + 1;
       const terr = territories[s.territoryId];
-      totalPortBonus += (terr.buildings?.tradeHub || 0) * 0.14;
+      totalPortBonus +=
+        (terr.buildings?.tradeHub || 0) * 0.14 +
+        (terr.buildings?.shipyard || 0) * 0.1;
       if (terr.isOccupied) totalPortBonus -= 0.15;
     }
 
@@ -406,6 +408,7 @@ export function calculateNationTradeAndStraits(params: {
         12 +
         (t.baseGdp || 25) * 0.35 +
         (t.buildings?.tradeHub || 0) * 16 +
+        (t.buildings?.shipyard || 0) * 12 +
         (t.resource === 'TICARET_BOGAZI' || t.resource === 'FINANS_MERKEZI'
           ? 14
           : 0);

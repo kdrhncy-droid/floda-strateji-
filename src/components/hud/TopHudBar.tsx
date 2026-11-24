@@ -137,13 +137,14 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
                 %{Math.round(playerNation.stability)}
               </span>
             </div>
-            <div className="hud-narrow-landscape-hide min-w-0">
-              <div className="font-display text-[11px] sm:text-sm font-bold text-amber-100 truncate max-w-[92px] min-[390px]:max-w-[116px] lg:max-w-[180px]">
+            <div className="hud-narrow-landscape-hide min-w-0 overflow-hidden">
+              <div className="font-display text-[11px] sm:text-sm font-bold text-amber-100 truncate max-w-[90px] min-[370px]:max-w-[110px] min-[390px]:max-w-[124px] lg:max-w-[180px]">
                 {nationTitle}
               </div>
-              <div className="hud-landscape-hide text-[9px] sm:text-[10px] text-amber-400 sm:text-slate-400 whitespace-nowrap leading-tight font-mono-num sm:font-sans">
-                <span className="sm:hidden font-semibold">
-                  {dateLabel} · {hourLabel}
+              <div className="hud-landscape-hide text-[9px] sm:text-[10px] text-amber-400 sm:text-slate-400 leading-tight font-mono-num sm:font-sans truncate">
+                <span className="sm:hidden font-semibold truncate block">
+                  {dateLabel}
+                  <span className="hidden min-[370px]:inline"> · {hourLabel}</span>
                 </span>
                 <span className="hidden sm:inline text-amber-300/90">
                   {IDEOLOGIES[playerNation.ideology]?.name ?? 'Monarşi'} · Diplomasi

@@ -24,7 +24,7 @@ import {
   isAtWar,
   resolveWarParticipants,
 } from './simulationEngine';
-import { relationKey } from './worldBuilder';
+import { isTerritoryCoastal, relationKey } from './worldBuilder';
 
 function scaleUnitComp(units: UnitComposition, ratio: number): UnitComposition {
   return {
@@ -836,39 +836,58 @@ export function evaluateMultiProvinceAiTurn(params: {
 
       let chosenBuilding: BuildingType | undefined;
       let econTarget: Territory | undefined;
+      const highInflation = (actorNation.inflation || 0) >= 6;
 
       if (hasThreatenedBorder && weakestBorder && (weakestBorder.buildings.fortress || 0) < 4) {
         econTarget = weakestBorder;
         chosenBuilding = 'fortress';
       } else if (lowManpower) {
         econTarget =
-          ownedProvinces.find((p) => (p.buildings.barracks || 0) < 4) ||
-          ownedProvinces[0];
-        chosenBuilding = 'barracks';
+          ownedProvinces.find(
+            (p) => (p.buildings.barracks || 0) < 4 || (p.buildings.granary || 0) < 3
+          ) || ownedProvinces[0];
+        chosenBuilding =
+          econTarget && (econTarget.buildings.granary || 0) < (econTarget.buildings.barracks || 0)
+            ? 'granary'
+            : 'barracks';
+      } else if (highInflation) {
+        econTarget =
+          ownedProvinces.find((p) => p.isCapital && (p.buildings.mint || 0) < 4) ||
+          [...ownedProvinces].sort((a, b) => b.baseGdp - a.baseGdp)[0];
+        chosenBuilding = 'mint';
       } else {
         econTarget =
           ownedProvinces.find(
             (p) =>
               straitShoreSet.has(p.id) &&
-              ((p.buildings.tradeHub || 0) < 4 || (p.buildings.fortress || 0) < 3)
+              ((p.buildings.tradeHub || 0) < 4 || (p.buildings.shipyard || 0) < 3)
           ) ||
           ownedProvinces.find((p) => p.isCapital) ||
           [...ownedProvinces].sort((a, b) => b.baseGdp - a.baseGdp)[0];
 
         if (econTarget) {
           const isStraitProv = straitShoreSet.has(econTarget.id);
+          const isCoastalProv = isTerritoryCoastal(econTarget);
           const candidateBuildings: BuildingType[] = isStraitProv
-            ? ['tradeHub', 'fortress', 'factory', 'university', 'barracks']
+            ? ['shipyard', 'tradeHub', 'fortress', 'factory', 'mint', 'university']
+            : isCoastalProv
+            ? ['factory', 'shipyard', 'tradeHub', 'mint', 'granary', 'university']
             : behindInTech
-            ? ['university', 'factory', 'tradeHub', 'barracks', 'fortress']
-            : ['factory', 'tradeHub', 'university', 'barracks', 'fortress'];
+            ? ['university', 'factory', 'mint', 'tradeHub', 'granary', 'barracks', 'fortress']
+            : ['factory', 'tradeHub', 'mint', 'granary', 'university', 'barracks', 'fortress'];
           chosenBuilding = candidateBuildings.find(
-            (bKey) => (econTarget!.buildings[bKey] || 0) < 5
+            (bKey) =>
+              (econTarget!.buildings[bKey] || 0) < 5 &&
+              (bKey !== 'shipyard' || isCoastalProv)
           );
         }
       }
 
-      if (econTarget && chosenBuilding) {
+      if (
+        econTarget &&
+        chosenBuilding &&
+        (chosenBuilding !== 'shipyard' || isTerritoryCoastal(econTarget))
+      ) {
         const currentLvl = econTarget.buildings[chosenBuilding] || 0;
         const upgradeCost = 380 + currentLvl * 200;
         if (currentLvl < 5 && actorNation.treasury >= upgradeCost + 220) {

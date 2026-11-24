@@ -45,6 +45,16 @@ export const TECH_TREE: TechDefinition[] = [
     description: 'Ülke sınırları içindeki tüm bölgelerde savunma direncini maksimuma çıkarır ve Nesil V Zirve Ordusunu açar.',
     effectLabel: '+%30 Ulusal Savunma · Nesil V Zirve Ordu Açılır',
   },
+  {
+    id: 'mil_5',
+    name: 'Tam Spektrum Muharebe Doktrini',
+    branch: 'MILITARY',
+    tier: 5,
+    cost: 1080,
+    prerequisite: 'mil_4',
+    description: 'Müşterek lojistik optimizasyonu ve tam spektrum ateş üstünlüğüyle muharebe gücünü artırır, ordu bakımını düşürür.',
+    effectLabel: '+%20 Muharebe Gücü · -%12 Ordu Bakım Gideri',
+  },
 
   // ECONOMY
   {
@@ -86,6 +96,16 @@ export const TECH_TREE: TechDefinition[] = [
     description: 'Merkezî tahsilat ve vergi denetimiyle vergi gelirini artırır.',
     effectLabel: '+%20 Vergi Geliri',
   },
+  {
+    id: 'eco_5',
+    name: 'Okyanus Limanları & Küresel Koridor Ağı',
+    branch: 'ECONOMY',
+    tier: 5,
+    cost: 1020,
+    prerequisite: 'eco_4',
+    description: 'Kıyı limanları, enerji boğazları ve küresel lojistik hatlarından gelen ticaret gelirini ve şehir yatırım verimini artırır.',
+    effectLabel: '+%25 Boğaz & Deniz Ticareti · +%0,20 Şehir Yatırımı',
+  },
 
   // ADMINISTRATION
   {
@@ -114,8 +134,8 @@ export const TECH_TREE: TechDefinition[] = [
     tier: 3,
     cost: 420,
     prerequisite: 'adm_2',
-    description: 'Ülke genelindeki insan gücü (Manpower) havuzunu ve yenilenme hızını büyütür.',
-    effectLabel: '+%35 İnsan Gücü Yenilenmesi',
+    description: 'Ülke genelindeki insan gücü (Manpower) havuz tavanını ve yenilenme hızını büyütür.',
+    effectLabel: '+%35 İnsan Gücü Yenilenmesi · +%25 Havuz Tavanı',
   },
   {
     id: 'adm_4',
@@ -126,6 +146,16 @@ export const TECH_TREE: TechDefinition[] = [
     prerequisite: 'adm_3',
     description: 'Çok uluslu imparatorluklarda tam istikrar ve vasal gelir artışı sağlar.',
     effectLabel: '+%50 Vasal Haraç Geliri',
+  },
+  {
+    id: 'adm_5',
+    name: 'İmparatorluk Entegrasyon & İdari Birlik',
+    branch: 'ADMINISTRATION',
+    tier: 5,
+    cost: 980,
+    prerequisite: 'adm_4',
+    description: 'Yeni eyaletlerin Öz Vatan (Core) entegrasyonunu hızlandırır ve tüm şehirlerde günlük yerel huzursuzluğu düşürür.',
+    effectLabel: '+%40 Asimilasyon Hızı · −0,35 Günlük Huzursuzluk',
   },
 
   // SCIENCE
@@ -167,6 +197,16 @@ export const TECH_TREE: TechDefinition[] = [
     prerequisite: 'sci_3',
     description: 'Mühendislik ve otomasyon yatırımları ulusal üretim gelirini artırır.',
     effectLabel: '+%35 Üretim Geliri',
+  },
+  {
+    id: 'sci_5',
+    name: 'İleri Kuantum & Endüstriyel Ar-Ge Çağı',
+    branch: 'SCIENCE',
+    tier: 5,
+    cost: 1120,
+    prerequisite: 'sci_4',
+    description: 'İleri mühendislik üsleriyle bilimsel araştırmayı, ulusal üretimi ve şehir yatırım çarpanını zirveye taşır.',
+    effectLabel: '+%30 Araştırma Hızı · +%20 Üretim · +%0,20 Yatırım',
   },
 ];
 
@@ -215,6 +255,17 @@ export const TECH_TREE_1440: TechDefinition[] = [
       'Modern talimli nizamiye alayları ve seri ateşli sahra bataryalarıyla imparatorluk sınırlarını korur; Nesil V Zirve Orduyu açar.',
     effectLabel: '+%30 Ulusal Savunma · Nesil V (Nizâm-ı Cedîd) Açılır',
   },
+  {
+    id: 'mil_5',
+    name: 'Cihanşümul Sefer & Menzil Nizâmı',
+    branch: 'MILITARY',
+    tier: 5,
+    cost: 1180,
+    prerequisite: 'mil_4',
+    description:
+      'Menzilhâne ikmal ağı ve daimi sefer disipliniyle orduların vuruş gücünü artırır, günlük ulufe ve bakım yükünü azaltır.',
+    effectLabel: '+%20 Muharebe Gücü · -%12 Ordu Bakım Gideri',
+  },
 
   // ECONOMY (1440 Historical Era)
   {
@@ -260,6 +311,17 @@ export const TECH_TREE_1440: TechDefinition[] = [
       'Merkezî hazine tahsilat ve vergi denetimiyle vergi gelirini artırır.',
     effectLabel: '+%20 Vergi Geliri',
   },
+  {
+    id: 'eco_5',
+    name: 'Akdeniz-Hint Deniz & Kervan Tekeli',
+    branch: 'ECONOMY',
+    tier: 5,
+    cost: 1100,
+    prerequisite: 'eco_4',
+    description:
+      'Kıyı tersaneleri, gümrük boğazları ve büyük kervan yollarından gelen ticaret gelirini ve şehir yatırım verimini büyütür.',
+    effectLabel: '+%25 Boğaz & Kervan Ticareti · +%0,20 Şehir Yatırımı',
+  },
 
   // ADMINISTRATION (1440 Historical Era)
   {
@@ -291,8 +353,8 @@ export const TECH_TREE_1440: TechDefinition[] = [
     cost: 480,
     prerequisite: 'adm_2',
     description:
-      'Sancaklardaki asker yükümlülüğünü genişleterek sefer öncesi insan gücü havuzunu büyütür.',
-    effectLabel: '+%35 İnsan Gücü Yenilenmesi',
+      'Sancaklardaki asker yükümlülüğünü genişleterek sefer öncesi insan gücü havuz tavanını ve yenilenmesini büyütür.',
+    effectLabel: '+%35 İnsan Gücü Yenilenmesi · +%25 Havuz Tavanı',
   },
   {
     id: 'adm_4',
@@ -304,6 +366,17 @@ export const TECH_TREE_1440: TechDefinition[] = [
     description:
       'Çok uluslu imparatorluk mülkünde sarsılmaz kanun düzeni ve yüksek tâbi devlet haracı sağlar.',
     effectLabel: '+%50 Vasal Haraç Geliri',
+  },
+  {
+    id: 'adm_5',
+    name: 'Cihanşümul İskân & Eyalet Kanunu',
+    branch: 'ADMINISTRATION',
+    tier: 5,
+    cost: 1060,
+    prerequisite: 'adm_4',
+    description:
+      'Fethedilen sancakların Öz Vatan (Core) bütünleşmesini hızlandırır ve tüm eyaletlerde günlük huzursuzluğu yatıştırır.',
+    effectLabel: '+%40 Asimilasyon Hızı · −0,35 Günlük Huzursuzluk',
   },
 
   // SCIENCE (1440 Historical Era)
@@ -349,6 +422,17 @@ export const TECH_TREE_1440: TechDefinition[] = [
     description:
       'İmparatorluk mühendislik akademisiyle hem sivil üretimi hem askeri teknolojiyi çağın zirvesine çıkarır.',
     effectLabel: '+%35 Üretim Geliri',
+  },
+  {
+    id: 'sci_5',
+    name: 'Takiyüddin Rasathanesi & Büyük Bilim Çağı',
+    branch: 'SCIENCE',
+    tier: 5,
+    cost: 1200,
+    prerequisite: 'sci_4',
+    description:
+      'İleri astronomi, haritacılık ve mühendislik mektepleriyle araştırma hızını, üretimi ve şehir gelişimini zirveye taşır.',
+    effectLabel: '+%30 Araştırma Hızı · +%20 Üretim · +%0,20 Yatırım',
   },
 ];
 

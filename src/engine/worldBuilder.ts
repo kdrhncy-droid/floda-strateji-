@@ -43,6 +43,21 @@ export function relationKey(a: string, b: string): string {
   return a < b ? `${a}_${b}` : `${b}_${a}`;
 }
 
+const STRAIT_SHORE_ID_SET = new Set<string>(
+  STRATEGIC_STRAITS.flatMap((s) => s.shoreIds)
+);
+
+/** Backward-compatible coastal check that also handles legacy saves lacking Territory.isCoastal. */
+export function isTerritoryCoastal(
+  territory: Pick<Territory, 'id' | 'isCoastal' | 'resource'> | null | undefined
+): boolean {
+  if (!territory) return false;
+  if (typeof territory.isCoastal === 'boolean') {
+    return territory.isCoastal;
+  }
+  return STRAIT_SHORE_ID_SET.has(territory.id) || territory.resource === 'TICARET_BOGAZI';
+}
+
 function diversifyProvinceResource(
   provId: string,
   baseResource: ResourceType,
@@ -328,6 +343,146 @@ export function buildPolygonAdjacencyNeighbors(
   return linkedCountryPairs;
 }
 
+/**
+ * Classifies provinces touching open sea/coastline (edges not shared with any adjacent land polygon)
+ * so only true coastal cities can build coastal harbors & shipyards.
+ */
+const INLAND_VORONOI_OVERRIDES = new Set<string>([
+  '792',     // Ankara
+  '792_KNY', // Konya
+  '792_ERZ', // Erzurum
+  '643',     // Moskova
+  '643_KZN', // Kazan
+  '643_SVX', // Perm
+  '643_OVB', // Tümen
+  '643_IKT', // İrkutsk
+  '250',     // Paris
+  '276',     // Berlin
+  '724',     // Madrid / Toledo
+  '380_MIL', // Milano
+  '616_POZ', // Poznań
+  '804_HRK', // Harkiv
+]);
+
+export function computeCoastalTerritoryIds(
+  features: GeoCountryFeature[],
+  territories: Record<string, Territory>
+): Set<string> {
+  const entries: {
+    id: string;
+    boxes: RingBBox[];
+    minLon: number;
+    maxLon: number;
+    minLat: number;
+    maxLat: number;
+  }[] = [];
+
+  for (const feat of features) {
+    if (!territories[feat.id]) continue;
+    const boxes = extractOuterRingBBoxes(feat.geometry);
+    if (boxes.length === 0) continue;
+    let minLon = Infinity;
+    let maxLon = -Infinity;
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    for (const b of boxes) {
+      if (b.minLon < minLon) minLon = b.minLon;
+      if (b.maxLon > maxLon) maxLon = b.maxLon;
+      if (b.minLat < minLat) minLat = b.minLat;
+      if (b.maxLat > maxLat) maxLat = b.maxLat;
+    }
+    entries.push({ id: feat.id, boxes, minLon, maxLon, minLat, maxLat });
+  }
+
+  const coastalIds = new Set<string>();
+  const seaGapThresholdDeg = 0.24;
+  const seaGapSq = seaGapThresholdDeg * seaGapThresholdDeg;
+  const bboxPad = 0.3;
+
+  for (let i = 0; i < entries.length; i++) {
+    const eA = entries[i];
+    if (INLAND_VORONOI_OVERRIDES.has(eA.id)) {
+      continue;
+    }
+    if (STRAIT_SHORE_ID_SET.has(eA.id) || territories[eA.id]?.resource === 'TICARET_BOGAZI') {
+      coastalIds.add(eA.id);
+      continue;
+    }
+
+    const nearbyNeighbors = entries.filter(
+      (eB, idx) =>
+        idx !== i &&
+        !(
+          eB.maxLon < eA.minLon - bboxPad ||
+          eB.minLon > eA.maxLon + bboxPad ||
+          eB.maxLat < eA.minLat - bboxPad ||
+          eB.minLat > eA.maxLat + bboxPad
+        )
+    );
+
+    if (nearbyNeighbors.length === 0) {
+      // Pure island province
+      coastalIds.add(eA.id);
+      continue;
+    }
+
+    let exposedCoastScore = 0;
+    for (const bA of eA.boxes) {
+      const ringA = bA.ring;
+      const lenA = ringA.length;
+      for (let k = 0; k < lenA; k++) {
+        const p1 = ringA[k];
+        const p2 = ringA[(k + 1) % lenA];
+        const segDx = p2[0] - p1[0];
+        const segDy = p2[1] - p1[1];
+        if (Math.abs(segDx) > 30) continue;
+        const segLenSq = segDx * segDx + segDy * segDy;
+        if (segLenSq < 0.0025) continue; // skip tiny <0.05° vertex jitters
+
+        const mx = (p1[0] + p2[0]) * 0.5;
+        const my = (p1[1] + p2[1]) * 0.5;
+
+        let touchesAnyLand = false;
+        for (const nb of nearbyNeighbors) {
+          for (const bB of nb.boxes) {
+            if (
+              mx < bB.minLon - bboxPad ||
+              mx > bB.maxLon + bboxPad ||
+              my < bB.minLat - bboxPad ||
+              my > bB.maxLat + bboxPad
+            ) {
+              continue;
+            }
+            const ringB = bB.ring;
+            const lenB = ringB.length;
+            for (let m = 0; m < lenB; m++) {
+              const a = ringB[m];
+              const b = ringB[(m + 1) % lenB];
+              if (pointToSegmentDistSq(mx, my, a[0], a[1], b[0], b[1]) <= seaGapSq) {
+                touchesAnyLand = true;
+                break;
+              }
+            }
+            if (touchesAnyLand) break;
+          }
+          if (touchesAnyLand) break;
+        }
+
+        if (!touchesAnyLand) {
+          exposedCoastScore += Math.sqrt(segLenSq);
+          if (exposedCoastScore >= 0.25) {
+            coastalIds.add(eA.id);
+            break;
+          }
+        }
+      }
+      if (coastalIds.has(eA.id)) break;
+    }
+  }
+
+  return coastalIds;
+}
+
 export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
   const mode = GAME_MODES.find((m) => m.id === modeId) || GAME_MODES[0];
 
@@ -496,6 +651,9 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
             university: piece.seed.isCapital && isMajorPower ? 1 : 0,
             tradeHub: piece.seed.isCapital ? 1 : 0,
             supplyDepot: 1,
+            shipyard: 0,
+            mint: 0,
+            granary: 0,
           },
           garrison: infantryCount + armorCount + airDroneCount,
           units: {
@@ -567,6 +725,9 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
           university: isMajorPower ? 1 : 0,
           tradeHub: isMajorPower ? 1 : 0,
           supplyDepot: 1,
+          shipyard: 0,
+          mint: 0,
+          granary: 0,
         },
         garrison: infantryCount + armorCount + airDroneCount,
         units: {
@@ -599,6 +760,15 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
     territories,
     linkProvinces
   );
+
+  // 1B. Mark geometric open-sea coastlines so only coastal provinces can construct harbors/shipyards
+  const coastalTerritoryIds = computeCoastalTerritoryIds(
+    provinceFeatures,
+    territories
+  );
+  Object.keys(territories).forEach((tId) => {
+    territories[tId].isCoastal = coastalTerritoryIds.has(tId);
+  });
 
   // 2. Ensure internal sister-province connectivity if a country has island/detached sub-provinces
   Object.values(countryToProvinces).forEach((provList) => {

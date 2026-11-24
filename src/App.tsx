@@ -780,6 +780,7 @@ function GameAppInner() {
         <WorldEventToastStack
           newsEvents={newsEvents}
           toastMessage={toastMessage}
+          isDrawerOpen={activeTab !== 'NONE'}
           onDismissToast={() => store.showToast(null)}
           onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
         />
@@ -797,6 +798,7 @@ function GameAppInner() {
           hasBottomCard={Boolean(
             selectedTerritory && activeTab === 'NONE' && macroMode === 'NONE'
           )}
+          hideWhenDrawerOpen={activeTab !== 'NONE'}
           outlinerSlot={
             screenState === 'PLAYING' ? (
               <AoH3OutlinerWidget
@@ -880,6 +882,7 @@ function GameAppInner() {
           onSetBatchTargetPicking={setBatchMarchTargetPicking}
           onSetBatchMarchRatio={setBatchMarchRatio}
           onInvestSpecialtyProduction={store.investSpecialtyProduction}
+          onUpgradeBuildingBatch={store.batchUpgradeBuilding}
           onDismissToast={() => store.showToast(null)}
         />
 
@@ -952,6 +955,10 @@ function GameAppInner() {
             onRecruitOrAssignGeneral={store.recruitOrAssignGeneral}
             onUpgradeBuilding={store.upgradeBuilding}
             onAssimilateTerritory={store.assimilateTerritory}
+            onBatchAssimilate={store.batchAssimilate}
+            onBatchStabilityFestival={store.batchStabilityFestival}
+            onBatchUpgradeBuilding={store.batchUpgradeBuilding}
+            onBatchBorderMobilization={store.batchBorderMobilization}
             onStartMissionary={store.startMissionary}
             onFormEmpire={store.formEmpire}
             onUpdateTaxRate={store.updateTaxRate}
@@ -984,7 +991,8 @@ function GameAppInner() {
 
       <MehterhaneDock
         hideCompactOnMobile={Boolean(
-          (selectedTerritory && activeTab === 'NONE' && macroMode === 'NONE') ||
+          activeTab !== 'NONE' ||
+            (selectedTerritory && activeTab === 'NONE' && macroMode === 'NONE') ||
             macroMode !== 'NONE'
         )}
       />

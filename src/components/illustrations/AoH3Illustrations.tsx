@@ -329,6 +329,37 @@ export const BuildingIllustrationSvg: React.FC<{
           <circle cx="28" cy="35" r="5" fill="#fde047" />
         </svg>
       );
+    case 'shipyard':
+      return (
+        <svg viewBox="0 0 56 56" className={className}>
+          <rect width="56" height="56" rx="10" fill="#082f49" stroke="#38bdf8" strokeWidth="1.5" />
+          <path d="M8,40 Q18,36 28,40 T48,40 L48,48 L8,48 Z" fill="#0284c7" fillOpacity="0.65" />
+          <path d="M14,35 L42,35 L37,42 L19,42 Z" fill="#b45309" stroke="#fde68a" strokeWidth="1.2" />
+          <line x1="28" y1="12" x2="28" y2="35" stroke="#fde68a" strokeWidth="2" />
+          <path d="M28,13 L42,27 L28,29 Z" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1" />
+          <path d="M26,16 L16,28 L26,28 Z" fill="#e2e8f0" />
+        </svg>
+      );
+    case 'mint':
+      return (
+        <svg viewBox="0 0 56 56" className={className}>
+          <rect width="56" height="56" rx="10" fill="#422006" stroke="#fbbf24" strokeWidth="1.5" />
+          <path d="M12,24 L28,12 L44,24 Z" fill="#d97706" stroke="#fde68a" strokeWidth="1.2" />
+          <rect x="14" y="24" width="28" height="20" fill="#78350f" stroke="#fde68a" strokeWidth="1" />
+          <circle cx="28" cy="34" r="7" fill="#f59e0b" stroke="#fef08a" strokeWidth="1.5" />
+          <text x="28" y="37.5" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#451a03">₺</text>
+        </svg>
+      );
+    case 'granary':
+      return (
+        <svg viewBox="0 0 56 56" className={className}>
+          <rect width="56" height="56" rx="10" fill="#14532d" stroke="#4ade80" strokeWidth="1.5" />
+          <path d="M16,26 Q28,10 40,26 Z" fill="#ca8a04" stroke="#fde047" strokeWidth="1.2" />
+          <rect x="16" y="26" width="24" height="18" fill="#854d0e" stroke="#fde68a" strokeWidth="1" />
+          <path d="M10,44 L46,44" stroke="#4ade80" strokeWidth="2.5" />
+          <path d="M28,29 L28,41 M24,33 L32,33" stroke="#fef08a" strokeWidth="1.8" />
+        </svg>
+      );
     case 'supplyDepot':
     default:
       return (

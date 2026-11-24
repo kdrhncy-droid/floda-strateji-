@@ -1050,16 +1050,21 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           university: 0,
           tradeHub: 0,
           supplyDepot: 0,
+          shipyard: 0,
+          mint: 0,
+          granary: 0,
         };
 
         // Province population is a living economic input. Previously it was
         // initialized once and never changed, so manpower and GDP could not
         // organically grow during a campaign. Keep growth modest and let
-        // unrest and supply depots visibly affect the result.
+        // unrest, supply depots, and granaries visibly affect the result.
         const unrestGrowthFactor = Math.max(0.25, 1 - (t.unrest || 0) / 140);
         const dailyPopulationGrowth =
           (t.population || 0) *
-          (0.00035 * unrestGrowthFactor + (buildings.supplyDepot || 0) * 0.00008);
+          (0.00035 * unrestGrowthFactor +
+            (buildings.supplyDepot || 0) * 0.00008 +
+            (buildings.granary || 0) * 0.00018);
         const nextPopulation = Number(
           Math.max(0, (t.population || 0) + dailyPopulationGrowth).toFixed(2)
         );
@@ -1075,6 +1080,13 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
             0,
             Number((nextUnrest - buildings.supplyDepot * 0.12).toFixed(2))
           );
+          tModified = true;
+        }
+
+        const ownerNation = nextNations[t.ownerId];
+        const ownerHasAdm5 = Boolean(ownerNation?.unlockedTechs?.includes('adm_5'));
+        if (ownerHasAdm5 && nextUnrest > 0) {
+          nextUnrest = Math.max(0, Number((nextUnrest - 0.35).toFixed(2)));
           tModified = true;
         }
 
@@ -1115,8 +1127,12 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
 
         if (t.isAssimilating) {
           const currentVal = t.assimilation ?? 30;
-          const updatedAssim = Math.min(100, Number((currentVal + 1.25).toFixed(2)));
-          nextUnrest = Math.max(0, Number((t.unrest - 0.35).toFixed(2)));
+          const assimStep = ownerHasAdm5 ? 1.75 : 1.25;
+          const updatedAssim = Math.min(
+            100,
+            Number((currentVal + assimStep).toFixed(2))
+          );
+          nextUnrest = Math.max(0, Number((nextUnrest - 0.35).toFixed(2)));
           if (updatedAssim >= 100) {
             nextAssim = 100;
             nextIsAssimilating = false;

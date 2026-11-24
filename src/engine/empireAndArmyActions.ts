@@ -37,7 +37,7 @@ import {
   isAtWar,
   resolveWarParticipants,
 } from './simulationEngine';
-import { relationKey } from './worldBuilder';
+import { isTerritoryCoastal, relationKey } from './worldBuilder';
 import {
   DEFAULT_LORD_LOYALTY,
   getLordRetinueTroops,
@@ -402,6 +402,12 @@ export function upgradeBuildingDomain(params: {
   if (!t || !p || t.ownerId !== playerNationId) return {};
   const def = BUILDINGS.find((b) => b.id === building);
   if (!def) return {};
+
+  if (def.requiresCoastal && !isTerritoryCoastal(t)) {
+    return {
+      toastMessage: `⚓ ${def.name} yalnızca denize kıyısı olan şehirlerde kurulabilir!`,
+    };
+  }
 
   const currentLvl = t.buildings[building] || 0;
   if (currentLvl >= def.maxLevel) return {};
@@ -2172,4 +2178,313 @@ export function disbandArmyDomain(params: {
     toastMessage: `🪖 ${terr.name}: ${disbandedTroops.toLocaleString('tr-TR')} asker silindi/terhis edildi (+${refundedManpower.toLocaleString('tr-TR')} İnsan Gücü rezerve iade edildi).`,
   };
 }
+
+export function batchAssimilateDomain(params: {
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  playerNationId: string;
+}): EmpireActionPatch {
+  const { territories, nations, playerNationId } = params;
+  const p = nations[playerNationId];
+  if (!p) return {};
+
+  const eligible = Object.values(territories)
+    .filter(
+      (t) =>
+        t &&
+        t.ownerId === playerNationId &&
+        !t.isAssimilating &&
+        (t.coreOwnerId !== playerNationId ||
+          t.isOccupied ||
+          (t.assimilation ?? 100) < 100)
+    )
+    .sort((a, b) => (b.unrest || 0) - (a.unrest || 0) || (b.baseGdp || 0) - (a.baseGdp || 0));
+
+  if (eligible.length === 0) {
+    return {
+      toastMessage: '🌍 Asimile edilecek yabancı/işgal toprağı bulunmuyor; tüm şehirler Öz Vatan.',
+    };
+  }
+
+  const costPerCity = 180;
+  if (p.treasury < costPerCity) {
+    return {
+      toastMessage: `🌍 Toplu Asimilasyon için şehir başına ${costPerCity} Altın gerekli.`,
+    };
+  }
+
+  let remainingGold = p.treasury;
+  let startedCount = 0;
+  const nextTerritories = { ...territories };
+
+  for (const t of eligible) {
+    if (remainingGold < costPerCity) break;
+    remainingGold -= costPerCity;
+    startedCount++;
+    const startingAssimilation =
+      t.coreOwnerId !== playerNationId
+        ? Math.min(t.assimilation ?? 25, 75)
+        : Math.min(t.assimilation ?? 75, 90);
+    nextTerritories[t.id] = {
+      ...t,
+      isOccupied: false,
+      occupiedById: undefined,
+      isAssimilating: true,
+      assimilation: startingAssimilation,
+      unrest: Math.max(0, t.unrest - 12),
+    };
+  }
+
+  const spent = startedCount * costPerCity;
+  sound.playTreaty();
+  const skippedByGold = eligible.length - startedCount;
+  return {
+    nations: {
+      ...nations,
+      [playerNationId]: { ...p, treasury: remainingGold },
+    },
+    territories: nextTerritories,
+    toastMessage:
+      skippedByGold > 0
+        ? `🌍 ${startedCount} şehirde Toplu Asimilasyon başlatıldı (-${spent.toLocaleString('tr-TR')} Altın · ${skippedByGold} şehir bütçe yetersizliğiyle ertelendi).`
+        : `🌍 ${startedCount} şehirde Toplu Asimilasyon başlatıldı (-${spent.toLocaleString('tr-TR')} Altın).`,
+  };
+}
+
+export function batchStabilityFestivalDomain(params: {
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  playerNationId: string;
+}): EmpireActionPatch {
+  const { territories, nations, playerNationId } = params;
+  const p = nations[playerNationId];
+  if (!p) return {};
+
+  const restless = Object.values(territories)
+    .filter((t) => t && t.ownerId === playerNationId && (t.unrest || 0) >= 10)
+    .sort((a, b) => (b.unrest || 0) - (a.unrest || 0));
+
+  if (restless.length === 0) {
+    return {
+      toastMessage: '🎉 Tüm eyaletlerde asayiş yerinde (Huzursuzluk %10 altında).',
+    };
+  }
+
+  const costPerCity = 140;
+  if (p.treasury < costPerCity) {
+    return {
+      toastMessage: `🎉 Toplu Şenlik & İstikrar Yatırımı için şehir başına ${costPerCity} Altın gerekli.`,
+    };
+  }
+
+  let remainingGold = p.treasury;
+  let calmedCount = 0;
+  const nextTerritories = { ...territories };
+
+  for (const t of restless) {
+    if (remainingGold < costPerCity) break;
+    remainingGold -= costPerCity;
+    calmedCount++;
+    nextTerritories[t.id] = {
+      ...t,
+      unrest: Math.max(0, Number((t.unrest - 15).toFixed(1))),
+    };
+  }
+
+  const spent = calmedCount * costPerCity;
+  const stabilityGain = calmedCount * 2;
+  sound.playTreaty();
+  return {
+    nations: {
+      ...nations,
+      [playerNationId]: {
+        ...p,
+        treasury: remainingGold,
+        stability: Math.min(100, p.stability + stabilityGain),
+      },
+    },
+    territories: nextTerritories,
+    toastMessage: `🎉 ${calmedCount} eyalette Şenlik & Dirlik fermanı ilan edildi (-15 huzursuzluk, +${stabilityGain} İstikrar, -${spent.toLocaleString('tr-TR')} Altın).`,
+  };
+}
+
+export function batchUpgradeBuildingDomain(params: {
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  playerNationId: string;
+  building: BuildingType;
+  territoryIds?: string[];
+}): EmpireActionPatch {
+  const { territories, nations, playerNationId, building, territoryIds } = params;
+  const p = nations[playerNationId];
+  const def = BUILDINGS.find((b) => b.id === building);
+  if (!p || !def) return {};
+
+  const filterSet = territoryIds ? new Set(territoryIds) : null;
+  let blockedByCoastCount = 0;
+  const eligible = Object.values(territories)
+    .filter((t) => {
+      if (!t || t.ownerId !== playerNationId) return false;
+      if (filterSet && !filterSet.has(t.id)) return false;
+      if (def.requiresCoastal && !isTerritoryCoastal(t)) {
+        blockedByCoastCount++;
+        return false;
+      }
+      const lvl = t.buildings?.[building] || 0;
+      if (lvl >= def.maxLevel) return false;
+      if ((t.constructionQueue || []).some((q) => q.building === building)) return false;
+      return true;
+    })
+    .sort((a, b) => (b.baseGdp || 0) - (a.baseGdp || 0));
+
+  if (eligible.length === 0) {
+    if (def.requiresCoastal && blockedByCoastCount > 0) {
+      return {
+        toastMessage: `⚓ ${def.name} yalnızca denize kıyısı olan şehirlerde kurulabilir!`,
+      };
+    }
+    return {
+      toastMessage: `🏗️ ${def.name} için uygun veya müsait şehir bulunmuyor (azami seviye veya inşası sürüyor).`,
+    };
+  }
+
+  let remainingGold = p.treasury;
+  let startedCount = 0;
+  let totalSpent = 0;
+  const nextTerritories = { ...territories };
+  const ts = Date.now();
+
+  for (let idx = 0; idx < eligible.length; idx++) {
+    const t = eligible[idx];
+    const currentLvl = t.buildings?.[building] || 0;
+    const cost = Math.round(def.baseCost * Math.pow(1.35, currentLvl));
+    if (remainingGold < cost) continue;
+    remainingGold -= cost;
+    totalSpent += cost;
+    startedCount++;
+    const totalDays = Math.max(14, 18 + currentLvl * 14);
+    nextTerritories[t.id] = {
+      ...t,
+      constructionQueue: [
+        ...(t.constructionQueue || []),
+        {
+          id: `batch-${t.id}-${building}-${ts}-${idx}`,
+          building,
+          targetLevel: currentLvl + 1,
+          progressDays: 0,
+          totalDays,
+          goldCost: cost,
+        },
+      ],
+    };
+  }
+
+  if (startedCount === 0) {
+    const cheapestCost = Math.min(
+      ...eligible.map((t) =>
+        Math.round(def.baseCost * Math.pow(1.35, t.buildings?.[building] || 0))
+      )
+    );
+    return {
+      toastMessage: `🏗️ Toplu ${def.name} için yetersiz hazine (en az ${cheapestCost.toLocaleString('tr-TR')} Altın gerekli).`,
+    };
+  }
+
+  sound.playBuild();
+  const skipped = eligible.length - startedCount;
+  return {
+    nations: {
+      ...nations,
+      [playerNationId]: { ...p, treasury: remainingGold },
+    },
+    territories: nextTerritories,
+    toastMessage:
+      skipped > 0
+        ? `🏗️ ${startedCount} şehirde ${def.name} inşası başlatıldı (-${totalSpent.toLocaleString('tr-TR')} Altın · ${skipped} şehir bütçe yetersizliğiyle kaldı).`
+        : `🏗️ ${startedCount} şehirde ${def.name} inşası başlatıldı (-${totalSpent.toLocaleString('tr-TR')} Altın).`,
+  };
+}
+
+export function batchBorderMobilizationDomain(params: {
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  playerNationId: string;
+}): EmpireActionPatch {
+  const { territories, nations, playerNationId } = params;
+  const p = nations[playerNationId];
+  if (!p) return {};
+
+  const borderCities = Object.values(territories)
+    .filter(
+      (t) =>
+        t &&
+        t.ownerId === playerNationId &&
+        t.neighbors.some((nbId) => {
+          const nb = territories[nbId];
+          return Boolean(nb && nb.ownerId !== playerNationId);
+        })
+    )
+    .sort((a, b) => (a.garrison || 0) - (b.garrison || 0));
+
+  if (borderCities.length === 0) {
+    return {
+      toastMessage: '🛡️ Yabancı devletle kara/boğaz sınırı paylaşan şehir bulunamadı.',
+    };
+  }
+
+  const discount = p.enactedReforms.includes('ref_national_defense_industry')
+    ? 0.8
+    : 1.0;
+  const goldCostPerCity = Math.round(150 * discount);
+  const troopStep = 1000;
+
+  if (p.treasury < goldCostPerCity) {
+    return {
+      toastMessage: `🛡️ Sınır Seferberliği için en az ${goldCostPerCity} Altın gerekli.`,
+    };
+  }
+  if (p.manpower < troopStep) {
+    return {
+      toastMessage: `🛡️ Sınır Seferberliği için en az ${troopStep.toLocaleString('tr-TR')} İnsan Gücü gerekli.`,
+    };
+  }
+
+  let remainingGold = p.treasury;
+  let remainingManpower = p.manpower;
+  let reinforcedCount = 0;
+  const nextTerritories = { ...territories };
+
+  for (const t of borderCities) {
+    if (remainingGold < goldCostPerCity || remainingManpower < troopStep) break;
+    remainingGold -= goldCostPerCity;
+    remainingManpower -= troopStep;
+    reinforcedCount++;
+    const curUnits = t.units || { infantry: t.garrison, armor: 0, airDrone: 0 };
+    nextTerritories[t.id] = {
+      ...t,
+      garrison: t.garrison + troopStep,
+      units: {
+        ...curUnits,
+        infantry: curUnits.infantry + troopStep,
+      },
+    };
+  }
+
+  const totalTroops = reinforcedCount * troopStep;
+  const totalGold = reinforcedCount * goldCostPerCity;
+  sound.playBuild();
+  return {
+    nations: {
+      ...nations,
+      [playerNationId]: {
+        ...p,
+        treasury: remainingGold,
+        manpower: remainingManpower,
+      },
+    },
+    territories: nextTerritories,
+    toastMessage: `🛡️ Sınır Seferberliği: ${reinforcedCount} sınır şehrine +${totalTroops.toLocaleString('tr-TR')} Piyade konuşlandırıldı (-${totalGold.toLocaleString('tr-TR')} Altın).`,
+  };
+}
+
 

@@ -5,6 +5,8 @@ import {
   adjustOccupiedUnrestDrift,
   calculateNationEconomy,
   calculateProvinceDevelopment,
+  computeCombatStrength,
+  computeNationManpowerCap,
   formatGameDate,
   getOrCreateRelation,
   getWarScoreForNation,
@@ -26,6 +28,10 @@ import {
 import { buildNationDiplomacySummary } from './nationDiplomacySummary';
 import {
   assimilateTerritoryDomain,
+  batchAssimilateDomain,
+  batchBorderMobilizationDomain,
+  batchStabilityFestivalDomain,
+  batchUpgradeBuildingDomain,
   cancelResearchDomain,
   enactReformDomain,
   executeArmyMoveDomain,
@@ -37,6 +43,8 @@ import {
   startResearchDomain,
   upgradeBuildingDomain,
 } from './empireAndArmyActions';
+import { TECH_TREE, TECH_TREE_1440 } from '../data/techAndArmyTiers';
+import { isTerritoryCoastal } from './worldBuilder';
 import { ActiveBattle, ActiveWar, DiplomaticRelation, Nation, Territory } from '../types/game';
 import { resolveTerritoryFillColor } from '../map/mapPolygonRenderer';
 import {
@@ -4276,6 +4284,349 @@ test('ARMY_GENERATIONS expose explicit AoH3 troop class labels for every tier in
   assert.match(ARMY_GENERATIONS_1440[0].armorClassLabel, /Atlı Okçu|Süvari/i);
   assert.match(ARMY_GENERATIONS_2026[0].armorClassLabel, /Tank|Zırhlı/i);
 });
+
+test('initializeWorld2026 classifies coastal vs inland provinces and enforces shipyard coastal gating', () => {
+  const bundle = initializeWorld2026('EMPIRES_1440');
+  assert.equal(bundle.territories['792_IST']?.isCoastal, true);
+  assert.equal(bundle.territories['792_IZM']?.isCoastal, true);
+  assert.equal(bundle.territories['792_TRB']?.isCoastal, true);
+  assert.equal(bundle.territories['300']?.isCoastal, true);
+  assert.equal(bundle.territories['792']?.isCoastal, false);
+  assert.equal(bundle.territories['792_KNY']?.isCoastal, false);
+  assert.equal(bundle.territories['348']?.isCoastal, false);
+  assert.equal(bundle.territories['040']?.isCoastal, false);
+  assert.equal(bundle.territories['643']?.isCoastal, false);
+
+  const nations = {
+    '792': { ...bundle.nations['792'], treasury: 5000 },
+  };
+  const rejected = upgradeBuildingDomain({
+    territoryId: '792',
+    building: 'shipyard',
+    territories: bundle.territories,
+    nations,
+    playerNationId: '792',
+  });
+  assert.match(rejected.toastMessage || '', /kıyısı olan şehirlerde/i);
+  assert.equal(rejected.nations, undefined);
+
+  const accepted = upgradeBuildingDomain({
+    territoryId: '792_IST',
+    building: 'shipyard',
+    territories: bundle.territories,
+    nations,
+    playerNationId: '792',
+  });
+  assert.equal(accepted.nations?.['792'].treasury, 5000 - 520);
+  assert.equal(accepted.territories?.['792_IST'].constructionQueue?.[0]?.building, 'shipyard');
+  assert.equal(isTerritoryCoastal({ id: 'custom_1', resource: 'TAHIL', isCoastal: false }), false);
+  assert.equal(isTerritoryCoastal({ id: '792_IST', resource: 'TICARET_BOGAZI' }), true);
+});
+
+test('shipyard, mint, and granary buildings produce measurable economic, demographic, and defense effects', () => {
+  const baseNation: Nation = {
+    id: '792',
+    name: 'Osmanlı',
+    flagCode: 'TR_OTTOMAN',
+    color: '#1b3b2b',
+    ideology: 'MONARCHY',
+    treasury: 5000,
+    manpower: 20000,
+    researchPoints: 50,
+    activeResearch: null,
+    stability: 80,
+    diplomacyPoints: 50,
+    taxRate: 25,
+    budget: { military: 30, economy: 30, research: 20, welfare: 20 },
+    inflation: 4,
+    aggressiveExpansion: 0,
+    unlockedTechs: [],
+    enactedReforms: [],
+    capitalTerritoryId: 'ist',
+    isEliminated: false,
+    recruitedGeneralIds: [],
+    activeGeneralId: null,
+  };
+
+  const baseTerritory: Territory = {
+    id: 'ist',
+    name: 'İstanbul',
+    ownerId: '792',
+    coreOwnerId: '792',
+    isCapital: true,
+    isCoastal: true,
+    terrain: 'METROPOL',
+    population: 1_000_000,
+    baseGdp: 100,
+    resource: 'TICARET_BOGAZI',
+    buildings: {
+      factory: 1,
+      barracks: 3,
+      fortress: 1,
+      university: 1,
+      tradeHub: 1,
+      supplyDepot: 1,
+      shipyard: 0,
+      mint: 0,
+      granary: 0,
+    },
+    garrison: 5000,
+    units: { infantry: 5000, armor: 0, airDrone: 0 },
+    unrest: 0,
+    isOccupied: false,
+    centroid: [29, 41],
+    neighbors: [],
+  };
+
+  const econBase = calculateNationEconomy(baseNation, { ist: baseTerritory }, { '792': baseNation }, {}, []);
+  const capBase = computeNationManpowerCap(baseNation, { ist: baseTerritory });
+  const defBase = computeCombatStrength(baseNation, baseTerritory, true);
+
+  const upgradedTerr: Territory = {
+    ...baseTerritory,
+    buildings: {
+      ...baseTerritory.buildings,
+      shipyard: 2,
+      mint: 2,
+      granary: 2,
+    },
+  };
+
+  const econUp = calculateNationEconomy(baseNation, { ist: upgradedTerr }, { '792': baseNation }, {}, []);
+  const capUp = computeNationManpowerCap(baseNation, { ist: upgradedTerr });
+  const defUp = computeCombatStrength(baseNation, upgradedTerr, true);
+
+  assert.ok(econUp.tradeIncome > econBase.tradeIncome, 'Shipyard should raise trade income');
+  assert.ok(econUp.taxIncome > econBase.taxIncome, 'Mint should raise tax income');
+  assert.ok(econUp.inflationRelief > econBase.inflationRelief, 'Mint should raise inflation relief');
+  assert.ok(econUp.dailyManpower > econBase.dailyManpower, 'Granary should raise daily manpower');
+  assert.equal(capUp - capBase, 12_000, '2 Granary levels should add 12,000 manpower cap');
+  assert.ok(defUp > defBase, 'Coastal shipyard should boost defender combat strength');
+
+  const tickBase = computeGameTick({
+    tick: 0,
+    hour: 22,
+    speed: 1,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: { '792': baseNation },
+    territories: { ist: baseTerritory },
+    relations: {},
+    wars: [],
+    battles: [],
+    movements: [],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+  const tickGranary = computeGameTick({
+    tick: 0,
+    hour: 22,
+    speed: 1,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: { '792': baseNation },
+    territories: { ist: upgradedTerr },
+    relations: {},
+    wars: [],
+    battles: [],
+    movements: [],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+  assert.ok(
+    tickGranary.territories.ist.population > tickBase.territories.ist.population,
+    'Granary should boost daily population growth'
+  );
+});
+
+test('Tier 5 technologies exist in both eras and apply combat, trade, assimilation, unrest, and research effects', () => {
+  for (const id of ['mil_5', 'eco_5', 'adm_5', 'sci_5']) {
+    assert.ok(TECH_TREE.some((t) => t.id === id && t.tier === 5), `TECH_TREE missing ${id}`);
+    assert.ok(TECH_TREE_1440.some((t) => t.id === id && t.tier === 5), `TECH_TREE_1440 missing ${id}`);
+  }
+
+  const baseNation: Nation = {
+    id: '792',
+    name: 'Osmanlı',
+    flagCode: 'TR_OTTOMAN',
+    color: '#1b3b2b',
+    ideology: 'MONARCHY',
+    treasury: 5000,
+    manpower: 20000,
+    researchPoints: 50,
+    activeResearch: null,
+    stability: 80,
+    diplomacyPoints: 50,
+    taxRate: 25,
+    budget: { military: 30, economy: 30, research: 20, welfare: 20 },
+    inflation: 2,
+    aggressiveExpansion: 0,
+    unlockedTechs: [],
+    enactedReforms: [],
+    capitalTerritoryId: '792_IST',
+    isEliminated: false,
+    recruitedGeneralIds: [],
+    activeGeneralId: null,
+  };
+
+  const tIst: Territory = {
+    id: '792_IST',
+    name: 'İstanbul',
+    ownerId: '792',
+    coreOwnerId: '300',
+    isCapital: true,
+    isCoastal: true,
+    terrain: 'METROPOL',
+    population: 600_000,
+    baseGdp: 90,
+    resource: 'TICARET_BOGAZI',
+    buildings: { factory: 1, barracks: 1, fortress: 1, university: 1, tradeHub: 1, supplyDepot: 1 },
+    garrison: 10000,
+    units: { infantry: 10000, armor: 0, airDrone: 0 },
+    unrest: 12,
+    assimilation: 40,
+    isAssimilating: true,
+    isOccupied: false,
+    centroid: [29, 41],
+    neighbors: [],
+  };
+
+  const baseEcon = calculateNationEconomy(baseNation, { '792_IST': tIst }, { '792': baseNation }, {}, []);
+  const tier5Nation: Nation = {
+    ...baseNation,
+    unlockedTechs: ['mil_5', 'eco_5', 'adm_5', 'sci_5'],
+  };
+  const tier5Econ = calculateNationEconomy(tier5Nation, { '792_IST': tIst }, { '792': tier5Nation }, {}, []);
+
+  assert.ok(computeCombatStrength(tier5Nation, tIst, false) > computeCombatStrength(baseNation, tIst, false));
+  assert.ok(tier5Econ.militaryUpkeep < baseEcon.militaryUpkeep, 'mil_5 should cut military upkeep');
+  assert.ok(tier5Econ.straitTollIncome > baseEcon.straitTollIncome, 'eco_5 should boost strait tolls');
+  assert.ok(tier5Econ.dailyResearch > baseEcon.dailyResearch, 'sci_5 should boost research output');
+  assert.ok(tier5Econ.productionIncome > baseEcon.productionIncome, 'sci_5 should boost production');
+  assert.ok(
+    calculateProvinceDevelopment(tIst, tier5Nation).techInvestmentMult >
+      calculateProvinceDevelopment(tIst, baseNation).techInvestmentMult
+  );
+
+  const baseDay = computeGameTick({
+    tick: 0,
+    hour: 22,
+    speed: 1,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: { '792': baseNation },
+    territories: { '792_IST': tIst },
+    relations: {},
+    wars: [],
+    battles: [],
+    movements: [],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+  const adm5Day = computeGameTick({
+    tick: 0,
+    hour: 22,
+    speed: 1,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: { '792': tier5Nation },
+    territories: { '792_IST': tIst },
+    relations: {},
+    wars: [],
+    battles: [],
+    movements: [],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+  assert.ok(
+    (adm5Day.territories['792_IST'].assimilation || 0) >
+      (baseDay.territories['792_IST'].assimilation || 0),
+    'adm_5 should accelerate daily assimilation'
+  );
+  assert.ok(
+    adm5Day.territories['792_IST'].unrest < baseDay.territories['792_IST'].unrest,
+    'adm_5 should calm unrest faster daily'
+  );
+});
+
+test('batch empire management domains process assimilation, festivals, coastal-safe batch building, and border mobilization', () => {
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Osmanlı',
+      treasury: 2500,
+      manpower: 5000,
+      stability: 60,
+      enactedReforms: [],
+    } as unknown as Nation,
+  };
+
+  const territories: Record<string, Territory> = {
+    coast: {
+      id: 'coast',
+      name: 'İzmir',
+      ownerId: '792',
+      coreOwnerId: '300',
+      isCoastal: true,
+      baseGdp: 70,
+      unrest: 22,
+      assimilation: 30,
+      isAssimilating: false,
+      isOccupied: true,
+      garrison: 2000,
+      units: { infantry: 2000, armor: 0, airDrone: 0 },
+      buildings: { factory: 1, barracks: 1, fortress: 1, university: 0, tradeHub: 1, supplyDepot: 0, shipyard: 0 },
+      neighbors: ['enemy'],
+    } as unknown as Territory,
+    inland: {
+      id: 'inland',
+      name: 'Ankara',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCoastal: false,
+      baseGdp: 65,
+      unrest: 14,
+      assimilation: 100,
+      isAssimilating: false,
+      isOccupied: false,
+      garrison: 3000,
+      units: { infantry: 3000, armor: 0, airDrone: 0 },
+      buildings: { factory: 1, barracks: 1, fortress: 1, university: 0, tradeHub: 0, supplyDepot: 0, shipyard: 0 },
+      neighbors: ['coast'],
+    } as unknown as Territory,
+    enemy: {
+      id: 'enemy',
+      name: 'Atina',
+      ownerId: '300',
+      neighbors: ['coast'],
+    } as unknown as Territory,
+  };
+
+  const assimRes = batchAssimilateDomain({ territories, nations, playerNationId: '792' });
+  assert.equal(assimRes.territories?.coast.isAssimilating, true);
+  assert.equal(assimRes.nations?.['792'].treasury, 2500 - 180);
+
+  const festRes = batchStabilityFestivalDomain({ territories, nations, playerNationId: '792' });
+  assert.equal(festRes.territories?.coast.unrest, 7);
+  assert.equal(festRes.territories?.inland.unrest, 0);
+  assert.equal(festRes.nations?.['792'].stability, 64);
+
+  const shipRes = batchUpgradeBuildingDomain({
+    territories,
+    nations,
+    playerNationId: '792',
+    building: 'shipyard',
+  });
+  assert.equal(shipRes.territories?.coast.constructionQueue?.[0]?.building, 'shipyard');
+  assert.equal(shipRes.territories?.inland.constructionQueue?.length || 0, 0);
+  assert.equal(shipRes.nations?.['792'].treasury, 2500 - 520);
+
+  const mobRes = batchBorderMobilizationDomain({ territories, nations, playerNationId: '792' });
+  assert.equal(mobRes.territories?.coast.garrison, 3000);
+  assert.equal(mobRes.territories?.inland.garrison, 3000);
+  assert.equal(mobRes.nations?.['792'].manpower, 4000);
+});
+
 
 
 

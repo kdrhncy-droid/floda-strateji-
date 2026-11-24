@@ -57,6 +57,13 @@ export interface CommandDrawersProps {
   onRecruitOrAssignGeneral: (generalId: string) => void;
   onUpgradeBuilding: (territoryId: string, building: BuildingType) => void;
   onAssimilateTerritory: (territoryId: string) => void;
+  onBatchAssimilate?: () => void;
+  onBatchStabilityFestival?: () => void;
+  onBatchUpgradeBuilding?: (
+    building: BuildingType,
+    territoryIds?: string[]
+  ) => void;
+  onBatchBorderMobilization?: () => void;
   onStartMissionary?: (territoryId: string) => void;
   onFormEmpire: (empireId: string) => void;
   onUpdateTaxRate: (newRate: number) => void;

@@ -420,6 +420,7 @@ export function hydrateSavedPayload(
         ...savedT,
         ownerId: safeOwnerId,
         coreOwnerId: safeCoreId,
+        isCoastal: baseT.isCoastal ?? savedT.isCoastal,
         garrison: Number.isFinite(savedT.garrison)
           ? Math.max(0, savedT.garrison)
           : baseT.garrison,

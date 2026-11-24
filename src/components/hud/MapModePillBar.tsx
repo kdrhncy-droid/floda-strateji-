@@ -12,16 +12,17 @@ import {
   ChevronUp,
   X,
 } from 'lucide-react';
-import { MapMode, Territory } from '../../types/game';
+import { BuildingType, MapMode, Territory } from '../../types/game';
 import {
   SPECIALTY_PRODUCTION_OPTIONS,
   SpecialtyProductionId,
   getSpecialtyOptionForResource,
   getSpecialtyTerritoryEligibility,
 } from '../../engine/empireAndArmyActions';
+import { isTerritoryCoastal } from '../../engine/worldBuilder';
 import { sound } from '../../utils/soundEngine';
 import { CULTURES, RELIGIONS } from '../../data/religionAndCultureData';
-import { RESOURCE_INFO } from '../../data/world2026Data';
+import { BUILDINGS, RESOURCE_INFO } from '../../data/world2026Data';
 
 export type MapMacroMode =
   | 'NONE'
@@ -41,6 +42,7 @@ interface MapModePillBarProps {
   territories?: Record<string, Territory>;
   playerTreasury?: number;
   hasBottomCard?: boolean;
+  hideWhenDrawerOpen?: boolean;
   outlinerSlot?: React.ReactNode;
   belowTraySlot?: React.ReactNode;
   onSetMapMode: (mode: MapMode) => void;
@@ -56,6 +58,10 @@ interface MapModePillBarProps {
   onInvestSpecialtyProduction?: (
     territoryIds: string[],
     specialtyId: SpecialtyProductionId
+  ) => void;
+  onUpgradeBuildingBatch?: (
+    building: BuildingType,
+    territoryIds?: string[]
   ) => void;
   onDismissToast?: () => void;
 }
@@ -83,6 +89,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   territories = {},
   playerTreasury = 0,
   hasBottomCard = false,
+  hideWhenDrawerOpen = false,
   outlinerSlot,
   belowTraySlot,
   onSetMapMode,
@@ -96,6 +103,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   onSetBatchTargetPicking,
   onSetBatchMarchRatio,
   onInvestSpecialtyProduction,
+  onUpgradeBuildingBatch,
 }) => {
   const [legendOpen, setLegendOpen] = useState(true);
   const [openTray, setOpenTray] = useState<'NONE' | 'MODES' | 'MACRO'>('NONE');
@@ -112,7 +120,11 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
 
   return (
     <>
-      <div className="hud-top-overlay hud-mapmode-bar absolute top-2 inset-x-2 z-30 flex flex-col gap-1.5 pointer-events-none">
+      <div
+        className={`hud-top-overlay hud-mapmode-bar absolute top-2 inset-x-2 z-30 flex flex-col gap-1.5 pointer-events-none ${
+          hideWhenDrawerOpen ? 'portrait:max-[900px]:hidden' : ''
+        }`}
+      >
         {/* Unified Non-Overlapping Top Row: [Map Lenses + Macro] on Left, [Ordular] on Right */}
         <div className="flex flex-wrap items-start justify-between gap-1.5 w-full">
           <div className="flex items-center gap-1 sm:gap-1.5 pointer-events-auto flex-wrap">
@@ -380,6 +392,25 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
               const canAffordAuto =
                 autoEligiblePairs.length > 0 && playerTreasury >= autoNaturalCost;
 
+              const shipyardDef = BUILDINGS.find((b) => b.id === 'shipyard');
+              const eligibleShipyardCities = selectedTerrs.filter((t) => {
+                if (!isTerritoryCoastal(t)) return false;
+                if ((t.buildings?.shipyard || 0) >= (shipyardDef?.maxLevel ?? 5))
+                  return false;
+                if ((t.constructionQueue || []).some((q) => q.building === 'shipyard'))
+                  return false;
+                return true;
+              });
+              const shipyardTotalCost = eligibleShipyardCities.reduce(
+                (sum, t) =>
+                  sum +
+                  Math.round(
+                    (shipyardDef?.baseCost ?? 520) *
+                      Math.pow(1.35, t.buildings?.shipyard || 0)
+                  ),
+                0
+              );
+
               return (
                 <div
                   data-testid="economy-macro-panel"
@@ -542,6 +573,30 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                           );
                         })}
                       </div>
+
+                      {eligibleShipyardCities.length > 0 && onUpgradeBuildingBatch && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpgradeBuildingBatch(
+                              'shipyard',
+                              eligibleShipyardCities.map((c) => c.id)
+                            )
+                          }
+                          className={`w-full px-2 py-1 rounded-lg border text-left transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                            playerTreasury >= shipyardTotalCost
+                              ? 'bg-sky-950/75 hover:bg-sky-900/80 border-sky-400/55 text-sky-100'
+                              : 'bg-black/45 border-rose-500/40 text-rose-300'
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold truncate">
+                            ⚓ Kıyı Limanı & Tersane ({eligibleShipyardCities.length}/{selectedTerrs.length} Kıyı)
+                          </span>
+                          <span className="text-[10px] font-mono-num font-bold text-amber-300 shrink-0">
+                            {shipyardTotalCost}A
+                          </span>
+                        </button>
+                      )}
                     </>
                   )}
                 </div>

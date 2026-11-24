@@ -24,7 +24,7 @@
 - [x] Askerî geçiş izni açıldığında gösterilen ilişki bonusu gerçek artışla aynı. İzni iptal etmek ilişki puanı kazandırmıyor.
 - [x] Kısa krallık görünümü, eyalet diplomasisi ve ayrıntılı savaş kartı savaş skorunu oyuncunun saldıran/savunan perspektifinde aynı işaretle gösteriyor.
 - [x] Pakt düğmeleri hedef kabulü beklemiyorsa eylemi “öneri/teklif” gibi göstermiyor; aktifleşme mesajı imzalanan/kurulan paktı doğru anlatıyor.
-- [ ] Teknoloji kartı vaatleri ile ekonomi, işgal, diplomasi, istikrar, savaş ve enflasyon/enerji mekanikleri uyuşuyor. Uygulanmayan etki vaat edilmiyor; yeni mekanik yalnız açık tasarım niyetiyle ekleniyor.
+- [x] Teknoloji kartı vaatleri ile ekonomi, işgal, diplomasi, istikrar, savaş ve enflasyon/enerji mekanikleri uyuşuyor. Uygulanmayan etki vaat edilmiyor; yeni mekanik yalnız açık tasarım niyetiyle ekleniyor.
 
 ## Harita, HUD ve etkileşim
 
@@ -39,8 +39,8 @@
 - [x] Sistem, kriz ve haber modal/drawer'ları dialog bağlamını, başlığını ve kapatma düğmesinin Türkçe erişilebilir adını bildiriyor; klavyeyle açma, içeride gezinme, kapatma ve açan kontrole geri dönme davranışı tutarlı.
 - [x] Toast mesajları 320–390 px ekranlarda tek satır ellipsis ile anlam kaybetmiyor; uzun metin satıra sarılıyor, kapsayıcı ekrandan taşmıyor ve önemli sonuç görünür kalıyor.
 - [x] Toast bildirimleri ekran okuyucu tarafından uygun durum/önem düzeyinde duyuruluyor; uzun mesajlar okunabilir olmadan kaybolmuyor.
-- [ ] HUD, ekonomi, diplomasi, teknoloji, sistem ve kriz/haber panellerinde kritik Türkçe metin, sayı ve kontrol etiketleri 320×720, 390×844, 844×390 ve 1366×768 görünümlerinde kırpılmıyor, örtüşmüyor veya yatay taşma oluşturmuyor.
-- [ ] Uzun ülke/eyalet adları, uzun toast'lar ve çok seçenekli kriz içeriği dar ekranlarda okunabilir; tüm gerekli kontroller kaydırmayla erişilebilir.
+- [x] HUD, ekonomi, diplomasi, teknoloji, sistem ve kriz/haber panellerinde kritik Türkçe metin, sayı ve kontrol etiketleri 320×720, 390×844, 844×390 ve 1366×768 görünümlerinde kırpılmıyor, örtüşmüyor veya yatay taşma oluşturmuyor.
+- [x] Uzun ülke/eyalet adları, uzun toast'lar ve çok seçenekli kriz içeriği dar ekranlarda okunabilir; tüm gerekli kontroller kaydırmayla erişilebilir.
 
 ## Kapsam kanıtı ve depo temizliği
 

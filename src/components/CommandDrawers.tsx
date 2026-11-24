@@ -101,6 +101,9 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
                 : '▲ Paneli Aç'}
             </button>
             <button
+              type="button"
+              aria-label="Paneli kapat"
+              data-testid="drawer-close-btn"
               onClick={() => {
                 sound.playClick();
                 onClose();

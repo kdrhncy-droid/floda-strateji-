@@ -142,14 +142,14 @@
     - [x] **Haraca Bağla & Savaş Tazminatı** (düzenli gelir payı / yıllık haraç + nakit tazminat).
     - [x] Canlı kabul göstergesi (*Kabul Eder / Puan Aşıldı*) ile net onay akışı.
   - [x] Eski dağınık/mükerrer savaş ve barış erişim katmanları temizlenip tüm savaş akışı bu tek merkezli sisteme bağlandı.
-- [ ] **3.4. Kıyı Şehirlerine Özel Liman İnşası + Genişletilmiş İnşa ve Araştırma Seçenekleri:**
-  - [ ] Denizle sınırı olan şehirler (`isCoastal`) otomatik/coğrafi olarak işaretlenecek ve **yalnızca kıyı şehirlerinde Liman / Tersane** inşa edilebilecek (deniz ticareti geliri, denizden ikmal, çıkarma ve stratejik liman puanı sağlar).
-  - [ ] İnşa seçenekleri zenginleştirilecek (Mevcut 6 binaya ek olarak **Liman/Tersane**, **Hammadde & Üretim Tesisi (İnek Çiftliği / Pamuk Tarlası / Kereste Ocağı / Maden)**, **Çiftlik / Erzak Ambarı**, **Darphane / Vergi Dairesi** vb. — toplam 10 dengeli ve ayırt edici bina).
-  - [ ] Araştırma (Teknoloji) ağacı genişletilecek: her dalda daha fazla kademe ve **yatırım yapılan üretim sektörlerini, liman/denizcilik gücünü, ordu doktrinini ve şehir gelişim puanını doğrudan büyüten** yeni teknolojiler eklenecek.
-- [ ] **3.5. AoH2 DE / AoH3 Tarzı Toplu Yükseltme & Makro Yönetim Paneli:**
-  - [ ] Tek tıkla seçilen eyaletlerde özel üretim tesisi (İnek Çiftliği, Pamuk Tarlası, Kereste, Maden), ekonomik/askerî bina yükseltme ve kıyı limanı geliştirme (maliyet ve bütçe önizlemeli).
-  - [ ] Toplu asimilasyon, toplu istikrar/festival yatırımı ve sınır eyaletlerine toplu garnizon/seferberlik desteği.
-  - [ ] Mobil Dostu Yarı-Otomatik Cephe Komutanı (seçili ordulara sınır savunma / isyan bastırma emri).
+- [x] **3.4. Kıyı Şehirlerine Özel Liman İnşası + Genişletilmiş İnşa ve Araştırma Seçenekleri:**
+  - [x] Denizle sınırı olan şehirler (`isCoastal`) otomatik/coğrafi olarak işaretlendi ve **yalnızca kıyı şehirlerinde Liman / Tersane** inşa edilebiliyor (deniz ticareti geliri, boğaz/kıyı savunması ve stratejik liman puanı sağlar; iç kara şehirlerinde kilitlidir).
+  - [x] İnşa seçenekleri zenginleştirildi (Mevcut 6 binaya ek olarak **Kıyı Limanı & Tersane**, **Darphane & Vergi Dairesi**, **Erzak & Tahıl Ambarı** + çoklu şehir özel üretim tesisi yatırımları — toplam 9 ayırt edici bina + özel üretim tesisleri).
+  - [x] Araştırma (Teknoloji) ağacı **Kademe V (Altın Çağ)** ile genişletildi: her 4 dalda (Askeri, Ekonomi, İdare, Bilim) 1440 ve 2026 dönemlerine özel gerçek motor etkili yeni teknolojiler eklendi.
+- [x] **3.5. AoH2 DE / AoH3 Tarzı Toplu Yükseltme & Makro Yönetim Paneli:**
+  - [x] Tek tıkla seçilen eyaletlerde özel üretim tesisi (İnek Çiftliği, Pamuk Tarlası, Kereste, Maden), ekonomik/askerî bina yükseltme ve kıyı limanı geliştirme (maliyet ve bütçe önizlemeli).
+  - [x] Toplu asimilasyon, toplu istikrar/festival yatırımı ve sınır eyaletlerine toplu garnizon/seferberlik desteği.
+  - [x] Mobil Dostu Yarı-Otomatik Cephe Komutanı (seçili ordulara taarruz/savunma duruşu ve toplu cephe sevki).
 - [ ] **3.6. Akıllı Kısayollar, Kategorili Gelişmiş Ayarlar ve Görsel/İkon Temizliği:**
   - [ ] Hız kontrolü, başkent odağı, ordu yürütme, harita modları (Ekonomi/Kaynak dahil) ve toplu işlem paneli için tutarlı kısayollar.
   - [ ] *Kategorili Ayarlar:* Grafik & Performans, Harita & Görünüm (sınır kalınlığı, şehir ismi boyutu, savaş sisi, UI ölçeği), Ses (ana/müzik/SFX ayrı sürgüler), Oynanış & AI (zorluk, kriz sıklığı, oto-kayıt, kapitülasyon eşiği).

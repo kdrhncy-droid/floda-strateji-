@@ -51,7 +51,10 @@ export type BuildingType =
   | 'fortress'
   | 'university'
   | 'tradeHub'
-  | 'supplyDepot';
+  | 'supplyDepot'
+  | 'shipyard'
+  | 'mint'
+  | 'granary';
 
 export type UnitType = 'infantry' | 'armor' | 'airDrone';
 
@@ -79,6 +82,7 @@ export interface BuildingDefinition {
   baseCost: number;
   maxLevel: number;
   effectSummary: string;
+  requiresCoastal?: boolean;
 }
 
 export interface IdeologyDefinition {
@@ -152,6 +156,9 @@ export interface TerritoryBuildings {
   university: number;
   tradeHub: number;
   supplyDepot: number;
+  shipyard?: number;
+  mint?: number;
+  granary?: number;
 }
 
 export interface Territory {
@@ -160,6 +167,7 @@ export interface Territory {
   ownerId: string;
   coreOwnerId: string;
   isCapital?: boolean;
+  isCoastal?: boolean;
   terrain?: TerrainType;
   fiefLordId?: string | null;
   castleWallHp?: number; // 0-100

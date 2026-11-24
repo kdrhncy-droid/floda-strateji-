@@ -1,8 +1,10 @@
-import React from 'react';
-import { Anchor, Compass, Swords, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { Anchor, Compass, Layers, Swords, TrendingUp } from 'lucide-react';
+import { BuildingType } from '../../types/game';
 import { CommandDrawersProps } from './drawerTypes';
-import { RESOURCE_INFO } from '../../data/world2026Data';
+import { BUILDINGS, RESOURCE_INFO } from '../../data/world2026Data';
 import { calculateProvinceDevelopment } from '../../engine/simulationEngine';
+import { isTerritoryCoastal } from '../../engine/worldBuilder';
 import {
   evaluateActiveStraits,
   TRADE_RAID_INFLUENCE_COST,
@@ -20,9 +22,14 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
   onCentralBankIntervention,
   onIssueWarBonds,
   onRaidEnemyTradeRoutes,
+  onBatchAssimilate,
+  onBatchStabilityFestival,
+  onBatchUpgradeBuilding,
+  onBatchBorderMobilization,
   onSelectTerritory,
   gameMode = 'EMPIRES_1440',
 }) => {
+  const [batchBuilding, setBatchBuilding] = useState<BuildingType>('factory');
   const is1440 = gameMode === 'EMPIRES_1440';
   const tradeDetails = playerEconomy.tradeDetails;
   const domesticTrade = Math.max(
@@ -44,8 +51,47 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
     (playerNation.clanInfluence ?? 120) >= TRADE_RAID_INFLUENCE_COST &&
     playerNation.manpower >= TRADE_RAID_MANPOWER_COST;
 
-  const ownedTerritoryDevRows = Object.values(territories)
-    .filter((t) => t && t.ownerId === playerNation.id)
+  const ownedTerritories = Object.values(territories).filter(
+    (t) => t && t.ownerId === playerNation.id
+  );
+
+  const nonCorePendingCount = ownedTerritories.filter(
+    (t) =>
+      !t.isAssimilating &&
+      (t.coreOwnerId !== playerNation.id ||
+        t.isOccupied ||
+        (t.assimilation ?? 100) < 100)
+  ).length;
+  const restlessCount = ownedTerritories.filter(
+    (t) => (t.unrest || 0) >= 10
+  ).length;
+  const borderCityCount = ownedTerritories.filter((t) =>
+    t.neighbors.some((nbId) => {
+      const nb = territories[nbId];
+      return Boolean(nb && nb.ownerId !== playerNation.id);
+    })
+  ).length;
+
+  const batchBldDef =
+    BUILDINGS.find((b) => b.id === batchBuilding) || BUILDINGS[0];
+  const eligibleBatchBuildCities = ownedTerritories.filter((t) => {
+    if (batchBldDef.requiresCoastal && !isTerritoryCoastal(t)) return false;
+    if ((t.buildings?.[batchBuilding] || 0) >= batchBldDef.maxLevel) return false;
+    if ((t.constructionQueue || []).some((q) => q.building === batchBuilding))
+      return false;
+    return true;
+  });
+  const totalBatchBuildCost = eligibleBatchBuildCities.reduce((sum, t) => {
+    const lvl = t.buildings?.[batchBuilding] || 0;
+    return sum + Math.round(batchBldDef.baseCost * Math.pow(1.35, lvl));
+  }, 0);
+  const borderMobUnitGold = playerNation.enactedReforms.includes(
+    'ref_national_defense_industry'
+  )
+    ? 120
+    : 150;
+
+  const ownedTerritoryDevRows = ownedTerritories
     .map((t) => ({
       territory: t,
       resMeta: RESOURCE_INFO[t.resource] || RESOURCE_INFO.TAHIL,
@@ -261,6 +307,172 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Stage 3.5: AoH2 DE / AoH3 Batch Empire Management (Toplu İmparatorluk Yönetimi) */}
+      {(onBatchAssimilate ||
+        onBatchStabilityFestival ||
+        onBatchUpgradeBuilding ||
+        onBatchBorderMobilization) && (
+        <div
+          data-testid="batch-empire-management-card"
+          className="lg:col-span-12 bg-slate-950/85 border border-sky-500/35 rounded-2xl p-4 space-y-3"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+            <div>
+              <h3 className="text-sm font-bold text-sky-300 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-sky-400 shrink-0" />
+                <span>Toplu İmparatorluk Yönetimi (Tek Tık Makro İdare)</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Büyük imparatorluklarda tek tek şehir gezmeden asimilasyon, şenlik, sınır seferberliği ve kıyı limanı dahil toplu inşaat başlatın.
+              </p>
+            </div>
+            <span className="font-mono-num text-xs text-amber-300 font-bold shrink-0">
+              Hazine: {Math.floor(playerNation.treasury).toLocaleString('tr-TR')} Altın
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {/* 1. Toplu Asimilasyon */}
+            {onBatchAssimilate && (
+              <button
+                type="button"
+                data-testid="batch-assimilate-btn"
+                disabled={nonCorePendingCount === 0 || playerNation.treasury < 180}
+                onClick={onBatchAssimilate}
+                className="p-3 rounded-xl bg-slate-900/90 hover:bg-emerald-950/50 border border-slate-800 hover:border-emerald-500/50 text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold text-white">
+                      🌍 Toplu Asimilasyon
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-mono-num text-[10px] font-bold shrink-0">
+                      {nonCorePendingCount} Şehir
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-slate-400 mt-1 leading-snug">
+                    Yabancı/işgal altındaki şehirleri Öz Vatan sürecine alır (-12 huzursuzluk).
+                  </p>
+                </div>
+                <div className="text-[11px] font-mono-num font-bold text-amber-300">
+                  {nonCorePendingCount > 0
+                    ? `180G / Şehir (${(nonCorePendingCount * 180).toLocaleString('tr-TR')}G)`
+                    : 'Tüm Şehirler Öz Vatan'}
+                </div>
+              </button>
+            )}
+
+            {/* 2. Toplu Şenlik & İstikrar */}
+            {onBatchStabilityFestival && (
+              <button
+                type="button"
+                data-testid="batch-festival-btn"
+                disabled={restlessCount === 0 || playerNation.treasury < 140}
+                onClick={onBatchStabilityFestival}
+                className="p-3 rounded-xl bg-slate-900/90 hover:bg-amber-950/40 border border-slate-800 hover:border-amber-500/50 text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold text-white">
+                      🎉 Toplu Şenlik & Dirlik
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-mono-num text-[10px] font-bold shrink-0">
+                      {restlessCount} Huzursuz
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-slate-400 mt-1 leading-snug">
+                    Huzursuz (%10+) şehirlerde -15 isyan riski ve +2 Ulusal İstikrar sağlar.
+                  </p>
+                </div>
+                <div className="text-[11px] font-mono-num font-bold text-amber-300">
+                  {restlessCount > 0
+                    ? `140G / Şehir (${(restlessCount * 140).toLocaleString('tr-TR')}G)`
+                    : 'Asayiş Yerinde'}
+                </div>
+              </button>
+            )}
+
+            {/* 3. Sınır Seferberliği */}
+            {onBatchBorderMobilization && (
+              <button
+                type="button"
+                data-testid="batch-border-mob-btn"
+                disabled={
+                  borderCityCount === 0 ||
+                  playerNation.treasury < borderMobUnitGold ||
+                  playerNation.manpower < 1000
+                }
+                onClick={onBatchBorderMobilization}
+                className="p-3 rounded-xl bg-slate-900/90 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/50 text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold text-white">
+                      🛡️ Sınır Seferberliği
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 font-mono-num text-[10px] font-bold shrink-0">
+                      {borderCityCount} Sınır
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] text-slate-400 mt-1 leading-snug">
+                    Yabancı komşulu zayıf sınır şehirlerine +1.000 Piyade takviye eder.
+                  </p>
+                </div>
+                <div className="text-[11px] font-mono-num font-bold text-amber-300">
+                  {borderCityCount > 0
+                    ? `${borderMobUnitGold}G + 1.000 İG / Şehir`
+                    : 'Sınır Şehri Yok'}
+                </div>
+              </button>
+            )}
+
+            {/* 4. Toplu Bina / Kıyı Limanı İnşası */}
+            {onBatchUpgradeBuilding && (
+              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between gap-2">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold text-white">
+                      🏗️ Toplu Bina İnşası
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 font-mono-num text-[10px] font-bold shrink-0">
+                      {eligibleBatchBuildCities.length} Uygun
+                    </span>
+                  </div>
+                  <select
+                    aria-label="Toplu inşa edilecek bina türü"
+                    data-testid="batch-building-select"
+                    value={batchBuilding}
+                    onChange={(e) => setBatchBuilding(e.target.value as BuildingType)}
+                    className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-100 font-medium focus:outline-none focus:border-amber-400"
+                  >
+                    {BUILDINGS.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                        {b.requiresCoastal ? ' (Yalnızca Kıyı)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  data-testid="batch-build-btn"
+                  disabled={eligibleBatchBuildCities.length === 0}
+                  onClick={() => onBatchUpgradeBuilding(batchBuilding)}
+                  className="w-full min-h-[36px] px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-extrabold transition-colors disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {eligibleBatchBuildCities.length > 0
+                    ? `İnşayı Başlat (${eligibleBatchBuildCities.length}Ş · ${totalBatchBuildCost.toLocaleString('tr-TR')}G)`
+                    : batchBldDef.requiresCoastal
+                    ? 'Uygun Kıyı Şehri Yok'
+                    : 'Uygun Şehir Yok'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Stage 3: Strategic Straits, Blockades & Trade Corridors Command Center (Full 12 cols) */}
       <div className="lg:col-span-12 bg-slate-950/85 border border-amber-500/35 rounded-2xl p-4 space-y-4">

@@ -190,6 +190,31 @@ export const BUILDINGS: BuildingDefinition[] = [
     maxLevel: 5,
     effectSummary: '−0,12 Huzursuzluk Puanı/Gün · −1,2 Puan/Haftalık Güncelleme · +%0,008 Nüfus/Gün/Seviye',
   },
+  {
+    id: 'shipyard',
+    name: 'Kıyı Limanı & Tersane',
+    description: 'Yalnızca denize kıyısı olan şehirlerde kurulur. Deniz ticaretini, boğaz ağırlığını ve kıyı savunmasını güçlendirir.',
+    baseCost: 520,
+    maxLevel: 5,
+    requiresCoastal: true,
+    effectSummary: '+%22 Deniz Ticareti/Sv · +%8 Kıyı Savunması/Sv · +12 Koridor Ağırlığı',
+  },
+  {
+    id: 'mint',
+    name: 'Darphane & Vergi Dairesi',
+    description: 'Vergi tahsilatını ve sikke istikrarını artırır; eyaletin yerel vergi katkısını büyütüp günlük enflasyonu dengeler.',
+    baseCost: 430,
+    maxLevel: 5,
+    effectSummary: '+%14 Yerel Vergi Katkısı/Sv · −0,015 Enflasyon/Gün/Sv (en çok −0,15/gün)',
+  },
+  {
+    id: 'granary',
+    name: 'Çiftlik & Erzak Ambarı',
+    description: 'Tarımsal üretimi ve nüfus artışını hızlandırır; ulusal insan gücü yenilenmesi ve seferberlik tavanını yükseltir.',
+    baseCost: 380,
+    maxLevel: 5,
+    effectSummary: '+%0,018 Nüfus/Gün/Sv · +220 İnsan Gücü/Gün · +6.000 Havuz Tavanı/Sv',
+  },
 ];
 
 export interface ResourceMetadata {

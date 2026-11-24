@@ -15,7 +15,7 @@ import {
   ResourceType,
   UnitComposition,
 } from '../types/game';
-import { relationKey } from './worldBuilder';
+import { isTerritoryCoastal, relationKey } from './worldBuilder';
 import { TERRAIN_INFO } from './pashaAndFiefEngine';
 import {
   calculateNationTradeAndStraits,
@@ -179,6 +179,9 @@ export function calculateProvinceDevelopment(
     university: 0,
     tradeHub: 0,
     supplyDepot: 0,
+    shipyard: 0,
+    mint: 0,
+    granary: 0,
   };
   const totalBuildingLevels =
     (bld.factory || 0) +
@@ -186,14 +189,20 @@ export function calculateProvinceDevelopment(
     (bld.university || 0) +
     (bld.supplyDepot || 0) +
     (bld.barracks || 0) +
-    (bld.fortress || 0);
+    (bld.fortress || 0) +
+    (bld.shipyard || 0) +
+    (bld.mint || 0) +
+    (bld.granary || 0);
 
-  // Local building investment multiplier (Sanayi, Liman, İkmal, Üniversite)
+  // Local building investment multiplier (Sanayi, Liman, Tersane, Darphane, Ambar, İkmal, Üniversite)
   const buildingInvestmentMult = Number(
     (
       1 +
       (bld.factory || 0) * 0.36 +
       (bld.tradeHub || 0) * 0.22 +
+      (bld.shipyard || 0) * 0.24 +
+      (bld.mint || 0) * 0.16 +
+      (bld.granary || 0) * 0.15 +
       (bld.supplyDepot || 0) * 0.14 +
       (bld.university || 0) * 0.12
     ).toFixed(2)
@@ -207,9 +216,11 @@ export function calculateProvinceDevelopment(
   if (unlockedTechs.includes('eco_2')) techMult += 0.22;
   if (unlockedTechs.includes('eco_3')) techMult += 0.15;
   if (unlockedTechs.includes('eco_4')) techMult += 0.18;
+  if (unlockedTechs.includes('eco_5')) techMult += 0.2;
   if (unlockedTechs.includes('sci_1')) techMult += 0.08;
   if (unlockedTechs.includes('sci_2')) techMult += 0.15;
   if (unlockedTechs.includes('sci_4')) techMult += 0.25;
+  if (unlockedTechs.includes('sci_5')) techMult += 0.2;
   if (enactedReforms.includes('ref_free_trade_zones')) techMult += 0.12;
   const techInvestmentMult = Number(techMult.toFixed(2));
 
@@ -242,7 +253,10 @@ export function calculateProvinceDevelopment(
   const buildingTerm =
     (bld.factory || 0) * 9 +
     (bld.tradeHub || 0) * 7 +
+    (bld.shipyard || 0) * 7 +
     (bld.university || 0) * 6 +
+    (bld.mint || 0) * 5 +
+    (bld.granary || 0) * 5 +
     (bld.supplyDepot || 0) * 5 +
     (bld.barracks || 0) * 3 +
     (bld.fortress || 0) * 3;
@@ -436,8 +450,12 @@ export function calculateNationEconomy(
   let baseProduction = 0;
   let universityOutput = 0;
   let barracksManpower = 0;
+  let granaryManpower = 0;
   let tradeHubBonus = 0;
+  let shipyardBonus = 0;
   let tradeHubLevels = 0;
+  let mintLevels = 0;
+  let mintTaxBoost = 0;
   const resourceEffects = {
     taxPct: 0,
     productionPct: 0,
@@ -465,13 +483,20 @@ export function calculateNationEconomy(
       university: 0,
       tradeHub: 0,
       supplyDepot: 0,
+      shipyard: 0,
+      mint: 0,
+      granary: 0,
     };
 
     baseProduction += dev.effectiveDailyGdp;
     universityOutput += (bld.university || 0) * 4.5;
     barracksManpower += (bld.barracks || 0) * 350;
+    granaryManpower += (bld.granary || 0) * 220;
     tradeHubBonus += (bld.tradeHub || 0) * 0.2;
+    shipyardBonus += (bld.shipyard || 0) * 0.22;
     tradeHubLevels += bld.tradeHub || 0;
+    mintLevels += bld.mint || 0;
+    mintTaxBoost += dev.effectiveDailyGdp * (bld.mint || 0) * 0.14;
 
     const resourceEffect = RESOURCE_ECONOMIC_EFFECTS[t.resource];
     if (resourceEffect && !claimedResourceBonuses.has(t.resource)) {
@@ -491,6 +516,7 @@ export function calculateNationEconomy(
     ownedTerritories.length <= 3
       ? 1.0
       : Math.max(0.24, 1.95 / Math.pow(ownedTerritories.length, 0.64));
+  const mintTaxBase = mintTaxBoost * empireScale;
   baseProduction = baseProduction * empireScale;
 
   const movingTroops = activeMovements
@@ -516,7 +542,7 @@ export function calculateNationEconomy(
   if (enactedReforms.includes('ref_free_trade_zones')) taxTechMult += 0.2;
 
   const taxIncome = Math.round(
-    baseProduction * 0.55 * taxRateFactor * taxTechMult
+    (baseProduction + mintTaxBase) * 0.55 * taxRateFactor * taxTechMult
   );
 
   let prodMult = 1 + ((budget.economy || 25) - 25) * 0.008;
@@ -524,6 +550,7 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('eco_2')) prodMult += 0.25;
   if (unlockedTechs.includes('sci_2')) prodMult += 0.15;
   if (unlockedTechs.includes('sci_4')) prodMult += 0.35;
+  if (unlockedTechs.includes('sci_5')) prodMult += 0.2;
 
   const productionIncome = Math.round(baseProduction * 0.48 * prodMult);
 
@@ -538,7 +565,11 @@ export function calculateNationEconomy(
   });
 
   let tradeMult =
-    1 + tradeHubBonus + tradeAgreementCount * 0.14 + resourceEffects.tradePct / 100;
+    1 +
+    tradeHubBonus +
+    shipyardBonus +
+    tradeAgreementCount * 0.14 +
+    resourceEffects.tradePct / 100;
   if (unlockedTechs.includes('eco_3')) tradeMult += 0.3;
   if (enactedReforms.includes('ref_free_trade_zones')) tradeMult += 0.2;
 
@@ -559,11 +590,16 @@ export function calculateNationEconomy(
     relations,
     wars,
   });
+  const maritimeTradeTechMult = unlockedTechs.includes('eco_5') ? 1.25 : 1.0;
   const straitTollIncome = Math.round(
-    tradeDetails.straitTollIncome * (ownedTerritories.length > 6 ? 0.65 : 1)
+    tradeDetails.straitTollIncome *
+      (ownedTerritories.length > 6 ? 0.65 : 1) *
+      maritimeTradeTechMult
   );
   const caravanTradeIncome = Math.round(
-    tradeDetails.caravanTradeIncome * (ownedTerritories.length > 6 ? 0.65 : 1)
+    tradeDetails.caravanTradeIncome *
+      (ownedTerritories.length > 6 ? 0.65 : 1) *
+      maritimeTradeTechMult
   );
   const seizedBlockadeIncome = tradeDetails.seizedBlockadeIncome;
   const blockadePenaltyLoss = tradeDetails.blockadePenaltyLoss;
@@ -589,6 +625,9 @@ export function calculateNationEconomy(
   let upkeepPerThousand = 2.25 * (0.75 + (budget.military || 35) / 100);
   upkeepPerThousand *=
     1 - Math.min(0.3, resourceEffects.militaryUpkeepReductionPct / 100);
+  if (unlockedTechs.includes('mil_5')) {
+    upkeepPerThousand *= 0.88;
+  }
   if (enactedReforms.includes('ref_professional_army')) {
     upkeepPerThousand *= 0.9;
   }
@@ -615,10 +654,14 @@ export function calculateNationEconomy(
   let researchMult = 1 + ideology.researchBonus / 100;
   if (unlockedTechs.includes('sci_1')) researchMult += 0.2;
   if (unlockedTechs.includes('sci_3')) researchMult += 0.25;
+  if (unlockedTechs.includes('sci_5')) researchMult += 0.3;
   const dailyResearch = Number((researchBase * researchMult).toFixed(1));
 
   const manpowerBase =
-    140 + Math.round(totalPopulation * 0.0006 * empireScale) + barracksManpower;
+    140 +
+    Math.round(totalPopulation * 0.0006 * empireScale) +
+    barracksManpower +
+    granaryManpower;
   let manpowerMult =
     1 + ideology.manpowerGrowthBonus / 100 + resourceEffects.manpowerPct / 100;
   if (unlockedTechs.includes('adm_3')) manpowerMult += 0.35;
@@ -641,7 +684,11 @@ export function calculateNationEconomy(
     vassalTributeOut,
     militaryUpkeep,
     inflationPenalty,
-    inflationRelief: Math.min(0.2, tradeHubLevels * 0.02),
+    inflationRelief: Number(
+      (
+        Math.min(0.2, tradeHubLevels * 0.02) + Math.min(0.15, mintLevels * 0.015)
+      ).toFixed(3)
+    ),
     netDailyGold,
     dailyResearch,
     dailyManpower,
@@ -654,11 +701,13 @@ export function computeNationManpowerCap(
 ): number {
   let ownedCount = 0;
   let totalBarracks = 0;
+  let totalGranaries = 0;
   let totalPop = 0;
   for (const t of Object.values(territories)) {
     if (t && t.ownerId === nation.id) {
       ownedCount++;
       totalBarracks += t.buildings?.barracks || 0;
+      totalGranaries += t.buildings?.granary || 0;
       totalPop += t.population || 0;
     }
   }
@@ -666,6 +715,7 @@ export function computeNationManpowerCap(
   const rawCap =
     ownedCount * 9_000 +
     totalBarracks * 12_000 +
+    totalGranaries * 6_000 +
     Math.min(200_000, Math.round(totalPop * 0.0025));
   return Math.max(45_000, Math.round(rawCap * techBonus));
 }
@@ -688,6 +738,7 @@ export function computeCombatStrength(
   if (unlockedTechs.includes('mil_1')) mult += 0.12;
   if (unlockedTechs.includes('mil_2')) mult += 0.18;
   if (unlockedTechs.includes('mil_3')) mult += 0.25;
+  if (unlockedTechs.includes('mil_5')) mult += 0.2;
   if (enactedReforms.includes('ref_professional_army')) mult += 0.15;
 
   // National Army Modernization Generation Bonus (applied once standing armies are modernized to unlocked tech!)
@@ -742,6 +793,9 @@ export function computeCombatStrength(
     }
 
     if (unlockedTechs.includes('mil_4')) mult += 0.3;
+    if (isTerritoryCoastal(territory)) {
+      mult += (territory?.buildings?.shipyard || 0) * 0.08;
+    }
   }
 
   return Math.max(0.5, mult);

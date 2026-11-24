@@ -1,7 +1,8 @@
 import React from "react";
-import { Hammer, Check } from "lucide-react";
+import { Hammer, Check, Anchor } from "lucide-react";
 import { BuildingType, Nation, Territory } from "../../types/game";
 import { BUILDINGS } from "../../data/world2026Data";
+import { isTerritoryCoastal } from "../../engine/worldBuilder";
 import { BuildingIllustrationSvg } from "../illustrations/AoH3Illustrations";
 
 interface ProvinceBuildingsPanelProps {
@@ -17,21 +18,32 @@ export const ProvinceBuildingsPanel: React.FC<ProvinceBuildingsPanelProps> = ({
   isVisibleOnMobile,
   onUpgradeBuilding,
 }) => {
+  const isCoastal = isTerritoryCoastal(selectedTerritory);
+
   return (
     <div
       className={`bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3 ${
         isVisibleOnMobile ? "block" : "hidden lg:block"
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Hammer className="w-4 h-4 text-amber-400" />
-            Binalar & Altyapı
+            <span>Binalar & Altyapı</span>
+            <span
+              data-testid="province-coastal-badge"
+              className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                isCoastal
+                  ? "bg-sky-500/15 text-sky-300 border-sky-500/35"
+                  : "bg-slate-900 text-slate-400 border-slate-700"
+              }`}
+            >
+              {isCoastal ? "⚓ Kıyı Şehri" : "🏔️ İç Kara"}
+            </span>
           </h3>
-          <p className="hidden sm:block text-xs text-slate-400">
-            Binalar bölgenin ekonomik gelirini, savunmasını ve araştırma
-            kapasitesini kalıcı olarak büyütür.
+          <p className="hidden sm:block text-xs text-slate-400 mt-0.5">
+            Binalar bölgenin ekonomik gelirini, savunmasını, nüfus artışını ve araştırma kapasitesini kalıcı olarak büyütür.
           </p>
         </div>
       </div>
@@ -40,18 +52,25 @@ export const ProvinceBuildingsPanel: React.FC<ProvinceBuildingsPanelProps> = ({
         {BUILDINGS.map((b) => {
           const currentLvl = selectedTerritory.buildings[b.id] || 0;
           const isMax = currentLvl >= b.maxLevel;
+          const missingCoast = Boolean(b.requiresCoastal && !isCoastal);
           const cost = Math.round(b.baseCost * Math.pow(1.35, currentLvl));
           const queuedItem = selectedTerritory.constructionQueue?.find(
             (q) => q.building === b.id
           );
           const canAfford =
-            playerNation.treasury >= cost && !isMax && !queuedItem;
+            !missingCoast &&
+            playerNation.treasury >= cost &&
+            !isMax &&
+            !queuedItem;
           const estDays = Math.max(14, 18 + currentLvl * 14);
 
           return (
             <div
               key={b.id}
-              className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col justify-between gap-2"
+              data-testid={`building-card-${b.id}`}
+              className={`bg-slate-900/90 border rounded-xl p-2.5 flex flex-col justify-between gap-2 ${
+                missingCoast ? "border-slate-800/70 opacity-80" : "border-slate-800"
+              }`}
             >
               <div className="flex items-start gap-2.5">
                 <BuildingIllustrationSvg
@@ -73,6 +92,20 @@ export const ProvinceBuildingsPanel: React.FC<ProvinceBuildingsPanelProps> = ({
                   <div className="text-[10.5px] leading-snug text-emerald-400 mt-0.5 font-medium">
                     {b.effectSummary}
                   </div>
+                  {b.requiresCoastal && (
+                    <div
+                      className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                        missingCoast
+                          ? "bg-amber-950/60 text-amber-300 border-amber-500/35"
+                          : "bg-sky-950/60 text-sky-300 border-sky-500/35"
+                      }`}
+                    >
+                      <Anchor className="w-2.5 h-2.5 shrink-0" />
+                      <span>
+                        {missingCoast ? "Yalnızca Kıyı Şehirleri" : "Kıyı Limanı Uygun"}
+                      </span>
+                    </div>
+                  )}
 
                   {queuedItem && (
                     <div className="mt-2 space-y-1">
@@ -109,14 +142,18 @@ export const ProvinceBuildingsPanel: React.FC<ProvinceBuildingsPanelProps> = ({
 
               <div className="flex items-center justify-between gap-2 text-[10px] font-mono-num text-slate-400">
                 <span>
-                  {queuedItem
+                  {missingCoast
+                    ? "Kıyı kilidi"
+                    : queuedItem
                     ? "İnşa sırası"
                     : isMax
                     ? "Tamamlandı"
                     : "Sonraki seviye"}
                 </span>
                 <span className="text-amber-300">
-                  {!queuedItem && !isMax
+                  {missingCoast
+                    ? "Kıyı Gerekli"
+                    : !queuedItem && !isMax
                     ? `${cost}G · ${estDays}g`
                     : queuedItem
                     ? `${queuedItem.totalDays - queuedItem.progressDays}g kaldı`
@@ -126,9 +163,12 @@ export const ProvinceBuildingsPanel: React.FC<ProvinceBuildingsPanelProps> = ({
 
               <button
                 disabled={!canAfford}
+                data-testid={`upgrade-building-${b.id}`}
                 onClick={() => onUpgradeBuilding(selectedTerritory.id, b.id)}
                 className={`w-full min-h-[42px] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors ${
-                  queuedItem
+                  missingCoast
+                    ? "bg-slate-800/80 text-amber-300/75 border border-slate-700 cursor-not-allowed"
+                    : queuedItem
                     ? "bg-amber-950/50 text-amber-300 border border-amber-500/40 cursor-default"
                     : isMax
                     ? "bg-slate-800 text-slate-500 cursor-not-allowed"
@@ -137,7 +177,11 @@ export const ProvinceBuildingsPanel: React.FC<ProvinceBuildingsPanelProps> = ({
                     : "bg-slate-800 text-slate-400 cursor-not-allowed"
                 }`}
               >
-                {queuedItem ? (
+                {missingCoast ? (
+                  <>
+                    <Anchor className="w-3.5 h-3.5" /> Kıyı Gerekli
+                  </>
+                ) : queuedItem ? (
                   <>
                     <Hammer className="w-3.5 h-3.5 animate-spin" /> İnşa
                     ediliyor

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Check, Crown, FlaskConical } from "lucide-react";
+import { Crown, FlaskConical } from "lucide-react";
 import { TechBranch } from "../../types/game";
 import { CommandDrawersProps } from "./drawerTypes";
 import { ArmyModernizationCard } from "./ArmyModernizationCard";
@@ -475,33 +475,34 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                   />
                 )}
 
-                {/* AoH3 Horizontal Tiered Technology Tree (Kademe I -> Kademe II -> Kademe III -> Kademe IV) */}
+                {/* AoH3 Horizontal Tiered Technology Tree (Kademe I -> Kademe V) */}
                 <div
                   data-testid="aoh3-tech-tree-canvas"
-                  className="rounded-2xl bg-[#13100d] border border-[#caa15a]/45 p-2.5 sm:p-3 overflow-x-auto shadow-inner"
+                  className="rounded-2xl bg-[#13100d] border border-[#caa15a]/45 p-2 sm:p-2.5 overflow-x-auto shadow-inner"
                 >
-                  <div className="min-w-[500px] space-y-2.5">
+                  <div className="min-w-[590px] lg:min-w-0 space-y-2">
                     {/* Era / Tier Column Headers */}
-                    <div className="grid grid-cols-4 gap-2 pb-2 border-b border-[#caa15a]/25">
+                    <div className="grid grid-cols-5 gap-1.5 pb-2 border-b border-[#caa15a]/25">
                       {[
                         { tier: 1, title: 'KADEME I', subtitle: 'Erken Doktrin' },
                         { tier: 2, title: 'KADEME II', subtitle: 'Teşkilat & Ocak' },
                         { tier: 3, title: 'KADEME III', subtitle: 'İmparatorluk' },
                         { tier: 4, title: 'KADEME IV', subtitle: 'Cihan Hakimiyeti' },
+                        { tier: 5, title: 'KADEME V', subtitle: 'Altın Çağ' },
                       ].map((col) => (
                         <div
                           key={col.tier}
-                          className="px-2 py-1.5 rounded-lg bg-[#1d1813] border border-[#caa15a]/30 flex items-center justify-between gap-1"
+                          className="px-1.5 py-1 rounded-lg bg-[#1d1813] border border-[#caa15a]/30 flex items-center justify-between gap-1 min-w-0"
                         >
                           <div className="min-w-0">
-                            <div className="text-[10px] font-display font-extrabold text-amber-300 tracking-wider truncate">
+                            <div className="text-[9.5px] font-display font-extrabold text-amber-300 tracking-wide truncate">
                               {col.title}
                             </div>
-                            <div className="text-[9px] text-[#b8a990] truncate">
+                            <div className="text-[8.5px] text-[#b8a990] truncate">
                               {col.subtitle}
                             </div>
                           </div>
-                          <span className="w-4 h-4 rounded-full bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-[9px] font-mono-num font-bold text-amber-200 shrink-0">
+                          <span className="w-4 h-4 rounded-full bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-[8.5px] font-mono-num font-bold text-amber-200 shrink-0">
                             {col.tier}
                           </span>
                         </div>
@@ -509,8 +510,8 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     </div>
 
                     {/* Horizontal Connected Node Columns */}
-                    <div className="grid grid-cols-4 gap-2 items-stretch">
-                      {[1, 2, 3, 4].map((tierNum) => {
+                    <div className="grid grid-cols-5 gap-1.5 items-stretch">
+                      {[1, 2, 3, 4, 5].map((tierNum) => {
                         const tierTechs = activeTechTree.filter(
                           (t) => t.branch === techBranchFilter && t.tier === tierNum
                         );
@@ -590,7 +591,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                     )}
 
                                     <div
-                                      className={`w-full rounded-xl border p-2.5 flex flex-col justify-between gap-2 transition-all shadow-lg ${
+                                      className={`w-full min-w-0 rounded-xl border p-2 flex flex-col justify-between gap-1.5 transition-all shadow-lg ${
                                         isUnlocked
                                           ? 'bg-gradient-to-b from-emerald-950/60 to-[#171f1a] border-emerald-500/70'
                                           : isActivelyResearching
@@ -601,10 +602,10 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                       }`}
                                     >
                                       {/* Top Node Header: Icon + Name + Cost Badge */}
-                                      <div className="space-y-1.5">
-                                        <div className="flex items-start justify-between gap-1.5">
+                                      <div className="space-y-1">
+                                        <div className="flex items-start justify-between gap-1">
                                           <span
-                                            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold border shrink-0 shadow-inner"
+                                            className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold border shrink-0 shadow-inner"
                                             style={{
                                               color: branchColor,
                                               borderColor: `${branchColor}66`,
@@ -613,20 +614,20 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                           >
                                             {TECH_BRANCH_META[tech.branch]?.glyph || '◆'}
                                           </span>
-                                          <span className="px-1.5 py-0.5 rounded bg-black/50 border border-[#caa15a]/30 font-mono-num text-[10px] font-bold text-amber-300">
+                                          <span className="px-1 py-0.5 rounded bg-black/50 border border-[#caa15a]/30 font-mono-num text-[9.5px] font-bold text-amber-300 shrink-0">
                                             {tech.cost} RP
                                           </span>
                                         </div>
 
-                                        <div className="text-xs font-display font-bold text-[#f3ead7] leading-snug">
+                                        <div className="text-[11px] font-display font-bold text-[#f3ead7] leading-tight">
                                           {tech.name}
                                         </div>
 
-                                        <div className="text-[10px] font-semibold text-emerald-300 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 leading-tight">
+                                        <div className="text-[9.5px] font-semibold text-emerald-300 px-1 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 leading-tight">
                                           {tech.effectLabel}
                                         </div>
 
-                                        <p className="text-[10px] text-[#b8a990] line-clamp-2 leading-relaxed">
+                                        <p className="text-[9.5px] text-[#b8a990] line-clamp-2 leading-snug">
                                           {tech.description}
                                         </p>
                                       </div>
@@ -665,7 +666,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                           isActivelyResearching
                                         }
                                         onClick={() => handleStartResearch(tech.id)}
-                                        className={`w-full min-h-[34px] px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer ${
+                                        className={`w-full min-h-[32px] px-1.5 py-1 rounded-lg text-[10px] font-bold transition-colors flex items-center justify-center gap-1 text-center leading-tight cursor-pointer ${
                                           isUnlocked
                                             ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 cursor-default'
                                             : isActivelyResearching
@@ -675,19 +676,17 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                             : 'bg-black/45 text-slate-500 border border-slate-800 cursor-not-allowed'
                                         }`}
                                       >
-                                        {isUnlocked ? (
-                                          <>
-                                            <Check className="w-3.5 h-3.5" /> Açıldı
-                                          </>
-                                        ) : isActivelyResearching ? (
-                                          `⏳ %${activePct} (~${activeEstDays}g)`
-                                        ) : !prereqMet ? (
-                                          `🔒 ${prereqDef?.name || 'Önceki Kademe'}`
-                                        ) : hasSavedProgress ? (
-                                          `▶ Devam Et (~${estDaysForThis}g)`
-                                        ) : (
-                                          `🔬 Araştır (~${estDaysForThis}g)`
-                                        )}
+                                        <span className="truncate">
+                                          {isUnlocked
+                                            ? '✓ Açıldı'
+                                            : isActivelyResearching
+                                            ? `⏳ %${activePct} (~${activeEstDays}g)`
+                                            : !prereqMet
+                                            ? `🔒 ${prereqDef?.name || 'Önceki Kademe'}`
+                                            : hasSavedProgress
+                                            ? `▶ Devam (~${estDaysForThis}g)`
+                                            : `🔬 Araştır (~${estDaysForThis}g)`}
+                                        </span>
                                       </button>
                                     </div>
                                   </div>
