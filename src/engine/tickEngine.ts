@@ -57,7 +57,7 @@ import {
   evaluateActiveStraits,
 } from './straitsAndTradeEngine';
 import { evaluatePlayerAiCommander } from './playerAiCommander';
-import { pickNextAutoResearchTech } from './empireAndArmyActions';
+import { pickNextAutoResearchTech } from './actions/techAndReformActions';
 import { GameSettings } from './gameSettings';
 import { scaleUnits } from './core/unitHelpers';
 export { scaleUnits };
