@@ -263,6 +263,209 @@ export function drawNationFlagOnCanvas(
     ctx.arc(cx, cy, minDim * 0.11, 0, Math.PI * 2);
     ctx.fill();
   }
+  // 2B. 1440 TARİHSEL DEVLET SANCAKLARI (Özel 1440 bayrak kodları modern baseId'den önce gelir)
+  else if (code === 'OZB') {
+    ctx.fillStyle = '#0E7490';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#F59E0B';
+    ctx.fillRect(x, y, w, h * 0.12);
+    ctx.fillRect(x, y + h * 0.88, w, h * 0.12);
+    drawCrescentAndStar(ctx, cx, cy, minDim * 0.25, '#F8FAFC', '#0E7490', 8);
+  } else if (code === 'SIR') {
+    ctx.fillStyle = '#991B1B';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FACC15';
+    ctx.fillRect(cx - w * 0.07, y, w * 0.14, h);
+    ctx.fillRect(x, cy - h * 0.1, w, h * 0.2);
+    drawFivePointStar(ctx, cx, cy, minDim * 0.18, minDim * 0.08, '#FFFBEB');
+  } else if (code === 'LIT') {
+    ctx.fillStyle = '#881337';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillRect(cx - w * 0.14, cy - h * 0.26, w * 0.28, h * 0.52);
+    ctx.fillStyle = '#FACC15';
+    ctx.fillRect(cx - w * 0.04, cy - h * 0.2, w * 0.08, h * 0.4);
+    ctx.fillRect(cx - w * 0.11, cy - h * 0.08, w * 0.22, h * 0.08);
+  } else if (code === 'BOH') {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w, h / 2);
+    ctx.fillStyle = '#DC2626';
+    ctx.fillRect(x, y + h / 2, w, h / 2);
+    drawFivePointStar(ctx, cx, cy, minDim * 0.2, minDim * 0.09, '#F59E0B');
+  } else if (code === 'BRG') {
+    // Cross of Burgundy (red jagged saltire on white)
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#B91C1C';
+    ctx.lineWidth = Math.max(2, minDim * 0.2);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.moveTo(x + w, y);
+    ctx.lineTo(x, y + h);
+    ctx.stroke();
+  } else if (code === 'ISV') {
+    ctx.fillStyle = '#DC2626';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(cx - minDim * 0.1, cy - minDim * 0.3, minDim * 0.2, minDim * 0.6);
+    ctx.fillRect(cx - minDim * 0.3, cy - minDim * 0.1, minDim * 0.6, minDim * 0.2);
+  } else if (code === 'BOS') {
+    ctx.fillStyle = '#1D4ED8';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#F8FAFC';
+    ctx.lineWidth = Math.max(2, minDim * 0.18);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.stroke();
+    drawFivePointStar(ctx, x + w * 0.72, y + h * 0.26, minDim * 0.14, minDim * 0.06, '#FACC15');
+    drawFivePointStar(ctx, x + w * 0.28, y + h * 0.74, minDim * 0.14, minDim * 0.06, '#FACC15');
+  } else if (code === 'HIR') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#DC2626', '#FFFFFF', '#1D4ED8');
+    ctx.fillStyle = '#DC2626';
+    ctx.fillRect(cx - minDim * 0.16, cy - minDim * 0.16, minDim * 0.32, minDim * 0.32);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(cx - minDim * 0.16, cy - minDim * 0.16, minDim * 0.16, minDim * 0.16);
+    ctx.fillRect(cx, cy, minDim * 0.16, minDim * 0.16);
+  } else if (code === 'BOG') {
+    ctx.fillStyle = '#991B1B';
+    ctx.fillRect(x, y, w, h);
+    drawEightPointStar(ctx, cx, cy, minDim * 0.26, '#FACC15');
+  } else if (code === 'TOT') {
+    // Teutonic Order black cross on white
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(cx - w * 0.08, y, w * 0.16, h);
+    ctx.fillRect(x, cy - h * 0.11, w, h * 0.22);
+  } else if (code === 'DAN') {
+    ctx.fillStyle = '#C8102E';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x + w * 0.3, y, w * 0.12, h);
+    ctx.fillRect(x, cy - h * 0.09, w, h * 0.18);
+  } else if (code === 'NOR') {
+    ctx.fillStyle = '#BA0C2F';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x + w * 0.28, y, w * 0.16, h);
+    ctx.fillRect(x, cy - h * 0.12, w, h * 0.24);
+    ctx.fillStyle = '#00205B';
+    ctx.fillRect(x + w * 0.32, y, w * 0.08, h);
+    ctx.fillRect(x, cy - h * 0.06, w, h * 0.12);
+  } else if (code === 'KIB') {
+    // Lusignan Kingdom of Cyprus (Jerusalem gold cross on white)
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#D97706';
+    ctx.fillRect(cx - w * 0.07, y + h * 0.12, w * 0.14, h * 0.76);
+    ctx.fillRect(x + w * 0.2, cy - h * 0.09, w * 0.6, h * 0.18);
+  } else if (code === 'GUR') {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#DC2626';
+    ctx.fillRect(cx - w * 0.08, y, w * 0.16, h);
+    ctx.fillRect(x, cy - h * 0.11, w, h * 0.22);
+    for (const [qx, qy] of [[0.24, 0.24], [0.76, 0.24], [0.24, 0.76], [0.76, 0.76]]) {
+      ctx.fillRect(x + w * qx - 1.5, y + h * qy - 3, 3, 6);
+      ctx.fillRect(x + w * qx - 3, y + h * qy - 1.5, 6, 3);
+    }
+  } else if (code === 'KIR') {
+    // Crimean Khanate: Sky blue + golden Tarak Tamga
+    ctx.fillStyle = '#0284C7';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FACC15';
+    ctx.fillRect(cx - w * 0.16, cy - h * 0.16, w * 0.32, h * 0.08);
+    ctx.fillRect(cx - w * 0.16, cy - h * 0.16, w * 0.06, h * 0.32);
+    ctx.fillRect(cx - w * 0.03, cy - h * 0.16, w * 0.06, h * 0.36);
+    ctx.fillRect(cx + w * 0.1, cy - h * 0.16, w * 0.06, h * 0.32);
+  } else if (code === 'KAZ') {
+    ctx.fillStyle = '#00AFCA';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FEC50C';
+    ctx.beginPath();
+    ctx.arc(cx, cy, minDim * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (code === 'YEM') {
+    ctx.fillStyle = '#991B1B';
+    ctx.fillRect(x, y, w, h);
+    drawCrescentAndStar(ctx, cx, cy, minDim * 0.28, '#FFFFFF', '#991B1B', 5);
+  } else if (code === 'NUB') {
+    ctx.fillStyle = '#D97706';
+    ctx.fillRect(x, y, w, h);
+    drawCrescentAndStar(ctx, cx, cy, minDim * 0.26, '#111827', '#D97706', 5);
+  } else if (code === 'ADL' || code === 'MLK') {
+    ctx.fillStyle = '#047857';
+    ctx.fillRect(x, y, w, h);
+    drawCrescentAndStar(
+      ctx,
+      cx,
+      cy,
+      minDim * 0.28,
+      code === 'MLK' ? '#FACC15' : '#FFFFFF',
+      '#047857',
+      8
+    );
+  } else if (code === 'MLI') {
+    ctx.fillStyle = '#CA8A04';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#991B1B';
+    ctx.beginPath();
+    ctx.moveTo(cx, y + h * 0.16);
+    ctx.lineTo(x + w * 0.72, cy);
+    ctx.lineTo(cx, y + h * 0.84);
+    ctx.lineTo(x + w * 0.28, cy);
+    ctx.closePath();
+    ctx.fill();
+  } else if (code === 'KLV') {
+    ctx.fillStyle = '#0F766E';
+    ctx.fillRect(x, y, w, h);
+    drawCrescentAndStar(ctx, cx, cy, minDim * 0.27, '#FACC15', '#0F766E', 5);
+  } else if (code === 'KON') {
+    ctx.fillStyle = '#991B1B';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillRect(cx - w * 0.08, y, w * 0.16, h);
+    ctx.fillRect(x, cy - h * 0.11, w, h * 0.22);
+  } else if (code === 'BNG') {
+    ctx.fillStyle = '#006A4E';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#F42A41';
+    ctx.beginPath();
+    ctx.arc(cx - w * 0.04, cy, minDim * 0.27, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (code === 'SEY') {
+    ctx.fillStyle = '#8D153A';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#FFBE29';
+    ctx.lineWidth = Math.max(1.5, minDim * 0.12);
+    ctx.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3);
+    drawFivePointStar(ctx, cx, cy, minDim * 0.22, minDim * 0.1, '#FFBE29');
+  } else if (code === 'SUL') {
+    ctx.fillStyle = '#1E40AF';
+    ctx.fillRect(x, y, w, h);
+    drawCrescentAndStar(ctx, cx, cy, minDim * 0.26, '#F8FAFC', '#1E40AF', 5);
+  } else if (code === 'DAI') {
+    ctx.fillStyle = '#DA251D';
+    ctx.fillRect(x, y, w, h);
+    drawFivePointStar(ctx, cx, cy, minDim * 0.28, minDim * 0.11, '#FFFF00');
+  } else if (code === 'AVA') {
+    ctx.fillStyle = '#EAB308';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#991B1B';
+    ctx.beginPath();
+    ctx.arc(cx, cy, minDim * 0.26, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (code === 'KHM') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#032EA1', '#E00025', '#032EA1');
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillRect(cx - w * 0.16, cy - h * 0.1, w * 0.32, h * 0.2);
+  } else if (code === 'MOG') {
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x, y, w, h);
+    drawCrescentAndStar(ctx, cx, cy, minDim * 0.25, '#FACC15', '#334155', 8);
+  }
   // 3. BİZANS (BIZ) & YUNANİSTAN (300, GR)
   else if (code === 'BIZ') {
     // Palaiologos Imperial Banner: Crimson/Tyrian field + Golden Cross + 4 Gold Symmetrical B Crests
@@ -874,6 +1077,417 @@ export function drawNationFlagOnCanvas(
     } else {
       drawCrescentAndStar(ctx, cx, cy, minDim * 0.28, '#FFFFFF', bg, 5);
     }
+  }
+  // 22B. GENİŞLETİLMİŞ MODERN ÜLKE BAYRAKLARI (Avrupa, Asya, Afrika, Amerika)
+  else if (baseId === '191') {
+    // Hırvatistan
+    drawHorizontalTricolor(ctx, x, y, w, h, '#FF0000', '#FFFFFF', '#171796');
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect(cx - minDim * 0.14, cy - minDim * 0.14, minDim * 0.28, minDim * 0.28);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(cx - minDim * 0.14, cy - minDim * 0.14, minDim * 0.14, minDim * 0.14);
+    ctx.fillRect(cx, cy, minDim * 0.14, minDim * 0.14);
+  } else if (baseId === '268') {
+    // Gürcistan
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect(cx - w * 0.08, y, w * 0.16, h);
+    ctx.fillRect(x, cy - h * 0.11, w, h * 0.22);
+    for (const [qx, qy] of [[0.24, 0.24], [0.76, 0.24], [0.24, 0.76], [0.76, 0.76]]) {
+      ctx.fillRect(x + w * qx - 1.5, y + h * qy - 3, 3, 6);
+      ctx.fillRect(x + w * qx - 3, y + h * qy - 1.5, 6, 3);
+    }
+  } else if (baseId === '417') {
+    // Kırgızistan
+    ctx.fillStyle = '#E8112D';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FFEF00';
+    ctx.beginPath();
+    ctx.arc(cx, cy, minDim * 0.24, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (baseId === '196') {
+    // Kıbrıs
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#D57800';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - h * 0.04, w * 0.22, h * 0.14, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#4E5B31';
+    ctx.fillRect(cx - w * 0.14, cy + h * 0.16, w * 0.28, h * 0.06);
+  } else if (baseId === '192') {
+    // Küba
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#002A8F' : '#FFFFFF';
+      ctx.fillRect(x, y + (i * h) / 5, w, h / 5 + 0.5);
+    }
+    ctx.fillStyle = '#CF142B';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w * 0.44, cy);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+    drawFivePointStar(ctx, x + w * 0.16, cy, minDim * 0.15, minDim * 0.06, '#FFFFFF');
+  } else if (baseId === '275' || baseId === '729') {
+    // Filistin & Sudan
+    drawHorizontalTricolor(
+      ctx, x, y, w, h,
+      baseId === '275' ? '#000000' : '#D21034',
+      '#FFFFFF',
+      baseId === '275' ? '#007A3D' : '#000000'
+    );
+    ctx.fillStyle = baseId === '275' ? '#CE1126' : '#007229';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w * 0.38, cy);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+  } else if (baseId === '422') {
+    // Lübnan
+    ctx.fillStyle = '#ED1C24';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y + h * 0.25, w, h * 0.5);
+    ctx.fillStyle = '#00A651';
+    ctx.beginPath();
+    ctx.moveTo(cx, y + h * 0.3);
+    ctx.lineTo(cx + w * 0.12, y + h * 0.68);
+    ctx.lineTo(cx - w * 0.12, y + h * 0.68);
+    ctx.closePath();
+    ctx.fill();
+  } else if (baseId === '440') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#FDB913', '#006A44', '#C1272D');
+  } else if (baseId === '428') {
+    ctx.fillStyle = '#9E3039';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y + h * 0.4, w, h * 0.2);
+  } else if (baseId === '233') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#0072CE', '#000000', '#FFFFFF');
+  } else if (baseId === '158') {
+    // Tayvan
+    ctx.fillStyle = '#FE0000';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#000095';
+    ctx.fillRect(x, y, w * 0.5, h * 0.5);
+    drawEightPointStar(ctx, x + w * 0.25, y + h * 0.25, minDim * 0.16, '#FFFFFF');
+  } else if (baseId === '144') {
+    // Sri Lanka
+    ctx.fillStyle = '#FFBE29';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#00534E';
+    ctx.fillRect(x + w * 0.05, y + h * 0.1, w * 0.14, h * 0.8);
+    ctx.fillStyle = '#EB7400';
+    ctx.fillRect(x + w * 0.19, y + h * 0.1, w * 0.14, h * 0.8);
+    ctx.fillStyle = '#8D153A';
+    ctx.fillRect(x + w * 0.38, y + h * 0.1, w * 0.57, h * 0.8);
+  } else if (baseId === '008') {
+    // Arnavutluk
+    ctx.fillStyle = '#E41E20';
+    ctx.fillRect(x, y, w, h);
+    drawEightPointStar(ctx, cx, cy, minDim * 0.24, '#000000');
+  } else if (baseId === '499') {
+    // Karadağ
+    ctx.fillStyle = '#C40308';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#D4AF37';
+    ctx.lineWidth = Math.max(1.2, minDim * 0.09);
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    drawFivePointStar(ctx, cx, cy, minDim * 0.2, minDim * 0.09, '#D4AF37');
+  } else if (baseId === '608') {
+    // Filipinler
+    ctx.fillStyle = '#0038A8';
+    ctx.fillRect(x, y, w, h / 2);
+    ctx.fillStyle = '#CE1126';
+    ctx.fillRect(x, y + h / 2, w, h / 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w * 0.4, cy);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+    drawEightPointStar(ctx, x + w * 0.15, cy, minDim * 0.15, '#FCD116');
+  } else if (baseId === '068') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#D52B1E', '#F9E300', '#007934');
+  } else if (baseId === '050') {
+    ctx.fillStyle = '#006A4E';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#F42A41';
+    ctx.beginPath();
+    ctx.arc(cx - w * 0.04, cy, minDim * 0.27, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (baseId === '218') {
+    ctx.fillStyle = '#FFD100';
+    ctx.fillRect(x, y, w, h * 0.5);
+    ctx.fillStyle = '#0033A0';
+    ctx.fillRect(x, y + h * 0.5, w, h * 0.25);
+    ctx.fillStyle = '#EF3340';
+    ctx.fillRect(x, y + h * 0.75, w, h * 0.25);
+  } else if (baseId === '404') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#000000', '#BB0000', '#006600');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y + h * 0.31, w, h * 0.04);
+    ctx.fillRect(x, y + h * 0.65, w, h * 0.04);
+  } else if (baseId === '288') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#CE1126', '#FCD116', '#006B3F');
+    drawFivePointStar(ctx, cx, cy, minDim * 0.16, minDim * 0.07, '#000000');
+  } else if (baseId === '180') {
+    ctx.fillStyle = '#007FFF';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#F7D618';
+    ctx.lineWidth = Math.max(2, minDim * 0.24);
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.lineTo(x + w, y);
+    ctx.stroke();
+    ctx.strokeStyle = '#CE1021';
+    ctx.lineWidth = Math.max(1.2, minDim * 0.14);
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.lineTo(x + w, y);
+    ctx.stroke();
+    drawFivePointStar(ctx, x + w * 0.2, y + h * 0.24, minDim * 0.14, minDim * 0.06, '#F7D618');
+  } else if (baseId === '116') {
+    ctx.fillStyle = '#032EA1';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#E00025';
+    ctx.fillRect(x, y + h * 0.25, w, h * 0.5);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(cx - w * 0.16, cy - h * 0.1, w * 0.32, h * 0.2);
+  } else if (baseId === '120') {
+    drawVerticalTricolor(ctx, x, y, w, h, '#007A5E', '#CE1126', '#FCD116');
+    drawFivePointStar(ctx, cx, cy, minDim * 0.15, minDim * 0.06, '#FCD116');
+  } else if (baseId === '214') {
+    ctx.fillStyle = '#002D62';
+    ctx.fillRect(x, y, w / 2, h / 2);
+    ctx.fillRect(x + w / 2, y + h / 2, w / 2, h / 2);
+    ctx.fillStyle = '#CE1126';
+    ctx.fillRect(x + w / 2, y, w / 2, h / 2);
+    ctx.fillRect(x, y + h / 2, w / 2, h / 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(cx - w * 0.08, y, w * 0.16, h);
+    ctx.fillRect(x, cy - h * 0.11, w, h * 0.22);
+  } else if (baseId === '516' || baseId === '834') {
+    // Namibya & Tanzanya
+    ctx.fillStyle = baseId === '516' ? '#003580' : '#1EB53A';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = baseId === '516' ? '#009543' : '#00A3DD';
+    ctx.beginPath();
+    ctx.moveTo(x + w, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = baseId === '516' ? '#D21034' : '#000000';
+    ctx.lineWidth = Math.max(2, minDim * 0.2);
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.lineTo(x + w, y);
+    ctx.stroke();
+  } else if (baseId === '894') {
+    ctx.fillStyle = '#198A00';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#DE2010';
+    ctx.fillRect(x + w * 0.67, y + h * 0.45, w * 0.11, h * 0.55);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(x + w * 0.78, y + h * 0.45, w * 0.11, h * 0.55);
+    ctx.fillStyle = '#EF7D00';
+    ctx.fillRect(x + w * 0.89, y + h * 0.45, w * 0.11, h * 0.55);
+  } else if (baseId === '716') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#006400', '#FFD200', '#D40000');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w * 0.36, cy);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+    drawFivePointStar(ctx, x + w * 0.13, cy, minDim * 0.13, minDim * 0.05, '#D40000');
+  } else if (baseId === '024') {
+    ctx.fillStyle = '#CC092F';
+    ctx.fillRect(x, y, w, h / 2);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(x, y + h / 2, w, h / 2);
+    drawFivePointStar(ctx, cx, cy, minDim * 0.18, minDim * 0.08, '#FFCB00');
+  } else if (baseId === '466' || baseId === '324' || baseId === '686') {
+    // Mali, Gine, Senegal
+    if (baseId === '324') {
+      drawVerticalTricolor(ctx, x, y, w, h, '#CE1126', '#FCD116', '#009460');
+    } else {
+      drawVerticalTricolor(ctx, x, y, w, h, '#14B53A', '#FCD116', '#CE1126');
+      if (baseId === '686') {
+        drawFivePointStar(ctx, cx, cy, minDim * 0.15, minDim * 0.06, '#00853F');
+      }
+    }
+  } else if (baseId === '148') {
+    drawVerticalTricolor(ctx, x, y, w, h, '#002664', '#FECB00', '#C60C30');
+  } else if (baseId === '562') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#E05206', '#FFFFFF', '#0DB02B');
+    ctx.fillStyle = '#E05206';
+    ctx.beginPath();
+    ctx.arc(cx, cy, minDim * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (baseId === '728') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#000000', '#DA121A', '#078930');
+    ctx.fillStyle = '#0F47AF';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w * 0.38, cy);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+    drawFivePointStar(ctx, x + w * 0.14, cy, minDim * 0.13, minDim * 0.05, '#FCDD09');
+  } else if (baseId === '706') {
+    ctx.fillStyle = '#4189DD';
+    ctx.fillRect(x, y, w, h);
+    drawFivePointStar(ctx, cx, cy, minDim * 0.25, minDim * 0.1, '#FFFFFF');
+  } else if (baseId === '450') {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w * 0.34, h);
+    ctx.fillStyle = '#FC3D32';
+    ctx.fillRect(x + w * 0.34, y, w * 0.66, h / 2);
+    ctx.fillStyle = '#007E3A';
+    ctx.fillRect(x + w * 0.34, y + h / 2, w * 0.66, h / 2);
+  } else if (baseId === '384') {
+    drawVerticalTricolor(ctx, x, y, w, h, '#F77F00', '#FFFFFF', '#009E60');
+  } else if (baseId === '498') {
+    drawVerticalTricolor(ctx, x, y, w, h, '#0046AE', '#FFD200', '#CC092F');
+  } else if (baseId === '051') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#D90012', '#0033A0', '#F2A800');
+  } else if (baseId === '795') {
+    ctx.fillStyle = '#00843D';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#D22630';
+    ctx.fillRect(x + w * 0.16, y, w * 0.14, h);
+    drawCrescentAndStar(ctx, cx + w * 0.08, cy - h * 0.12, minDim * 0.18, '#FFFFFF', '#00843D', 5);
+  } else if (baseId === '762') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#CC0000', '#FFFFFF', '#006600');
+    drawFivePointStar(ctx, cx, cy, minDim * 0.13, minDim * 0.05, '#F8C300');
+  } else if (baseId === '112') {
+    ctx.fillStyle = '#C8313E';
+    ctx.fillRect(x, y, w, h * 0.67);
+    ctx.fillStyle = '#4AA657';
+    ctx.fillRect(x, y + h * 0.67, w, h * 0.33);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w * 0.12, h);
+  } else if (baseId === '703' || baseId === '705') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#FFFFFF', '#0B4EA2', '#EE1C25');
+    ctx.fillStyle = '#EE1C25';
+    ctx.fillRect(x + w * 0.22, cy - h * 0.16, w * 0.16, h * 0.32);
+  } else if (baseId === '807') {
+    // Kuzey Makedonya
+    ctx.fillStyle = '#D20000';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#FFE600';
+    ctx.lineWidth = Math.max(1.2, minDim * 0.1);
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
+    ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
+    ctx.moveTo(cx, y); ctx.lineTo(cx, y + h);
+    ctx.moveTo(x, cy); ctx.lineTo(x + w, cy);
+    ctx.stroke();
+    ctx.fillStyle = '#FFE600';
+    ctx.beginPath();
+    ctx.arc(cx, cy, minDim * 0.17, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (baseId === '383') {
+    // Kosova
+    ctx.fillStyle = '#244AA5';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#D0A650';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - h * 0.14);
+    ctx.lineTo(cx + w * 0.14, cy + h * 0.16);
+    ctx.lineTo(cx - w * 0.14, cy + h * 0.16);
+    ctx.closePath();
+    ctx.fill();
+  } else if (baseId === '858') {
+    // Uruguay
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#0038A8';
+    for (let i = 1; i < 9; i += 2) ctx.fillRect(x, y + (i * h) / 9, w, h / 9);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w * 0.38, (5 * h) / 9);
+    ctx.fillStyle = '#FCD116';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.19, y + (2.5 * h) / 9, minDim * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (baseId === '600' || baseId === '442') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#D52B1E', '#FFFFFF', baseId === '442' ? '#00A1DE' : '#0038A8');
+  } else if (baseId === '591') {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#D21034';
+    ctx.fillRect(x + w / 2, y, w / 2, h / 2);
+    ctx.fillStyle = '#005293';
+    ctx.fillRect(x, y + h / 2, w / 2, h / 2);
+  } else if (baseId === '188') {
+    ctx.fillStyle = '#002B7F';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x, y + h * 0.18, w, h * 0.64);
+    ctx.fillStyle = '#CE1126';
+    ctx.fillRect(x, y + h * 0.34, w, h * 0.32);
+  } else if (baseId === '320') {
+    drawVerticalTricolor(ctx, x, y, w, h, '#4997D0', '#FFFFFF', '#4997D0');
+  } else if (baseId === '340' || baseId === '222' || baseId === '558') {
+    drawHorizontalTricolor(ctx, x, y, w, h, '#0073CF', '#FFFFFF', '#0073CF');
+  } else if (baseId === '388') {
+    // Jamaika
+    ctx.fillStyle = '#009B3A';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(cx, cy); ctx.lineTo(x, y + h); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + w, y); ctx.lineTo(cx, cy); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#FED100';
+    ctx.lineWidth = Math.max(1.5, minDim * 0.15);
+    ctx.beginPath();
+    ctx.moveTo(x, y); ctx.lineTo(x + w, y + h);
+    ctx.moveTo(x + w, y); ctx.lineTo(x, y + h);
+    ctx.stroke();
+  } else if (baseId === '332') {
+    ctx.fillStyle = '#00209F';
+    ctx.fillRect(x, y, w, h / 2);
+    ctx.fillStyle = '#D21034';
+    ctx.fillRect(x, y + h / 2, w, h / 2);
+  } else if (baseId === '352') {
+    ctx.fillStyle = '#02529C';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x + w * 0.28, y, w * 0.16, h);
+    ctx.fillRect(x, cy - h * 0.12, w, h * 0.24);
+    ctx.fillStyle = '#DC1E35';
+    ctx.fillRect(x + w * 0.32, y, w * 0.08, h);
+    ctx.fillRect(x, cy - h * 0.06, w, h * 0.12);
+  } else if (baseId === '496') {
+    drawVerticalTricolor(ctx, x, y, w, h, '#DA2032', '#0066B3', '#DA2032');
+    ctx.fillStyle = '#FFD900';
+    ctx.fillRect(x + w * 0.1, cy - h * 0.2, w * 0.12, h * 0.4);
+  } else if (baseId === '418') {
+    ctx.fillStyle = '#CE1126';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#002868';
+    ctx.fillRect(x, y + h * 0.25, w, h * 0.5);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(cx, cy, minDim * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (baseId === '096') {
+    ctx.fillStyle = '#F7E017';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = Math.max(1.5, minDim * 0.16);
+    ctx.beginPath(); ctx.moveTo(x, y + h * 0.2); ctx.lineTo(x + w, y + h * 0.65); ctx.stroke();
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = Math.max(1.5, minDim * 0.16);
+    ctx.beginPath(); ctx.moveTo(x, y + h * 0.36); ctx.lineTo(x + w, y + h * 0.82); ctx.stroke();
   }
   // 23. REMAINING NATIONS FALLBACK HERALDIC GENERATOR (Deterministic & clean)
   else {

@@ -429,6 +429,214 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'MEL', name: 'Melbourne', lon: 144.96, lat: -37.81, gdpShare: 0.30, resource: 'TICARET_BOGAZI' },
     { suffixId: 'PER', name: 'Perth', lon: 115.86, lat: -31.95, gdpShare: 0.26, resource: 'NADIR_TOPRAK' },
   ],
+  // Vietnam (3 Şehir)
+  '704': [
+    { suffixId: 'HAN', name: 'Hanoi', lon: 105.83, lat: 21.02, isCapital: true, gdpShare: 0.38, resource: 'DEMIR_CELIK' },
+    { suffixId: 'DAD', name: 'Da Nang', lon: 108.20, lat: 16.05, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SGN', name: 'Saygon', lon: 106.66, lat: 10.82, gdpShare: 0.38, resource: 'PAMUK' },
+  ],
+  // Tayland (3 Şehir)
+  '764': [
+    { suffixId: 'BKK', name: 'Bangkok', lon: 100.50, lat: 13.75, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'CNX', name: 'Chiang Mai', lon: 98.98, lat: 18.78, gdpShare: 0.26, resource: 'KERESTE' },
+    { suffixId: 'HDY', name: 'Songkhla', lon: 100.47, lat: 7.19, gdpShare: 0.26, resource: 'TICARET_BOGAZI' },
+  ],
+  // Myanmar (3 Şehir)
+  '104': [
+    { suffixId: 'RGN', name: 'Yangon', lon: 96.15, lat: 16.84, isCapital: true, gdpShare: 0.42, resource: 'TAHIL' },
+    { suffixId: 'MDL', name: 'Mandalay', lon: 96.08, lat: 21.95, gdpShare: 0.34, resource: 'KERESTE' },
+    { suffixId: 'MYT', name: 'Myitkyina', lon: 97.39, lat: 25.38, gdpShare: 0.24, resource: 'ALTIN' },
+  ],
+  // Filipinler (3 Şehir)
+  '608': [
+    { suffixId: 'MNL', name: 'Manila', lon: 120.98, lat: 14.59, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'CEB', name: 'Cebu', lon: 123.88, lat: 10.31, gdpShare: 0.28, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'DVO', name: 'Davao', lon: 125.61, lat: 7.07, gdpShare: 0.24, resource: 'KERESTE' },
+  ],
+  // Bangladeş (2 Şehir)
+  '050': [
+    { suffixId: 'DAC', name: 'Dakka', lon: 90.41, lat: 23.81, isCapital: true, gdpShare: 0.60, resource: 'PAMUK' },
+    { suffixId: 'CGP', name: 'Chittagong', lon: 91.78, lat: 22.35, gdpShare: 0.40, resource: 'TICARET_BOGAZI' },
+  ],
+  // Malezya (2 Şehir)
+  '458': [
+    { suffixId: 'KUL', name: 'Kuala Lumpur', lon: 101.68, lat: 3.13, isCapital: true, gdpShare: 0.62, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'KCH', name: 'Kuching', lon: 110.35, lat: 1.55, gdpShare: 0.38, resource: 'PETROL' },
+  ],
+  // Kamboçya (2 Şehir)
+  '116': [
+    { suffixId: 'PNH', name: 'Phnom Penh', lon: 104.92, lat: 11.55, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
+    { suffixId: 'REP', name: 'Angkor', lon: 103.85, lat: 13.36, gdpShare: 0.42, resource: 'KERESTE' },
+  ],
+  // Sri Lanka (2 Şehir)
+  '144': [
+    { suffixId: 'CMB', name: 'Kolombo', lon: 79.86, lat: 6.92, isCapital: true, gdpShare: 0.60, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'KDY', name: 'Kandy', lon: 80.63, lat: 7.29, gdpShare: 0.40, resource: 'PAMUK' },
+  ],
+  // Kolombiya (3 Şehir)
+  '170': [
+    { suffixId: 'BOG', name: 'Bogota', lon: -74.07, lat: 4.71, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MDE', name: 'Medellin', lon: -75.56, lat: 6.24, gdpShare: 0.28, resource: 'ALTIN' },
+    { suffixId: 'CTG', name: 'Cartagena', lon: -75.51, lat: 10.39, gdpShare: 0.28, resource: 'PETROL' },
+  ],
+  // Peru (3 Şehir)
+  '604': [
+    { suffixId: 'LIM', name: 'Lima', lon: -77.04, lat: -12.04, isCapital: true, gdpShare: 0.46, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'CUZ', name: 'Cusco', lon: -71.96, lat: -13.53, gdpShare: 0.32, resource: 'ALTIN' },
+    { suffixId: 'IQT', name: 'Iquitos', lon: -73.25, lat: -3.74, gdpShare: 0.22, resource: 'KERESTE' },
+  ],
+  // Venezuela (3 Şehir)
+  '862': [
+    { suffixId: 'CCS', name: 'Karakas', lon: -66.90, lat: 10.48, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MAR', name: 'Maracaibo', lon: -71.61, lat: 10.64, gdpShare: 0.34, resource: 'PETROL' },
+    { suffixId: 'CGU', name: 'Ciudad Guayana', lon: -62.71, lat: 8.35, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
+  ],
+  // Şili (3 Şehir)
+  '152': [
+    { suffixId: 'SCL', name: 'Santiago', lon: -70.66, lat: -33.44, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'ANF', name: 'Antofagasta', lon: -70.39, lat: -23.65, gdpShare: 0.30, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'PUQ', name: 'Valdivia', lon: -73.24, lat: -39.81, gdpShare: 0.22, resource: 'KERESTE' },
+  ],
+  // Bolivya (2 Şehir)
+  '068': [
+    { suffixId: 'LPB', name: 'La Paz', lon: -68.11, lat: -16.48, isCapital: true, gdpShare: 0.54, resource: 'ALTIN' },
+    { suffixId: 'SRZ', name: 'Santa Cruz', lon: -63.18, lat: -17.78, gdpShare: 0.46, resource: 'DOGALGAZ' },
+  ],
+  // Ekvador (2 Şehir)
+  '218': [
+    { suffixId: 'UIO', name: 'Quito', lon: -78.46, lat: -0.18, isCapital: true, gdpShare: 0.52, resource: 'PETROL' },
+    { suffixId: 'GYE', name: 'Guayaquil', lon: -79.88, lat: -2.18, gdpShare: 0.48, resource: 'TICARET_BOGAZI' },
+  ],
+  // Paraguay (2 Şehir)
+  '600': [
+    { suffixId: 'ASU', name: 'Asuncion', lon: -57.57, lat: -25.26, isCapital: true, gdpShare: 0.60, resource: 'SIGIR' },
+    { suffixId: 'ENC', name: 'Concepcion', lon: -57.43, lat: -23.40, gdpShare: 0.40, resource: 'TAHIL' },
+  ],
+  // Küba (2 Şehir)
+  '192': [
+    { suffixId: 'HAV', name: 'Havana', lon: -82.36, lat: 23.11, isCapital: true, gdpShare: 0.58, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SCU', name: 'Santiago', lon: -75.82, lat: 20.02, gdpShare: 0.42, resource: 'PAMUK' },
+  ],
+  // Kongo DC (4 Şehir)
+  '180': [
+    { suffixId: 'FIH', name: 'Kinşasa', lon: 15.26, lat: -4.44, isCapital: true, gdpShare: 0.34, resource: 'KERESTE' },
+    { suffixId: 'FBM', name: 'Lubumbashi', lon: 27.47, lat: -11.66, gdpShare: 0.26, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'FKI', name: 'Kisangani', lon: 25.19, lat: 0.51, gdpShare: 0.22, resource: 'ALTIN' },
+    { suffixId: 'GOM', name: 'Goma', lon: 29.22, lat: -1.65, gdpShare: 0.18, resource: 'DEMIR_CELIK' },
+  ],
+  // Angola (3 Şehir)
+  '024': [
+    { suffixId: 'LAD', name: 'Luanda', lon: 13.23, lat: -8.83, isCapital: true, gdpShare: 0.46, resource: 'PETROL' },
+    { suffixId: 'NOV', name: 'Huambo', lon: 15.73, lat: -12.77, gdpShare: 0.28, resource: 'TAHIL' },
+    { suffixId: 'SDD', name: 'Lubango', lon: 13.49, lat: -14.91, gdpShare: 0.26, resource: 'ALTIN' },
+  ],
+  // Tanzanya (3 Şehir)
+  '834': [
+    { suffixId: 'DOD', name: 'Dodoma', lon: 35.75, lat: -6.16, isCapital: true, gdpShare: 0.34, resource: 'TAHIL' },
+    { suffixId: 'DAR', name: 'Darüsselam', lon: 39.20, lat: -6.79, gdpShare: 0.40, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'MWZ', name: 'Mwanza', lon: 32.90, lat: -2.51, gdpShare: 0.26, resource: 'ALTIN' },
+  ],
+  // Sudan (3 Şehir)
+  '729': [
+    { suffixId: 'KRT', name: 'Hartum', lon: 32.55, lat: 15.50, isCapital: true, gdpShare: 0.44, resource: 'PAMUK' },
+    { suffixId: 'PZU', name: 'Port Sudan', lon: 37.21, lat: 19.61, gdpShare: 0.30, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'ELF', name: 'El Faşir', lon: 25.35, lat: 13.62, gdpShare: 0.26, resource: 'SIGIR' },
+  ],
+  // Kenya (2 Şehir)
+  '404': [
+    { suffixId: 'NBO', name: 'Nairobi', lon: 36.82, lat: -1.29, isCapital: true, gdpShare: 0.58, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MBA', name: 'Mombasa', lon: 39.66, lat: -4.04, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
+  ],
+  // Mali (2 Şehir)
+  '466': [
+    { suffixId: 'BKO', name: 'Bamako', lon: -8.00, lat: 12.63, isCapital: true, gdpShare: 0.56, resource: 'ALTIN' },
+    { suffixId: 'TOM', name: 'Timbuktu', lon: -3.00, lat: 16.76, gdpShare: 0.44, resource: 'TAHIL' },
+  ],
+  // Çad (2 Şehir)
+  '148': [
+    { suffixId: 'NDJ', name: 'Encemine', lon: 15.05, lat: 12.13, isCapital: true, gdpShare: 0.58, resource: 'PETROL' },
+    { suffixId: 'AEH', name: 'Abeche', lon: 20.83, lat: 13.82, gdpShare: 0.42, resource: 'SIGIR' },
+  ],
+  // Nijer (2 Şehir)
+  '562': [
+    { suffixId: 'NIM', name: 'Niamey', lon: 2.12, lat: 13.51, isCapital: true, gdpShare: 0.56, resource: 'TAHIL' },
+    { suffixId: 'AJY', name: 'Agadez', lon: 7.99, lat: 16.97, gdpShare: 0.44, resource: 'NADIR_TOPRAK' },
+  ],
+  // Namibya (2 Şehir)
+  '516': [
+    { suffixId: 'WDH', name: 'Windhoek', lon: 17.08, lat: -22.56, isCapital: true, gdpShare: 0.58, resource: 'ALTIN' },
+    { suffixId: 'WVB', name: 'Walvis Bay', lon: 14.50, lat: -22.95, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
+  ],
+  // Zambiya (2 Şehir)
+  '894': [
+    { suffixId: 'LUN', name: 'Lusaka', lon: 28.28, lat: -15.38, isCapital: true, gdpShare: 0.56, resource: 'DEMIR_CELIK' },
+    { suffixId: 'NLA', name: 'Ndola', lon: 28.63, lat: -12.95, gdpShare: 0.44, resource: 'NADIR_TOPRAK' },
+  ],
+  // Zimbabve (2 Şehir)
+  '716': [
+    { suffixId: 'HRE', name: 'Harare', lon: 31.05, lat: -17.82, isCapital: true, gdpShare: 0.56, resource: 'ALTIN' },
+    { suffixId: 'BUQ', name: 'Bulawayo', lon: 28.58, lat: -20.13, gdpShare: 0.44, resource: 'DEMIR_CELIK' },
+  ],
+  // Madagaskar (2 Şehir)
+  '450': [
+    { suffixId: 'TNR', name: 'Antananarivo', lon: 47.50, lat: -18.87, isCapital: true, gdpShare: 0.58, resource: 'KERESTE' },
+    { suffixId: 'TMM', name: 'Toamasina', lon: 49.40, lat: -18.14, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
+  ],
+  // Kamerun (2 Şehir)
+  '120': [
+    { suffixId: 'YAO', name: 'Yaounde', lon: 11.50, lat: 3.84, isCapital: true, gdpShare: 0.52, resource: 'KERESTE' },
+    { suffixId: 'DLA', name: 'Douala', lon: 9.70, lat: 4.05, gdpShare: 0.48, resource: 'PETROL' },
+  ],
+  // Gana (2 Şehir)
+  '288': [
+    { suffixId: 'ACC', name: 'Akra', lon: -0.18, lat: 5.60, isCapital: true, gdpShare: 0.56, resource: 'ALTIN' },
+    { suffixId: 'KMS', name: 'Kumasi', lon: -1.62, lat: 6.68, gdpShare: 0.44, resource: 'PAMUK' },
+  ],
+  // Hollanda (2 Şehir)
+  '528': [
+    { suffixId: 'AMS', name: 'Amsterdam', lon: 4.90, lat: 52.36, isCapital: true, gdpShare: 0.56, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'RTM', name: 'Rotterdam', lon: 4.47, lat: 51.92, gdpShare: 0.44, resource: 'TICARET_BOGAZI' },
+  ],
+  // Belçika (2 Şehir)
+  '056': [
+    { suffixId: 'BRU', name: 'Brüksel', lon: 4.35, lat: 50.85, isCapital: true, gdpShare: 0.56, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'ANR', name: 'Anvers', lon: 4.40, lat: 51.21, gdpShare: 0.44, resource: 'TICARET_BOGAZI' },
+  ],
+  // İsviçre (2 Şehir)
+  '756': [
+    { suffixId: 'BRN', name: 'Bern', lon: 7.44, lat: 46.94, isCapital: true, gdpShare: 0.46, resource: 'DEMIR_CELIK' },
+    { suffixId: 'ZRH', name: 'Zürih', lon: 8.54, lat: 47.37, gdpShare: 0.54, resource: 'FINANS_MERKEZI' },
+  ],
+  // Danimarka (2 Şehir)
+  '208': [
+    { suffixId: 'CPH', name: 'Kopenhag', lon: 12.56, lat: 55.67, isCapital: true, gdpShare: 0.60, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'AAR', name: 'Aarhus', lon: 10.20, lat: 56.16, gdpShare: 0.40, resource: 'SIGIR' },
+  ],
+  // İrlanda (2 Şehir)
+  '372': [
+    { suffixId: 'DUB', name: 'Dublin', lon: -6.26, lat: 53.34, isCapital: true, gdpShare: 0.60, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'ORK', name: 'Cork', lon: -8.47, lat: 51.89, gdpShare: 0.40, resource: 'SIGIR' },
+  ],
+  // Slovakya (2 Şehir)
+  '703': [
+    { suffixId: 'BTS', name: 'Bratislava', lon: 17.10, lat: 48.14, isCapital: true, gdpShare: 0.58, resource: 'DEMIR_CELIK' },
+    { suffixId: 'KSC', name: 'Kösice', lon: 21.26, lat: 48.71, gdpShare: 0.42, resource: 'TAHIL' },
+  ],
+  // Kırgızistan (2 Şehir)
+  '417': [
+    { suffixId: 'FRU', name: 'Bişkek', lon: 74.56, lat: 42.87, isCapital: true, gdpShare: 0.58, resource: 'ALTIN' },
+    { suffixId: 'OSS', name: 'Oş', lon: 72.79, lat: 40.51, gdpShare: 0.42, resource: 'SIGIR' },
+  ],
+  // Tacikistan (2 Şehir)
+  '762': [
+    { suffixId: 'DYU', name: 'Duşanbe', lon: 68.78, lat: 38.55, isCapital: true, gdpShare: 0.58, resource: 'ALTIN' },
+    { suffixId: 'LBD', name: 'Hucend', lon: 69.62, lat: 40.28, gdpShare: 0.42, resource: 'PAMUK' },
+  ],
+  // Arnavutluk (2 Şehir)
+  '008': [
+    { suffixId: 'TIA', name: 'Tiran', lon: 19.81, lat: 41.32, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
+    { suffixId: 'SHK', name: 'İşkodra', lon: 19.51, lat: 42.06, gdpShare: 0.42, resource: 'KERESTE' },
+  ],
 };
 
 // Clamps ±180° antimeridian wrap vertices (such as Russia's Chukotka tip at -175° lon or Fiji)
