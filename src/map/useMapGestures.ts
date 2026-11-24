@@ -12,15 +12,22 @@ function clampMapTransform(
   height: number
 ): { k: number; x: number; y: number } {
   const k = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, t.k));
-  const scaledW = width * k;
-  const scaledH = height * k;
-  const padX = Math.max(width * 0.35, 140);
-  const padY = Math.max(height * 0.35, 120);
+  const baseScale = getBaseProjectionScale(width, height);
+  // Natural Earth projection spans roughly ±2.75 * baseScale horizontally and ±1.42 * baseScale vertically around [width/2, height/2].
+  // On mobile portrait (e.g., 390x844), baseScale is 150 so the unscaled map width (~830px) is much wider than viewport width (390px).
+  const halfGlobeW = Math.max(width * 0.65, baseScale * 3.15);
+  const halfGlobeH = Math.max(height * 0.55, baseScale * 1.65);
+  const mapMinX = width / 2 - halfGlobeW;
+  const mapMaxX = width / 2 + halfGlobeW;
+  const mapMinY = height / 2 - halfGlobeH;
+  const mapMaxY = height / 2 + halfGlobeH;
+  const padX = Math.max(width * 0.45, 180);
+  const padY = Math.max(height * 0.45, 150);
 
-  const minX = width - scaledW - padX;
-  const maxX = padX;
-  const minY = height - scaledH - padY;
-  const maxY = padY;
+  const minX = width / 2 - mapMaxX * k - padX;
+  const maxX = width / 2 - mapMinX * k + padX;
+  const minY = height / 2 - mapMaxY * k - padY;
+  const maxY = height / 2 - mapMinY * k + padY;
 
   return {
     k,

@@ -17,6 +17,7 @@ import {
 import { NationFlagCanvasBadge } from "../../map/nationFlagRenderer";
 import { cleanNationName } from "../../utils/formatters";
 import { Nation, Territory } from "../../types/game";
+import { computeNationTechMetrics } from "../../data/world2026Data";
 
 export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
   onClose,
@@ -170,23 +171,23 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
   return (
     <div className="space-y-4">
       {/* Diplomacy Points & Aggressive Expansion Header Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-500/30 bg-sky-950/25 px-3.5 py-2.5 text-xs">
-        <span className="text-sky-200 font-semibold">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#caa15a]/35 bg-[#16120e] px-3.5 py-2.5 text-xs">
+        <span className="text-[#f3ead7] font-semibold">
           Diplomasi Puanı:{' '}
-          <strong className="font-mono-num text-white">
+          <strong className="font-mono-num text-amber-300">
             {(playerNation.diplomacyPoints ?? 100).toFixed(0)} / 100
           </strong>
-          <span className="hidden sm:inline text-slate-400 font-normal ml-2">
+          <span className="hidden sm:inline text-[#b8a990] font-normal ml-2">
             (Günlük +1 · Savaş ilanı: 10 DP)
           </span>
         </span>
-        <span className="text-slate-300">
+        <span className="text-[#d8cbb5]">
           Agresif Genişleme:{' '}
           <strong
             className={`font-mono-num ${
               playerNation.aggressiveExpansion >= 50
                 ? 'text-rose-400'
-                : 'text-emerald-400'
+                : 'text-emerald-300'
             }`}
           >
             %{playerNation.aggressiveExpansion.toFixed(0)} / 100
@@ -197,24 +198,24 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
       {/* Dedicated Alliance & Coalition Network Panel */}
       <div
         data-testid="diplomacy-alliance-hub"
-        className="bg-emerald-950/20 border border-emerald-500/35 rounded-2xl p-3.5 space-y-2.5"
+        className="bg-[#16120e] border border-[#caa15a]/40 rounded-2xl p-3.5 space-y-2.5"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-emerald-200 flex items-center gap-2">
-            <Handshake className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+            <Handshake className="w-4 h-4 text-[#e0b86e]" />
             <span>İttifak Ağı &amp; Aktif Paktlar</span>
           </h3>
           <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono-num">
-            <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 font-bold">
+            <span className="px-2 py-0.5 rounded-md bg-emerald-950/60 border border-emerald-500/35 text-emerald-300 font-bold">
               ⚔️ Tam İttifak: {pactSummary.offensiveCount}
             </span>
-            <span className="px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-500/35 text-sky-300 font-bold">
+            <span className="px-2 py-0.5 rounded-md bg-[#1f1913] border border-[#caa15a]/35 text-[#f3ead7] font-bold">
               🛡️ Savunma Paktı: {pactSummary.defensiveCount}
             </span>
-            <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/35 text-amber-300 font-bold">
+            <span className="px-2 py-0.5 rounded-md bg-[#1f1913] border border-[#caa15a]/35 text-amber-300 font-bold">
               🪙 Ticaret: {pactSummary.tradeCount}
             </span>
-            <span className="px-2 py-0.5 rounded-md bg-teal-500/15 border border-teal-500/35 text-teal-300 font-bold">
+            <span className="px-2 py-0.5 rounded-md bg-[#1f1913] border border-[#caa15a]/35 text-[#d8cbb5] font-bold">
               🕊️ Saldırmazlık: {pactSummary.nonAggressionCount}
             </span>
           </div>
@@ -275,7 +276,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                         data-testid={`call-ally-${ally.id}`}
                         onClick={() => onCallAllyToWar(callableWar.id, ally.id)}
                         title={`${cleanNationName(ally.name)} müttefikini ${cleanNationName(callableEnemy?.name || 'düşman')} savaşına çağır`}
-                        className="px-2 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-extrabold shadow transition-colors cursor-pointer"
+                        className="px-2 py-1 rounded-lg bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] text-[10px] font-extrabold shadow transition-colors cursor-pointer"
                       >
                         📯 Savaşa Çağır
                       </button>
@@ -284,7 +285,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                       <button
                         type="button"
                         onClick={() => onInspectNation(ally.id)}
-                        className="px-2 py-1 rounded-lg bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/40 text-sky-200 text-[10px] font-bold cursor-pointer"
+                        className="px-2 py-1 rounded-lg bg-[#1c1610] hover:bg-[#271f17] border border-[#caa15a]/35 text-[#f3ead7] text-[10px] font-bold cursor-pointer"
                       >
                         Detay
                       </button>
@@ -376,8 +377,8 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
             onClick={() => setDiploFilter(f.id)}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
               diploFilter === f.id
-                ? 'bg-amber-500 text-slate-950 font-bold'
-                : 'bg-slate-950 text-slate-300 border border-slate-800 hover:border-slate-700'
+                ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] font-bold'
+                : 'bg-[#16120e] text-[#d8cbb5] border border-[#caa15a]/30 hover:border-[#caa15a]/60'
             }`}
           >
             {f.label}
@@ -388,7 +389,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
       {/* Unified Nation Diplomacy & Ruler Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[460px] overflow-y-auto pr-1">
         {orderedRealms.length === 0 ? (
-          <div className="col-span-full p-6 text-center rounded-2xl bg-slate-950/70 border border-slate-800 text-xs text-slate-400">
+          <div className="col-span-full p-6 text-center rounded-2xl bg-[#16120e] border border-[#caa15a]/25 text-xs text-[#b8a990]">
             Bu filtreye uygun devlet bulunmuyor.
           </div>
         ) : (
@@ -405,6 +406,11 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
             const realmPersonality = !isPlayer
               ? AI_PERSONALITY_META[resolveNationAiPersonality(realm, territories)]
               : null;
+            const realmTech = computeNationTechMetrics(
+              realm,
+              territories,
+              gameMode
+            );
 
             const rel = isPlayer
               ? null
@@ -419,24 +425,16 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
             return (
               <div
                 key={realm.id}
+                data-testid={`diplomacy-nation-card-${realm.id}`}
                 className={`relative overflow-hidden rounded-2xl p-4 space-y-3 border transition-all ${
                   isPlayer
-                    ? 'bg-amber-950/20 border-amber-500/60 shadow-lg ring-1 ring-amber-500/30'
+                    ? 'bg-[#1f1811] border-[#caa15a]/75 shadow-lg ring-1 ring-[#caa15a]/35'
                     : war
                     ? 'bg-rose-950/25 border-rose-500/50 shadow-md'
                     : rel?.allianceType || rel?.isAllied
-                    ? 'bg-emerald-950/20 border-emerald-500/50'
-                    : 'bg-slate-950/85 border-slate-800'
+                    ? 'bg-emerald-950/20 border-emerald-500/45'
+                    : 'bg-[#15110d] border-[#caa15a]/30'
                 }`}
-                style={{
-                  borderColor: isPlayer
-                    ? `${realm.color}aa`
-                    : war
-                    ? 'rgba(224, 123, 123, 0.55)'
-                    : rel?.allianceType || rel?.isAllied
-                    ? 'rgba(103, 201, 155, 0.5)'
-                    : undefined,
-                }}
               >
                 <span
                   className="absolute inset-y-0 left-0 w-1"
@@ -455,10 +453,10 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                       height={28}
                     />
                     <div className="min-w-0">
-                      <div className="text-sm font-bold text-white truncate flex items-center gap-1.5">
+                      <div className="text-sm font-bold text-[#f3ead7] truncate flex items-center gap-1.5">
                         <span>{cleanNationName(realm.name)}</span>
                         {isPlayer && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500 text-slate-950 font-black">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#caa15a] text-[#14100c] font-black">
                             DEVLETİNİZ
                           </span>
                         )}
@@ -467,7 +465,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                         <span className="truncate">👑 {rulerTitle}</span>
                         {realmPersonality && (
                           <span
-                            className="text-[10px] font-medium text-sky-300/90 shrink-0"
+                            className="text-[10px] font-medium text-[#c5b79e] shrink-0"
                             title={realmPersonality.description}
                           >
                             · {realmPersonality.shortLabel}
@@ -479,89 +477,101 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
 
                   <div className="shrink-0">
                     {isPlayer ? (
-                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#caa15a]/20 border border-[#caa15a]/45 text-amber-200">
                         Hükümdarsınız
                       </span>
                     ) : war ? (
-                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/20 border border-rose-500/50 text-rose-300">
+                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-950/75 border border-rose-500/50 text-rose-200">
                         ⚔️ Savaşta ({playerWarScore !== null && playerWarScore > 0 ? '+' : ''}
                         {playerWarScore ?? war.attackerWarScore}%)
                       </span>
                     ) : rel?.allianceType === 'OFFENSIVE' ? (
-                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/20 border border-emerald-500/50 text-emerald-300">
+                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-950/75 border border-emerald-500/50 text-emerald-200">
                         ⚔️ Tam İttifak
                       </span>
                     ) : rel?.allianceType === 'DEFENSIVE' || rel?.isAllied ? (
-                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-500/20 border border-sky-500/50 text-sky-300">
+                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-950/55 border border-emerald-500/40 text-emerald-200">
                         🛡️ Savunma Paktı
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-900 border border-slate-700 text-slate-300">
+                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#1c1610] border border-[#caa15a]/30 text-[#d8cbb5]">
                         🕊️ İlişki {rel?.score && rel.score > 0 ? `+${rel.score}` : rel?.score || 0}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* 3 Stat Metrics */}
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-slate-900/90 rounded-xl p-2 border border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-medium">Toplam Ordu</div>
-                    <div className="text-xs sm:text-sm font-bold text-amber-300 font-mono-num">
-                      {(totalArmy / 1000).toFixed(1)}B
+                {/* 4 Stat Metrics: Altın (Hazine), Toplam Ordu (Asker), Teknoloji Düzeyi, Başkent & Eyalet */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="bg-[#1b1510] rounded-xl p-2 border border-[#caa15a]/25">
+                    <div className="text-[10px] text-[#b8a990] font-medium">Altın (Hazine)</div>
+                    <div
+                      data-testid={`diplo-gold-${realm.id}`}
+                      className="text-xs sm:text-sm font-bold text-amber-300 font-mono-num"
+                    >
+                      {Math.floor(realm.treasury).toLocaleString('tr-TR')} A
                     </div>
                   </div>
-                  <div className="bg-slate-900/90 rounded-xl p-2 border border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-medium">Eyalet</div>
-                    <div className="text-xs sm:text-sm font-bold text-white font-mono-num">
-                      {ownedProvs.length}
+                  <div className="bg-[#1b1510] rounded-xl p-2 border border-[#caa15a]/25">
+                    <div className="text-[10px] text-[#b8a990] font-medium">Toplam Ordu</div>
+                    <div
+                      data-testid={`diplo-army-${realm.id}`}
+                      className="text-xs sm:text-sm font-bold text-emerald-300 font-mono-num"
+                    >
+                      {totalArmy.toLocaleString('tr-TR')}
                     </div>
                   </div>
-                  <div className="bg-slate-900/90 rounded-xl p-2 border border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-medium">Paşa & Bey</div>
-                    <div className="text-xs sm:text-sm font-bold text-emerald-400 font-mono-num">
-                      {notableLords.length}
+                  <div className="bg-[#1b1510] rounded-xl p-2 border border-[#caa15a]/25">
+                    <div className="text-[10px] text-[#b8a990] font-medium">Teknoloji</div>
+                    <div className="text-xs sm:text-sm font-bold text-[#f3ead7] font-mono-num">
+                      Sv.{realmTech.techLevel.toFixed(1)}
+                    </div>
+                  </div>
+                  <div className="bg-[#1b1510] rounded-xl p-2 border border-[#caa15a]/25">
+                    <div className="text-[10px] text-[#b8a990] font-medium">Başkent &amp; Toprak</div>
+                    <div className="text-xs sm:text-sm font-bold text-[#f3ead7] font-mono-num">
+                      Bşk.{realmTech.capitalLevel} · {ownedProvs.length} Ey.
                     </div>
                   </div>
                 </div>
 
                 {/* Notable Commanders */}
-                <div className="bg-slate-900/60 rounded-xl p-2.5 border border-slate-800/80 space-y-1.5">
-                  <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                <div className="bg-[#19140f] rounded-xl p-2.5 border border-[#caa15a]/20 space-y-1.5">
+                  <div className="text-[11px] font-bold text-[#d8cbb5] flex items-center justify-between">
                     <span className="flex items-center gap-1">
-                      <Swords className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Paşalar & Komutanlar</span>
+                      <Swords className="w-3.5 h-3.5 text-[#e0b86e]" />
+                      <span>Paşalar &amp; Komutanlar ({notableLords.length})</span>
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono-num">
-                      {notableLords.length} İsim
+                    <span className="text-[10px] text-[#b8a990] font-mono-num">
+                      Prestij {realmTech.prestige}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
+                  <div className="flex flex-wrap gap-1.5 max-h-14 overflow-y-auto">
                     {notableLords.length > 0 ? (
                       notableLords.map((lordName) => (
                         <span
                           key={lordName}
-                          className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 border border-slate-700 text-slate-200"
+                          className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#221b14] border border-[#caa15a]/25 text-[#f3ead7]"
                         >
                           ⚜ {lordName}
                         </span>
                       ))
                     ) : (
-                      <span className="text-[10px] text-slate-500 italic">
+                      <span className="text-[10px] text-[#8e806a] italic">
                         Merkez garnizon idaresi.
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Actions — Cohesive AoH3 Obsidian & Antique Gold / Emerald / Crimson Palette */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   {!isPlayer && (
                     <>
                       <button
                         onClick={() => onDiplomaticAction(realm.id, 'IMPROVE')}
                         title="İlişkileri Geliştir (+20 İlişki · 150 Altın)"
-                        className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-emerald-400 shrink-0 cursor-pointer"
+                        className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[#1b1510] hover:bg-[#251d15] border border-[#caa15a]/35 text-[11px] font-semibold text-[#f3ead7] shrink-0 cursor-pointer"
                       >
                         +İlişki
                       </button>
@@ -571,13 +581,13 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                         title="Savunma Paktı: Saldırıya uğrandığında otomatik savunma desteği (+25 İlişki)"
                         className={`min-h-[38px] py-1.5 px-2.5 rounded-xl border text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer ${
                           rel?.allianceType === 'DEFENSIVE'
-                            ? 'bg-sky-900/70 border-sky-400 text-sky-100'
-                            : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-sky-200'
+                            ? 'bg-emerald-950/65 border-emerald-500/50 text-emerald-200'
+                            : 'bg-[#1b1510] hover:bg-[#251d15] border-[#caa15a]/35 text-[#f3ead7]'
                         }`}
                       >
-                        <Shield className="w-3 h-3 shrink-0" />
+                        <Shield className="w-3 h-3 shrink-0 text-[#e0b86e]" />
                         <span>
-                          {rel?.allianceType === 'DEFENSIVE' ? 'Savunma Feshet' : 'Savunma'}
+                          {rel?.allianceType === 'DEFENSIVE' ? 'Savunma Aktif' : 'Savunma'}
                         </span>
                       </button>
 
@@ -586,13 +596,13 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                         title="Tam İttifak (Saldırı Paktı): Ortak taarruz & tam savunma (+45 İlişki)"
                         className={`min-h-[38px] py-1.5 px-2.5 rounded-xl border text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer ${
                           rel?.allianceType === 'OFFENSIVE'
-                            ? 'bg-emerald-900/70 border-emerald-400 text-emerald-100'
-                            : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-emerald-200'
+                            ? 'bg-emerald-950/75 border-emerald-400 text-emerald-100'
+                            : 'bg-[#1b1510] hover:bg-[#251d15] border-[#caa15a]/35 text-[#f3ead7]'
                         }`}
                       >
-                        <Handshake className="w-3 h-3 shrink-0" />
+                        <Handshake className="w-3 h-3 shrink-0 text-[#e0b86e]" />
                         <span>
-                          {rel?.allianceType === 'OFFENSIVE' ? 'İttifak Feshet' : 'Tam İttifak'}
+                          {rel?.allianceType === 'OFFENSIVE' ? 'İttifak Aktif' : 'Tam İttifak'}
                         </span>
                       </button>
 
@@ -605,14 +615,14 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                               onPeaceDeal(war.id, 'WHITE_PEACE');
                             }
                           }}
-                          className="flex-1 min-h-[38px] py-1.5 px-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer"
+                          className="flex-1 min-h-[38px] py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer"
                         >
                           <span>⚔️ Barış Masası</span>
                         </button>
                       ) : (
                         <button
                           onClick={() => onDiplomaticAction(realm.id, 'DECLARE_WAR')}
-                          className="flex-1 min-h-[38px] py-1.5 px-2.5 rounded-xl bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer"
+                          className="flex-1 min-h-[38px] py-1.5 px-2.5 rounded-xl bg-rose-950/75 hover:bg-rose-900/80 border border-rose-500/50 text-rose-100 text-[11px] font-bold flex items-center justify-center gap-1 cursor-pointer"
                         >
                           <span>⚔️ Savaş</span>
                         </button>
@@ -623,7 +633,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                   {onInspectNation && (
                     <button
                       onClick={() => onInspectNation(realm.id)}
-                      className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/35 text-sky-200 text-[11px] font-bold border border-sky-500/40 shrink-0 flex items-center gap-1 cursor-pointer"
+                      className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[#1b1510] hover:bg-[#251d15] text-[#f3ead7] text-[11px] font-bold border border-[#caa15a]/35 shrink-0 flex items-center gap-1 cursor-pointer"
                       title="Ülkenin tüm pakt, ittifak ve savaşlarını gör"
                     >
                       <span>🌐 Detay</span>
@@ -638,7 +648,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                         onClose();
                       }
                     }}
-                    className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-400 text-[11px] font-bold border border-slate-700 shrink-0 flex items-center gap-1 cursor-pointer"
+                    className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[#1b1510] hover:bg-[#251d15] text-[#e0b86e] text-[11px] font-bold border border-[#caa15a]/35 shrink-0 flex items-center gap-1 cursor-pointer"
                     title="Haritada Odaklan"
                   >
                     <span>📍</span>

@@ -352,10 +352,29 @@ const INLAND_VORONOI_OVERRIDES = new Set<string>([
   '792_KNY', // Konya
   '792_ERZ', // Erzurum
   '643',     // Moskova
+  '643_SMO', // Smolensk
+  '643_GOJ', // Nijni Novgorod
   '643_KZN', // Kazan
-  '643_SVX', // Perm
-  '643_OVB', // Tümen
+  '643_KUF', // Samara
+  '643_SVX', // Yekaterinburg
+  '643_OMS', // Omsk
+  '643_OVB', // Novosibirsk
+  '643_KJA', // Krasnoyarsk
   '643_IKT', // İrkutsk
+  '840_DET', // Detroit
+  '840_MSP', // Minneapolis
+  '840_DAL', // Dallas
+  '840_DEN', // Denver
+  '840_PHX', // Phoenix
+  '156_WUH', // Vuhan
+  '156_CKG', // Çongçing
+  '156_HRB', // Harbin
+  '156_KMG', // Kunming
+  '156_LHW', // Lanzhou
+  '356_JAI', // Jaipur
+  '356_LKO', // Luknov
+  '124_YWG', // Winnipeg
+  '124_YYC', // Calgary
   '250',     // Paris
   '276',     // Berlin
   '724',     // Madrid / Toledo

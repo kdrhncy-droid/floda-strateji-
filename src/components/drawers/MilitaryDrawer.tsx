@@ -3,6 +3,7 @@ import { Award, Coins, MapPin, Shield, Swords, TrendingUp, UserPlus } from "luci
 import { CommandDrawersProps } from "./drawerTypes";
 import { ArmyModernizationCard } from "./ArmyModernizationCard";
 import {
+  computeNationTechMetrics,
   getArmyGenerationInfo,
   getCommandersForMode,
   getNationModernizedTier,
@@ -36,7 +37,9 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   onSelectTerritory,
   gameMode = "EMPIRES_1440",
 }) => {
-  const [rankingSortBy, setRankingSortBy] = useState<"SCORE" | "GDP" | "ARMY" | "PROVINCES">("SCORE");
+  const [rankingSortBy, setRankingSortBy] = useState<
+    "SCORE" | "GDP" | "ARMY" | "TECH" | "PRESTIGE" | "CAPITAL"
+  >("SCORE");
   const [recruitmentTab, setRecruitmentTab] = useState<"REGULAR" | "MERCENARY">("REGULAR");
 
   const ownedProvinces = useMemo(
@@ -95,7 +98,11 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
       };
       prev.ownedCount += 1;
       prev.army += t.garrison || 0;
-      prev.gdp += t.baseGdp * (1 + t.buildings.factory * 0.25);
+      prev.gdp +=
+        t.baseGdp *
+        (1 +
+          (t.buildings.factory || 0) * 0.25 +
+          (t.buildings.capitalPalace || 0) * 0.15);
       statsByNation.set(t.ownerId, prev);
     }
 
@@ -107,22 +114,46 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
           army: 0,
           gdp: 0,
         };
-        const score = Math.round(
-          st.gdp * 2 + st.army / 250 + n.unlockedTechs.length * 80
+        const metrics = computeNationTechMetrics(n, territories, gameMode);
+        const economyScore = Math.round(st.gdp * 1.9 + n.treasury * 0.08);
+        const armyScore = Math.round(st.army / 180);
+        const techScore = Math.round(metrics.techLevel * 120);
+        const prestigeScore = Math.round(metrics.prestige * 1.15);
+        const capitalTerritoryScore = Math.round(
+          metrics.capitalLevel * 95 + st.ownedCount * 48
         );
+        const score =
+          economyScore +
+          armyScore +
+          techScore +
+          prestigeScore +
+          capitalTerritoryScore;
         return {
           nation: n,
           ownedCount: st.ownedCount,
           army: st.army,
           gdp: st.gdp,
+          techLevel: metrics.techLevel,
+          maxTechLevel: metrics.maxTechLevel,
+          capitalLevel: metrics.capitalLevel,
+          prestige: metrics.prestige,
           score,
         };
       })
       .sort((a, b) => {
-        if (rankingSortBy === 'GDP') return b.gdp - a.gdp;
-        if (rankingSortBy === 'ARMY') return b.army - a.army;
-        if (rankingSortBy === 'PROVINCES')
-          return b.ownedCount - a.ownedCount || b.score - a.score;
+        if (rankingSortBy === "GDP")
+          return b.gdp + b.nation.treasury * 0.05 - (a.gdp + a.nation.treasury * 0.05);
+        if (rankingSortBy === "ARMY") return b.army - a.army;
+        if (rankingSortBy === "TECH")
+          return b.techLevel - a.techLevel || b.score - a.score;
+        if (rankingSortBy === "PRESTIGE")
+          return b.prestige - a.prestige || b.score - a.score;
+        if (rankingSortBy === "CAPITAL")
+          return (
+            b.capitalLevel * 10 +
+            b.ownedCount -
+            (a.capitalLevel * 10 + a.ownedCount) || b.score - a.score
+          );
         return b.score - a.score;
       });
 
@@ -131,7 +162,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
       rankedList: list,
       playerRankIndex: list.findIndex((r) => r.nation.id === playerNation.id),
     };
-  }, [territories, nations, playerNation.id, rankingSortBy]);
+  }, [territories, nations, playerNation.id, rankingSortBy, gameMode]);
 
   return (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -679,39 +710,43 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                 </div>
               </div>
 
-              {/* Right 6 Cols: Filterable Global Superpower Leaderboard */}
-              <div className="lg:col-span-6 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3">
+              {/* Right 6 Cols: Filterable 6-Pillar Global Superpower Leaderboard */}
+              <div className="lg:col-span-6 bg-[#14100c] border border-[#caa15a]/40 rounded-2xl p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-[#e0b86e]" />
                     {gameMode === 'EMPIRES_1440'
-                      ? '1440 İmparatorluk Güç Sıralaması'
-                      : '2026 Küresel Süper Güç Sıralaması'}
+                      ? '1440 İmparatorluk Güç Sıralaması (6 Kriter)'
+                      : '2026 Küresel Süper Güç Sıralaması (6 Kriter)'}
                   </h3>
                   {playerRankIndex >= 0 && (
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 font-mono-num text-xs font-bold text-amber-300">
-                      Dünya Sıranız: #{playerRankIndex + 1}
+                    <span className="px-2.5 py-1 rounded-lg bg-[#caa15a]/20 border border-[#caa15a]/45 font-mono-num text-xs font-bold text-amber-200">
+                      Dünya Sıranız: #{playerRankIndex + 1} / {rankedList.length}
                     </span>
                   )}
                 </div>
 
-                {/* 4-Way Sort Filter */}
-                <div className="grid grid-cols-4 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                {/* 6-Way AoH3 Sort Filter: Toplam Güç, Ekonomi, Ordu, Teknoloji, Prestij, Başkent & Toprak */}
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 bg-[#0f0c09] p-1 rounded-xl border border-[#caa15a]/30">
                   {(
                     [
                       { id: 'SCORE', label: 'Toplam Güç' },
                       { id: 'GDP', label: 'Ekonomi' },
                       { id: 'ARMY', label: 'Ordu' },
-                      { id: 'PROVINCES', label: 'Toprak' },
+                      { id: 'TECH', label: 'Teknoloji' },
+                      { id: 'PRESTIGE', label: 'Prestij' },
+                      { id: 'CAPITAL', label: 'Bşk. & Toprak' },
                     ] as const
                   ).map((tab) => (
                     <button
                       key={tab.id}
+                      type="button"
+                      data-testid={`power-rank-sort-${tab.id}`}
                       onClick={() => setRankingSortBy(tab.id)}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-colors ${
+                      className={`py-1.5 px-1.5 rounded-lg text-[10.5px] font-bold transition-colors truncate cursor-pointer ${
                         rankingSortBy === tab.id
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c]'
+                          : 'text-[#b8a990] hover:text-white'
                       }`}
                     >
                       {tab.label}
@@ -720,20 +755,20 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                 </div>
 
                 <div className="space-y-2 max-h-[540px] overflow-y-auto pr-1">
-                  {rankedList.slice(0, 35).map((entry, idx) => (
+                  {rankedList.slice(0, 45).map((entry, idx) => (
                     <button
                       key={entry.nation.id}
                       onClick={() =>
                         onSelectTerritory(entry.nation.capitalTerritoryId)
                       }
-                      className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition-colors ${
+                      className={`w-full p-2.5 rounded-xl border flex items-center justify-between gap-2 text-left transition-colors cursor-pointer ${
                         entry.nation.id === playerNation.id
-                          ? 'bg-amber-500/15 border-amber-500/60'
-                          : 'bg-slate-900/80 hover:bg-slate-800/80 border-slate-800'
+                          ? 'bg-[#211a12] border-[#caa15a]/75 shadow'
+                          : 'bg-[#18130e] hover:bg-[#221b14] border-[#caa15a]/25'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono-num text-xs font-bold text-slate-400 w-6 shrink-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="font-mono-num text-xs font-bold text-[#b8a990] w-6 shrink-0">
                           #{idx + 1}
                         </span>
                         <NationFlagCanvasBadge
@@ -744,27 +779,40 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                           height={24}
                         />
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-white truncate">
+                          <div className="text-xs font-bold text-[#f3ead7] truncate">
                             {cleanNationName(entry.nation.name)}
                             {entry.nation.vassalOf && (
-                              <span className="ml-1.5 text-[10px] text-purple-400 font-normal">
+                              <span className="ml-1.5 text-[10px] text-amber-300 font-normal">
                                 (Vasal)
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-400">
-                            {entry.ownedCount} Eyalet ·{' '}
-                            {(entry.army / 1000).toFixed(0)}B Ordu
+                          <div className="text-[10.5px] text-[#c5b79e] font-mono-num flex flex-wrap items-center gap-x-1.5">
+                            <span className="text-emerald-300 font-semibold">
+                              {(entry.army / 1000).toFixed(1)}B Ordu
+                            </span>
+                            <span>·</span>
+                            <span className="text-amber-300 font-semibold">
+                              {Math.floor(entry.nation.treasury).toLocaleString('tr-TR')} A
+                            </span>
+                            <span>·</span>
+                            <span className="text-sky-300">
+                              Tek.{entry.techLevel.toFixed(1)}
+                            </span>
+                            <span>·</span>
+                            <span>
+                              Bşk.{entry.capitalLevel} · {entry.ownedCount} Ey.
+                            </span>
                           </div>
                         </div>
                       </div>
 
                       <div className="text-right font-mono-num shrink-0">
-                        <div className="text-xs font-bold text-amber-400">
-                          {entry.score} Puan
+                        <div className="text-xs font-bold text-amber-300">
+                          {entry.score.toLocaleString('tr-TR')} Puan
                         </div>
-                        <div className="text-[10px] text-emerald-400">
-                          {Math.round(entry.gdp)} GSYİH
+                        <div className="text-[10px] text-[#b8a990]">
+                          {Math.round(entry.gdp)} GSYİH · ★{entry.prestige}
                         </div>
                       </div>
                     </button>

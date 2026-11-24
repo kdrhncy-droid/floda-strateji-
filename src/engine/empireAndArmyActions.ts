@@ -417,6 +417,21 @@ export function upgradeBuildingDomain(params: {
     };
   }
 
+  if (def.requiresCapital && !t.isCapital && t.id !== p.capitalTerritoryId) {
+    return {
+      toastMessage: `👑 ${def.name} yalnızca devletin Başkentinde inşa edilebilir!`,
+    };
+  }
+
+  if (def.requiredTechId && !(p.unlockedTechs || []).includes(def.requiredTechId)) {
+    const reqTech =
+      getTechTreeForMode('EMPIRES_1440').find((tc) => tc.id === def.requiredTechId) ||
+      getTechTreeForMode('STANDARD_2026').find((tc) => tc.id === def.requiredTechId);
+    return {
+      toastMessage: `🔬 ${def.name} inşası için önce "${reqTech?.shortTitle || reqTech?.name || def.requiredTechId}" teknolojisini araştırmalısınız!`,
+    };
+  }
+
   const currentLvl = t.buildings[building] || 0;
   if (currentLvl >= def.maxLevel) return {};
 
@@ -431,6 +446,7 @@ export function upgradeBuildingDomain(params: {
   if (p.unlockedTechs?.includes('eco_2b')) buildCostMult *= 0.88;
   if (p.unlockedTechs?.includes('adm_1b')) buildCostMult *= 0.9;
   if (p.unlockedTechs?.includes('sci_4b')) buildCostMult *= 0.85;
+  if (p.unlockedTechs?.includes('sci_6b')) buildCostMult *= 0.9;
   const cost = Math.max(
     80,
     Math.round(def.baseCost * Math.pow(1.35, currentLvl) * buildCostMult)

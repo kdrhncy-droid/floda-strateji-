@@ -2,6 +2,7 @@ import {
   Nation,
   ReformDefinition,
   TechDefinition,
+  Territory,
 } from "../types/game";
 
 export const TECH_TREE: TechDefinition[] = [
@@ -531,6 +532,111 @@ export const TECH_TREE: TechDefinition[] = [
     prerequisite: 'sci_4b',
     description: 'İnsanlığın bilimsel sınırlarını aşarak araştırma hızında ve askeri doktrinde rakipsiz üstünlük kurar.',
     effectLabel: '+%35 Araştırma Hızı · +%15 Muharebe Gücü',
+  },
+  // TIER 6 (Çağ VI - Modern Zirve Doktrinleri)
+  {
+    id: 'mil_6',
+    name: 'Yörünge Komuta & Kuantum Harp Kalkanı',
+    shortTitle: 'Yörünge Kalkanı',
+    branch: 'MILITARY',
+    tier: 6,
+    subRow: 0,
+    artKey: 'ARTILLERY',
+    cost: 1450,
+    prerequisite: 'mil_5',
+    description: 'Alçak yörünge sensör ağları ve hipersonik önleme kalkanıyla orduların taarruz ve savunma kudretini zirveye taşır.',
+    effectLabel: '+%25 Muharebe Gücü · +%15 Ulusal Savunma',
+  },
+  {
+    id: 'mil_6b',
+    name: 'Nükleer Tahrikli Okyanus Donanması',
+    shortTitle: 'Okyanus Armadası',
+    branch: 'MILITARY',
+    tier: 6,
+    subRow: 1,
+    artKey: 'NAVAL',
+    cost: 1400,
+    prerequisite: 'mil_5b',
+    description: 'Sınırsız menzilli görev kuvvetleriyle tüm açık denizlerde mutlak hakimiyet ve lojistik üstünlük sağlar.',
+    effectLabel: '+%25 Deniz Gücü · +%20 İkmal Limiti',
+  },
+  {
+    id: 'eco_6',
+    name: 'Otonom Mega Üretim & Küresel Borsa Ağı',
+    shortTitle: 'Mega Üretim Ağı',
+    branch: 'ECONOMY',
+    tier: 6,
+    subRow: 0,
+    artKey: 'ENGINEERING',
+    cost: 1380,
+    prerequisite: 'eco_5',
+    description: 'Tam otonom sanayi havzaları ve küresel finans entegrasyonuyla üretim ve vergi gelirlerini katlar.',
+    effectLabel: '+%25 Üretim Geliri · +%20 Vergi Geliri',
+  },
+  {
+    id: 'eco_6b',
+    name: 'Kıtalararası Serbest Ticaret & Varlık Merkezi',
+    shortTitle: 'Küresel Hazine',
+    branch: 'ECONOMY',
+    tier: 6,
+    subRow: 1,
+    artKey: 'TREASURY',
+    cost: 1350,
+    prerequisite: 'eco_5b',
+    description: 'Uluslararası ticaret koridorlarını ve merkez bankası rezervlerini güçlendirerek ticareti büyütür, enflasyonu bastırır.',
+    effectLabel: '+%25 Ticaret Geliri · −0,025 Günlük Enflasyon',
+  },
+  {
+    id: 'adm_6',
+    name: 'Kusursuz Dijital Devlet & Hukuk Reformu',
+    shortTitle: 'Dijital Devlet',
+    branch: 'ADMINISTRATION',
+    tier: 6,
+    subRow: 0,
+    artKey: 'COURT',
+    cost: 1340,
+    prerequisite: 'adm_5',
+    description: 'Başkentten en uzak eyalete kadar şeffaf ve hızlı yönetim kurarak istikrarı, asimilasyonu ve insan gücünü artırır.',
+    effectLabel: '+%30 Asimilasyon · −0,20 Huzursuzluk · +%20 İnsan Gücü',
+  },
+  {
+    id: 'adm_6b',
+    name: 'Stratejik İttifak & Küresel Prestij Doktrini',
+    shortTitle: 'Küresel Prestij',
+    branch: 'ADMINISTRATION',
+    tier: 6,
+    subRow: 1,
+    artKey: 'COURT',
+    cost: 1310,
+    prerequisite: 'adm_5b',
+    description: 'Uluslararası meşruiyeti ve başkent prestijini yükselterek agresif genişlemeyi düşürür, vasal gelirlerini artırır.',
+    effectLabel: '−%15 Agresif Genişleme · +%35 Vasal Geliri',
+  },
+  {
+    id: 'sci_6',
+    name: 'Ulusal Araştırma Üniversiteleri & Bilim Kentleri',
+    shortTitle: 'Bilim Kentleri',
+    branch: 'SCIENCE',
+    tier: 6,
+    subRow: 0,
+    artKey: 'OBSERVATORY',
+    cost: 1480,
+    prerequisite: 'sci_5',
+    description: 'Üniversite ve araştırma enstitülerinin bilimsel çıktısını katlayarak maksimum teknoloji tavanını yükseltir.',
+    effectLabel: '+%35 Araştırma Hızı · +3,0 Maks Teknoloji Tavanı',
+  },
+  {
+    id: 'sci_6b',
+    name: 'Yüksek Teknoloji Medeniyeti & Uzay Endüstrisi',
+    shortTitle: 'Uzay Endüstrisi',
+    branch: 'SCIENCE',
+    tier: 6,
+    subRow: 1,
+    artKey: 'ENGINEERING',
+    cost: 1440,
+    prerequisite: 'sci_5b',
+    description: 'Bilim, sanayi ve savunma ekosistemini tek çatı altında birleştirerek üretime ve araştırmaya kalıcı ivme kazandırır.',
+    effectLabel: '+%25 Araştırma · +%20 Üretim · -%10 İnşa Maliyeti',
   },
 ];
 
@@ -1102,7 +1208,282 @@ export const TECH_TREE_1440: TechDefinition[] = [
       'Çağın en büyük alimlerini bir araya getirerek araştırma hızında ve askeri teknolojide tartışmasız üstünlük kurar.',
     effectLabel: '+%35 Araştırma Hızı · +%15 Muharebe Gücü',
   },
+  // TIER 6 (Çağ VI - 1440 Cihan İmparatorluğu Zirvesi)
+  {
+    id: 'mil_6',
+    name: 'Cihanşümul Topçu & Nizamiye Ordusu',
+    shortTitle: 'Cihan Ordusu',
+    branch: 'MILITARY',
+    tier: 6,
+    subRow: 0,
+    artKey: 'ARTILLERY',
+    cost: 1480,
+    prerequisite: 'mil_5',
+    description: 'Standartlaştırılmış sahra topçusu ve seçkin piyade tümenleriyle meydan muharebelerinde ve savunmada ezici üstünlük sağlar.',
+    effectLabel: '+%25 Muharebe Gücü · +%15 Ulusal Savunma',
+  },
+  {
+    id: 'mil_6b',
+    name: 'Üç Ambarlı Kalyon & Okyanus Donanması',
+    shortTitle: 'Üç Ambarlı Kalyon',
+    branch: 'MILITARY',
+    tier: 6,
+    subRow: 1,
+    artKey: 'NAVAL',
+    cost: 1420,
+    prerequisite: 'mil_5b',
+    description: 'Ağır toplu üç ambarlı kalyon filolarıyla tüm denizlerde mutlak hakimiyet ve sefer ikmal genişliği kurar.',
+    effectLabel: '+%25 Deniz Gücü · +%20 İkmal Limiti',
+  },
+  {
+    id: 'eco_6',
+    name: 'İmparatorluk İmalathaneleri & Darphane Reformu',
+    shortTitle: 'Büyük İmalathane',
+    branch: 'ECONOMY',
+    tier: 6,
+    subRow: 0,
+    artKey: 'ENGINEERING',
+    cost: 1400,
+    prerequisite: 'eco_5',
+    description: 'Büyük ölçekli devlet imalathaneleri ve merkezî hazine denetimiyle üretim ve vergi gelirlerini zirveye çıkarır.',
+    effectLabel: '+%25 Üretim Geliri · +%20 Vergi Geliri',
+  },
+  {
+    id: 'eco_6b',
+    name: 'Üç Kıta Kervan & Deniz Ticaret Tekeli',
+    shortTitle: 'Üç Kıta Ticareti',
+    branch: 'ECONOMY',
+    tier: 6,
+    subRow: 1,
+    artKey: 'TREASURY',
+    cost: 1360,
+    prerequisite: 'eco_5b',
+    description: 'Doğu ile Batı arasındaki tüm ticaret boğazlarını ve bedestenleri birleştirerek ticaret gelirini büyütür, enflasyonu düşürür.',
+    effectLabel: '+%25 Ticaret Geliri · −0,025 Günlük Enflasyon',
+  },
+  {
+    id: 'adm_6',
+    name: 'Kanunnâme-i Cihan & Merkezî Bürokrasi',
+    shortTitle: 'Kanunnâme-i Cihan',
+    branch: 'ADMINISTRATION',
+    tier: 6,
+    subRow: 0,
+    artKey: 'COURT',
+    cost: 1350,
+    prerequisite: 'adm_5',
+    description: 'Kusursuz divan teşkilatı ve eyalet adaletiyle asimilasyonu hızlandırır, huzursuzluğu bastırır ve insan gücünü artırır.',
+    effectLabel: '+%30 Asimilasyon · −0,20 Huzursuzluk · +%20 İnsan Gücü',
+  },
+  {
+    id: 'adm_6b',
+    name: 'Hilâfet & Cihanşümul Saltanat Prestiji',
+    shortTitle: 'Saltanat Prestiji',
+    branch: 'ADMINISTRATION',
+    tier: 6,
+    subRow: 1,
+    artKey: 'COURT',
+    cost: 1320,
+    prerequisite: 'adm_5b',
+    description: 'Cihan çapında diplomatik meşruiyet ve başkent ihtişamıyla agresif genişlemeyi azaltır, bağlı devlet haraçlarını artırır.',
+    effectLabel: '−%15 Agresif Genişleme · +%35 Vasal Haracı',
+  },
+  {
+    id: 'sci_6',
+    name: 'Darülfünun-u Osmani & Külliye Şebekesi',
+    shortTitle: 'Büyük Darülfünun',
+    branch: 'SCIENCE',
+    tier: 6,
+    subRow: 0,
+    artKey: 'OBSERVATORY',
+    cost: 1500,
+    prerequisite: 'sci_5',
+    description: 'Başkent ve eyaletlerdeki darülfünun ile medrese ağını birleştirerek araştırma hızını ve maksimum teknoloji tavanını yükseltir.',
+    effectLabel: '+%35 Araştırma Hızı · +3,0 Maks Teknoloji Tavanı',
+  },
+  {
+    id: 'sci_6b',
+    name: 'Buhar Makineleri & Erken Sanayi Devrimi',
+    shortTitle: 'Sanayi Devrimi',
+    branch: 'SCIENCE',
+    tier: 6,
+    subRow: 1,
+    artKey: 'ENGINEERING',
+    cost: 1460,
+    prerequisite: 'sci_5b',
+    description: 'Mekanik buhar gücü ve modern metalürjiyle hem bilimsel araştırmada hem de sanayi üretiminde yeni bir çağ başlatır.',
+    effectLabel: '+%25 Araştırma · +%20 Üretim · -%10 İnşa Maliyeti',
+  },
 ];
+
+export interface NationTechMetrics {
+  techLevel: number;
+  maxTechLevel: number;
+  monthlyTechGrowth: number;
+  capitalLevel: number;
+  prestige: number;
+  schoolCount: number;
+  highSchoolCount: number;
+  universityCount: number;
+  capitalPalaceLevel: number;
+  eraLabel: string;
+}
+
+export function computeNationTechMetrics(
+  nation: Pick<
+    Nation,
+    | 'id'
+    | 'unlockedTechs'
+    | 'enactedReforms'
+    | 'researchPoints'
+    | 'stability'
+    | 'treasury'
+    | 'formedEmpireId'
+    | 'capitalTerritoryId'
+  >,
+  territories: Record<
+    string,
+    {
+      ownerId: string;
+      isCapital?: boolean;
+      buildings?: Partial<Record<keyof Territory['buildings'], number>>;
+    }
+  >,
+  gameMode: string = 'EMPIRES_1440',
+  dailyResearch: number = 4.5
+): NationTechMetrics {
+  const is1440 = gameMode === 'EMPIRES_1440';
+  const unlocked = nation.unlockedTechs || [];
+  const reforms = nation.enactedReforms || [];
+
+  let ownedCount = 0;
+  let schoolCount = 0;
+  let highSchoolCount = 0;
+  let universityCount = 0;
+  let totalBuildingLevels = 0;
+  let capitalBuildingLevels = 0;
+  let capitalPalaceLevel = 0;
+
+  for (const [tId, t] of Object.entries(territories)) {
+    if (!t || t.ownerId !== nation.id) continue;
+    ownedCount++;
+    const b = t.buildings || {};
+    const sLvl = b.school || 0;
+    const hLvl = b.highSchool || 0;
+    const uLvl = b.university || 0;
+    const pLvl = b.capitalPalace || 0;
+    schoolCount += sLvl;
+    highSchoolCount += hLvl;
+    universityCount += uLvl;
+
+    const sumLvl =
+      (b.factory || 0) +
+      (b.barracks || 0) +
+      (b.fortress || 0) +
+      uLvl +
+      (b.tradeHub || 0) +
+      (b.supplyDepot || 0) +
+      (b.shipyard || 0) +
+      (b.mint || 0) +
+      (b.granary || 0) +
+      sLvl +
+      hLvl +
+      pLvl;
+    totalBuildingLevels += sumLvl;
+
+    if (t.isCapital || tId === nation.capitalTerritoryId) {
+      capitalBuildingLevels = Math.max(capitalBuildingLevels, sumLvl);
+      capitalPalaceLevel = Math.max(capitalPalaceLevel, pLvl);
+    }
+  }
+
+  const capitalLevel = Math.min(
+    10,
+    Math.max(
+      1,
+      1 +
+        capitalPalaceLevel +
+        Math.min(4, Math.floor(capitalBuildingLevels / 4)) +
+        (unlocked.includes('adm_1') ? 1 : 0) +
+        (unlocked.includes('adm_6') ? 1 : 0)
+    )
+  );
+
+  const eduLevelBonus =
+    schoolCount * 0.08 + highSchoolCount * 0.14 + universityCount * 0.22;
+  const eduCapBonus =
+    schoolCount * 0.25 + highSchoolCount * 0.45 + universityCount * 0.75;
+
+  const sciCapBonus =
+    (unlocked.includes('sci_1') ? 0.8 : 0) +
+    (unlocked.includes('sci_2') ? 1.0 : 0) +
+    (unlocked.includes('sci_3') ? 1.2 : 0) +
+    (unlocked.includes('sci_4') ? 1.5 : 0) +
+    (unlocked.includes('sci_5') ? 2.0 : 0) +
+    (unlocked.includes('sci_6') ? 3.0 : 0);
+
+  const baseMax = is1440 ? 4.4 : 13.5;
+  const maxTechLevel = Number(
+    Math.min(
+      is1440 ? 18.0 : 32.0,
+      baseMax + capitalLevel * (is1440 ? 0.85 : 1.15) + eduCapBonus + sciCapBonus
+    ).toFixed(1)
+  );
+
+  const baseTech = is1440 ? 1.1 : 6.6;
+  const perTechGain = is1440 ? 0.22 : 0.36;
+  const rawTechLevel =
+    baseTech +
+    unlocked.length * perTechGain +
+    reforms.length * 0.18 +
+    Math.min(is1440 ? 3.2 : 5.5, eduLevelBonus) +
+    Math.min(0.45, (nation.researchPoints || 0) / 1800);
+
+  const techLevel = Number(Math.min(maxTechLevel, rawTechLevel).toFixed(2));
+  const monthlyTechGrowth = Number(
+    Math.max(0.08, dailyResearch * (is1440 ? 0.032 : 0.045)).toFixed(2)
+  );
+
+  const prestige = Math.round(
+    80 +
+      unlocked.length * 22 +
+      reforms.length * 35 +
+      capitalLevel * 32 +
+      capitalPalaceLevel * 25 +
+      (nation.formedEmpireId ? 240 : 0) +
+      ownedCount * 11 +
+      totalBuildingLevels * 7 +
+      (nation.stability || 70) * 1.1
+  );
+
+  const eraLabel = is1440
+    ? techLevel >= 7.5
+      ? 'Sanayi & Nizâm-ı Cedîd Çağı'
+      : techLevel >= 4.5
+        ? 'Barut & Kalyon İmparatorluğu'
+        : techLevel >= 2.5
+          ? 'Rönesans & Topçu Çağı'
+          : 'Erken Barut & Beylik Çağı (1440)'
+    : techLevel >= 16
+      ? 'Kuantum & Uzay Medeniyeti'
+      : techLevel >= 11.5
+        ? 'Otonom Sürü & Yapay Zekâ Çağı'
+        : techLevel >= 8.5
+          ? 'Endüstri 5.0 & Dijital Çağ'
+          : 'Modern Küresel Çağ (2026)';
+
+  return {
+    techLevel,
+    maxTechLevel,
+    monthlyTechGrowth,
+    capitalLevel,
+    prestige,
+    schoolCount,
+    highSchoolCount,
+    universityCount,
+    capitalPalaceLevel,
+    eraLabel,
+  };
+}
 
 export interface ArmyGenerationMetadata {
   tier: number; // 0..4

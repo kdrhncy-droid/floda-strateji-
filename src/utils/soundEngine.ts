@@ -57,72 +57,6 @@ class SoundEngine {
     }
   }
 
-  public playClick() {
-    if (!this.enabled) return;
-    this.vibrate(8);
-    this.init();
-    if (!this.ctx) return;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(520, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(180, this.ctx.currentTime + 0.045);
-
-    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.045);
-
-    const out = this.getOutputNode() || this.ctx.destination;
-    osc.connect(gain);
-    gain.connect(out);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.05);
-  }
-
-  public playSelectTerritory() {
-    if (!this.enabled) return;
-    this.vibrate(12);
-    this.init();
-    if (!this.ctx) return;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(340, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(480, this.ctx.currentTime + 0.07);
-
-    gain.gain.setValueAtTime(0.09, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.07);
-
-    const out = this.getOutputNode() || this.ctx.destination;
-    osc.connect(gain);
-    gain.connect(out);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.075);
-  }
-
-  public playBuild() {
-    if (!this.enabled) return;
-    this.vibrate([12, 30, 15]);
-    this.init();
-    if (!this.ctx) return;
-
-    const now = this.ctx.currentTime;
-    [280, 420, 560].forEach((freq, idx) => {
-      if (!this.ctx) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
-      gain.gain.setValueAtTime(0.08, now + idx * 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.09);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now + idx * 0.05);
-      osc.stop(now + idx * 0.05 + 0.1);
-    });
-  }
-
   private lastHornAtMs = 0;
   private lastFanfareAtMs = 0;
 
@@ -131,9 +65,83 @@ class SoundEngine {
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(cutoffHz, this.ctx.currentTime);
-    filter.Q.setValueAtTime(0.7, this.ctx.currentTime);
+    filter.Q.setValueAtTime(0.75, this.ctx.currentTime);
     filter.connect(this.getOutputNode() || this.ctx.destination);
     return filter;
+  }
+
+  public playClick() {
+    if (!this.enabled) return;
+    this.vibrate(8);
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const filter = this.createWarmFilter(520);
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    // Warm wooden war-room frame tap (soft low-mid transient)
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(290, now);
+    osc.frequency.exponentialRampToValueAtTime(118, now + 0.038);
+
+    gain.gain.setValueAtTime(0.055, now);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.04);
+
+    osc.connect(gain);
+    gain.connect(filter || this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.044);
+  }
+
+  public playSelectTerritory() {
+    if (!this.enabled) return;
+    this.vibrate(10);
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const filter = this.createWarmFilter(580);
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    // Soft parchment map focus tone
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(240, now);
+    osc.frequency.exponentialRampToValueAtTime(320, now + 0.06);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.052, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.065);
+
+    osc.connect(gain);
+    gain.connect(filter || this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.07);
+  }
+
+  public playBuild() {
+    if (!this.enabled) return;
+    this.vibrate([12, 26, 14]);
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const filter = this.createWarmFilter(640);
+    // Warm resonant stone masonry & timber chord (D4 -> A4 -> D5) routed through masterGain + warm filter
+    [220, 293.66, 369.99].forEach((freq, idx) => {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.055);
+      gain.gain.setValueAtTime(0.001, now + idx * 0.055);
+      gain.gain.linearRampToValueAtTime(0.048, now + idx * 0.055 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.055 + 0.14);
+      osc.connect(gain);
+      gain.connect(filter || this.ctx.destination);
+      osc.start(now + idx * 0.055);
+      osc.stop(now + idx * 0.055 + 0.15);
+    });
   }
 
   public playMarch() {

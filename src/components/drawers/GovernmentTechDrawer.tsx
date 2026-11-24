@@ -20,13 +20,16 @@ import { CommandDrawersProps } from "./drawerTypes";
 import { ArmyModernizationCard } from "./ArmyModernizationCard";
 import { getTechArtwork } from "./techArtwork";
 import {
+  BUILDINGS,
   FORMABLE_EMPIRES,
   IDEOLOGIES,
+  computeNationTechMetrics,
   getNationModernizedTier,
   getNationUnlockedMilTier,
   getReformsForMode,
   getTechTreeForMode,
 } from "../../data/world2026Data";
+import { cleanProvinceName } from "../../utils/formatters";
 
 const IDEOLOGY_GLYPHS: Record<string, string> = {
   DEMOCRACY: "⚖",
@@ -104,6 +107,7 @@ const ERA_COLUMNS_1440 = [
   { tier: 3, title: "ÇAĞ III", subtitle: "İmparatorluk" },
   { tier: 4, title: "ÇAĞ IV", subtitle: "Cihan Hakimiyeti" },
   { tier: 5, title: "ÇAĞ V", subtitle: "Altın Çağ" },
+  { tier: 6, title: "ÇAĞ VI", subtitle: "Cihan Zirvesi" },
 ];
 
 const ERA_COLUMNS_2026 = [
@@ -112,6 +116,7 @@ const ERA_COLUMNS_2026 = [
   { tier: 3, title: "ÇAĞ III", subtitle: "Süper Güç" },
   { tier: 4, title: "ÇAĞ IV", subtitle: "İleri Teknoloji" },
   { tier: 5, title: "ÇAĞ V", subtitle: "Gelecek Çağı" },
+  { tier: 6, title: "ÇAĞ VI", subtitle: "Uzay & Kuantum" },
 ];
 
 type TreeZoomLevel = 75 | 100 | 115;
@@ -121,21 +126,21 @@ const ZOOM_SPECS: Record<
   { minCanvasPx: number; railPx: number; colMinPx: number; cardHeightClass: string; titleClass: string }
 > = {
   75: {
-    minCanvasPx: 710,
+    minCanvasPx: 840,
     railPx: 108,
     colMinPx: 112,
     cardHeightClass: "h-[66px]",
     titleClass: "text-[10px]",
   },
   100: {
-    minCanvasPx: 860,
+    minCanvasPx: 1020,
     railPx: 124,
     colMinPx: 138,
     cardHeightClass: "h-[82px]",
     titleClass: "text-[11px]",
   },
   115: {
-    minCanvasPx: 990,
+    minCanvasPx: 1170,
     railPx: 136,
     colMinPx: 162,
     cardHeightClass: "h-[96px]",
@@ -157,12 +162,33 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
   onToggleAutoResearch,
   onUpdateBudget,
   onModernizeNationalArmy,
+  onUpgradeBuilding,
+  onBatchUpgradeBuilding,
+  onSelectTerritory,
   gameMode = "EMPIRES_1440",
 }) => {
-  const [drawerSection, setDrawerSection] = useState<"TECH" | "STATE">("TECH");
+  const [drawerSection, setDrawerSection] = useState<"TECH" | "DIVAN" | "STATE">("TECH");
   const [branchFilter, setBranchFilter] = useState<"ALL" | TechBranch>("ALL");
   const [selectedTechId, setSelectedTechId] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState<TreeZoomLevel>(100);
+
+  const techMetrics = useMemo(
+    () =>
+      computeNationTechMetrics(
+        playerNation,
+        territories,
+        gameMode,
+        playerEconomy.dailyResearch
+      ),
+    [playerNation, territories, gameMode, playerEconomy.dailyResearch]
+  );
+  const capitalTerritory =
+    territories[playerNation.capitalTerritoryId] ??
+    Object.values(territories).find(
+      (t) => t && t.ownerId === playerNation.id && t.isCapital
+    ) ??
+    Object.values(territories).find((t) => t && t.ownerId === playerNation.id) ??
+    null;
 
   // Press-and-hold (touch & mouse) + desktop mouse hover rich explanation popover
   const [holdPopoverTechId, setHoldPopoverTechId] = useState<string | null>(null);
@@ -510,12 +536,12 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
         </div>
       )}
 
-      {/* Top Mode Switcher: Full-Width AoH3 Tech Tree vs. State / Reforms / Empires */}
+      {/* Top Mode Switcher: Full-Width AoH3 Tech Tree vs. Divan & Başkent vs. State / Reforms / Empires */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-[#caa15a]/25">
         <div
           role="tablist"
           aria-label="Hükümet ve Teknoloji Sekmeleri"
-          className="flex items-center gap-1 bg-[#120f0c] p-1 rounded-xl border border-[#caa15a]/30 w-full sm:w-auto max-w-full"
+          className="flex items-center gap-1 bg-[#120f0c] p-1 rounded-xl border border-[#caa15a]/30 w-full sm:w-auto max-w-full overflow-x-auto"
         >
           <button
             type="button"
@@ -530,13 +556,40 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             }`}
           >
             <FlaskConical className="w-3.5 h-3.5 shrink-0" />
-            <span>Teknoloji Ağacı</span>
+            <span>Teknoloji</span>
             <span
               className={`font-mono-num text-[10px] font-extrabold ${
                 drawerSection === "TECH" ? "text-[#14110e]/80" : "text-amber-300"
               }`}
             >
               {playerNation.unlockedTechs.length}/{activeTechTree.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={drawerSection === "DIVAN"}
+            data-testid="gov-tab-divan"
+            onClick={() => setDrawerSection("DIVAN")}
+            className={`min-h-[36px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              drawerSection === "DIVAN"
+                ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
+                : "text-[#d8cbb5] hover:text-white"
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              {gameMode === "EMPIRES_1440"
+                ? "Divan & Başkent"
+                : "Başkent & Eğitim"}
+            </span>
+            <span
+              className={`font-mono-num text-[10px] font-extrabold ${
+                drawerSection === "DIVAN" ? "text-[#14110e]/80" : "text-emerald-300"
+              }`}
+            >
+              Sv.{techMetrics.capitalLevel}
             </span>
           </button>
 
@@ -553,24 +606,41 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             }`}
           >
             <ScrollText className="w-3.5 h-3.5 shrink-0" />
-            <span className="sm:hidden">Devlet &amp; Reform</span>
-            <span className="hidden sm:inline">Devlet, Reform &amp; İmparatorluk</span>
+            <span className="sm:hidden">Reform</span>
+            <span className="hidden sm:inline">Rejim, Reform &amp; İmparatorluk</span>
           </button>
         </div>
 
-        {/* Inline Unboxed Science Telemetry */}
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#c5b79e] font-mono-num">
+        {/* Inline Unboxed AoH3 Technology Level & Capital Telemetry */}
+        <div
+          data-testid="aoh3-tech-level-strip"
+          className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-[#c5b79e] font-mono-num"
+        >
           <span>
-            Günlük Bilim{" "}
-            <strong className="text-sky-300">
-              +{playerEconomy.dailyResearch.toFixed(1)} RP
+            Tek. Düzeyi{" "}
+            <strong className="text-amber-300">
+              {techMetrics.techLevel.toFixed(2)} / Maks {techMetrics.maxTechLevel.toFixed(1)}
             </strong>
           </span>
           <span className="text-[#caa15a]/40">·</span>
           <span>
-            Bilim Havuzu{" "}
-            <strong className="text-amber-300">
-              {playerNation.researchPoints.toFixed(0)} RP
+            Aylık{" "}
+            <strong className="text-emerald-300">
+              +{techMetrics.monthlyTechGrowth.toFixed(2)}
+            </strong>
+          </span>
+          <span className="text-[#caa15a]/40">·</span>
+          <span>
+            Başkent{" "}
+            <strong className="text-[#f3ead7]">
+              Sv.{techMetrics.capitalLevel}/10
+            </strong>
+          </span>
+          <span className="text-[#caa15a]/40">·</span>
+          <span>
+            Günlük{" "}
+            <strong className="text-sky-300">
+              +{playerEconomy.dailyResearch.toFixed(1)} RP
             </strong>
           </span>
           {hasPendingArmyUpgrade && (
@@ -811,11 +881,11 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
               className="space-y-3"
               style={{ minWidth: `${zoomSpec.minCanvasPx}px` }}
             >
-              {/* Sticky Era Column Headers (Çağ I -> Çağ V) */}
+              {/* Era Column Headers (Çağ I -> Çağ VI) — scrolls naturally with the tree on iPhone so Dal · Hat never covers lower branches */}
               <div
-                className="grid gap-2.5 pb-2 border-b border-[#caa15a]/25 items-center sticky top-0 z-20 bg-[#0f0c09]/95 backdrop-blur-sm"
+                className="grid gap-2.5 pb-2 border-b border-[#caa15a]/25 items-center bg-[#0f0c09]"
                 style={{
-                  gridTemplateColumns: `${zoomSpec.railPx}px repeat(5, minmax(${zoomSpec.colMinPx}px, 1fr))`,
+                  gridTemplateColumns: `${zoomSpec.railPx}px repeat(6, minmax(${zoomSpec.colMinPx}px, 1fr))`,
                 }}
               >
                 <div className="px-2 py-1 text-[10px] font-display font-bold uppercase tracking-wider text-[#b8a990]">
@@ -873,7 +943,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                             key={`${branch.id}_row_${subRow}`}
                             className="grid gap-2.5 items-stretch"
                             style={{
-                              gridTemplateColumns: `${zoomSpec.railPx - 16}px repeat(5, minmax(${zoomSpec.colMinPx}px, 1fr))`,
+                              gridTemplateColumns: `${zoomSpec.railPx - 16}px repeat(6, minmax(${zoomSpec.colMinPx}px, 1fr))`,
                             }}
                           >
                             {/* Compact Track Label Cell */}
@@ -922,8 +992,8 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                               </div>
                             </div>
 
-                            {/* 5 Era Illustrated Tech Cards Connected Horizontally */}
-                            {[1, 2, 3, 4, 5].map((tierNum) => {
+                            {/* 6 Era Illustrated Tech Cards Connected Horizontally */}
+                            {[1, 2, 3, 4, 5, 6].map((tierNum) => {
                               const tech = rowTechs.find(
                                 (t) => t.tier === tierNum
                               );
@@ -1054,7 +1124,8 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                       <img
                                         src={artwork.src}
                                         alt={tech.shortTitle ?? tech.name}
-                                        loading="lazy"
+                                        loading="eager"
+                                        decoding="async"
                                         draggable={false}
                                         referrerPolicy="no-referrer"
                                         onError={() =>
@@ -1297,6 +1368,530 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
               </div>
             </div>
           )}
+        </div>
+      ) : drawerSection === "DIVAN" ? (
+        /* DIVAN & BAŞKENT TAB: AoH3 Capital Level, Educational Infrastructure & Court Council */
+        <div
+          data-testid="aoh3-divan-screen"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-4"
+        >
+          {/* Left 6 Cols: Capital Palace & Scenario Technology Capacity */}
+          <div className="lg:col-span-6 space-y-3">
+            <div className="rounded-2xl bg-[#15110d] border border-[#caa15a]/45 overflow-hidden shadow-lg">
+              <div
+                className="relative h-28 w-full overflow-hidden border-b border-[#caa15a]/30"
+                style={{
+                  background: getTechArtwork("COURT", "ADMINISTRATION")
+                    .fallbackGradient,
+                }}
+              >
+                <img
+                  src={getTechArtwork("COURT", "ADMINISTRATION").src}
+                  alt="Başkent Külliyesi"
+                  loading="eager"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover brightness-90"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#15110d] via-[#15110d]/55 to-black/30" />
+
+                <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between gap-2">
+                  <span className="px-2 py-0.5 rounded bg-black/75 border border-[#caa15a]/45 text-[10px] font-bold text-amber-200">
+                    {techMetrics.eraLabel}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-950/90 border border-emerald-500/45 font-mono-num text-[11px] font-extrabold text-emerald-300">
+                    Başkent Seviyesi Sv.{techMetrics.capitalLevel}/10
+                  </span>
+                </div>
+
+                <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-display font-bold text-[#faf3e3] drop-shadow">
+                      {gameMode === "EMPIRES_1440"
+                        ? "Saray-ı Hümayun & Başkent Külliyesi"
+                        : "Başkent Devlet Külliyesi & Merkez Kampüsü"}
+                    </h3>
+                    <div className="text-[11px] text-amber-200 font-semibold">
+                      ★{" "}
+                      {capitalTerritory
+                        ? cleanProvinceName(capitalTerritory.name)
+                        : "Payitaht"}{" "}
+                      · Saray Sv.{techMetrics.capitalPalaceLevel}/5
+                    </div>
+                  </div>
+                  {capitalTerritory && onSelectTerritory && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectTerritory(capitalTerritory.id)}
+                      className="px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black/90 border border-[#caa15a]/40 text-[11px] font-bold text-amber-200 cursor-pointer shrink-0"
+                    >
+                      📍 Başkente Git
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3.5 space-y-3">
+                {/* 4 Pillar Metrics: Tech Level, Max Tech Cap, Monthly Growth, Prestige */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
+                    <div className="text-[10px] text-[#b8a990]">
+                      Teknoloji Düzeyi
+                    </div>
+                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-amber-300">
+                      {techMetrics.techLevel.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
+                    <div className="text-[10px] text-[#b8a990]">
+                      Maks. Tek. Tavanı
+                    </div>
+                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-sky-300">
+                      {techMetrics.maxTechLevel.toFixed(1)}
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
+                    <div className="text-[10px] text-[#b8a990]">
+                      Aylık Tek. Artışı
+                    </div>
+                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-emerald-300">
+                      +{techMetrics.monthlyTechGrowth.toFixed(2)}/ay
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
+                    <div className="text-[10px] text-[#b8a990]">
+                      Devlet Prestiji
+                    </div>
+                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-[#f3ead7]">
+                      {techMetrics.prestige}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-[#c5b79e] leading-relaxed">
+                  {gameMode === "EMPIRES_1440"
+                    ? "1440 çağında teknoloji düzeyi tarihsel başlangıç seviyesindedir (1.30 taban). Sıbyan Mektebi, Medrese, Darülfünun ve Saray-ı Hümayun inşa ettikçe maksimum teknoloji tavanınız ve aylık araştırma hızınız yükselir."
+                    : "2026 modern çağında ülkeler ileri teknoloji tabanıyla (7.00+) başlar. İlkokul, Ortaokul-Lise, Üniversite ve Başkent Külliyesi yatırımlarıyla maksimum teknoloji kapasitenizi büyütün."}
+                </p>
+
+                {/* Direct Capital Palace Upgrade Action */}
+                {capitalTerritory &&
+                  (() => {
+                    const palaceDef = BUILDINGS.find(
+                      (b) => b.id === "capitalPalace"
+                    );
+                    const curLvl =
+                      capitalTerritory.buildings.capitalPalace ?? 0;
+                    const maxLvl = palaceDef?.maxLevel ?? 5;
+                    const isMax = curLvl >= maxLvl;
+                    const hasAdm1 =
+                      playerNation.unlockedTechs.includes("adm_1");
+                    const cost = Math.round(
+                      (palaceDef?.baseCost ?? 500) * Math.pow(1.35, curLvl)
+                    );
+                    const queued = capitalTerritory.constructionQueue?.find(
+                      (q) => q.building === "capitalPalace"
+                    );
+                    const canUpgrade =
+                      hasAdm1 &&
+                      !isMax &&
+                      !queued &&
+                      playerNation.treasury >= cost;
+
+                    return (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#1d1711] border border-[#caa15a]/35">
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-[#f3ead7]">
+                            {gameMode === "EMPIRES_1440"
+                              ? "Saray-ı Hümayun & Divan Külliyesi"
+                              : "Başkent Devlet Külliyesi"}{" "}
+                            <span className="text-amber-300 font-mono-num">
+                              (Sv.{curLvl}/{maxLvl})
+                            </span>
+                          </div>
+                          <div className="text-[10.5px] text-emerald-300">
+                            Seviye başına +3.5 Bilim, +%8 Vergi, +300 İG ve +1
+                            Başkent Seviyesi
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          data-testid="upgrade-capital-palace-btn"
+                          disabled={!canUpgrade}
+                          onClick={() =>
+                            onUpgradeBuilding(
+                              capitalTerritory.id,
+                              "capitalPalace"
+                            )
+                          }
+                          className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-colors ${
+                            !hasAdm1
+                              ? "bg-[#120e0a] text-rose-300 border border-rose-500/35 cursor-not-allowed"
+                              : queued
+                              ? "bg-amber-950/60 text-amber-300 border border-amber-500/40 cursor-default"
+                              : isMax
+                              ? "bg-emerald-950/50 text-emerald-300 border border-emerald-500/35 cursor-default"
+                              : canUpgrade
+                              ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow"
+                              : "bg-[#120e0a] text-[#8e806a] border border-[#caa15a]/20 cursor-not-allowed"
+                          }`}
+                        >
+                          {!hasAdm1
+                            ? "🔒 İdare Çağ I (adm_1) Gerekli"
+                            : queued
+                            ? `İnşa Sürüyor (${
+                                queued.totalDays - queued.progressDays
+                              }g)`
+                            : isMax
+                            ? "✓ Maksimum Seviye"
+                            : `Sarayı Yükselt (${cost} Altın)`}
+                        </button>
+                      </div>
+                    );
+                  })()}
+              </div>
+            </div>
+
+            {/* AoH3 Tech-Gated Educational Network Card (İlkokul/Mektep, Ortaokul/Medrese, Üniversite/Darülfünun) */}
+            <div className="rounded-2xl bg-[#15110d] border border-[#caa15a]/35 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+                  <FlaskConical className="w-4 h-4 text-sky-300" />
+                  <span>
+                    {gameMode === "EMPIRES_1440"
+                      ? "Maarif & Medrese Eğitim Şebekesi"
+                      : "Ulusal Eğitim & Üniversite Ağı"}
+                  </span>
+                </h3>
+                <span className="text-[11px] font-mono-num text-[#b8a990]">
+                  {playerEconomy.territoryCount} Eyalet
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {(
+                  [
+                    {
+                      id: "school" as const,
+                      title:
+                        gameMode === "EMPIRES_1440"
+                          ? "Sıbyan Mektebi (İlkokul)"
+                          : "İlkokul & Temel Eğitim",
+                      count: techMetrics.schoolCount,
+                      reqTechId: "sci_1",
+                      reqLabel: "Bilim Çağ I (sci_1)",
+                      bonus: "+1.4 Bilim/gün · +0.25 Maks. Teknoloji Tavanı",
+                      artKey: "OBSERVATORY" as const,
+                    },
+                    {
+                      id: "highSchool" as const,
+                      title:
+                        gameMode === "EMPIRES_1440"
+                          ? "Medrese-i Âliye (Ortaokul & Lise)"
+                          : "Ortaokul & Teknik Lise",
+                      count: techMetrics.highSchoolCount,
+                      reqTechId: "sci_2",
+                      reqLabel: "Bilim Çağ II (sci_2)",
+                      bonus: "+2.6 Bilim/gün · +%4 Üretim · +0.45 Maks. Tek.",
+                      artKey: "COURT" as const,
+                    },
+                    {
+                      id: "university" as const,
+                      title:
+                        gameMode === "EMPIRES_1440"
+                          ? "Darülfünun & Rasathane (Üniversite)"
+                          : "Araştırma Üniversitesi",
+                      count: techMetrics.universityCount,
+                      reqTechId: null,
+                      reqLabel: "Başlangıçtan Açık",
+                      bonus: "+4.5 Bilim/gün · +0.85 Maks. Teknoloji Tavanı",
+                      artKey: "OBSERVATORY" as const,
+                    },
+                  ] as const
+                ).map((edu) => {
+                  const bDef = BUILDINGS.find((b) => b.id === edu.id);
+                  const unlocked =
+                    !edu.reqTechId ||
+                    playerNation.unlockedTechs.includes(edu.reqTechId);
+                  const capLvl = capitalTerritory
+                    ? capitalTerritory.buildings[edu.id] ?? 0
+                    : 0;
+                  const cost = Math.round(
+                    (bDef?.baseCost ?? 220) * Math.pow(1.35, capLvl)
+                  );
+                  const art = getTechArtwork(edu.artKey, "SCIENCE");
+                  const canBuildInCap =
+                    Boolean(capitalTerritory) &&
+                    unlocked &&
+                    capLvl < (bDef?.maxLevel ?? 5) &&
+                    playerNation.treasury >= cost &&
+                    !capitalTerritory?.constructionQueue?.some(
+                      (q) => q.building === edu.id
+                    );
+
+                  return (
+                    <div
+                      key={edu.id}
+                      data-testid={`edu-network-card-${edu.id}`}
+                      className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img
+                          src={art.src}
+                          alt={edu.title}
+                          loading="eager"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                          className="w-12 h-10 rounded-lg object-cover border border-[#caa15a]/35 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs font-bold text-[#f3ead7]">
+                              {edu.title}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-500/35 font-mono-num text-[10px] font-bold text-sky-300">
+                              Toplam Sv.{edu.count}
+                            </span>
+                          </div>
+                          <div className="text-[10.5px] text-emerald-300">
+                            {edu.bonus}
+                          </div>
+                          <div className="text-[10px] text-[#b8a990]">
+                            {unlocked ? (
+                              <span className="text-emerald-300">
+                                ✓ {edu.reqLabel} Açık
+                              </span>
+                            ) : (
+                              <span className="text-rose-300">
+                                🔒 {edu.reqLabel} Araştırması Gerekli
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {capitalTerritory && (
+                          <button
+                            type="button"
+                            disabled={!canBuildInCap}
+                            onClick={() =>
+                              onUpgradeBuilding(capitalTerritory.id, edu.id)
+                            }
+                            className={`min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-colors ${
+                              canBuildInCap
+                                ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c]"
+                                : "bg-[#120e0a] text-[#8e806a] border border-[#caa15a]/20 cursor-not-allowed"
+                            }`}
+                          >
+                            {!unlocked
+                              ? "Kilitli"
+                              : capLvl >= (bDef?.maxLevel ?? 5)
+                              ? "Başkentte Maks"
+                              : `Başkente Kur (${cost}A)`}
+                          </button>
+                        )}
+                        {onBatchUpgradeBuilding && unlocked && (
+                          <button
+                            type="button"
+                            onClick={() => onBatchUpgradeBuilding(edu.id)}
+                            className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#241c14] hover:bg-[#2f2419] border border-[#caa15a]/35 text-[11px] font-bold text-amber-200 cursor-pointer"
+                            title="Hazine yettiğince uygun eyaletlerde toplu inşa başlatır"
+                          >
+                            Toplu Kur
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Right 6 Cols: Divan-ı Hümayun / Devlet Konseyi Illustrated Ministers */}
+          <div className="lg:col-span-6 space-y-3">
+            <div className="rounded-2xl bg-[#15110d] border border-[#caa15a]/35 p-3.5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+                    <Landmark className="w-4 h-4 text-[#e0b86e]" />
+                    <span>
+                      {gameMode === "EMPIRES_1440"
+                        ? "Divan-ı Hümayun Erkânı & Vezirler"
+                        : "Bakanlar Kurulu & Stratejik Konsey"}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-[#b8a990] mt-0.5">
+                    Bütçe payları ve açılan teknolojiler Divan üyelerinin devletinize sağladığı çarpanları doğrudan güçlendirir.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {(
+                  [
+                    {
+                      role:
+                        gameMode === "EMPIRES_1440"
+                          ? "Sadrazam (Vezir-i Azam)"
+                          : "Başbakan & İcra Kurulu",
+                      subtitle:
+                        gameMode === "EMPIRES_1440"
+                          ? "Mühr-ü Hümayun & Merkez İdare"
+                          : "Merkezi Koordinasyon",
+                      artKey: "COURT" as const,
+                      branch: "ADMINISTRATION" as const,
+                      statLabel: `İstikrar %${Math.round(
+                        playerNation.stability
+                      )} · Refah & İdare %${
+                        playerNation.budget?.welfare ?? 20
+                      }`,
+                      effect:
+                        playerNation.unlockedTechs.includes("adm_6")
+                          ? "+%18 Vergi & +0.70 Günlük İstikrar (Cihanşümul)"
+                          : "+%10 Vergi Verimi & +0.35 Günlük İstikrar",
+                    },
+                    {
+                      role:
+                        gameMode === "EMPIRES_1440"
+                          ? "Başdefterdar"
+                          : "Hazine & Maliye Bakanı",
+                      subtitle:
+                        gameMode === "EMPIRES_1440"
+                          ? "Hazine-i Âmire & Darphane"
+                          : "Merkez Bankası & Maliye",
+                      artKey: "TREASURY" as const,
+                      branch: "ECONOMY" as const,
+                      statLabel: `Net Gelir ${
+                        playerEconomy.netDailyGold >= 0 ? "+" : ""
+                      }${Math.round(playerEconomy.netDailyGold)} A/gün`,
+                      effect: `Vergi Oranı %${playerNation.taxRate} · Enflasyon %${playerNation.inflation.toFixed(
+                        1
+                      )}`,
+                    },
+                    {
+                      role:
+                        gameMode === "EMPIRES_1440"
+                          ? "Kazasker & Şeyhülislam"
+                          : "Eğitim & Bilim Bakanı",
+                      subtitle:
+                        gameMode === "EMPIRES_1440"
+                          ? "İlmiye, Medreseler & Adalet"
+                          : "Akademi & Ar-Ge",
+                      artKey: "OBSERVATORY" as const,
+                      branch: "SCIENCE" as const,
+                      statLabel: `Bilim Bütçesi %${
+                        playerNation.budget?.research ?? 15
+                      } · +${playerEconomy.dailyResearch.toFixed(1)} RP/gün`,
+                      effect: `${
+                        techMetrics.schoolCount +
+                        techMetrics.highSchoolCount +
+                        techMetrics.universityCount
+                      } Eğitim Kurumu · Tavan ${techMetrics.maxTechLevel.toFixed(
+                        1
+                      )}`,
+                    },
+                    {
+                      role:
+                        gameMode === "EMPIRES_1440"
+                          ? "Serasker & Yeniçeri Ağası"
+                          : "Genelkurmay Başkanı",
+                      subtitle:
+                        gameMode === "EMPIRES_1440"
+                          ? "Kapıkulu & Eyalet Orduları"
+                          : "Silahlı Kuvvetler Komutanlığı",
+                      artKey: "INFANTRY" as const,
+                      branch: "MILITARY" as const,
+                      statLabel: `Ordu ${(
+                        playerEconomy.totalGarrison / 1000
+                      ).toFixed(1)}B · Askerî Sv.${modernizedMilTier}`,
+                      effect: `Askerî Bütçe %${
+                        playerNation.budget?.military ?? 25
+                      } · +${playerEconomy.dailyManpower} İG/gün`,
+                    },
+                    {
+                      role:
+                        gameMode === "EMPIRES_1440"
+                          ? "Kaptan-ı Derya"
+                          : "Deniz Kuvvetleri Komutanı",
+                      subtitle:
+                        gameMode === "EMPIRES_1440"
+                          ? "Tersane-i Âmire & Donanma"
+                          : "Amfibi Filo & Deniz Ticareti",
+                      artKey: "NAVAL" as const,
+                      branch: "MILITARY" as const,
+                      statLabel: `${
+                        playerNation.unlockedTechs.filter((id) =>
+                          id.endsWith("b")
+                        ).length
+                      } Deniz/Lojistik Doktrini`,
+                      effect:
+                        "Deniz aşırı çıkarma ve boğaz geçişlerinde amfibi koruma sağlar",
+                    },
+                    {
+                      role:
+                        gameMode === "EMPIRES_1440"
+                          ? "Nişancı & Reisülküttab"
+                          : "Dışişleri Bakanı",
+                      subtitle:
+                        gameMode === "EMPIRES_1440"
+                          ? "Tuğra, Ahidnâme & Sefaret"
+                          : "Uluslararası Diplomasi",
+                      artKey: "TRADE" as const,
+                      branch: "ADMINISTRATION" as const,
+                      statLabel: `Diplomasi Puanı ${(
+                        playerNation.diplomacyPoints ?? 100
+                      ).toFixed(0)}/100`,
+                      effect: `Agresif Genişleme %${playerNation.aggressiveExpansion.toFixed(
+                        0
+                      )} · Prestij ${techMetrics.prestige}`,
+                    },
+                  ] as const
+                ).map((vizier) => {
+                  const art = getTechArtwork(vizier.artKey, vizier.branch);
+                  return (
+                    <div
+                      key={vizier.role}
+                      className="rounded-xl bg-[#1b1510] border border-[#caa15a]/30 overflow-hidden flex flex-col justify-between"
+                    >
+                      <div
+                        className="relative h-14 w-full overflow-hidden border-b border-[#caa15a]/20"
+                        style={{ background: art.fallbackGradient }}
+                      >
+                        <img
+                          src={art.src}
+                          alt={vizier.role}
+                          loading="eager"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover brightness-90"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1b1510] via-[#1b1510]/45 to-black/25" />
+                        <div className="absolute bottom-1.5 left-2.5 right-2.5">
+                          <div className="text-xs font-display font-bold text-[#faf3e3] truncate drop-shadow">
+                            {vizier.role}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-2.5 space-y-1">
+                        <div className="text-[10px] font-semibold text-amber-300">
+                          {vizier.subtitle}
+                        </div>
+                        <div className="text-[10.5px] font-mono-num font-bold text-[#f3ead7]">
+                          {vizier.statLabel}
+                        </div>
+                        <div className="text-[10px] text-emerald-300 leading-snug">
+                          {vizier.effect}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         /* STATE TAB: Ideology, Reforms, Army Modernization & Formable Empires */

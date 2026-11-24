@@ -54,7 +54,10 @@ export type BuildingType =
   | 'supplyDepot'
   | 'shipyard'
   | 'mint'
-  | 'granary';
+  | 'granary'
+  | 'school'
+  | 'highSchool'
+  | 'capitalPalace';
 
 export type UnitType = 'infantry' | 'armor' | 'airDrone';
 
@@ -78,11 +81,15 @@ export interface Commander {
 export interface BuildingDefinition {
   id: BuildingType;
   name: string;
+  eraName1440?: string;
   description: string;
   baseCost: number;
   maxLevel: number;
   effectSummary: string;
   requiresCoastal?: boolean;
+  requiresCapital?: boolean;
+  requiredTechId?: string;
+  artKey?: TechArtKey;
 }
 
 export interface IdeologyDefinition {
@@ -200,6 +207,9 @@ export interface TerritoryBuildings {
   shipyard?: number;
   mint?: number;
   granary?: number;
+  school?: number;
+  highSchool?: number;
+  capitalPalace?: number;
 }
 
 export interface Territory {

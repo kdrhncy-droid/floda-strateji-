@@ -6304,29 +6304,29 @@ test('toggleAutoResearchDomain starts next tech when toggled ON while idle and c
   );
 });
 
-test('both 1440 and 2026 tech trees expose 40 illustrated branching technologies with valid prerequisites', async () => {
+test('both 1440 and 2026 tech trees expose 48 illustrated branching technologies across 6 eras with valid prerequisites', async () => {
   const { TECH_TREE, TECH_TREE_1440 } = await import('../data/techAndArmyTiers');
 
   for (const [label, tree] of [
     ['1440', TECH_TREE_1440],
     ['2026', TECH_TREE],
   ] as const) {
-    assert.equal(tree.length, 40, `${label} tech tree must have 40 technologies`);
+    assert.equal(tree.length, 48, `${label} tech tree must have 48 technologies`);
     const ids = new Set(tree.map((t) => t.id));
-    assert.equal(ids.size, 40, `${label} tech IDs must be unique`);
+    assert.equal(ids.size, 48, `${label} tech IDs must be unique`);
 
     for (const branch of ['MILITARY', 'ECONOMY', 'ADMINISTRATION', 'SCIENCE'] as const) {
       const branchItems = tree.filter((t) => t.branch === branch);
-      assert.equal(branchItems.length, 10, `${label} ${branch} must have 10 techs (2 tracks × 5 eras)`);
+      assert.equal(branchItems.length, 12, `${label} ${branch} must have 12 techs (2 tracks × 6 eras)`);
       assert.equal(
         branchItems.filter((t) => t.subRow === 0).length,
-        5,
-        `${label} ${branch} main track must have 5 tiers`
+        6,
+        `${label} ${branch} main track must have 6 tiers`
       );
       assert.equal(
         branchItems.filter((t) => t.subRow === 1).length,
-        5,
-        `${label} ${branch} specialist track must have 5 tiers`
+        6,
+        `${label} ${branch} specialist track must have 6 tiers`
       );
     }
 
@@ -6585,6 +6585,92 @@ test('new specialist technologies deliver real measurable effects across economy
     'adm_4b must accelerate daily assimilation progress'
   );
 });
+
+test('scenario-based technology level (2026 vs 1440) and tech-gated educational & capital buildings function accurately', async () => {
+  const { computeNationTechMetrics } = await import('../data/techAndArmyTiers');
+  const { upgradeBuildingDomain } = await import('./empireAndArmyActions');
+
+  const nation = mkFaz3Nation('792', {
+    treasury: 10000,
+    capitalTerritoryId: '792',
+    unlockedTechs: [],
+  });
+  const territories: Record<string, Territory> = {
+    '792': {
+      id: '792',
+      name: 'Kostantiniyye',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCapital: true,
+      population: 120000,
+      baseGdp: 200,
+      resource: 'TICARET_BOGAZI',
+      garrison: 8000,
+      units: { infantry: 6000, armor: 1500, airDrone: 500 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: true,
+      buildings: {
+        factory: 1,
+        barracks: 1,
+        fortress: 1,
+        university: 1,
+        tradeHub: 1,
+        supplyDepot: 1,
+        school: 0,
+        highSchool: 0,
+        capitalPalace: 0,
+      },
+      neighbors: [],
+      centroid: [28.9, 41.0],
+    } as unknown as Territory,
+  };
+
+  const metrics1440 = computeNationTechMetrics(nation, territories, 'EMPIRES_1440', 8);
+  const metrics2026 = computeNationTechMetrics(nation, territories, 'MODERN_2026', 8);
+
+  assert.ok(
+    metrics2026.techLevel > metrics1440.techLevel + 4.5,
+    '2026 scenario technology level must start significantly higher than 1440 historical technology level'
+  );
+  assert.ok(
+    metrics2026.maxTechLevel > metrics1440.maxTechLevel + 4.0,
+    '2026 max tech ceiling must exceed 1440 baseline ceiling'
+  );
+
+  // Attempting to build 'school' without 'sci_1' must be blocked
+  const blockedSchool = upgradeBuildingDomain({
+    territoryId: '792',
+    building: 'school',
+    territories,
+    nations: { '792': nation },
+    playerNationId: '792',
+  });
+  assert.equal(
+    blockedSchool.territories,
+    undefined,
+    'school construction must be blocked until sci_1 is unlocked'
+  );
+
+  // Unlocking sci_1, sci_2, and adm_1 allows building school, highSchool, and capitalPalace
+  const unlockedNation: Nation = {
+    ...nation,
+    unlockedTechs: ['sci_1', 'sci_2', 'adm_1'],
+  };
+  const allowedSchool = upgradeBuildingDomain({
+    territoryId: '792',
+    building: 'school',
+    territories,
+    nations: { '792': unlockedNation },
+    playerNationId: '792',
+  });
+  assert.ok(
+    allowedSchool.territories?.['792']?.constructionQueue?.some((q) => q.building === 'school'),
+    'school must queue once sci_1 is unlocked'
+  );
+});
+
 
 
 

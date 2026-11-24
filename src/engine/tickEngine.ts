@@ -1575,19 +1575,24 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         // Supply depots now provide their declared daily local order effect;
         // this is intentionally separate from assimilation and missionary
         // effects, which are campaign actions with their own progress bars.
-        if ((buildings.supplyDepot || 0) > 0) {
+        if ((buildings.supplyDepot || 0) > 0 || (buildings.capitalPalace || 0) > 0) {
+          const bldCalm =
+            (buildings.supplyDepot || 0) * 0.12 +
+            (buildings.capitalPalace || 0) * 0.15;
           nextUnrest = Math.max(
             0,
-            Number((nextUnrest - buildings.supplyDepot * 0.12).toFixed(2))
+            Number((nextUnrest - bldCalm).toFixed(2))
           );
           tModified = true;
         }
 
         const ownerHasAdm5 = ownerTechs.includes('adm_5');
+        const ownerHasAdm6 = ownerTechs.includes('adm_6');
         const ownerHasAdm1b = ownerTechs.includes('adm_1b');
         const ownerHasAdm5b = ownerTechs.includes('adm_5b');
         const techUnrestCalm =
           (ownerHasAdm5 ? 0.35 : 0) +
+          (ownerHasAdm6 ? 0.2 : 0) +
           (ownerHasAdm1b ? 0.2 : 0) +
           (ownerHasAdm5b ? 0.25 : 0);
         if (techUnrestCalm > 0 && nextUnrest > 0) {
@@ -1633,9 +1638,12 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         if (t.isAssimilating && !t.isOccupied) {
           const currentVal = t.assimilation ?? 30;
           const baseAssimStep = ownerHasAdm5 ? 1.75 : 1.25;
-          const assimStep = ownerTechs.includes('adm_4b')
-            ? Number((baseAssimStep * 1.2).toFixed(2))
-            : baseAssimStep;
+          let assimMult = 1.0;
+          if (ownerTechs.includes('adm_2b')) assimMult += 0.2;
+          if (ownerTechs.includes('adm_4b')) assimMult += 0.2;
+          if (ownerHasAdm6) assimMult += 0.3;
+          assimMult += (buildings.school || 0) * 0.08;
+          const assimStep = Number((baseAssimStep * assimMult).toFixed(2));
           const updatedAssim = Math.min(
             100,
             Number((currentVal + assimStep).toFixed(2))

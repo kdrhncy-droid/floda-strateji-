@@ -1154,13 +1154,23 @@ export function evaluateMultiProvinceAiTurn(params: {
   const personalityMeta = AI_PERSONALITY_META[actorPersonality];
 
   // 1. Personality-Specialized AI Technology Progression & National Army Modernization
+  const isMasterAiDifficulty =
+    aiAggressiveness === 'AGGRESSIVE' || aiAggressiveness === 'CHAOS';
+  if (isMasterAiDifficulty && !wars.some((w) => w.attackers.includes(actorId) || w.defenders.includes(actorId))) {
+    // Master-difficulty AI actively funds research institutes & treasury discipline during peacetime
+    actorNation = {
+      ...actorNation,
+      researchPoints: Number((actorNation.researchPoints + 12).toFixed(1)),
+    };
+  }
   const activeTechTree = getTechTreeForMode(gameMode);
+  const techDiscount = isMasterAiDifficulty ? 0.88 : 1.0;
   const availableTechs = activeTechTree.filter(
     (tech) =>
       !actorNation.unlockedTechs.includes(tech.id) &&
       (!tech.prerequisite ||
         actorNation.unlockedTechs.includes(tech.prerequisite)) &&
-      actorNation.researchPoints >= tech.cost
+      actorNation.researchPoints >= Math.round(tech.cost * techDiscount)
   );
 
   const nextAiTech = availableTechs.sort((a, b) => {
@@ -1172,9 +1182,10 @@ export function evaluateMultiProvinceAiTurn(params: {
   })[0];
 
   if (nextAiTech) {
+    const effectiveCost = Math.round(nextAiTech.cost * techDiscount);
     actorNation = {
       ...actorNation,
-      researchPoints: Math.max(0, actorNation.researchPoints - nextAiTech.cost),
+      researchPoints: Math.max(0, actorNation.researchPoints - effectiveCost),
       unlockedTechs: [...actorNation.unlockedTechs, nextAiTech.id],
     };
     updatedNations = {
@@ -1246,22 +1257,26 @@ export function evaluateMultiProvinceAiTurn(params: {
     );
 
     // Personality-calibrated balance between peacetime economy/development and military buildup
+    // On high/max difficulty (AGGRESSIVE / CHAOS), AI nations play like grand-strategy veterans:
+    // they aggressively develop economy, schools, universities, and capital level during peacetime!
     const preferEconByPersonality =
-      actorPersonality === 'MERCHANT'
+      isMasterAiDifficulty
+        ? stepIndex % 3 !== 2
+        : actorPersonality === 'MERCHANT'
         ? stepIndex % 3 !== 2
         : actorPersonality === 'DEFENDER'
         ? stepIndex % 2 === 0
         : stepIndex % 3 === 0;
     const preferEconTurn =
       !actorInAnyWar &&
-      actorNation.treasury >= 760 &&
+      actorNation.treasury >= (isMasterAiDifficulty ? 620 : 760) &&
       (!weakestBorder ||
         weakestBorder.garrison >= 8500 ||
         actorNation.manpower < 14000) &&
       (preferEconByPersonality || !hasThreatenedBorder);
 
     if (preferEconTurn) {
-      // Personality & Development-Driven Infrastructure, Supply, Coastal Harbor & Resource Investment!
+      // Personality & Development-Driven Infrastructure, Supply, Education, Capital & Resource Investment!
       const straitShoreSet = new Set(
         STRATEGIC_STRAITS.flatMap((s) => s.shoreIds)
       );
@@ -1273,11 +1288,18 @@ export function evaluateMultiProvinceAiTurn(params: {
           (p.buildings.supplyDepot || 0) < 4
       );
       const lowManpower = actorNation.manpower < 18000;
-      const behindInTech = actorNation.unlockedTechs.length < 3;
+      const behindInTech = actorNation.unlockedTechs.length < (isMasterAiDifficulty ? 6 : 3);
       const highInflation = (actorNation.inflation || 0) >= 6;
+      const hasSci1 = actorNation.unlockedTechs.includes('sci_1');
+      const hasSci2 = actorNation.unlockedTechs.includes('sci_2');
+      const hasAdm1 = actorNation.unlockedTechs.includes('adm_1');
 
       let chosenBuilding: BuildingType | undefined;
       let econTarget: Territory | undefined;
+
+      const capitalProv = ownedProvinces.find(
+        (p) => p.isCapital || p.id === actorNation.capitalTerritoryId
+      );
 
       if (overSupplyProv) {
         econTarget = overSupplyProv;
@@ -1286,6 +1308,14 @@ export function evaluateMultiProvinceAiTurn(params: {
           (overSupplyProv.buildings.granary || 0)
             ? 'supplyDepot'
             : 'granary';
+      } else if (
+        capitalProv &&
+        hasAdm1 &&
+        (capitalProv.buildings.capitalPalace || 0) < 3 &&
+        stepIndex % 2 === 0
+      ) {
+        econTarget = capitalProv;
+        chosenBuilding = 'capitalPalace';
       } else if (
         (hasThreatenedBorder || actorPersonality === 'DEFENDER') &&
         weakestBorder &&
@@ -1342,24 +1372,30 @@ export function evaluateMultiProvinceAiTurn(params: {
         if (econTarget) {
           const isStraitProv = straitShoreSet.has(econTarget.id);
           const isCoastalProv = isTerritoryCoastal(econTarget);
+          const isCapProv =
+            Boolean(econTarget.isCapital) ||
+            econTarget.id === actorNation.capitalTerritoryId;
           const candidateBuildings: BuildingType[] =
             actorPersonality === 'MERCHANT'
               ? isCoastalProv
-                ? ['shipyard', 'tradeHub', 'mint', 'factory', 'university', 'granary']
-                : ['tradeHub', 'factory', 'mint', 'university', 'granary', 'supplyDepot']
+                ? ['shipyard', 'tradeHub', 'mint', 'factory', 'highSchool', 'school', 'university', 'granary']
+                : ['tradeHub', 'factory', 'mint', 'highSchool', 'school', 'university', 'granary', 'supplyDepot']
               : actorPersonality === 'CONQUEROR' || actorPersonality === 'REVANCHIST'
-              ? ['barracks', 'supplyDepot', 'factory', 'fortress', 'granary', 'shipyard', 'mint']
+              ? ['factory', 'barracks', 'school', 'highSchool', 'university', 'supplyDepot', 'fortress', 'granary', 'shipyard', 'mint']
               : actorPersonality === 'DEFENDER'
-              ? ['fortress', 'granary', 'supplyDepot', 'factory', 'mint', 'university', 'shipyard']
+              ? ['fortress', 'factory', 'school', 'highSchool', 'granary', 'supplyDepot', 'mint', 'university', 'shipyard']
               : isStraitProv
-              ? ['shipyard', 'tradeHub', 'fortress', 'factory', 'mint', 'university']
+              ? ['shipyard', 'tradeHub', 'fortress', 'factory', 'mint', 'highSchool', 'university']
               : behindInTech
-              ? ['university', 'factory', 'mint', 'tradeHub', 'granary', 'barracks']
-              : ['factory', 'tradeHub', 'mint', 'granary', 'university', 'barracks', 'fortress'];
+              ? ['school', 'highSchool', 'university', 'factory', 'mint', 'tradeHub', 'granary', 'barracks']
+              : ['factory', 'tradeHub', 'school', 'highSchool', 'university', 'mint', 'granary', 'barracks', 'fortress'];
           chosenBuilding = candidateBuildings.find(
             (bKey) =>
               (econTarget!.buildings[bKey] || 0) < 5 &&
-              (bKey !== 'shipyard' || isCoastalProv)
+              (bKey !== 'shipyard' || isCoastalProv) &&
+              (bKey !== 'capitalPalace' || (isCapProv && hasAdm1)) &&
+              (bKey !== 'school' || hasSci1) &&
+              (bKey !== 'highSchool' || hasSci2)
           );
         }
       }
@@ -2035,15 +2071,18 @@ export function evaluateMultiProvinceAiTurn(params: {
     }
   }
 
-  // 5. Strategic Coalition-Aware War Evaluation (Never declare suicidal or unstable wars!)
+  // 5. Strategic Coalition-Aware War Evaluation (Never declare suicidal or reckless wars!)
+  // On high/max difficulty (AGGRESSIVE / CHAOS), AI nations do NOT spam random wars;
+  // instead they build up their economy/tech and strike only when stability, treasury,
+  // manpower, and coalition power ratios are decisively in their favor.
   const maxAllowedGlobalWars =
     aiAggressiveness === 'PASSIVE'
       ? 1
       : aiAggressiveness === 'NORMAL'
       ? 3
       : aiAggressiveness === 'AGGRESSIVE'
-      ? 5
-      : 8;
+      ? 3
+      : 4;
 
   const localRatioThreshold =
     aiAggressiveness === 'PASSIVE'
@@ -2051,22 +2090,27 @@ export function evaluateMultiProvinceAiTurn(params: {
       : aiAggressiveness === 'NORMAL'
       ? 1.35
       : aiAggressiveness === 'AGGRESSIVE'
-      ? 1.15
-      : 1.0;
+      ? 1.25
+      : 1.18;
 
   const coalitionRatioThreshold =
     aiAggressiveness === 'PASSIVE'
       ? 1.55
       : aiAggressiveness === 'NORMAL'
-      ? 1.12
+      ? 1.15
       : aiAggressiveness === 'AGGRESSIVE'
-      ? 0.92
-      : 0.78;
+      ? 1.18
+      : 1.12;
+
+  const minWarStability = isMasterAiDifficulty ? 56 : 45;
+  const minWarManpower = isMasterAiDifficulty ? 9000 : 5000;
+  const minWarTreasury = isMasterAiDifficulty ? 750 : 350;
 
   const actorReadyForOffensiveWar =
     !actorInAnyWar &&
-    actorNation.stability >= 45 &&
-    actorNation.manpower >= 5000 &&
+    actorNation.stability >= minWarStability &&
+    actorNation.manpower >= minWarManpower &&
+    actorNation.treasury >= minWarTreasury &&
     wars.length < maxAllowedGlobalWars;
 
   if (actorReadyForOffensiveWar) {

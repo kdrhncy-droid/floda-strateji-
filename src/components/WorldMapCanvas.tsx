@@ -334,16 +334,18 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
 
   // Center on capital once when campaign starts or nation changes
   useEffect(() => {
-    const key = `${playerNationId}_${features.length}`;
+    const capId =
+      nations[playerNationId]?.capitalTerritoryId || playerNationId;
+    const key = `${playerNationId}_${capId}_${features.length}`;
     if (
       playerNationId &&
-      territories[playerNationId] &&
+      territories[capId] &&
       lastCenteredKeyRef.current !== key
     ) {
       lastCenteredKeyRef.current = key;
-      centerOnTerritory(playerNationId, 2.2);
+      centerOnTerritory(capId, 2.2);
     }
-  }, [playerNationId, features.length, territories, centerOnTerritory]);
+  }, [playerNationId, nations, features.length, territories, centerOnTerritory]);
 
   // Re-center on player's capital whenever triggered from TopHudBar
   useEffect(() => {

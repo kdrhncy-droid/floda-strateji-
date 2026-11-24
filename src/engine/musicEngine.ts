@@ -502,7 +502,7 @@ class NationalMusicEngine {
 
     const outNode = this.getOutputNode() || this.ctx.destination;
 
-    // 1. Lead Mehter Zurna / Brass Voice (with nasal reed formant filter for Mehter tracks)
+    // 1. Lead Mehter Zurna / Brass Voice (warm lowpass-shaped acoustic reed & horn)
     const freq = N[step.note] || 0;
     if (freq > 0) {
       const osc1 = this.ctx.createOscillator();
@@ -510,22 +510,20 @@ class NationalMusicEngine {
       const filter = this.ctx.createBiquadFilter();
       const gain = this.ctx.createGain();
 
-      osc1.type = 'sawtooth';
-      osc2.type = isMehter ? 'sawtooth' : 'triangle';
+      osc1.type = 'triangle';
+      osc2.type = isMehter ? 'sawtooth' : 'sine';
       osc1.frequency.setValueAtTime(freq, now);
-      osc2.frequency.setValueAtTime(freq * (isMehter ? 1.0045 : 1.003), now);
+      osc2.frequency.setValueAtTime(freq * (isMehter ? 1.003 : 1.002), now);
 
-      filter.type = isMehter ? 'bandpass' : 'lowpass';
-      filter.frequency.setValueAtTime(isMehter ? 1320 : 1450, now);
-      if (isMehter) {
-        filter.Q.setValueAtTime(1.4, now);
-      }
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(isMehter ? 920 : 1080, now);
+      filter.Q.setValueAtTime(isMehter ? 0.9 : 0.7, now);
 
       gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(isMehter ? 0.11 : 0.09, now + 0.025);
+      gain.gain.linearRampToValueAtTime(isMehter ? 0.068 : 0.062, now + 0.032);
       gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        now + Math.max(0.08, stepDurationSec * 0.92)
+        0.0008,
+        now + Math.max(0.09, stepDurationSec * 0.94)
       );
 
       osc1.connect(filter);
@@ -543,18 +541,23 @@ class NationalMusicEngine {
     const bassFreq = step.bass ? N[step.bass] || 0 : 0;
     if (bassFreq > 0) {
       const bassOsc = this.ctx.createOscillator();
+      const bassFilter = this.ctx.createBiquadFilter();
       const bassGain = this.ctx.createGain();
-      bassOsc.type = 'triangle';
+      bassOsc.type = 'sine';
       bassOsc.frequency.setValueAtTime(bassFreq * 0.5, now);
 
+      bassFilter.type = 'lowpass';
+      bassFilter.frequency.setValueAtTime(420, now);
+
       bassGain.gain.setValueAtTime(0.001, now);
-      bassGain.gain.linearRampToValueAtTime(0.08, now + 0.02);
+      bassGain.gain.linearRampToValueAtTime(0.065, now + 0.025);
       bassGain.gain.exponentialRampToValueAtTime(
-        0.001,
-        now + Math.max(0.08, stepDurationSec * 0.85)
+        0.0008,
+        now + Math.max(0.09, stepDurationSec * 0.88)
       );
 
-      bassOsc.connect(bassGain);
+      bassOsc.connect(bassFilter);
+      bassFilter.connect(bassGain);
       bassGain.connect(outNode);
       bassOsc.start(now);
       bassOsc.stop(now + stepDurationSec);
@@ -569,11 +572,11 @@ class NationalMusicEngine {
       const kickOsc = this.ctx.createOscillator();
       const kickGain = this.ctx.createGain();
       kickOsc.type = 'sine';
-      kickOsc.frequency.setValueAtTime(125, now);
-      kickOsc.frequency.exponentialRampToValueAtTime(36, now + 0.16);
+      kickOsc.frequency.setValueAtTime(108, now);
+      kickOsc.frequency.exponentialRampToValueAtTime(38, now + 0.16);
 
-      kickGain.gain.setValueAtTime(0.13, now);
-      kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+      kickGain.gain.setValueAtTime(0.095, now);
+      kickGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.17);
 
       kickOsc.connect(kickGain);
       kickGain.connect(outNode);
@@ -583,38 +586,44 @@ class NationalMusicEngine {
 
     if (step.drum === 'SNARE' || step.drum === 'BOTH') {
       const snareOsc = this.ctx.createOscillator();
+      const snareFilter = this.ctx.createBiquadFilter();
       const snareGain = this.ctx.createGain();
       snareOsc.type = 'triangle';
-      snareOsc.frequency.setValueAtTime(250, now);
-      snareOsc.frequency.exponentialRampToValueAtTime(92, now + 0.065);
+      snareOsc.frequency.setValueAtTime(195, now);
+      snareOsc.frequency.exponentialRampToValueAtTime(84, now + 0.065);
 
-      snareGain.gain.setValueAtTime(0.05, now);
-      snareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+      snareFilter.type = 'lowpass';
+      snareFilter.frequency.setValueAtTime(520, now);
 
-      snareOsc.connect(snareGain);
+      snareGain.gain.setValueAtTime(0.036, now);
+      snareGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.075);
+
+      snareOsc.connect(snareFilter);
+      snareFilter.connect(snareGain);
       snareGain.connect(outNode);
       snareOsc.start(now);
       snareOsc.stop(now + 0.08);
     }
 
     if (step.drum === 'CEVGAN') {
-      // Metallic Mehter Zil / Çevgan Cymbal Shimmer
+      // Soft Bronze Bell / Çevgan Chime
       const zilOsc = this.ctx.createOscillator();
       const zilFilter = this.ctx.createBiquadFilter();
       const zilGain = this.ctx.createGain();
-      zilOsc.type = 'square';
-      zilOsc.frequency.setValueAtTime(3150, now);
-      zilFilter.type = 'highpass';
-      zilFilter.frequency.setValueAtTime(2400, now);
+      zilOsc.type = 'triangle';
+      zilOsc.frequency.setValueAtTime(1240, now);
+      zilFilter.type = 'bandpass';
+      zilFilter.frequency.setValueAtTime(1180, now);
+      zilFilter.Q.setValueAtTime(1.2, now);
 
-      zilGain.gain.setValueAtTime(0.025, now);
-      zilGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.14);
+      zilGain.gain.setValueAtTime(0.018, now);
+      zilGain.gain.exponentialRampToValueAtTime(0.0006, now + 0.13);
 
       zilOsc.connect(zilFilter);
       zilFilter.connect(zilGain);
       zilGain.connect(outNode);
       zilOsc.start(now);
-      zilOsc.stop(now + 0.15);
+      zilOsc.stop(now + 0.14);
     }
 
     this.timerId = window.setTimeout(() => {

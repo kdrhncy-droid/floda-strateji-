@@ -36,7 +36,7 @@ export function adjustOccupiedUnrestDrift(
   return Number((baseDrift * 0.7).toFixed(2));
 }
 
-/** ADM_2 (-25%) and ADM_2B (-10%) reduce positive aggressive-expansion gains; losses are unchanged. */
+/** ADM_2 (-25%), ADM_2B (-10%), and ADM_6B (-15%) reduce positive aggressive-expansion gains; losses are unchanged. */
 export function adjustAggressiveExpansionGain(
   nation: NationTechState,
   baseGain: number
@@ -45,6 +45,7 @@ export function adjustAggressiveExpansionGain(
   let factor = 1.0;
   if (nation?.unlockedTechs?.includes('adm_2')) factor *= 0.75;
   if (nation?.unlockedTechs?.includes('adm_2b')) factor *= 0.9;
+  if (nation?.unlockedTechs?.includes('adm_6b')) factor *= 0.85;
   if (factor === 1.0) return baseGain;
   return Number((baseGain * factor).toFixed(2));
 }
@@ -190,6 +191,9 @@ export function calculateProvinceDevelopment(
     (bld.factory || 0) +
     (bld.tradeHub || 0) +
     (bld.university || 0) +
+    (bld.school || 0) +
+    (bld.highSchool || 0) +
+    (bld.capitalPalace || 0) +
     (bld.supplyDepot || 0) +
     (bld.barracks || 0) +
     (bld.fortress || 0) +
@@ -197,7 +201,7 @@ export function calculateProvinceDevelopment(
     (bld.mint || 0) +
     (bld.granary || 0);
 
-  // Local building investment multiplier (Sanayi, Liman, Tersane, Darphane, Ambar, İkmal, Üniversite)
+  // Local building investment multiplier (Sanayi, Liman, Tersane, Darphane, Ambar, İkmal, Okul, Medrese, Üniversite, Saray)
   const buildingInvestmentMult = Number(
     (
       1 +
@@ -207,7 +211,10 @@ export function calculateProvinceDevelopment(
       (bld.mint || 0) * 0.16 +
       (bld.granary || 0) * 0.15 +
       (bld.supplyDepot || 0) * 0.14 +
-      (bld.university || 0) * 0.12
+      (bld.university || 0) * 0.12 +
+      (bld.highSchool || 0) * 0.1 +
+      (bld.school || 0) * 0.06 +
+      (bld.capitalPalace || 0) * 0.18
     ).toFixed(2)
   );
 
@@ -222,12 +229,14 @@ export function calculateProvinceDevelopment(
   if (unlockedTechs.includes('eco_4')) techMult += 0.18;
   if (unlockedTechs.includes('eco_5')) techMult += 0.2;
   if (unlockedTechs.includes('eco_5b')) techMult += 0.18;
+  if (unlockedTechs.includes('eco_6')) techMult += 0.22;
   if (unlockedTechs.includes('adm_3b')) techMult += 0.12;
   if (unlockedTechs.includes('sci_1')) techMult += 0.08;
   if (unlockedTechs.includes('sci_2')) techMult += 0.15;
   if (unlockedTechs.includes('sci_4')) techMult += 0.25;
   if (unlockedTechs.includes('sci_4b')) techMult += 0.16;
   if (unlockedTechs.includes('sci_5')) techMult += 0.2;
+  if (unlockedTechs.includes('sci_6b')) techMult += 0.2;
   if (enactedReforms.includes('ref_free_trade_zones')) techMult += 0.12;
   const techInvestmentMult = Number(techMult.toFixed(2));
 
@@ -245,7 +254,7 @@ export function calculateProvinceDevelopment(
   const effectiveDailyGdp = Math.max(
     15,
     Math.round(
-      (baseGdp * resGdpMult * (1 + (bld.factory || 0) * 0.25) +
+      (baseGdp * resGdpMult * (1 + (bld.factory || 0) * 0.25 + (bld.highSchool || 0) * 0.1) +
         (effectiveResourceValue - baseResourceValue) * 0.9) *
         unrestPenalty
     )
@@ -262,6 +271,9 @@ export function calculateProvinceDevelopment(
     (bld.tradeHub || 0) * 7 +
     (bld.shipyard || 0) * 7 +
     (bld.university || 0) * 6 +
+    (bld.highSchool || 0) * 5 +
+    (bld.school || 0) * 4 +
+    (bld.capitalPalace || 0) * 8 +
     (bld.mint || 0) * 5 +
     (bld.granary || 0) * 5 +
     (bld.supplyDepot || 0) * 5 +
@@ -507,14 +519,20 @@ export function calculateNationEconomy(
       ? dev.effectiveDailyGdp * 0.75
       : dev.effectiveDailyGdp;
     baseProduction += effectiveProd;
-    universityOutput += (bld.university || 0) * 4.5;
+    universityOutput +=
+      (bld.university || 0) * 4.5 +
+      (bld.highSchool || 0) * 3.2 +
+      (bld.school || 0) * 2.0 +
+      (bld.capitalPalace || 0) * 1.5;
     barracksManpower += (bld.barracks || 0) * 350;
     granaryManpower += (bld.granary || 0) * 220;
     tradeHubBonus += (bld.tradeHub || 0) * (isBlockadedByFleet ? 0.1 : 0.2);
     shipyardBonus += (bld.shipyard || 0) * (isBlockadedByFleet ? 0.08 : 0.22);
     tradeHubLevels += bld.tradeHub || 0;
     mintLevels += bld.mint || 0;
-    mintTaxBoost += effectiveProd * (bld.mint || 0) * 0.14;
+    mintTaxBoost +=
+      effectiveProd *
+      ((bld.mint || 0) * 0.14 + (bld.capitalPalace || 0) * 0.12);
 
     const resourceEffect = RESOURCE_ECONOMIC_EFFECTS[t.resource];
     if (resourceEffect && !claimedResourceBonuses.has(t.resource)) {
@@ -570,6 +588,7 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('eco_3b')) taxTechMult += 0.12;
   if (unlockedTechs.includes('eco_4')) taxTechMult += 0.2;
   if (unlockedTechs.includes('eco_5b')) taxTechMult += 0.25;
+  if (unlockedTechs.includes('eco_6')) taxTechMult += 0.2;
   if (enactedReforms.includes('ref_free_trade_zones')) taxTechMult += 0.2;
 
   const taxIncome = Math.round(
@@ -580,10 +599,12 @@ export function calculateNationEconomy(
   prodMult += resourceEffects.productionPct / 100;
   if (unlockedTechs.includes('eco_2')) prodMult += 0.25;
   if (unlockedTechs.includes('eco_2b')) prodMult += 0.15;
+  if (unlockedTechs.includes('eco_6')) prodMult += 0.25;
   if (unlockedTechs.includes('sci_2')) prodMult += 0.15;
   if (unlockedTechs.includes('sci_4')) prodMult += 0.35;
   if (unlockedTechs.includes('sci_4b')) prodMult += 0.2;
   if (unlockedTechs.includes('sci_5')) prodMult += 0.2;
+  if (unlockedTechs.includes('sci_6b')) prodMult += 0.2;
 
   const productionIncome = Math.round(baseProduction * 0.48 * prodMult);
 
@@ -605,6 +626,7 @@ export function calculateNationEconomy(
     resourceEffects.tradePct / 100;
   if (unlockedTechs.includes('eco_3')) tradeMult += 0.3;
   if (unlockedTechs.includes('eco_4b')) tradeMult += 0.18;
+  if (unlockedTechs.includes('eco_6b')) tradeMult += 0.25;
   if (enactedReforms.includes('ref_free_trade_zones')) tradeMult += 0.2;
 
   const embargoResistance = unlockedTechs.includes('sci_2') ? 0.5 : 1.0;
@@ -626,6 +648,7 @@ export function calculateNationEconomy(
   });
   let maritimeTradeTechMult = 1.0;
   if (unlockedTechs.includes('eco_5')) maritimeTradeTechMult += 0.25;
+  if (unlockedTechs.includes('eco_6b')) maritimeTradeTechMult += 0.25;
   if (unlockedTechs.includes('mil_3b')) maritimeTradeTechMult += 0.12;
   if (unlockedTechs.includes('sci_3b')) maritimeTradeTechMult += 0.15;
   const straitTollIncome = Math.round(
@@ -656,6 +679,7 @@ export function calculateNationEconomy(
   let vassalTechMult = 1.0;
   if (unlockedTechs.includes('adm_4')) vassalTechMult += 0.5;
   if (unlockedTechs.includes('adm_5b')) vassalTechMult += 0.3;
+  if (unlockedTechs.includes('adm_6b')) vassalTechMult += 0.35;
   if (vassalTechMult > 1.0) {
     vassalIncome = Math.round(vassalIncome * vassalTechMult);
   }
@@ -700,6 +724,8 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('sci_3')) researchMult += 0.25;
   if (unlockedTechs.includes('sci_5')) researchMult += 0.3;
   if (unlockedTechs.includes('sci_5b')) researchMult += 0.35;
+  if (unlockedTechs.includes('sci_6')) researchMult += 0.35;
+  if (unlockedTechs.includes('sci_6b')) researchMult += 0.25;
   const dailyResearch = Number((researchBase * researchMult).toFixed(1));
 
   // totalPopulation is stored in thousands (e.g. 86,500 = 86.5M). Use a damped power curve so
@@ -717,11 +743,13 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('eco_1b')) manpowerMult += 0.1;
   if (unlockedTechs.includes('sci_1b')) manpowerMult += 0.15;
   if (unlockedTechs.includes('adm_3')) manpowerMult += 0.35;
+  if (unlockedTechs.includes('adm_6')) manpowerMult += 0.2;
   const dailyManpower = Math.round(manpowerBase * manpowerMult);
 
   let techInflationRelief = 0;
   if (unlockedTechs.includes('eco_3b')) techInflationRelief += 0.02;
   if (unlockedTechs.includes('eco_5b')) techInflationRelief += 0.025;
+  if (unlockedTechs.includes('eco_6b')) techInflationRelief += 0.025;
 
   return {
     territoryCount: ownedTerritories.length,
@@ -847,6 +875,7 @@ export function computeNationNavalBonus(
   const unlocked = nation?.unlockedTechs || [];
   if (unlocked.includes('mil_1b')) bonus += 0.15;
   if (unlocked.includes('mil_3b')) bonus += 0.2;
+  if (unlocked.includes('mil_6b')) bonus += 0.25;
   if (unlocked.includes('sci_3b')) bonus += 0.15;
   return Number(bonus.toFixed(2));
 }
@@ -870,6 +899,7 @@ export function computeCombatStrength(
   if (unlockedTechs.includes('mil_2')) mult += 0.18;
   if (unlockedTechs.includes('mil_3')) mult += 0.25;
   if (unlockedTechs.includes('mil_5')) mult += 0.2;
+  if (unlockedTechs.includes('mil_6')) mult += 0.25;
   if (unlockedTechs.includes('sci_5b')) mult += 0.15;
   if (!isDefender && unlockedTechs.includes('mil_5b')) mult += 0.2;
   if (enactedReforms.includes('ref_professional_army')) mult += 0.15;
@@ -927,6 +957,7 @@ export function computeCombatStrength(
 
     if (unlockedTechs.includes('mil_2b')) mult += 0.15;
     if (unlockedTechs.includes('mil_4')) mult += 0.3;
+    if (unlockedTechs.includes('mil_6')) mult += 0.15;
     if (isTerritoryCoastal(territory)) {
       mult += (territory?.buildings?.shipyard || 0) * 0.08;
     }
