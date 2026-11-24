@@ -10,6 +10,7 @@ import {
   Menu,
   Newspaper,
   Compass,
+  Music,
 } from 'lucide-react';
 import {
   BottomDrawerTab,
@@ -32,6 +33,7 @@ import { sound } from '../../utils/soundEngine';
 interface TopHudBarProps {
   playerNation: Nation;
   playerEconomy: NationEconomyBreakdown;
+  playerManpowerCap?: number;
   activeTab: BottomDrawerTab;
   tick: number;
   hour?: number;
@@ -51,6 +53,7 @@ interface TopHudBarProps {
 const SPEED_STEPS: ReadonlyArray<{ level: SpeedLevel; label: string }> = [
   { level: 1, label: '1x' },
   { level: 2, label: '2x' },
+  { level: 3, label: '3x' },
   { level: 4, label: '4x' },
   { level: 5, label: '5x' },
 ];
@@ -58,6 +61,7 @@ const SPEED_STEPS: ReadonlyArray<{ level: SpeedLevel; label: string }> = [
 export const TopHudBar: React.FC<TopHudBarProps> = ({
   playerNation,
   playerEconomy,
+  playerManpowerCap,
   activeTab,
   tick,
   hour = 8,
@@ -86,13 +90,17 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
       : 'text-orange-300';
   const hourLabel = `${String(hour % 24).padStart(2, '0')}:00`;
   const hourlyRateLabel = getClockSpeedProfile(speed).rateLabel;
+  const isManpowerFull =
+    typeof playerManpowerCap === 'number' &&
+    playerNation.manpower >= playerManpowerCap;
 
   const cycleSpeed = () => {
     sound.playClick();
     const nextSpeed: Record<SpeedLevel, SpeedLevel> = {
       0: 1,
       1: 2,
-      2: 4,
+      2: 3,
+      3: 4,
       4: 5,
       5: 1,
     };
@@ -226,13 +234,13 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               music.toggle();
             }}
             aria-label="Müziği aç veya kapat"
-            className={`w-[28px] h-[32px] rounded-xl border flex items-center justify-center text-xs font-bold ${
+            className={`w-[28px] h-[32px] rounded-xl border flex items-center justify-center ${
               isMusicPlaying
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
                 : 'bg-[#0c1324] text-slate-400 border-slate-800'
             }`}
           >
-            ♫
+            <Music className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -267,12 +275,29 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
           onClick={() =>
             onSetActiveTab(activeTab === 'MILITARY' ? 'NONE' : 'MILITARY')
           }
-          title="İnsan Gücü (Yedek Asker Havuzu)"
+          title={
+            typeof playerManpowerCap === 'number'
+              ? `İnsan Gücü: ${Math.round(playerNation.manpower).toLocaleString('tr-TR')} / ${playerManpowerCap.toLocaleString('tr-TR')} (${isManpowerFull ? 'Kapasite Dolu' : `+${playerEconomy.dailyManpower.toLocaleString('tr-TR')}/gün`})`
+              : `İnsan Gücü (+${playerEconomy.dailyManpower.toLocaleString('tr-TR')}/gün)`
+          }
           className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#0c1324] border border-emerald-500/30 hover:border-emerald-400 shrink-0"
         >
           <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400 shrink-0" />
           <span className="font-mono-num text-[11px] sm:text-xs font-bold text-white whitespace-nowrap">
-            {(playerNation.manpower / 1000).toFixed(0)}B
+            {(playerNation.manpower / 1000).toFixed(1)}B
+          </span>
+          <span
+            className={`hud-narrow-landscape-hide font-mono-num text-[10px] font-semibold whitespace-nowrap ${
+              isManpowerFull ? 'text-amber-300' : 'text-emerald-400'
+            }`}
+          >
+            (
+            {isManpowerFull
+              ? 'MAX'
+              : playerEconomy.dailyManpower >= 1000
+              ? `+${(playerEconomy.dailyManpower / 1000).toFixed(1)}B`
+              : `+${playerEconomy.dailyManpower}`}
+            )
           </span>
         </button>
 
@@ -291,6 +316,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
 
         {playerNation.activeResearch ? (
           <button
+            data-testid="hud-research-btn"
             onClick={() => {
               sound.playClick();
               onSetActiveTab(activeTab === 'GOVERNMENT' ? 'NONE' : 'GOVERNMENT');
@@ -298,7 +324,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             title="Aktif Teknoloji Araştırması"
             className="relative flex items-center justify-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#0c1324] border border-sky-500/50 hover:border-sky-400 shrink-0 shadow-sm"
           >
-            <FlaskConical className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400 shrink-0 animate-pulse" />
+            <FlaskConical className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400 shrink-0" />
             <span className="font-mono-num text-[11px] sm:text-xs font-bold text-sky-200 whitespace-nowrap">
               %{Math.min(100, Math.round((playerNation.activeResearch.progress / playerNation.activeResearch.totalCost) * 100))}
             </span>
@@ -316,12 +342,13 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
           </button>
         ) : (
           <button
+            data-testid="hud-research-btn"
             onClick={() => {
               sound.playClick();
               onSetActiveTab(activeTab === 'GOVERNMENT' ? 'NONE' : 'GOVERNMENT');
             }}
-            title="Teknoloji Araştırması Başlat (Bilim Boşta!)"
-            className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-amber-950/40 border border-amber-500/50 hover:border-amber-400 shrink-0 animate-pulse"
+            title="Teknoloji Araştırması Başlat (Bilim Boşta)"
+            className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-amber-950/40 border border-amber-500/50 hover:border-amber-400 shrink-0"
           >
             <FlaskConical className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
             <span className="font-mono-num text-[10px] sm:text-[11px] font-extrabold text-amber-200 whitespace-nowrap">
@@ -343,8 +370,8 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             >
               · {seasonInfo.name}
             </span>
-            <span className="hud-landscape-hide px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px]">
-              🕒 {hourLabel}
+            <span className="hud-landscape-hide text-amber-200/90 text-[10px] font-mono-num">
+              · {hourLabel}
             </span>
           </div>
           {/* AoH3 Speed Pips */}
@@ -409,13 +436,14 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             music.toggle();
           }}
           title="Ulusal Marş & Müzik Kutusu"
-          className={`min-w-[34px] min-h-[36px] px-2 rounded-xl border flex items-center justify-center gap-1 text-xs font-bold transition-colors shrink-0 ${
+          aria-label="Ulusal marşı aç veya kapat"
+          className={`min-w-[34px] min-h-[36px] px-2 rounded-xl border flex items-center justify-center gap-1 transition-colors shrink-0 ${
             isMusicPlaying
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
               : 'bg-[#0c1324] text-slate-400 border-slate-800 hover:text-slate-200'
           }`}
         >
-          <span>♫</span>
+          <Music className="w-3.5 h-3.5" />
         </button>
 
         <button

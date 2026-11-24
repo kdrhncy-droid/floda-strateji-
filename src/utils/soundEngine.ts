@@ -2,7 +2,33 @@
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private volumeScale: number = 0.68;
   public enabled: boolean = true;
+
+  public setVolumes(masterPct: number, sfxPct: number) {
+    const m = Math.max(0, Math.min(100, masterPct)) / 100;
+    const s = Math.max(0, Math.min(100, sfxPct)) / 100;
+    this.volumeScale = m * s;
+    this.enabled = this.volumeScale > 0.005;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(
+        this.volumeScale,
+        this.ctx.currentTime,
+        0.02
+      );
+    }
+  }
+
+  private getOutputNode(): AudioNode | null {
+    if (!this.ctx) return null;
+    if (!this.masterGain) {
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.setValueAtTime(this.volumeScale, this.ctx.currentTime);
+      this.masterGain.connect(this.ctx.destination);
+    }
+    return this.masterGain;
+  }
 
   private init() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -17,6 +43,7 @@ class SoundEngine {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
+    this.getOutputNode();
   }
 
   private vibrate(pattern: number | number[]) {
@@ -45,8 +72,9 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.045);
 
+    const out = this.getOutputNode() || this.ctx.destination;
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(out);
     osc.start();
     osc.stop(this.ctx.currentTime + 0.05);
   }
@@ -66,8 +94,9 @@ class SoundEngine {
     gain.gain.setValueAtTime(0.09, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.07);
 
+    const out = this.getOutputNode() || this.ctx.destination;
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    gain.connect(out);
     osc.start();
     osc.stop(this.ctx.currentTime + 0.075);
   }
@@ -103,7 +132,7 @@ class SoundEngine {
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(cutoffHz, this.ctx.currentTime);
     filter.Q.setValueAtTime(0.7, this.ctx.currentTime);
-    filter.connect(this.ctx.destination);
+    filter.connect(this.getOutputNode() || this.ctx.destination);
     return filter;
   }
 

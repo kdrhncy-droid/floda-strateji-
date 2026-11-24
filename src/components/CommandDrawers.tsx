@@ -38,6 +38,8 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
             ? 'max-h-[48px]'
             : drawerSizeMode === 'COMPACT'
             ? 'max-h-[42vh] landscape:max-h-[48vh]'
+            : activeTab === 'GOVERNMENT'
+            ? 'max-h-[84vh] landscape:max-h-[86vh]'
             : 'max-h-[76vh] landscape:max-h-[78vh]'
         } flex flex-col overflow-hidden transition-all`}
       >

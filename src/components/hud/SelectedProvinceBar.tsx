@@ -192,8 +192,9 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
       {isOrderActive && (
         <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-sky-950/90 border border-sky-400/50 text-[11px]">
           <span className="font-bold text-sky-200 truncate">
-            🎯 Hedef şehre dokunun · %{Math.round(moveRatio * 100)} (
-            {plannedSendTroops.toLocaleString('tr-TR')} asker doğrudan ilerleyecek)
+            {territory.isCoastal
+              ? `Hedef şehre veya açık denize dokunun · %${Math.round(moveRatio * 100)} (${plannedSendTroops.toLocaleString('tr-TR')} asker)`
+              : `Hedef şehre dokunun · %${Math.round(moveRatio * 100)} (${plannedSendTroops.toLocaleString('tr-TR')} asker)`}
           </span>
           <button
             type="button"
@@ -555,6 +556,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
 
           {isPlayerOwned &&
             onAssimilateTerritory &&
+            !territory.isOccupied &&
             !territory.isAssimilating &&
             (territory.coreOwnerId !== playerNationId ||
               (territory.assimilation ?? 100) < 100) && (

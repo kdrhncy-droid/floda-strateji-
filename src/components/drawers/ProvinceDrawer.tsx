@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Swords, ArrowRight } from "lucide-react";
+import { Swords, ArrowRight, Shield, Flag, Landmark, Crown, Globe } from "lucide-react";
 import { CommandDrawersProps } from "./drawerTypes";
 import { ProvinceForeignDiplomacyPanel } from "./ProvinceForeignDiplomacyPanel";
 import { ProvinceFiefPanel } from "./ProvinceFiefPanel";
@@ -167,13 +167,13 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                               style={{ backgroundColor: `${culDef?.color || '#DC2626'}dd` }}
                               title={`${culDef?.name}: ${culDef?.description}`}
                             >
-                              🏹 {culDef?.name}
+                              {culDef?.name}
                             </span>
                           </div>
                         </div>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border inline-flex items-center gap-1 ${
                           isSelectedPlayerOwned
                             ? 'bg-emerald-950/90 border-emerald-400/60 text-emerald-300'
                             : isAtWar(wars, playerNation.id, selectedOwner.id)
@@ -181,11 +181,22 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                             : 'bg-slate-900/90 border-slate-700 text-slate-300'
                         }`}
                       >
-                        {isSelectedPlayerOwned
-                          ? '🛡 SİZİN EYALETİNİZ'
-                          : isAtWar(wars, playerNation.id, selectedOwner.id)
-                          ? '⚔️ DÜŞMAN TOPRAĞI'
-                          : '🏳 YABANCI EYALET'}
+                        {isSelectedPlayerOwned ? (
+                          <>
+                            <Shield className="w-3 h-3 shrink-0" />
+                            <span>SİZİN EYALETİNİZ</span>
+                          </>
+                        ) : isAtWar(wars, playerNation.id, selectedOwner.id) ? (
+                          <>
+                            <Swords className="w-3 h-3 shrink-0" />
+                            <span>DÜŞMAN TOPRAĞI</span>
+                          </>
+                        ) : (
+                          <>
+                            <Flag className="w-3 h-3 shrink-0" />
+                            <span>YABANCI EYALET</span>
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -406,7 +417,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                             : 'text-slate-300 hover:text-white'
                         }`}
                       >
-                        <span className="text-sm leading-none">⚔️</span>
+                        <Swords className="w-3.5 h-3.5" />
                         <span>Ordu</span>
                         <span className="text-[9px] font-medium opacity-70">Hareket & birlik</span>
                       </button>
@@ -420,7 +431,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                             : 'text-slate-300 hover:text-white'
                         }`}
                       >
-                        <span className="text-sm leading-none">🏛️</span>
+                        <Landmark className="w-3.5 h-3.5" />
                         <span>Ekonomi</span>
                         <span className="text-[9px] font-medium opacity-70">Bina & gelir</span>
                       </button>
@@ -434,24 +445,33 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                             : 'text-slate-300 hover:text-white'
                         }`}
                       >
-                        <span className="text-sm leading-none">⚜️</span>
+                        <Crown className="w-3.5 h-3.5" />
                         <span>Yönetim</span>
                         <span className="text-[9px] font-medium opacity-70">Tımar & vali</span>
                       </button>
                     </div>
                   )}
 
-                  {/* Assimilate Non-Core Province Card (AoH3 Style — visible across all sub-tabs) */}
+                  {/* Assimilate Non-Core Province Card (AoH3 Style — disabled during temporary wartime occupation) */}
                   {isSelectedPlayerOwned &&
                     (selectedTerritory.coreOwnerId !== playerNation.id ||
                       (selectedTerritory.assimilation ?? 100) < 100 ||
                       selectedTerritory.isAssimilating) && (
                       <div className="block">
-                        {selectedTerritory.isAssimilating ? (
+                        {selectedTerritory.isOccupied ? (
+                          <div className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/80 border border-amber-500/30 text-amber-200/90 text-[11px] flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-1.5 font-semibold">
+                              <Globe className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span>
+                                Geçici Savaş İşgali — Barış Konferansı ile kalıcı ilhak sonrası asimile edilebilir.
+                              </span>
+                            </span>
+                          </div>
+                        ) : selectedTerritory.isAssimilating ? (
                           <div className="w-full p-3 rounded-xl bg-orange-950/40 border border-orange-500/50 space-y-2">
                             <div className="flex items-center justify-between text-xs font-bold text-orange-200">
                               <span className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-orange-400 animate-ping" />
+                                <Globe className="w-3.5 h-3.5 text-orange-300 shrink-0" />
                                 Asimilasyon & Core Entegrasyonu Devam Ediyor
                               </span>
                               <span className="font-mono-num text-amber-300">
@@ -488,13 +508,16 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                             }
                             className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/50 text-orange-200 text-xs font-bold flex items-center justify-between transition-colors shadow-sm"
                           >
-                            <span className="text-left">
-                              🌍 Eyaleti Asimile Et (%
-                              {Math.round(
-                                selectedTerritory.assimilation ??
-                                  (selectedTerritory.coreOwnerId === playerNation.id ? 75 : 25)
-                              )}{' '}
-                              → %100 Öz Vatan Yap)
+                            <span className="text-left flex items-center gap-1.5">
+                              <Globe className="w-3.5 h-3.5 text-orange-300 shrink-0" />
+                              <span>
+                                Eyaleti Asimile Et (%
+                                {Math.round(
+                                  selectedTerritory.assimilation ??
+                                    (selectedTerritory.coreOwnerId === playerNation.id ? 75 : 25)
+                                )}{' '}
+                                → %100 Öz Vatan Yap)
+                              </span>
                             </span>
                             <span className="font-mono-num text-orange-300 shrink-0 ml-2">
                               180 Altın · ~60 Gün
@@ -518,8 +541,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                           <div className="w-full p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/50 space-y-2">
                             <div className="flex items-center justify-between text-xs font-bold text-emerald-200">
                               <span className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                                ☪ Dini Tebliğ & İrşad Faaliyeti Sürüyor
+                                <span>Dini Tebliğ & İrşad Faaliyeti Sürüyor</span>
                               </span>
                               <span className="font-mono-num text-emerald-300">
                                 %{Math.round(
@@ -699,7 +721,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                           className="w-full min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
                         >
                           <Swords className="w-4 h-4" />
-                          <span>🧭 Haritadan Hedef Seç & Hareket Et (Doğrudan Rota)</span>
+                          <span>Haritadan Hedef Seç & Hareket Et (Doğrudan Rota)</span>
                         </button>
 
                         {/* Quick Neighbor Target Buttons */}

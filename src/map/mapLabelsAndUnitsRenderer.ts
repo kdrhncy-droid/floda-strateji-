@@ -39,6 +39,7 @@ export interface RenderLabelsParams {
   projection: GeoProjection;
   mapMode: MapMode;
   mapLabelDensity?: MapLabelDensityOption;
+  mapLabelScaleMultiplier?: number;
   playerNationId: string;
   selectedTerritoryId: string | null;
   armyOrderSourceId?: string | null;
@@ -208,6 +209,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     fogOfWarEnabled,
     visibleTerritoryIds,
     mapLabelDensity = 'BALANCED',
+    mapLabelScaleMultiplier = 1.0,
   } = params;
 
   const isMobileViewport = width < 768 || height < 540;
@@ -458,7 +460,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         isMobileViewport
       );
 
-      const mobileScale = isMobileViewport ? 0.87 : 1.0;
+      const mobileScale = (isMobileViewport ? 0.87 : 1.0) * mapLabelScaleMultiplier;
       const fontSize =
         (isSelected
           ? 10.2

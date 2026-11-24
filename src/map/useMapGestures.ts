@@ -116,6 +116,37 @@ export function useMapGestures(params: {
     [containerRef]
   );
 
+  const centerOnCoords = useCallback(
+    (coords: [number, number], targetScale = 2.6) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const width = container.clientWidth || 1024;
+      const height = container.clientHeight || 640;
+
+      const baseScale = getBaseProjectionScale(width, height);
+      const projection = geoNaturalEarth1()
+        .scale(baseScale)
+        .translate([width / 2, height / 2]);
+
+      const pt = projection(coords);
+      if (!pt) return;
+
+      const nextTransform = clampMapTransform(
+        {
+          k: targetScale,
+          x: width / 2 - pt[0] * targetScale,
+          y: height / 2 - pt[1] * targetScale,
+        },
+        width,
+        height
+      );
+      transformRef.current = nextTransform;
+      setTransform(nextTransform);
+    },
+    [containerRef]
+  );
+
   const reprojectOnResize = useCallback(
     (
       prevWidth: number,
@@ -420,6 +451,7 @@ export function useMapGestures(params: {
   return {
     transform,
     centerOnTerritory,
+    centerOnCoords,
     reprojectOnResize,
     zoomBy,
     handlers: {

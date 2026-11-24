@@ -820,24 +820,87 @@ export function resolveTacticalBattleOutcomeDomain(params: {
   if (cur) {
     if (isAttackerWinner) {
       const previousOwnerId = cur.ownerId;
-      const isCoreForConqueror = cur.coreOwnerId === finalBattle.attackerNationId;
-      nextTerrs[finalBattle.territoryId] = {
-        ...cur,
-        ownerId: finalBattle.attackerNationId,
-        isCapital: false,
-        garrison: Math.max(1000, outcome.attackerSurvivingTroops),
-        units: {
-          infantry: Math.round(outcome.attackerSurvivingTroops * 0.7),
-          armor: Math.round(outcome.attackerSurvivingTroops * 0.2),
-          airDrone: Math.round(outcome.attackerSurvivingTroops * 0.1),
-        },
-        unrest: isCoreForConqueror ? Math.max(0, cur.unrest - 10) : Math.min(80, cur.unrest + 25),
-        assimilation: isCoreForConqueror ? 100 : 25,
-        isAssimilating: false,
-        isOccupied: !isCoreForConqueror,
-        occupiedById: isCoreForConqueror ? undefined : finalBattle.attackerNationId,
-        castleWallHp: finalBattle.castleWallHp,
-      };
+      const coreId = cur.coreOwnerId;
+      const allyBeneficiary =
+        coreId &&
+        coreId !== finalBattle.attackerNationId &&
+        coreId !== previousOwnerId &&
+        nextNations[coreId] &&
+        (nextNations[coreId].vassalOf === finalBattle.attackerNationId ||
+          nextNations[finalBattle.attackerNationId]?.vassalOf === coreId ||
+          wars.some(
+            (w) =>
+              (w.attackers.includes(finalBattle.attackerNationId) &&
+                w.attackers.includes(coreId)) ||
+              (w.defenders.includes(finalBattle.attackerNationId) &&
+                w.defenders.includes(coreId))
+          ))
+          ? coreId
+          : null;
+
+      if (allyBeneficiary) {
+        const allyNation = nextNations[allyBeneficiary];
+        const allyWasEliminated = Boolean(allyNation?.isEliminated);
+        if (allyNation && allyWasEliminated) {
+          nextNations[allyBeneficiary] = {
+            ...allyNation,
+            isEliminated: false,
+            capitalTerritoryId: finalBattle.territoryId,
+          };
+        }
+        nextTerrs[finalBattle.territoryId] = {
+          ...cur,
+          ownerId: allyBeneficiary,
+          isCapital: allyWasEliminated || allyNation?.capitalTerritoryId === finalBattle.territoryId,
+          garrison: 1200,
+          units: { infantry: 1000, armor: 200, airDrone: 0 },
+          unrest: Math.max(0, cur.unrest - 15),
+          assimilation: 100,
+          isAssimilating: false,
+          isOccupied: false,
+          occupiedById: undefined,
+          castleWallHp: finalBattle.castleWallHp,
+        };
+        const surviving = Math.max(1000, outcome.attackerSurvivingTroops);
+        const returnNeighborId = cur.neighbors.find(
+          (nId) => nextTerrs[nId]?.ownerId === finalBattle.attackerNationId
+        );
+        const capId = nextNations[finalBattle.attackerNationId]?.capitalTerritoryId;
+        const returnDestId =
+          returnNeighborId ||
+          (capId && nextTerrs[capId]?.ownerId === finalBattle.attackerNationId ? capId : null);
+        if (returnDestId && nextTerrs[returnDestId]) {
+          const rd = nextTerrs[returnDestId];
+          nextTerrs[returnDestId] = {
+            ...rd,
+            garrison: rd.garrison + surviving,
+            units: {
+              infantry: (rd.units?.infantry ?? rd.garrison) + Math.round(surviving * 0.7),
+              armor: (rd.units?.armor ?? 0) + Math.round(surviving * 0.2),
+              airDrone: (rd.units?.airDrone ?? 0) + Math.round(surviving * 0.1),
+            },
+          };
+        }
+      } else {
+        const isCoreForConqueror = cur.coreOwnerId === finalBattle.attackerNationId;
+        nextTerrs[finalBattle.territoryId] = {
+          ...cur,
+          ownerId: finalBattle.attackerNationId,
+          isCapital: false,
+          garrison: Math.max(1000, outcome.attackerSurvivingTroops),
+          units: {
+            infantry: Math.round(outcome.attackerSurvivingTroops * 0.7),
+            armor: Math.round(outcome.attackerSurvivingTroops * 0.2),
+            airDrone: Math.round(outcome.attackerSurvivingTroops * 0.1),
+          },
+          unrest: isCoreForConqueror ? Math.max(0, cur.unrest - 10) : Math.min(80, cur.unrest + 25),
+          assimilation: isCoreForConqueror ? 100 : 25,
+          isAssimilating: false,
+          isOccupied: !isCoreForConqueror,
+          occupiedById: isCoreForConqueror ? undefined : finalBattle.attackerNationId,
+          castleWallHp: finalBattle.castleWallHp,
+        };
+      }
 
       // Check if defender lost its capital or its last territory
       const remainingDefProvs = Object.values(nextTerrs).filter(

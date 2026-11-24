@@ -5,6 +5,10 @@ export type AiAggressivenessLevel = 'PASSIVE' | 'NORMAL' | 'AGGRESSIVE' | 'CHAOS
 export type CrisisFrequencyOption = 0 | 32 | 60 | 90;
 export type MapLabelDensityOption = 'COMPACT' | 'BALANCED' | 'DETAILED';
 export type UiScaleOption = 'COMPACT' | 'STANDARD' | 'LARGE';
+export type GraphicsQualityOption = 'LOW' | 'BALANCED' | 'HIGH';
+export type BorderThicknessOption = 'THIN' | 'NORMAL' | 'BOLD';
+export type MapLabelScaleOption = 'SMALL' | 'NORMAL' | 'LARGE';
+export type CapitulationThresholdOption = 60 | 75 | 85 | 100;
 
 export interface ClockSpeedProfile {
   speed: SpeedLevel;
@@ -25,25 +29,31 @@ export const CLOCK_SPEED_PROFILES: Record<SpeedLevel, ClockSpeedProfile> = {
   },
   1: {
     speed: 1,
-    intervalMs: 720,
+    intervalMs: 620,
     hoursStep: 1,
     rateLabel: 'HIZ: 1x (+1 Saat)',
   },
   2: {
     speed: 2,
-    intervalMs: 520,
+    intervalMs: 450,
     hoursStep: 2,
     rateLabel: 'HIZ: 2x (+2 Saat)',
   },
+  3: {
+    speed: 3,
+    intervalMs: 360,
+    hoursStep: 3,
+    rateLabel: 'HIZ: 3x (+3 Saat)',
+  },
   4: {
     speed: 4,
-    intervalMs: 380,
+    intervalMs: 295,
     hoursStep: 3,
     rateLabel: 'HIZ: 4x (+3 Saat)',
   },
   5: {
     speed: 5,
-    intervalMs: 270,
+    intervalMs: 220,
     hoursStep: 4,
     rateLabel: 'HIZ: 5x (+4 Saat)',
   },
@@ -83,6 +93,79 @@ export const MAP_LABEL_DENSITY_OPTIONS: {
   },
 ];
 
+export const GRAPHICS_QUALITY_OPTIONS: {
+  value: GraphicsQualityOption;
+  label: string;
+  desc: string;
+}[] = [
+  {
+    value: 'LOW',
+    label: 'Pil Tasarrufu',
+    desc: '1.0x piksel yoğunluğu — eski telefonlarda en yüksek akıcılık.',
+  },
+  {
+    value: 'BALANCED',
+    label: 'Dengeli',
+    desc: '1.5x piksel yoğunluğu — keskin harita ve dengeli pil tüketimi.',
+  },
+  {
+    value: 'HIGH',
+    label: 'Yüksek (Retina)',
+    desc: '2.0x+ tam çözünürlük — en keskin gravür sınırlar ve yazılar.',
+  },
+];
+
+export const BORDER_THICKNESS_OPTIONS: {
+  value: BorderThicknessOption;
+  label: string;
+  desc: string;
+}[] = [
+  { value: 'THIN', label: 'İnce', desc: 'Zarif, harita renklerini öne çıkaran sınırlar.' },
+  { value: 'NORMAL', label: 'Standart', desc: 'Önerilen kartografik ülke ve sancak ayrımı.' },
+  { value: 'BOLD', label: 'Kalın', desc: 'Yüksek kontrastlı, uzaktan kolay okunan sınırlar.' },
+];
+
+export const MAP_LABEL_SCALE_OPTIONS: {
+  value: MapLabelScaleOption;
+  label: string;
+  desc: string;
+}[] = [
+  { value: 'SMALL', label: 'Küçük', desc: 'Geniş harita görüşü için daha narin şehir yazıları.' },
+  { value: 'NORMAL', label: 'Standart', desc: 'Dengeli okunabilirlik.' },
+  { value: 'LARGE', label: 'Büyük', desc: 'Mobil ekranlarda kolay okunan büyütülmüş yazılar.' },
+];
+
+export const CAPITULATION_THRESHOLD_OPTIONS: {
+  value: CapitulationThresholdOption;
+  label: string;
+  desc: string;
+}[] = [
+  { value: 60, label: '%60 İşgal', desc: 'Hızlı seferler — rakipler daha erken teslim olur.' },
+  { value: 75, label: '%75 İşgal', desc: 'Dengeli büyük strateji standardı (Önerilen).' },
+  { value: 85, label: '%85 İşgal', desc: 'Zorlu direniş — neredeyse tam işgal gerekir.' },
+  { value: 100, label: 'Sadece %100', desc: 'Tüm şehirler düşmeden otomatik teslimiyet olmaz.' },
+];
+
+export interface KeyboardShortcutEntry {
+  keys: string;
+  action: string;
+  category: 'Zaman & Kamera' | 'Harita Modları' | 'Ordu & Yönetim';
+}
+
+export const KEYBOARD_SHORTCUTS_LIST: KeyboardShortcutEntry[] = [
+  { keys: 'Boşluk', action: 'Oyunu duraklat / devam ettir', category: 'Zaman & Kamera' },
+  { keys: '1 / 2 / 3 / 4 / 5', action: 'Oyun hızını 1x / 2x / 3x / 4x / 5x yap', category: 'Zaman & Kamera' },
+  { keys: 'H veya Home', action: 'Kamerayı başkente odakla', category: 'Zaman & Kamera' },
+  { keys: 'Esc', action: 'Aktif hareket emrini veya üst pencereyi kapat', category: 'Zaman & Kamera' },
+  { keys: 'Q', action: 'Siyasi Harita modu', category: 'Harita Modları' },
+  { keys: 'W', action: 'Ekonomi & Gelişim Haritası modu', category: 'Harita Modları' },
+  { keys: 'E', action: 'Kaynaklar Haritası modu', category: 'Harita Modları' },
+  { keys: 'R', action: 'Diplomasi Haritası modu', category: 'Harita Modları' },
+  { keys: 'T', action: 'Arazi & İkmal Haritası modu', category: 'Harita Modları' },
+  { keys: 'M', action: 'Seçili eyalette Hareket emrini başlat / iptal et', category: 'Ordu & Yönetim' },
+  { keys: 'B', action: 'Toplu İşlem (Makro Ekonomi & Seferberlik) panelini aç', category: 'Ordu & Yönetim' },
+];
+
 export interface GameSettings {
   autoSaveIntervalDays: AutoSaveIntervalOption;
   fogOfWarEnabled: boolean;
@@ -91,6 +174,14 @@ export interface GameSettings {
   crisisFrequencyDays: CrisisFrequencyOption;
   mapLabelDensity: MapLabelDensityOption;
   uiScale: UiScaleOption;
+  graphicsQuality: GraphicsQualityOption;
+  smoothArmyAnimations: boolean;
+  borderThickness: BorderThicknessOption;
+  mapLabelScale: MapLabelScaleOption;
+  masterVolume: number;
+  musicVolume: number;
+  sfxVolume: number;
+  capitulationThresholdPct: CapitulationThresholdOption;
 }
 
 const SETTINGS_STORAGE_KEY = 'IMPERIUM_2026_SETTINGS_V1';
@@ -103,16 +194,46 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   crisisFrequencyDays: 90,
   mapLabelDensity: 'BALANCED',
   uiScale: 'STANDARD',
+  graphicsQuality: 'HIGH',
+  smoothArmyAnimations: true,
+  borderThickness: 'NORMAL',
+  mapLabelScale: 'NORMAL',
+  masterVolume: 85,
+  musicVolume: 65,
+  sfxVolume: 80,
+  capitulationThresholdPct: 75,
 };
+
+export function getBorderThicknessMultiplier(
+  thickness?: BorderThicknessOption
+): number {
+  if (thickness === 'THIN') return 0.75;
+  if (thickness === 'BOLD') return 1.35;
+  return 1.0;
+}
+
+export function getMapLabelScaleMultiplier(
+  scale?: MapLabelScaleOption
+): number {
+  if (scale === 'SMALL') return 0.86;
+  if (scale === 'LARGE') return 1.16;
+  return 1.0;
+}
+
+export function getGraphicsMaxDpr(quality?: GraphicsQualityOption): number {
+  if (quality === 'LOW') return 1.0;
+  if (quality === 'BALANCED') return 1.5;
+  return 2.0;
+}
 
 export const UI_SCALE_OPTIONS: {
   value: UiScaleOption;
   label: string;
   desc: string;
 }[] = [
-  { value: 'COMPACT', label: 'Ölçek 0 (Kompakt)', desc: 'Küçük mobil ekranlar ve geniş harita görüşü için kompakt HUD' },
-  { value: 'STANDARD', label: 'Ölçek 1 (Standart)', desc: 'Dengeli Age of History 3 arayüz boyutu' },
-  { value: 'LARGE', label: 'Ölçek 2 (Büyük)', desc: 'Dokunmatik kolaylığı için büyütülmüş butonlar ve yazılar' },
+  { value: 'COMPACT', label: 'Kompakt', desc: 'Küçük mobil ekranlar ve geniş harita görüşü için kompakt HUD' },
+  { value: 'STANDARD', label: 'Standart', desc: 'Dengeli arayüz boyutu' },
+  { value: 'LARGE', label: 'Büyük', desc: 'Dokunmatik kolaylığı için büyütülmüş butonlar ve yazılar' },
 ];
 
 export const AUTO_SAVE_OPTIONS: {
@@ -159,11 +280,17 @@ export const CRISIS_FREQUENCY_OPTIONS: {
   value: CrisisFrequencyOption;
   label: string;
 }[] = [
-  { value: 32, label: 'Normal (32 Günde Bir)' },
-  { value: 60, label: 'Orta (60 Günde Bir)' },
-  { value: 90, label: 'Seyrek (90 Günde Bir)' },
-  { value: 0, label: 'Kapalı (Sadece Manuel)' },
+  { value: 32, label: 'Normal (32 Gün)' },
+  { value: 60, label: 'Orta (60 Gün)' },
+  { value: 90, label: 'Seyrek (90 Gün)' },
+  { value: 0, label: 'Kapalı (Manuel)' },
 ];
+
+function clampPct(value: unknown, fallback: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
 
 export function loadGameSettings(): GameSettings {
   try {
@@ -173,6 +300,9 @@ export function loadGameSettings(): GameSettings {
     return {
       ...DEFAULT_GAME_SETTINGS,
       ...parsed,
+      masterVolume: clampPct(parsed.masterVolume, DEFAULT_GAME_SETTINGS.masterVolume),
+      musicVolume: clampPct(parsed.musicVolume, DEFAULT_GAME_SETTINGS.musicVolume),
+      sfxVolume: clampPct(parsed.sfxVolume, DEFAULT_GAME_SETTINGS.sfxVolume),
     };
   } catch {
     return DEFAULT_GAME_SETTINGS;

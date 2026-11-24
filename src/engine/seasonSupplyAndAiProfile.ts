@@ -251,6 +251,8 @@ export function calculateProvinceSupplyLimit(
   let techMult = 1.0;
   if (ownerNation?.unlockedTechs?.includes('adm_4')) techMult += 0.2;
   if (ownerNation?.unlockedTechs?.includes('mil_5')) techMult += 0.15;
+  if (ownerNation?.unlockedTechs?.includes('mil_4b')) techMult += 0.25;
+  if (ownerNation?.unlockedTechs?.includes('eco_4b')) techMult += 0.15;
 
   const raw =
     (18_000 + popFactor + buildingSupply) *

@@ -21,7 +21,7 @@ export type MapMode =
 
 export type TerrainType = 'OVA' | 'DAGLIK' | 'ORMAN' | 'COL' | 'METROPOL';
 
-export type SpeedLevel = 0 | 1 | 2 | 4 | 5;
+export type SpeedLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
 export type IdeologyId =
   | 'DEMOCRACY'
@@ -100,11 +100,26 @@ export interface IdeologyDefinition {
 
 export type TechBranch = 'MILITARY' | 'ECONOMY' | 'ADMINISTRATION' | 'SCIENCE';
 
+export type TechArtKey =
+  | 'INFANTRY'
+  | 'ARTILLERY'
+  | 'NAVAL'
+  | 'FORTRESS'
+  | 'TREASURY'
+  | 'TRADE'
+  | 'AGRICULTURE'
+  | 'COURT'
+  | 'OBSERVATORY'
+  | 'ENGINEERING';
+
 export interface TechDefinition {
   id: string;
   name: string;
+  shortTitle?: string;
   branch: TechBranch;
   tier: number;
+  subRow?: 0 | 1;
+  artKey?: TechArtKey;
   cost: number;
   prerequisite?: string;
   description: string;
@@ -169,6 +184,7 @@ export interface IncomingDiplomaticOffer {
 export interface PendingWarMoveRequest {
   fromId: string;
   sourceTerritoryIds?: string[];
+  sourceSeaArmyId?: string;
   moveRatio?: number;
   toId: string;
   targetNationId: string;
@@ -312,6 +328,7 @@ export interface Nation {
   inflation: number; // 0-100%
   researchPoints: number;
   activeResearch?: ActiveResearchProject | null;
+  autoResearch?: boolean;
   researchProgressByTech?: Record<string, number>;
   stateReligion?: ReligionId;
   primaryCulture?: CultureId;
@@ -390,6 +407,16 @@ export interface ActiveBattle {
   defenderCommanderName?: string;
 }
 
+export interface SeaArmy {
+  id: string;
+  ownerId: string;
+  name: string;
+  coords: [number, number]; // [lon, lat] on open water
+  troops: number;
+  units: UnitComposition;
+  anchorCoastId?: string;
+}
+
 export interface ArmyMovement {
   id: string;
   ownerId: string;
@@ -401,6 +428,12 @@ export interface ArmyMovement {
   units: UnitComposition;
   progress: number; // 0 to 100
   isAttack: boolean;
+  isNaval?: boolean;
+  fromCoords?: [number, number];
+  toCoords?: [number, number];
+  targetSeaName?: string;
+  sourceSeaArmyId?: string;
+  targetSeaArmyId?: string;
 }
 
 export interface WorldNewsEvent {

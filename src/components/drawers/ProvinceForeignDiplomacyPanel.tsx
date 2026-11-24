@@ -1,5 +1,5 @@
 import React from "react";
-import { Swords, Handshake, Crown, Ban, AlertTriangle, Coins, Shield, ArrowRight, Landmark, ScrollText } from "lucide-react";
+import { Swords, Handshake, Crown, Ban, AlertTriangle, Coins, Shield, ArrowRight, Landmark, ScrollText, Globe } from "lucide-react";
 import { ActiveWar, DiplomaticRelation, Nation, Territory } from "../../types/game";
 import { DiplomaticActionType, PeaceDealType } from "./drawerTypes";
 import {
@@ -218,9 +218,10 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                                     sound.playClick();
                                     onInspectNation(selectedOwner.id);
                                   }}
-                                  className="px-2.5 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/45 text-sky-200 text-[11px] font-bold"
+                                  className="px-2.5 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/45 text-sky-200 text-[11px] font-bold inline-flex items-center gap-1.5"
                                 >
-                                  🌐 Tüm Diplomasisi
+                                  <Globe className="w-3.5 h-3.5 shrink-0" />
+                                  <span>Tüm Diplomasisi</span>
                                 </button>
                               )}
 
@@ -235,9 +236,9 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                               ) : (
                                 <span className="text-xs text-slate-400">
                                   {rel.allianceType === 'OFFENSIVE'
-                                    ? '⚔️ Saldırı Paktı Müttefiki'
+                                    ? 'Saldırı Paktı Müttefiki'
                                     : rel.allianceType === 'DEFENSIVE'
-                                    ? '🛡️ Savunma Paktı Ortağı'
+                                    ? 'Savunma Paktı Ortağı'
                                     : rel.isAllied
                                     ? 'Resmi Müttefik'
                                     : rel.hasTradeAgreement
@@ -368,12 +369,12 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                                 <div className="text-xs font-bold flex items-center gap-1.5">
                                   <span>
                                     {rel.allianceType === 'DEFENSIVE'
-                                      ? '🛡️ Savunma Paktı Aktif'
-                                      : '🛡️ Savunma Paktı Kur'}
+                                      ? 'Savunma Paktı Aktif'
+                                      : 'Savunma Paktı Kur'}
                                   </span>
                                   {rel.allianceType === 'DEFENSIVE' && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/30 text-sky-200 font-semibold">
-                                      Aktif
+                                    <span className="text-[10px] font-semibold text-sky-300">
+                                      · Aktif
                                     </span>
                                   )}
                                 </div>
@@ -386,7 +387,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                               <Shield
                                 className={`w-4 h-4 shrink-0 ${
                                   rel.allianceType === 'DEFENSIVE'
-                                    ? 'text-sky-300 animate-pulse'
+                                    ? 'text-sky-300'
                                     : 'text-sky-400'
                                 }`}
                               />
@@ -407,12 +408,12 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                                 <div className="text-xs font-bold flex items-center gap-1.5">
                                   <span>
                                     {rel.allianceType === 'OFFENSIVE'
-                                      ? '⚔️ Saldırı Paktı Aktif'
-                                      : '⚔️ Saldırı Paktı Kur'}
+                                      ? 'Saldırı Paktı Aktif'
+                                      : 'Saldırı Paktı Kur'}
                                   </span>
                                   {rel.allianceType === 'OFFENSIVE' && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-200 font-semibold">
-                                      Aktif
+                                    <span className="text-[10px] font-semibold text-emerald-300">
+                                      · Aktif
                                     </span>
                                   )}
                                 </div>
@@ -425,7 +426,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                               <Swords
                                 className={`w-4 h-4 shrink-0 ${
                                   rel.allianceType === 'OFFENSIVE'
-                                    ? 'text-emerald-300 animate-pulse'
+                                    ? 'text-emerald-300'
                                     : 'text-emerald-400'
                                 }`}
                               />
@@ -644,7 +645,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                                 >
                                   <div>
                                     <div className="text-xs font-bold">
-                                      ⚔️ Resmi Savaş İlan Et
+                                      Resmi Savaş İlan Et
                                     </div>
                                     <div className="text-[11px] text-rose-100">
                                       Sınır eyaletlerine askeri sefer ve kuşatma başlat
@@ -667,7 +668,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                               >
                                 <div>
                                   <div className="text-xs font-bold">
-                                    ⚔️ Savaş & Barış Masasını Aç
+                                    Savaş & Barış Masasını Aç
                                   </div>
                                   <div className="text-[11px] text-slate-800">
                                     Cephe skoru, toprak talebi ve tazminat görüşmesi

@@ -13,6 +13,7 @@ import {
   getLordLoyaltySummary,
   getLordRetinueTroops,
 } from "../../engine/pashaAndFiefEngine";
+import { computeNationManpowerCap } from "../../engine/simulationEngine";
 import { NationFlagCanvasBadge } from "../../map/nationFlagRenderer";
 import { cleanNationName, cleanProvinceName } from "../../utils/formatters";
 import {
@@ -144,12 +145,19 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                         <UserPlus className="w-4 h-4 text-amber-400 shrink-0" />
                         <span>AoH3 Ordugah &amp; Kiralık Asker Karargâhı</span>
                       </h3>
-                      <div className="flex items-center gap-1.5 text-[11px] font-mono-num">
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono-num">
                         <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold">
-                          🪙 {Math.round(playerNation.treasury).toLocaleString('tr-TR')} Altın
+                          {Math.round(playerNation.treasury).toLocaleString('tr-TR')} Altın
                         </span>
-                        <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold">
-                          👥 {Math.round(playerNation.manpower).toLocaleString('tr-TR')} İG
+                        <span
+                          className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold"
+                          title={`İnsan Gücü: ${Math.round(playerNation.manpower).toLocaleString('tr-TR')} / ${computeNationManpowerCap(playerNation, territories).toLocaleString('tr-TR')} (+${playerEconomy.dailyManpower.toLocaleString('tr-TR')}/gün)`}
+                        >
+                          {Math.round(playerNation.manpower).toLocaleString('tr-TR')} /{' '}
+                          {(computeNationManpowerCap(playerNation, territories) / 1000).toFixed(0)}B İG
+                          {playerNation.manpower < computeNationManpowerCap(playerNation, territories)
+                            ? ` (+${playerEconomy.dailyManpower}/gün)`
+                            : ' (MAX)'}
                         </span>
                       </div>
                     </div>

@@ -337,6 +337,38 @@ class NationalMusicEngine {
     );
   }
 
+  private masterGain: GainNode | null = null;
+  private musicVolumeScale: number = 0.55;
+
+  public setVolumes(masterPct: number, musicPct: number) {
+    const m = Math.max(0, Math.min(100, masterPct)) / 100;
+    const mu = Math.max(0, Math.min(100, musicPct)) / 100;
+    this.musicVolumeScale = m * mu;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(
+        this.musicVolumeScale,
+        this.ctx.currentTime,
+        0.03
+      );
+    }
+    if (this.customAudioEl) {
+      this.customAudioEl.volume = Math.max(0, Math.min(1, this.musicVolumeScale));
+    }
+  }
+
+  private getOutputNode(): AudioNode | null {
+    if (!this.ctx) return null;
+    if (!this.masterGain) {
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.setValueAtTime(
+        this.musicVolumeScale,
+        this.ctx.currentTime
+      );
+      this.masterGain.connect(this.ctx.destination);
+    }
+    return this.masterGain;
+  }
+
   private initContext() {
     if (!this.ctx && typeof window !== 'undefined') {
       const AudioCtx =
@@ -350,6 +382,7 @@ class NationalMusicEngine {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
+    this.getOutputNode();
   }
 
   public selectDefaultTrackForNation(nationId: string) {
@@ -369,7 +402,7 @@ class NationalMusicEngine {
     this.customTrackName = file.name.replace(/\.[^/.]+$/, '');
     this.customAudioEl = new Audio(this.customObjectUrl);
     this.customAudioEl.loop = true;
-    this.customAudioEl.volume = 0.65;
+    this.customAudioEl.volume = Math.max(0, Math.min(1, this.musicVolumeScale));
     this.currentTrack = 'CUSTOM_MP3';
     this.play();
   }
@@ -467,6 +500,8 @@ class NationalMusicEngine {
     const stepDurationSec = step.beats * beatDurationSec;
     const now = this.ctx.currentTime;
 
+    const outNode = this.getOutputNode() || this.ctx.destination;
+
     // 1. Lead Mehter Zurna / Brass Voice (with nasal reed formant filter for Mehter tracks)
     const freq = N[step.note] || 0;
     if (freq > 0) {
@@ -496,7 +531,7 @@ class NationalMusicEngine {
       osc1.connect(filter);
       osc2.connect(filter);
       filter.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(outNode);
 
       osc1.start(now);
       osc2.start(now);
@@ -520,7 +555,7 @@ class NationalMusicEngine {
       );
 
       bassOsc.connect(bassGain);
-      bassGain.connect(this.ctx.destination);
+      bassGain.connect(outNode);
       bassOsc.start(now);
       bassOsc.stop(now + stepDurationSec);
     }
@@ -541,7 +576,7 @@ class NationalMusicEngine {
       kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
 
       kickOsc.connect(kickGain);
-      kickGain.connect(this.ctx.destination);
+      kickGain.connect(outNode);
       kickOsc.start(now);
       kickOsc.stop(now + 0.18);
     }
@@ -557,7 +592,7 @@ class NationalMusicEngine {
       snareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
 
       snareOsc.connect(snareGain);
-      snareGain.connect(this.ctx.destination);
+      snareGain.connect(outNode);
       snareOsc.start(now);
       snareOsc.stop(now + 0.08);
     }
@@ -577,7 +612,7 @@ class NationalMusicEngine {
 
       zilOsc.connect(zilFilter);
       zilFilter.connect(zilGain);
-      zilGain.connect(this.ctx.destination);
+      zilGain.connect(outNode);
       zilOsc.start(now);
       zilOsc.stop(now + 0.15);
     }

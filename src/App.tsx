@@ -6,16 +6,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Compass, ShieldAlert, Swords, X } from 'lucide-react';
 import { useGameStore } from './store/useGameStore';
-import { calculateNationEconomy } from './engine/simulationEngine';
+import {
+  calculateNationEconomy,
+  computeNationManpowerCap,
+} from './engine/simulationEngine';
 import {
   getMostRecentSaveRecord,
   initSaveStorage,
 } from './engine/saveManager';
 import { music } from './engine/musicEngine';
+import { sound } from './utils/soundEngine';
 import { TopHudBar } from './components/hud/TopHudBar';
 import { DiplomaticOfferBanner } from './components/hud/DiplomaticOfferBanner';
 import { MapMacroMode, MapModePillBar } from './components/hud/MapModePillBar';
 import { SelectedProvinceBar } from './components/hud/SelectedProvinceBar';
+import { SelectedSeaArmyBar } from './components/hud/SelectedSeaArmyBar';
 import { BottomNavBar, OfflineStatusBanner } from './components/hud/BottomNavBar';
 import {
   AoH3OutlinerWidget,
@@ -137,6 +142,7 @@ function GameAppInner() {
     wars,
     battles,
     movements,
+    seaArmies,
     newsEvents,
     tick,
     hour,
@@ -144,7 +150,9 @@ function GameAppInner() {
     mapMode,
     activeTab,
     selectedTerritoryId,
+    selectedSeaArmyId,
     armyOrderSourceId,
+    seaArmyOrderSourceId,
     moveRatio,
     soundEnabled,
     settings,
@@ -174,6 +182,10 @@ function GameAppInner() {
   const [batchMarchTargetPicking, setBatchMarchTargetPicking] = useState<boolean>(false);
   const [batchMarchRatio, setBatchMarchRatio] = useState<number>(1);
   const [focusCapitalSignal, setFocusCapitalSignal] = useState<number>(0);
+  const [focusCoordsSignal, setFocusCoordsSignal] = useState<{
+    coords: [number, number];
+    seq: number;
+  } | null>(null);
   const [inspectedNationId, setInspectedNationId] = useState<string | null>(
     null
   );
@@ -271,24 +283,215 @@ function GameAppInner() {
     }
   }, [screenState, tick, settings.autoSaveIntervalDays, store.saveToSlot]);
 
-  // Spacebar shortcut to toggle pause/play
+  useEffect(() => {
+    sound.setVolumes(settings.masterVolume, settings.sfxVolume);
+    music.setVolumes(settings.masterVolume, settings.musicVolume);
+  }, [settings.masterVolume, settings.musicVolume, settings.sfxVolume]);
+
+  // Smart Keyboard Shortcuts (Space, 1-4, H/Home, Q/W/E/R/T, M, B, Esc)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (screenState !== 'PLAYING') return;
-      if (e.code !== 'Space') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
       const target = e.target instanceof HTMLElement ? e.target : null;
       if (
         target?.isContentEditable ||
-        target?.closest(
-          'input, textarea, select, button, a[href], [role="button"], [role="link"], [role="checkbox"], [role="switch"], [contenteditable="true"]'
-        )
-      ) return;
-      e.preventDefault();
-      store.togglePause();
+        target?.closest('input, textarea, select, [contenteditable="true"]')
+      ) {
+        return;
+      }
+
+      const hasBlockingModal = Boolean(
+        showSystemModal ||
+          activeCrisis ||
+          pendingWarMove ||
+          activeWarModalId ||
+          inspectedNationId ||
+          showNewsDrawer ||
+          activeBattleOverviewTerritoryId
+      );
+
+      if (e.code === 'Space') {
+        if (
+          hasBlockingModal ||
+          target?.closest('button, a[href], [role="button"], [role="link"], [role="checkbox"], [role="switch"]')
+        ) {
+          return;
+        }
+        e.preventDefault();
+        store.togglePause();
+        return;
+      }
+
+      if (hasBlockingModal) return;
+
+      if (e.key === 'Escape') {
+        if (macroMode !== 'NONE') {
+          e.preventDefault();
+          setMacroMode('NONE');
+          setBatchMarchTargetPicking(false);
+          return;
+        }
+        if (armyOrderSourceId || seaArmyOrderSourceId) {
+          e.preventDefault();
+          store.setArmyOrderSourceId(null);
+          store.setSeaArmyOrderSourceId(null);
+          return;
+        }
+        if (activeTab !== 'NONE') {
+          e.preventDefault();
+          store.setActiveTab('NONE');
+          return;
+        }
+        if (selectedTerritoryId || selectedSeaArmyId) {
+          e.preventDefault();
+          store.selectTerritoryOnMap(null);
+          store.setSelectedSeaArmyId(null);
+          return;
+        }
+        return;
+      }
+
+      if (e.key === '1' || e.code === 'Digit1') {
+        e.preventDefault();
+        sound.playClick();
+        store.setSpeed(1);
+        return;
+      }
+      if (e.key === '2' || e.code === 'Digit2') {
+        e.preventDefault();
+        sound.playClick();
+        store.setSpeed(2);
+        return;
+      }
+      if (e.key === '3' || e.code === 'Digit3') {
+        e.preventDefault();
+        sound.playClick();
+        store.setSpeed(3);
+        return;
+      }
+      if (e.key === '4' || e.code === 'Digit4') {
+        e.preventDefault();
+        sound.playClick();
+        store.setSpeed(4);
+        return;
+      }
+      if (e.key === '5' || e.code === 'Digit5') {
+        e.preventDefault();
+        sound.playClick();
+        store.setSpeed(5);
+        return;
+      }
+
+      if (e.code === 'KeyH' || e.key === 'Home') {
+        e.preventDefault();
+        sound.playClick();
+        setFocusCapitalSignal((v) => v + 1);
+        return;
+      }
+
+      if (e.code === 'KeyQ') {
+        e.preventDefault();
+        sound.playClick();
+        store.setMapMode('POLITICAL');
+        return;
+      }
+      if (e.code === 'KeyW') {
+        e.preventDefault();
+        sound.playClick();
+        store.setMapMode('ECONOMIC');
+        return;
+      }
+      if (e.code === 'KeyE') {
+        e.preventDefault();
+        sound.playClick();
+        store.setMapMode('RESOURCES');
+        return;
+      }
+      if (e.code === 'KeyR') {
+        e.preventDefault();
+        sound.playClick();
+        store.setMapMode('DIPLOMATIC');
+        return;
+      }
+      if (e.code === 'KeyT') {
+        e.preventDefault();
+        sound.playClick();
+        store.setMapMode('TERRAIN');
+        return;
+      }
+
+      if (e.code === 'KeyM') {
+        e.preventDefault();
+        if (armyOrderSourceId) {
+          sound.playClick();
+          store.setArmyOrderSourceId(null);
+          return;
+        }
+        const st = useGameStore.getState();
+        const sel = st.selectedTerritoryId
+          ? st.territories[st.selectedTerritoryId]
+          : null;
+        if (sel && sel.ownerId === st.playerNationId) {
+          sound.playClick();
+          st.setActiveTab('NONE');
+          st.setArmyOrderSourceId(sel.id);
+        }
+        return;
+      }
+
+      if (e.code === 'KeyB') {
+        e.preventDefault();
+        sound.playClick();
+        if (macroMode !== 'NONE') {
+          setMacroMode('NONE');
+          setBatchMarchTargetPicking(false);
+        } else {
+          const st = useGameStore.getState();
+          const sel = st.selectedTerritoryId
+            ? st.territories[st.selectedTerritoryId]
+            : null;
+          if (
+            economySelectedIds.length === 0 &&
+            sel &&
+            sel.ownerId === st.playerNationId
+          ) {
+            setEconomySelectedIds([sel.id]);
+          }
+          st.setActiveTab('NONE');
+          st.selectTerritoryOnMap(null);
+          setMacroMode('BUILD_ECONOMY');
+        }
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [screenState, store.togglePause]);
+  }, [
+    screenState,
+    showSystemModal,
+    activeCrisis,
+    pendingWarMove,
+    activeWarModalId,
+    inspectedNationId,
+    showNewsDrawer,
+    activeBattleOverviewTerritoryId,
+    macroMode,
+    armyOrderSourceId,
+    seaArmyOrderSourceId,
+    activeTab,
+    selectedTerritoryId,
+    selectedSeaArmyId,
+    economySelectedIds.length,
+    store.togglePause,
+    store.setSpeed,
+    store.setMapMode,
+    store.setArmyOrderSourceId,
+    store.setSeaArmyOrderSourceId,
+    store.setActiveTab,
+    store.selectTerritoryOnMap,
+    store.setSelectedSeaArmyId,
+  ]);
 
   // Android hardware back button / browser back: close topmost drawer/modal instead of exiting PWA
   const hasDismissibleOverlay =
@@ -394,14 +597,28 @@ function GameAppInner() {
         relations,
         movements,
         wars,
-        gameMode
+        gameMode,
+        seaArmies
       ),
-    [playerNation, territories, nations, relations, movements, wars, gameMode]
+    [playerNation, territories, nations, relations, movements, wars, gameMode, seaArmies]
+  );
+
+  const playerManpowerCap = useMemo(
+    () => computeNationManpowerCap(playerNation, territories),
+    [playerNation, territories]
   );
 
   const selectedTerritory = selectedTerritoryId
     ? territories[selectedTerritoryId] || null
     : null;
+
+  const selectedSeaArmy = useMemo(
+    () =>
+      selectedSeaArmyId
+        ? seaArmies.find((s) => s.id === selectedSeaArmyId) || null
+        : null,
+    [seaArmies, selectedSeaArmyId]
+  );
 
   const pendingTargetNation = pendingWarMove
     ? nations[pendingWarMove.targetNationId]
@@ -409,11 +626,17 @@ function GameAppInner() {
   const pendingFromTerritory = pendingWarMove
     ? territories[pendingWarMove.fromId]
     : null;
+  const pendingSourceSeaArmy = pendingWarMove?.sourceSeaArmyId
+    ? seaArmies.find((s) => s.id === pendingWarMove.sourceSeaArmyId) || null
+    : null;
   const pendingToTerritory = pendingWarMove
     ? territories[pendingWarMove.toId]
     : null;
   const warConfirmationOpen = Boolean(
-    pendingWarMove && pendingTargetNation && pendingFromTerritory && pendingToTerritory
+    pendingWarMove &&
+      pendingTargetNation &&
+      (pendingFromTerritory || pendingSourceSeaArmy) &&
+      pendingToTerritory
   );
   const warConfirmationRef = useAccessibleDialog(warConfirmationOpen, () =>
     store.setPendingWarMove(null)
@@ -541,7 +764,6 @@ function GameAppInner() {
           showNewsDrawer={showNewsDrawer}
           onCloseNewsDrawer={() => store.setShowNewsDrawer(false)}
           newsEvents={newsEvents}
-          onTriggerManualCabinetDecision={store.triggerManualCabinetDecision}
         />
       )}
 
@@ -622,7 +844,10 @@ function GameAppInner() {
         )}
 
       {/* AoH3-Style Border Violation & War Declaration Confirmation Modal */}
-      {pendingWarMove && pendingTargetNation && pendingFromTerritory && pendingToTerritory && (
+      {pendingWarMove &&
+        pendingTargetNation &&
+        (pendingFromTerritory || pendingSourceSeaArmy) &&
+        pendingToTerritory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/88">
           <div
             ref={warConfirmationRef}
@@ -678,8 +903,13 @@ function GameAppInner() {
               </div>
 
               <p id="war-confirmation-description" className="text-slate-300 leading-relaxed">
-                {pendingWarMove.sourceTerritoryIds &&
-                pendingWarMove.sourceTerritoryIds.length > 1 ? (
+                {pendingSourceSeaArmy ? (
+                  <>
+                    <strong>{pendingSourceSeaArmy.name}</strong> donanmanızdaki{' '}
+                    {(pendingSourceSeaArmy.troops / 1000).toFixed(1)}B askeri amfibi çıkarma ile{' '}
+                  </>
+                ) : pendingWarMove.sourceTerritoryIds &&
+                  pendingWarMove.sourceTerritoryIds.length > 1 ? (
                   <>
                     <strong>{pendingWarMove.sourceTerritoryIds.length} eyaletinizdeki</strong> (
                     {pendingWarMove.sourceTerritoryIds
@@ -693,7 +923,7 @@ function GameAppInner() {
                   </>
                 ) : (
                   <>
-                    <strong>{cleanProvinceName(pendingFromTerritory.name)}</strong> eyaletindeki ordunuzu{' '}
+                    <strong>{cleanProvinceName(pendingFromTerritory?.name || '')}</strong> eyaletindeki ordunuzu{' '}
                   </>
                 )}
                 <strong>{cleanNationName(pendingTargetNation.name)}</strong> egemenliğindeki{' '}
@@ -706,7 +936,7 @@ function GameAppInner() {
                   className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 cursor-pointer"
                 >
                   <Swords className="w-4 h-4" />
-                  <span>⚔️ Resmen Savaş İlan Et ve Taarruza Geç!</span>
+                  <span>Resmen Savaş İlan Et ve Taarruza Geç</span>
                 </button>
 
                 <button
@@ -720,7 +950,7 @@ function GameAppInner() {
                   className="w-full py-2 px-4 rounded-xl bg-sky-600/25 hover:bg-sky-600/35 border border-sky-500/40 text-sky-200 font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Compass className="w-4 h-4 text-sky-400" />
-                  <span>🧭 Savaşmadan Askeri Geçiş İzni İste (120 Altın)</span>
+                  <span>Savaşmadan Askeri Geçiş İzni İste (120 Altın)</span>
                 </button>
 
                 <button
@@ -738,6 +968,7 @@ function GameAppInner() {
       <TopHudBar
         playerNation={playerNation}
         playerEconomy={playerEconomy}
+        playerManpowerCap={playerManpowerCap}
         activeTab={activeTab}
         tick={tick}
         hour={hour}
@@ -764,18 +995,32 @@ function GameAppInner() {
             wars={wars}
             battles={battles}
             movements={movements}
+            seaArmies={seaArmies}
             playerNationId={playerNationId}
             selectedTerritoryId={selectedTerritoryId}
+            selectedSeaArmyId={selectedSeaArmyId}
             multiSelectedTerritoryIds={multiSelectedIds}
             armyOrderSourceId={armyOrderSourceId}
+            seaArmyOrderSourceId={seaArmyOrderSourceId}
             mapMode={mapMode}
             mapLabelDensity={settings.mapLabelDensity}
             fogOfWarEnabled={settings.fogOfWarEnabled}
+            graphicsQuality={settings.graphicsQuality}
+            smoothArmyAnimations={settings.smoothArmyAnimations}
+            borderThickness={settings.borderThickness}
+            mapLabelScale={settings.mapLabelScale}
             speed={speed}
             focusCapitalSignal={focusCapitalSignal}
+            focusCoordsSignal={focusCoordsSignal}
             onSelectTerritory={handleMapSelectTerritory}
+            onSelectSeaArmy={(id) => store.setSelectedSeaArmyId(id)}
             onExecuteArmyMove={store.executeArmyMove}
-            onCancelArmyOrder={() => store.setArmyOrderSourceId(null)}
+            onEmbarkToSea={store.executeEmbarkToSea}
+            onDisembarkFromSea={store.executeDisembarkFromSea}
+            onCancelArmyOrder={() => {
+              store.setArmyOrderSourceId(null);
+              store.setSeaArmyOrderSourceId(null);
+            }}
           />
         )}
 
@@ -815,7 +1060,9 @@ function GameAppInner() {
           territories={territories}
           playerTreasury={playerNation?.treasury ?? 0}
           hasBottomCard={Boolean(
-            selectedTerritory && activeTab === 'NONE' && macroMode === 'NONE'
+            (selectedTerritory || selectedSeaArmy) &&
+              activeTab === 'NONE' &&
+              macroMode === 'NONE'
           )}
           hideWhenDrawerOpen={activeTab !== 'NONE'}
           outlinerSlot={
@@ -827,12 +1074,35 @@ function GameAppInner() {
                 wars={wars}
                 battles={battles}
                 movements={movements}
+                seaArmies={seaArmies}
                 selectedTerritoryId={selectedTerritoryId}
+                selectedSeaArmyId={selectedSeaArmyId}
                 aiCommanderEnabled={store.aiCommanderEnabled}
                 aiCommanderStance={store.aiCommanderStance}
                 onSelectTerritory={store.selectTerritoryOnMap}
+                onSelectSeaArmy={(id) => {
+                  store.setSelectedSeaArmyId(id);
+                  const fleet = seaArmies.find((s) => s.id === id);
+                  if (fleet) {
+                    setFocusCoordsSignal((prev) => ({
+                      coords: fleet.coords,
+                      seq: (prev?.seq ?? 0) + 1,
+                    }));
+                  }
+                }}
                 onSetActiveTab={store.setActiveTab}
                 onStartArmyOrder={store.setArmyOrderSourceId}
+                onStartSeaArmyOrder={(id) => {
+                  store.setSelectedSeaArmyId(id);
+                  store.setSeaArmyOrderSourceId(id);
+                  const fleet = seaArmies.find((s) => s.id === id);
+                  if (fleet) {
+                    setFocusCoordsSignal((prev) => ({
+                      coords: fleet.coords,
+                      seq: (prev?.seq ?? 0) + 1,
+                    }));
+                  }
+                }}
                 onStartBatchMarch={() => {
                   setMacroMode('BATCH_MARCH');
                   setBatchMarchTargetPicking(false);
@@ -937,6 +1207,24 @@ function GameAppInner() {
           />
         )}
 
+        {!selectedTerritory &&
+          selectedSeaArmy &&
+          activeTab === 'NONE' &&
+          macroMode === 'NONE' && (
+            <SelectedSeaArmyBar
+              seaArmy={selectedSeaArmy}
+              playerNationId={playerNationId}
+              nations={nations}
+              gameMode={gameMode}
+              seaArmyOrderSourceId={seaArmyOrderSourceId}
+              moveRatio={moveRatio}
+              onSetMoveRatio={store.setMoveRatio}
+              onStartSeaArmyOrder={store.setSeaArmyOrderSourceId}
+              onDisbandSeaArmy={store.disbandSeaArmy}
+              onClear={() => store.setSelectedSeaArmyId(null)}
+            />
+          )}
+
         {activeBattleOverviewTerritoryId &&
           territories[activeBattleOverviewTerritoryId] && (
             <AoH3BattleOverviewModal
@@ -989,6 +1277,7 @@ function GameAppInner() {
             onStartResearch={store.startResearch}
             onCancelResearch={store.cancelResearch}
             onBoostResearch={store.boostResearch}
+            onToggleAutoResearch={store.toggleAutoResearch}
             onUnlockTech={store.unlockTech}
             onEnactReform={store.enactReform}
             onDiplomaticAction={store.diplomaticAction}

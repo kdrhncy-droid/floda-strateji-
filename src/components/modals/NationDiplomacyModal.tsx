@@ -89,13 +89,13 @@ const DiplomacySectionCard: React.FC<SectionProps> = ({
   renderBadge,
 }) => {
   return (
-    <section className="rounded-xl bg-slate-950/85 border border-slate-800/90 p-3 space-y-2">
+    <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className={`flex items-center gap-1.5 text-xs font-bold ${accentClass}`}>
           {icon}
           <span>{title}</span>
         </div>
-        <span className="px-1.5 py-0.5 rounded-md bg-slate-900 border border-slate-800 font-mono-num text-[10px] font-bold text-slate-300">
+        <span className="font-mono-num text-[11px] font-bold text-[#b2a58f]">
           {entries.length}
         </span>
       </div>
@@ -115,7 +115,7 @@ const DiplomacySectionCard: React.FC<SectionProps> = ({
                   onSelectNation(entry.nation.id);
                 }}
                 title={`${cleanName} ülkesinin diplomasi ağını incele`}
-                className="group flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900/95 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-400/60 transition-colors text-left"
+                className="group flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#1e1a15] hover:bg-[#2a241d] border border-[#3a3228] hover:border-[#c89d54]/60 transition-colors text-left"
               >
                 <NationFlagCanvasBadge
                   nationId={entry.nation.id}
@@ -268,10 +268,10 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
         aria-modal="true"
         aria-labelledby="nation-diplomacy-modal-title"
         tabIndex={-1}
-        className="w-full max-w-4xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] bg-[#0a1120] border border-amber-500/45 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100"
+        className="w-full max-w-4xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] bg-[#191612] border border-[#c89d54]/45 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#f0e6d2]"
       >
         {/* Modal Header: AoH2/AoH3 Nation Emblem, Ruler, Stats & Nation Switcher */}
-        <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-slate-900 via-[#0e182d] to-slate-950 border-b border-amber-500/30 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-[#13110e] border-b border-[#c89d54]/30 flex flex-wrap items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <NationFlagCanvasBadge
               nationId={summary.nation.id}
@@ -284,39 +284,43 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h2
                   id="nation-diplomacy-modal-title"
-                  className="font-display font-bold text-sm sm:text-base text-amber-100 truncate"
+                  className="font-display font-bold text-sm sm:text-base text-[#f0e6d2] truncate"
                 >
                   {cleanName}
                 </h2>
                 {isPlayerNation ? (
-                  <span className="px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-black">
+                  <span className="px-1.5 py-0.5 rounded bg-[#c89d54] text-[#110f0d] text-[10px] font-black">
                     DEVLETİNİZ
                   </span>
                 ) : activePlayerWar ? (
-                  <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold">
-                    ⚔️ SAVAŞTASINIZ
+                  <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold inline-flex items-center gap-1">
+                    <Swords className="w-3 h-3" />
+                    <span>SAVAŞTASINIZ</span>
                   </span>
                 ) : playerRel ? (
                   <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono-num font-bold border ${
+                    className={`font-mono-num text-[11px] font-bold ${
                       playerRel.score >= 25
-                        ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
+                        ? 'text-emerald-400'
                         : playerRel.score <= -25
-                        ? 'bg-rose-950/80 border-rose-500/50 text-rose-300'
-                        : 'bg-slate-900 border-slate-700 text-slate-300'
+                        ? 'text-rose-400'
+                        : 'text-[#cfc3ae]'
                     }`}
                   >
-                    İlişkiniz: {playerRel.score > 0 ? `+${playerRel.score}` : playerRel.score}
+                    · İlişki: {playerRel.score > 0 ? `+${playerRel.score}` : playerRel.score}
                   </span>
                 ) : null}
               </div>
-              <div className="text-[11px] text-slate-300 flex flex-wrap items-center gap-1.5">
-                <span className="text-amber-300 font-semibold">👑 {summary.rulerName}</span>
-                <span className="text-slate-600">·</span>
+              <div className="text-[11px] text-[#cfc3ae] flex flex-wrap items-center gap-1.5">
+                <span className="text-[#e0bc78] font-semibold inline-flex items-center gap-1">
+                  <Crown className="w-3 h-3 text-[#c89d54] shrink-0" />
+                  <span>{summary.rulerName}</span>
+                </span>
+                <span className="text-[#5d5243]">·</span>
                 <span>{IDEOLOGIES[summary.nation.ideology]?.name ?? 'Monarşi'}</span>
                 {inspectedPersonalityMeta && (
                   <>
-                    <span className="text-slate-600">·</span>
+                    <span className="text-[#5d5243]">·</span>
                     <span
                       className="text-sky-300 font-semibold"
                       title={inspectedPersonalityMeta.description}
@@ -377,38 +381,38 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
         </div>
 
         {/* Compact National Vital Strip */}
-        <div className="px-3.5 sm:px-5 py-2 bg-slate-950/90 border-b border-slate-800/80 grid grid-cols-5 gap-1.5 text-center shrink-0">
-          <div className="rounded-lg bg-slate-900/90 border border-slate-800 px-2 py-1">
-            <div className="text-[10px] text-slate-400">Eyalet</div>
-            <div className="font-mono-num text-xs font-bold text-white">
+        <div className="px-3.5 sm:px-5 py-2 bg-[#13110e] border-b border-[#342d24] grid grid-cols-5 gap-1.5 text-center shrink-0">
+          <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] px-2 py-1">
+            <div className="text-[10px] text-[#b2a58f]">Eyalet</div>
+            <div className="font-mono-num text-xs font-bold text-[#f0e6d2]">
               {summary.provinceCount}
             </div>
           </div>
-          <div className="rounded-lg bg-slate-900/90 border border-slate-800 px-2 py-1">
-            <div className="text-[10px] text-slate-400">Toplam Ordu</div>
-            <div className="font-mono-num text-xs font-bold text-amber-300">
+          <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] px-2 py-1">
+            <div className="text-[10px] text-[#b2a58f]">Toplam Ordu</div>
+            <div className="font-mono-num text-xs font-bold text-[#e0bc78]">
               {(summary.totalArmy / 1000).toFixed(1)}B
             </div>
           </div>
-          <div className="rounded-lg bg-slate-900/90 border border-slate-800 px-2 py-1">
-            <div className="text-[10px] text-slate-400">Hazine</div>
+          <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] px-2 py-1">
+            <div className="text-[10px] text-[#b2a58f]">Hazine</div>
             <div className="font-mono-num text-xs font-bold text-emerald-300">
               {Math.round(summary.nation.treasury).toLocaleString('tr-TR')}
             </div>
           </div>
-          <div className="rounded-lg bg-slate-900/90 border border-slate-800 px-2 py-1">
-            <div className="text-[10px] text-slate-400">İstikrar</div>
+          <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] px-2 py-1">
+            <div className="text-[10px] text-[#b2a58f]">İstikrar</div>
             <div className="font-mono-num text-xs font-bold text-sky-300">
               %{Math.round(summary.nation.stability)}
             </div>
           </div>
-          <div className="rounded-lg bg-slate-900/90 border border-slate-800 px-2 py-1">
-            <div className="text-[10px] text-slate-400">Agresiflik</div>
+          <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] px-2 py-1">
+            <div className="text-[10px] text-[#b2a58f]">Agresiflik</div>
             <div
               className={`font-mono-num text-xs font-bold ${
                 summary.nation.aggressiveExpansion >= 50
                   ? 'text-rose-400'
-                  : 'text-slate-200'
+                  : 'text-[#f0e6d2]'
               }`}
             >
               %{Math.round(summary.nation.aggressiveExpansion)}
@@ -639,9 +643,9 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
         </div>
 
         {/* Footer Quick Action Strip (Includes Yapay Zekâya Devret in Bottom Area & Inline War Eligibility Alert) */}
-        <div className="px-3.5 sm:px-5 py-2.5 bg-slate-950/95 border-t border-slate-800 flex flex-col gap-2 shrink-0">
+        <div className="px-3.5 sm:px-5 py-2.5 bg-[#13110e] border-t border-[#c89d54]/25 flex flex-col gap-2 shrink-0">
           {!isPlayerNation && warBlockReason && (
-            <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-amber-950/70 border border-amber-500/45 text-[11px] text-amber-200">
+            <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-amber-950/60 border border-amber-500/45 text-[11px] text-amber-200">
               <div className="flex items-center gap-1.5 min-w-0">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span className="leading-snug">{warBlockReason}</span>
@@ -650,9 +654,10 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onDiplomaticAction(summary.nation.id, 'INSULT')}
-                  className="px-2 py-0.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 border border-rose-400/50 text-rose-200 text-[10px] font-bold whitespace-nowrap shrink-0"
+                  className="px-2 py-0.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 border border-rose-400/50 text-rose-200 text-[10px] font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0"
                 >
-                  💢 Hakaret Et (-25)
+                  <Flame className="w-3 h-3" />
+                  <span>Hakaret Et (-25)</span>
                 </button>
               )}
             </div>
@@ -676,7 +681,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                           ? isPlayerAtWar
                             ? 'border-emerald-400 bg-emerald-950/90 text-emerald-200'
                             : 'border-amber-400 bg-amber-950/80 text-amber-200'
-                          : 'border-amber-500/45 bg-slate-900 hover:bg-slate-800 text-amber-100'
+                          : 'border-[#c89d54]/45 bg-[#211d18] hover:bg-[#2b251e] text-[#f0e6d2]'
                       }`}
                     >
                       <Bot
@@ -685,18 +690,9 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                             ? isPlayerAtWar
                               ? 'text-emerald-300'
                               : 'text-amber-300'
-                            : 'text-amber-400'
+                            : 'text-[#c89d54]'
                         }`}
                       />
-                      {aiCommanderEnabled && (
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                            isPlayerAtWar
-                              ? 'bg-emerald-400 animate-pulse'
-                              : 'bg-amber-400'
-                          }`}
-                        />
-                      )}
                       <span>
                         {aiCommanderEnabled
                           ? isPlayerAtWar
@@ -776,11 +772,14 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     onClick={() =>
                       onDiplomaticAction(summary.nation.id, 'DEFENSIVE_PACT')
                     }
-                    className="px-2.5 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/45 text-sky-200 text-[11px] font-bold"
+                    className="px-2.5 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/45 text-sky-200 text-[11px] font-bold flex items-center gap-1"
                   >
-                    {playerRel?.allianceType === 'DEFENSIVE'
-                      ? '🛡️ Savunma Feshet'
-                      : '🛡️ Savunma Paktı'}
+                    <Shield className="w-3 h-3 shrink-0" />
+                    <span>
+                      {playerRel?.allianceType === 'DEFENSIVE'
+                        ? 'Savunma Feshet'
+                        : 'Savunma Paktı'}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -788,11 +787,14 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     onClick={() =>
                       onDiplomaticAction(summary.nation.id, 'OFFENSIVE_PACT')
                     }
-                    className="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/45 text-emerald-200 text-[11px] font-bold"
+                    className="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/45 text-emerald-200 text-[11px] font-bold flex items-center gap-1"
                   >
-                    {playerRel?.allianceType === 'OFFENSIVE'
-                      ? '⚔️ İttifak Feshet'
-                      : '⚔️ Tam İttifak'}
+                    <Swords className="w-3 h-3 shrink-0" />
+                    <span>
+                      {playerRel?.allianceType === 'OFFENSIVE'
+                        ? 'İttifak Feshet'
+                        : 'Tam İttifak'}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -808,9 +810,12 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     onClick={() =>
                       onDiplomaticAction(summary.nation.id, 'MILITARY_ACCESS')
                     }
-                    className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/45 text-indigo-200 text-[11px] font-bold"
+                    className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/45 text-indigo-200 text-[11px] font-bold flex items-center gap-1"
                   >
-                    {playerRel?.hasMilitaryAccess ? '🧭 Geçiş Aktif' : '🧭 Askeri Geçiş'}
+                    <Compass className="w-3 h-3 shrink-0" />
+                    <span>
+                      {playerRel?.hasMilitaryAccess ? 'Geçiş Aktif' : 'Askeri Geçiş'}
+                    </span>
                   </button>
                   {summary.nation.vassalOf === playerNationId ? (
                     <button
@@ -820,9 +825,10 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                         onDiplomaticAction(summary.nation.id, 'ANNEX_VASSAL')
                       }
                       title="Vasal devleti barışçıl olarak imparatorluğa ilhak et (+20 İlişki gerekir)"
-                      className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/50 text-amber-200 text-[11px] font-bold"
+                      className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/50 text-amber-200 text-[11px] font-bold flex items-center gap-1"
                     >
-                      👑 Vasal İlhak ({vassalAnnexCost}A)
+                      <Crown className="w-3 h-3 shrink-0" />
+                      <span>Vasal İlhak ({vassalAnnexCost}A)</span>
                     </button>
                   ) : !activePlayerWar ? (
                     <button
@@ -832,9 +838,10 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                         onDiplomaticAction(summary.nation.id, 'ULTIMATUM_VASSAL')
                       }
                       title="20 DP · Güçlü orduyla vasallık ültimatomu gönder"
-                      className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/45 text-purple-200 text-[11px] font-bold"
+                      className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/45 text-purple-200 text-[11px] font-bold flex items-center gap-1"
                     >
-                      👑 Vasallık Ültimatomu
+                      <Crown className="w-3 h-3 shrink-0" />
+                      <span>Vasallık Ültimatomu</span>
                     </button>
                   ) : null}
                   {activePlayerWar ? (
@@ -849,10 +856,10 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                           onPeaceDeal(activePlayerWar.id, 'WHITE_PEACE');
                         }
                       }}
-                      className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-extrabold flex items-center gap-1"
+                      className="px-2.5 py-1.5 rounded-xl bg-[#c89d54] hover:bg-[#d8b26e] text-[#110f0d] text-[11px] font-extrabold flex items-center gap-1"
                     >
                       <Swords className="w-3.5 h-3.5" />
-                      <span>⚔️ Savaş & Barış Masası</span>
+                      <span>Savaş & Barış Masası</span>
                     </button>
                   ) : (
                     <button
@@ -860,13 +867,14 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                       onClick={() =>
                         onDiplomaticAction(summary.nation.id, 'DECLARE_WAR')
                       }
-                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold ${
+                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 ${
                         warBlockReason
                           ? 'bg-rose-950/80 border border-rose-500/40 text-rose-200 hover:bg-rose-900/80'
                           : 'bg-rose-600 hover:bg-rose-500 text-white'
                       }`}
                     >
-                      ⚔️ Savaş İlan Et
+                      <Swords className="w-3.5 h-3.5" />
+                      <span>Savaş İlan Et</span>
                     </button>
                   )}
                 </div>

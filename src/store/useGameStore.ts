@@ -16,6 +16,7 @@ import {
   MapMode,
   Nation,
   PendingWarMoveRequest,
+  SeaArmy,
   SpeedLevel,
   TacticalBattleState,
   Territory,
@@ -71,14 +72,18 @@ import {
   cancelResearchDomain,
   changeIdeologyDomain,
   disbandArmyDomain,
+  disbandSeaArmyDomain,
   enactReformDomain,
   executeArmyMoveDomain,
   executeBatchArmyMoveDomain,
+  executeDisembarkFromSeaDomain,
+  executeEmbarkToSeaDomain,
   formEmpireDomain,
   hireMercenaryDomain,
   investSpecialtyProductionDomain,
   mergeNeighborArmiesDomain,
   modernizeNationalArmyDomain,
+  pickNextAutoResearchTech,
   recruitOrAssignGeneralDomain,
   recruitUnitDomain,
   resolveCrisisDomain,
@@ -86,9 +91,11 @@ import {
   SpecialtyProductionId,
   startMissionaryDomain,
   startResearchDomain,
+  toggleAutoResearchDomain,
   unlockTechDomain,
   upgradeBuildingDomain,
 } from '../engine/empireAndArmyActions';
+import { seededHash } from '../engine/aiAndRebellionEngine';
 import { evaluatePlayerAiCommander } from '../engine/playerAiCommander';
 import {
   callAllyToWarDomain,
@@ -115,15 +122,19 @@ export interface GameStoreState {
   wars: ActiveWar[];
   battles: ActiveBattle[];
   movements: ArmyMovement[];
+  seaArmies: SeaArmy[];
   newsEvents: WorldNewsEvent[];
   tick: number;
   hour: number;
   speed: SpeedLevel;
+  worldSeed: number;
 
   mapMode: MapMode;
   activeTab: BottomDrawerTab;
   selectedTerritoryId: string | null;
+  selectedSeaArmyId: string | null;
   armyOrderSourceId: string | null;
+  seaArmyOrderSourceId: string | null;
   pendingWarMove: PendingWarMoveRequest | null;
   moveRatio: number;
   aiCommanderEnabled: boolean;
@@ -148,7 +159,9 @@ export interface GameStoreState {
   setMapMode: (mode: MapMode) => void;
   setActiveTab: (tab: BottomDrawerTab) => void;
   setSelectedTerritoryId: (id: string | null) => void;
+  setSelectedSeaArmyId: (id: string | null) => void;
   setArmyOrderSourceId: (id: string | null) => void;
+  setSeaArmyOrderSourceId: (id: string | null) => void;
   setPendingWarMove: (req: PendingWarMoveRequest | null) => void;
   confirmPendingWarMove: () => void;
   setMoveRatio: (ratio: number) => void;
@@ -202,6 +215,15 @@ export interface GameStoreState {
   startMissionary: (territoryId: string) => void;
   formEmpire: (empireId: string) => void;
   executeArmyMove: (fromId: string, toId: string) => void;
+  executeEmbarkToSea: (
+    targetCoords: [number, number],
+    targetSeaArmyId?: string | null
+  ) => void;
+  executeDisembarkFromSea: (
+    sourceSeaArmyId: string,
+    toTerritoryId: string
+  ) => void;
+  disbandSeaArmy: (seaArmyId: string, ratio: 0.5 | 1) => void;
   executeBatchArmyMove: (
     sourceIds: string[],
     toId: string,
@@ -226,6 +248,7 @@ export interface GameStoreState {
   startResearch: (techId: string) => void;
   cancelResearch: () => void;
   boostResearch: () => void;
+  toggleAutoResearch: () => void;
   unlockTech: (techId: string) => void;
   enactReform: (reformId: string) => void;
   diplomaticAction: (
@@ -242,6 +265,10 @@ export interface GameStoreState {
 }
 
 const initialBundle = initializeWorld2026('EMPIRES_1440');
+
+function generateWorldSeed(): number {
+  return (Math.floor(Math.random() * 0x7fffffff) ^ (Date.now() & 0x7fffffff)) >>> 0 || 1337;
+}
 
 function evaluateCampaignOutcome(
   territories: Record<string, Territory>,
@@ -270,8 +297,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   territories: initialBundle.territories,
   relations: initialBundle.relations,
   wars: [],
+  worldSeed: generateWorldSeed(),
   battles: [],
   movements: [],
+  seaArmies: [],
   newsEvents: [],
   tick: 0,
   hour: 8,
@@ -280,7 +309,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   mapMode: 'POLITICAL',
   activeTab: 'NONE',
   selectedTerritoryId: '792',
+  selectedSeaArmyId: null,
   armyOrderSourceId: null,
+  seaArmyOrderSourceId: null,
   pendingWarMove: null,
   moveRatio: 1,
   aiCommanderEnabled: false,
@@ -319,28 +350,46 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       return { activeTab };
     }),
   setSelectedTerritoryId: (selectedTerritoryId) =>
-    set({ selectedTerritoryId }),
-  setArmyOrderSourceId: (armyOrderSourceId) => set({ armyOrderSourceId }),
+    set({ selectedTerritoryId, ...(selectedTerritoryId ? { selectedSeaArmyId: null } : {}) }),
+  setSelectedSeaArmyId: (selectedSeaArmyId) =>
+    set({
+      selectedSeaArmyId,
+      ...(selectedSeaArmyId
+        ? { selectedTerritoryId: null, armyOrderSourceId: null, activeTab: 'NONE' as BottomDrawerTab }
+        : { seaArmyOrderSourceId: null }),
+    }),
+  setArmyOrderSourceId: (armyOrderSourceId) =>
+    set({ armyOrderSourceId, ...(armyOrderSourceId ? { seaArmyOrderSourceId: null } : {}) }),
+  setSeaArmyOrderSourceId: (seaArmyOrderSourceId) =>
+    set({ seaArmyOrderSourceId, ...(seaArmyOrderSourceId ? { armyOrderSourceId: null } : {}) }),
   setPendingWarMove: (pendingWarMove) => set({ pendingWarMove }),
   confirmPendingWarMove: () =>
     set((s) => {
       if (!s.pendingWarMove) return {};
       const sourceIds = s.pendingWarMove.sourceTerritoryIds;
-      const patch =
-        sourceIds && sourceIds.length > 0
-          ? executeBatchArmyMoveDomain({
-              ...s,
-              sourceIds,
-              moveRatio: s.pendingWarMove.moveRatio ?? s.moveRatio,
-              toId: s.pendingWarMove.toId,
-              forceDeclareWar: true,
-            })
-          : executeArmyMoveDomain({
-              ...s,
-              fromId: s.pendingWarMove.fromId,
-              toId: s.pendingWarMove.toId,
-              forceDeclareWar: true,
-            });
+      const sourceSeaArmyId = s.pendingWarMove.sourceSeaArmyId;
+      const patch = sourceSeaArmyId
+        ? executeDisembarkFromSeaDomain({
+            ...s,
+            sourceSeaArmyId,
+            toTerritoryId: s.pendingWarMove.toId,
+            moveRatio: s.pendingWarMove.moveRatio ?? s.moveRatio,
+            forceDeclareWar: true,
+          })
+        : sourceIds && sourceIds.length > 0
+        ? executeBatchArmyMoveDomain({
+            ...s,
+            sourceIds,
+            moveRatio: s.pendingWarMove.moveRatio ?? s.moveRatio,
+            toId: s.pendingWarMove.toId,
+            forceDeclareWar: true,
+          })
+        : executeArmyMoveDomain({
+            ...s,
+            fromId: s.pendingWarMove.fromId,
+            toId: s.pendingWarMove.toId,
+            forceDeclareWar: true,
+          });
       return {
         ...patch,
         pendingWarMove: null,
@@ -702,6 +751,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       relations: bundle.relations,
       playerNationId: nextNationId,
       selectedTerritoryId: nextNationId,
+      seaArmies: [],
+      selectedSeaArmyId: null,
+      seaArmyOrderSourceId: null,
       campaignOutcome: null,
       dismissedVictoryBanner: false,
     });
@@ -713,6 +765,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   startNewGame: () => {
     const { gameMode, playerNationId, soundEnabled } = get();
     const bundle = initializeWorld2026(gameMode);
+    const freshSeed = generateWorldSeed();
     const validPlayerId = bundle.nations[playerNationId]
       ? playerNationId
       : '792';
@@ -730,6 +783,17 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       starterLoyalties[gId] = DEFAULT_LORD_LOYALTY + 4;
     });
 
+    // Automatically begin the first available technology so research runs from Day 1
+    const starterTech = pickNextAutoResearchTech(currentPlayerNation, gameMode);
+    const starterActiveResearch = starterTech
+      ? {
+          techId: starterTech.id,
+          progress: 0,
+          totalCost: starterTech.cost,
+          startedTick: 0,
+        }
+      : null;
+
     const nextNations: Record<string, Nation> = {
       ...bundle.nations,
       [validPlayerId]: {
@@ -738,8 +802,32 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         activeGeneralId:
           currentPlayerNation.activeGeneralId || finalGeneralIds[0] || null,
         lordLoyalties: starterLoyalties,
+        autoResearch: true,
+        activeResearch: starterActiveResearch,
+        researchProgressByTech: starterTech
+          ? {
+              ...(currentPlayerNation.researchProgressByTech ?? {}),
+              [starterTech.id]: 0,
+            }
+          : currentPlayerNation.researchProgressByTech,
       },
     };
+
+    // Subtle per-campaign diplomatic jitter so every new save unfolds organically
+    const seededRelations: Record<string, DiplomaticRelation> = {};
+    for (const [rKey, rel] of Object.entries(bundle.relations)) {
+      if (rel.isAllied || rel.allianceType || rel.score <= -75) {
+        seededRelations[rKey] = rel;
+      } else {
+        const delta = Math.round(
+          (seededHash(freshSeed, `init_rel_${rKey}`) - 0.5) * 20
+        );
+        seededRelations[rKey] = {
+          ...rel,
+          score: Math.max(-85, Math.min(85, rel.score + delta)),
+        };
+      }
+    }
 
     if (soundEnabled && !music.isPlaying) {
       music.setTrack(
@@ -752,16 +840,20 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       features: bundle.features,
       nations: nextNations,
       territories: bundle.territories,
-      relations: bundle.relations,
+      relations: seededRelations,
       playerNationId: validPlayerId,
+      worldSeed: freshSeed,
       wars: [],
       battles: [],
       movements: [],
+      seaArmies: [],
       tick: 0,
       hour: 8,
       speed: 1,
       selectedTerritoryId: null,
+      selectedSeaArmyId: null,
       armyOrderSourceId: null,
+      seaArmyOrderSourceId: null,
       pendingWarMove: null,
       moveRatio: 1,
       aiCommanderEnabled: false,
@@ -799,9 +891,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       wars: s.wars,
       battles: s.battles,
       movements: s.movements,
+      seaArmies: s.seaArmies,
       newsEvents: s.newsEvents,
       tick: s.tick,
       hour: s.hour,
+      worldSeed: s.worldSeed,
     });
   },
 
@@ -823,11 +917,15 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       wars: hydrated.wars,
       battles: hydrated.battles,
       movements: hydrated.movements,
+      seaArmies: hydrated.seaArmies || [],
       newsEvents: hydrated.newsEvents,
       tick: hydrated.tick,
       hour: hydrated.hour ?? 8,
+      worldSeed: hydrated.worldSeed ?? generateWorldSeed(),
       selectedTerritoryId: hydrated.playerNationId,
+      selectedSeaArmyId: null,
       armyOrderSourceId: null,
+      seaArmyOrderSourceId: null,
       pendingWarMove: null,
       moveRatio: 1,
       aiCommanderEnabled: false,
@@ -878,11 +976,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       wars: s.wars,
       battles: s.battles,
       movements: s.movements,
+      seaArmies: s.seaArmies,
       newsEvents: s.newsEvents,
       settings: s.settings,
       aiCommanderEnabled: s.aiCommanderEnabled,
       aiCommanderStance: s.aiCommanderStance,
       activeIncomingOffer: s.incomingDiplomaticOffer,
+      worldSeed: s.worldSeed,
     });
 
     for (const cue of out.sounds) {
@@ -898,6 +998,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       s.dismissedVictoryBanner
     );
 
+    const stillSelectedSea =
+      s.selectedSeaArmyId &&
+      out.seaArmies.some((sa) => sa.id === s.selectedSeaArmyId)
+        ? s.selectedSeaArmyId
+        : null;
+
     set({
       tick: out.nextTick,
       hour: out.nextHour,
@@ -907,6 +1013,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       wars: out.wars,
       battles: out.battles,
       movements: out.movements,
+      seaArmies: out.seaArmies,
+      selectedSeaArmyId: stillSelectedSea,
       newsEvents: out.newsEvents,
       ...(out.shouldPause || outcome ? { speed: 0 as SpeedLevel } : {}),
       ...(outcome
@@ -932,14 +1040,21 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   selectTerritory: (territoryId) => {
     sound.playSelectTerritory();
-    set({ selectedTerritoryId: territoryId, activeTab: 'TERRITORY' });
+    set({
+      selectedTerritoryId: territoryId,
+      selectedSeaArmyId: null,
+      seaArmyOrderSourceId: null,
+      activeTab: 'TERRITORY',
+    });
   },
 
   selectTerritoryOnMap: (territoryId) => {
     if (!territoryId) {
       set({
         selectedTerritoryId: null,
+        selectedSeaArmyId: null,
         armyOrderSourceId: null,
+        seaArmyOrderSourceId: null,
         activeTab: 'NONE',
       });
       return;
@@ -947,6 +1062,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     sound.playSelectTerritory();
     set({
       selectedTerritoryId: territoryId,
+      selectedSeaArmyId: null,
+      seaArmyOrderSourceId: null,
       activeTab: 'NONE',
     });
   },
@@ -1108,6 +1225,69 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         ...(patch.movements ? { moveRatio: 1 } : {}),
         ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
       };
+    }),
+
+  executeEmbarkToSea: (targetCoords, targetSeaArmyId = null) =>
+    set((s) => {
+      const patch = executeEmbarkToSeaDomain({
+        sourceTerritoryId: s.armyOrderSourceId,
+        sourceSeaArmyId: s.seaArmyOrderSourceId,
+        targetCoords,
+        targetSeaArmyId,
+        territories: s.territories,
+        nations: s.nations,
+        movements: s.movements,
+        seaArmies: s.seaArmies,
+        playerNationId: s.playerNationId,
+        moveRatio: s.moveRatio,
+        speed: s.speed,
+      });
+      return {
+        ...patch,
+        ...(patch.movements ? { moveRatio: 1 } : {}),
+        ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
+      };
+    }),
+
+  executeDisembarkFromSea: (sourceSeaArmyId, toTerritoryId) =>
+    set((s) => {
+      const patch = executeDisembarkFromSeaDomain({
+        sourceSeaArmyId,
+        toTerritoryId,
+        territories: s.territories,
+        nations: s.nations,
+        relations: s.relations,
+        wars: s.wars,
+        movements: s.movements,
+        seaArmies: s.seaArmies,
+        playerNationId: s.playerNationId,
+        moveRatio: s.moveRatio,
+        tick: s.tick,
+        gameMode: s.gameMode,
+        newsEvents: s.newsEvents,
+        speed: s.speed,
+      });
+      return {
+        ...patch,
+        ...(patch.movements ? { moveRatio: 1 } : {}),
+        ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
+      };
+    }),
+
+  disbandSeaArmy: (seaArmyId, ratio) =>
+    set((s) => {
+      const patch = disbandSeaArmyDomain({
+        seaArmyId,
+        ratio,
+        seaArmies: s.seaArmies,
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+      });
+      const cleanedPatch = { ...patch };
+      if (cleanedPatch.seaArmyOrderSourceId === undefined) {
+        delete cleanedPatch.seaArmyOrderSourceId;
+      }
+      return cleanedPatch;
     }),
 
   mergeNeighborArmies: (targetTerritoryId) =>
@@ -1426,6 +1606,16 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       boostResearchDomain({
         nations: s.nations,
         playerNationId: s.playerNationId,
+      })
+    ),
+
+  toggleAutoResearch: () =>
+    set((s) =>
+      toggleAutoResearchDomain({
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+        gameMode: s.gameMode,
+        tick: s.tick,
       })
     ),
 

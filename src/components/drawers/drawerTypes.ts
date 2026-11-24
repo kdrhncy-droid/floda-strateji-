@@ -74,6 +74,7 @@ export interface CommandDrawersProps {
   onStartResearch?: (techId: string) => void;
   onCancelResearch?: () => void;
   onBoostResearch?: () => void;
+  onToggleAutoResearch?: () => void;
   onUnlockTech: (techId: string) => void;
   onEnactReform: (reformId: string) => void;
   onDiplomaticAction: (

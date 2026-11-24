@@ -7,6 +7,7 @@ import { renderMapLabelsAndBattles } from '../map/mapLabelsAndUnitsRenderer';
 import {
   renderArmyMovementsLayer,
   renderOceanAndPolygons,
+  renderSeaArmiesLayer,
 } from '../map/mapPolygonRenderer';
 import {
   buildMapGeometryCache,
@@ -17,7 +18,15 @@ import {
 } from '../map/spatialIndex';
 import { useMapGestures } from '../map/useMapGestures';
 import { performanceTelemetry } from '../utils/performanceTelemetry';
-import type { MapLabelDensityOption } from '../engine/gameSettings';
+import {
+  BorderThicknessOption,
+  getBorderThicknessMultiplier,
+  getGraphicsMaxDpr,
+  getMapLabelScaleMultiplier,
+  GraphicsQualityOption,
+  MapLabelDensityOption,
+  MapLabelScaleOption,
+} from '../engine/gameSettings';
 import {
   buildClassifiedBorderPaths,
   ClassifiedBorderMap,
@@ -35,6 +44,7 @@ import {
   DiplomaticRelation,
   MapMode,
   Nation,
+  SeaArmy,
   SpeedLevel,
   Territory,
 } from '../types/game';
@@ -47,17 +57,34 @@ interface WorldMapCanvasProps {
   wars: ActiveWar[];
   battles: ActiveBattle[];
   movements: ArmyMovement[];
+  seaArmies?: SeaArmy[];
   playerNationId: string;
   selectedTerritoryId: string | null;
+  selectedSeaArmyId?: string | null;
   multiSelectedTerritoryIds?: string[];
   armyOrderSourceId: string | null;
+  seaArmyOrderSourceId?: string | null;
   mapMode: MapMode;
   mapLabelDensity?: MapLabelDensityOption;
+  mapLabelScale?: MapLabelScaleOption;
+  borderThickness?: BorderThicknessOption;
+  graphicsQuality?: GraphicsQualityOption;
+  smoothArmyAnimations?: boolean;
   fogOfWarEnabled?: boolean;
   speed?: SpeedLevel;
   focusCapitalSignal?: number;
+  focusCoordsSignal?: { coords: [number, number]; seq: number } | null;
   onSelectTerritory: (territoryId: string | null) => void;
+  onSelectSeaArmy?: (seaArmyId: string | null) => void;
   onExecuteArmyMove: (fromId: string, toId: string) => void;
+  onEmbarkToSea?: (
+    coords: [number, number],
+    targetSeaArmyId?: string | null
+  ) => void;
+  onDisembarkFromSea?: (
+    sourceSeaArmyId: string,
+    toTerritoryId: string
+  ) => void;
   onCancelArmyOrder: () => void;
 }
 
@@ -69,17 +96,28 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   wars,
   battles,
   movements,
+  seaArmies = [],
   playerNationId,
   selectedTerritoryId,
+  selectedSeaArmyId = null,
   multiSelectedTerritoryIds,
   armyOrderSourceId,
+  seaArmyOrderSourceId = null,
   mapMode,
   mapLabelDensity = 'BALANCED',
+  mapLabelScale = 'NORMAL',
+  borderThickness = 'NORMAL',
+  graphicsQuality = 'HIGH',
+  smoothArmyAnimations = true,
   fogOfWarEnabled = true,
   speed = 1,
   focusCapitalSignal = 0,
+  focusCoordsSignal = null,
   onSelectTerritory,
+  onSelectSeaArmy,
   onExecuteArmyMove,
+  onEmbarkToSea,
+  onDisembarkFromSea,
   onCancelArmyOrder,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -108,6 +146,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     multiSelectedTerritoryIds?: string[];
     armyOrderSourceId: string | null;
     fogOfWarEnabled: boolean;
+    borderThickness: BorderThicknessOption;
   } | null>(null);
   const lastCenteredKeyRef = useRef<string>('');
   const projectionCacheRef = useRef<{
@@ -138,9 +177,15 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   const clickContextRef = useRef({
     features,
     territories,
+    seaArmies,
+    playerNationId,
     armyOrderSourceId,
+    seaArmyOrderSourceId,
     onExecuteArmyMove,
     onSelectTerritory,
+    onSelectSeaArmy,
+    onEmbarkToSea,
+    onDisembarkFromSea,
     transform: { k: 1.85, x: 0, y: 0 },
   });
 
@@ -170,7 +215,40 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     const coords = projection.invert?.([mapX, mapY]) as [number, number] | null;
     if (!coords) return;
 
-    // O(log N) RBush hit-test for province polygon — instant AoH3 response!
+    // 1. Hit-test anchored SeaArmies (fleets) in screen space before land polygons
+    let hitFleet: SeaArmy | null = null;
+    let bestFleetDistSq = 30 * 30;
+    for (const fleet of ctxState.seaArmies) {
+      const pt = projection(fleet.coords);
+      if (!pt) continue;
+      const sx = pt[0] * k + x;
+      const sy = pt[1] * k + y;
+      const dx = clickX - sx;
+      const dy = clickY - sy;
+      const dSq = dx * dx + dy * dy;
+      if (dSq <= bestFleetDistSq) {
+        bestFleetDistSq = dSq;
+        hitFleet = fleet;
+      }
+    }
+
+    if (hitFleet) {
+      if (
+        (ctxState.armyOrderSourceId || ctxState.seaArmyOrderSourceId) &&
+        ctxState.onEmbarkToSea &&
+        ctxState.seaArmyOrderSourceId !== hitFleet.id
+      ) {
+        ctxState.onEmbarkToSea(
+          hitFleet.coords,
+          hitFleet.ownerId === ctxState.playerNationId ? hitFleet.id : null
+        );
+        return;
+      }
+      ctxState.onSelectSeaArmy?.(hitFleet.id);
+      return;
+    }
+
+    // 2. O(log N) RBush hit-test for province polygon — instant AoH3 response!
     const hitId = hitTestTerritoryAtPoint({
       cache,
       features: ctxState.features,
@@ -183,31 +261,54 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     });
 
     if (hitId) {
+      if (ctxState.seaArmyOrderSourceId && ctxState.onDisembarkFromSea) {
+        ctxState.onDisembarkFromSea(ctxState.seaArmyOrderSourceId, hitId);
+        return;
+      }
       if (ctxState.armyOrderSourceId && ctxState.armyOrderSourceId !== hitId) {
         ctxState.onExecuteArmyMove(ctxState.armyOrderSourceId, hitId);
         return;
       }
       ctxState.onSelectTerritory(hitId);
     } else {
+      // 3. Open ocean tap: embark coastal army or reposition sea army onto open sea
+      if (
+        (ctxState.armyOrderSourceId || ctxState.seaArmyOrderSourceId) &&
+        ctxState.onEmbarkToSea
+      ) {
+        ctxState.onEmbarkToSea(coords, null);
+        return;
+      }
       ctxState.onSelectTerritory(null);
     }
   }, []);
 
-  const { transform, centerOnTerritory, reprojectOnResize, handlers } =
-    useMapGestures({
-      canvasRef,
-      containerRef,
-      territories,
-      onTapClientPoint: handleCanvasTap,
-    });
+  const {
+    transform,
+    centerOnTerritory,
+    centerOnCoords,
+    reprojectOnResize,
+    handlers,
+  } = useMapGestures({
+    canvasRef,
+    containerRef,
+    territories,
+    onTapClientPoint: handleCanvasTap,
+  });
   const lastPerfTransformRef = useRef(transform);
 
   clickContextRef.current = {
     features,
     territories,
+    seaArmies,
+    playerNationId,
     armyOrderSourceId,
+    seaArmyOrderSourceId,
     onExecuteArmyMove,
     onSelectTerritory,
+    onSelectSeaArmy,
+    onEmbarkToSea,
+    onDisembarkFromSea,
     transform,
   };
 
@@ -256,6 +357,12 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     }
   }, [focusCapitalSignal, nations, playerNationId, territories, centerOnTerritory]);
 
+  // Smoothly focus camera on open-sea coordinates when a fleet is selected from Outliner
+  useEffect(() => {
+    if (!focusCoordsSignal || focusCoordsSignal.seq <= 0) return;
+    centerOnCoords(focusCoordsSignal.coords, 2.5);
+  }, [focusCoordsSignal, centerOnCoords]);
+
   // Main 2D Canvas Render Pass (with measured frame timings for map interactions)
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -273,7 +380,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       performanceTelemetry.setInteraction('pan');
     }
     lastPerfTransformRef.current = transform;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const maxDpr = getGraphicsMaxDpr(graphicsQuality);
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
     const pixelW = Math.round(width * dpr);
     const pixelH = Math.round(height * dpr);
 
@@ -344,7 +452,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       prevDeps.selectedTerritoryId === selectedTerritoryId &&
       prevDeps.multiSelectedTerritoryIds === multiSelectedTerritoryIds &&
       prevDeps.armyOrderSourceId === armyOrderSourceId &&
-      prevDeps.fogOfWarEnabled === fogOfWarEnabled;
+      prevDeps.fogOfWarEnabled === fogOfWarEnabled &&
+      prevDeps.borderThickness === borderThickness;
 
     // Sync smooth 60 FPS sub-tick movement tweens whenever movement state updates
     const nowMs = performance.now();
@@ -403,6 +512,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           fogOfWarEnabled,
           visibleTerritoryIds,
           classifiedBorders,
+          borderThicknessMultiplier: getBorderThicknessMultiplier(borderThickness),
         });
 
         baseCtx.restore();
@@ -421,6 +531,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           multiSelectedTerritoryIds,
           armyOrderSourceId,
           fogOfWarEnabled,
+          borderThickness,
         };
       }
     }
@@ -456,6 +567,21 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         animPhaseOverride,
       });
 
+      // 2b. Draw fleets/armies anchored on open sea (plus active coastal blockades)
+      renderSeaArmiesLayer({
+        ctx,
+        width,
+        height,
+        transform,
+        seaArmies,
+        territories,
+        nations,
+        wars,
+        projection,
+        playerNationId,
+        selectedSeaArmyId,
+      });
+
       // 3. Draw dynamic province labels, army shields, and live battle widgets
       renderMapLabelsAndBattles({
         ctx,
@@ -471,6 +597,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         projection,
         mapMode,
         mapLabelDensity,
+        mapLabelScaleMultiplier: getMapLabelScaleMultiplier(mapLabelScale),
         playerNationId,
         selectedTerritoryId,
         armyOrderSourceId,
@@ -483,8 +610,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
 
     drawOverlayFrame(nowMs);
 
-    // Run lightweight 60 FPS overlay interpolation strictly while armies are actively marching & clock is running
-    if (movements.length > 0 && speed > 0) {
+    // Run lightweight 60 FPS overlay interpolation strictly while armies are actively marching, smooth mode is on & clock is running
+    if (smoothArmyAnimations && movements.length > 0 && speed > 0) {
       let rafId = 0;
       const step = (ts: number) => {
         drawOverlayFrame(ts);
@@ -498,16 +625,22 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   }, [
     armyOrderSourceId,
     battles,
+    borderThickness,
     features,
     fogOfWarEnabled,
+    graphicsQuality,
     mapLabelDensity,
+    mapLabelScale,
     mapMode,
     movements,
     nations,
     playerNationId,
     relations,
+    seaArmies,
+    selectedSeaArmyId,
     selectedTerritoryId,
     multiSelectedTerritoryIds,
+    smoothArmyAnimations,
     speed,
     territories,
     transform,
@@ -528,7 +661,10 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-amber-950/95 border border-amber-500/50 text-amber-100 shadow-xl max-w-[calc(100vw-1.5rem)]">
           <Crosshair className="w-4 h-4 text-amber-400 shrink-0" />
           <span className="text-xs font-medium truncate">
-            <strong>{territories[armyOrderSourceId].name}</strong> ordusu için haritadan hedef şehir seçin
+            <strong>{territories[armyOrderSourceId].name}</strong> ordusu için{' '}
+            {territories[armyOrderSourceId].isCoastal
+              ? 'hedef şehir veya açık deniz noktası seçin'
+              : 'haritadan hedef şehir seçin'}
           </span>
           <button
             onClick={onCancelArmyOrder}
@@ -538,6 +674,27 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           </button>
         </div>
       )}
+
+      {seaArmyOrderSourceId &&
+        !selectedSeaArmyId &&
+        seaArmies.some((s) => s.id === seaArmyOrderSourceId) && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-sky-950/95 border border-sky-400/55 text-sky-100 shadow-xl max-w-[calc(100vw-1.5rem)]">
+            <Crosshair className="w-4 h-4 text-sky-300 shrink-0" />
+            <span className="text-xs font-medium truncate">
+              <strong>
+                {seaArmies.find((s) => s.id === seaArmyOrderSourceId)?.name ||
+                  'Deniz Filosu'}
+              </strong>{' '}
+              için haritadan kıyı şehri veya yeni deniz noktası seçin
+            </span>
+            <button
+              onClick={onCancelArmyOrder}
+              className="px-2.5 py-1 text-xs font-semibold bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-lg border border-slate-700 whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              İptal
+            </button>
+          </div>
+        )}
 
     </div>
   );

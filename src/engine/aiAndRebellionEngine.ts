@@ -12,6 +12,7 @@ import {
   GameModeId,
   IncomingDiplomaticOffer,
   Nation,
+  SeaArmy,
   Territory,
   UnitComposition,
   WorldNewsEvent,
@@ -41,6 +42,205 @@ function scaleUnitComp(units: UnitComposition, ratio: number): UnitComposition {
     infantry: Math.max(0, Math.round(units.infantry * ratio)),
     armor: Math.max(0, Math.round(units.armor * ratio)),
     airDrone: Math.max(0, Math.round(units.airDrone * ratio)),
+  };
+}
+
+/**
+ * Deterministic unsigned hash returning a float in [0, 1) from (seed, salt).
+ * Ensures every campaign with a different worldSeed unfolds uniquely while
+ * remaining reproducible for a given save.
+ */
+export function seededHash(seed: number, salt: string | number): number {
+  let h = (Math.imul(seed | 0, 2654435761) ^ 0x811c9dc5) >>> 0;
+  const str = String(salt);
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+/**
+ * Returns a new Fisher-Yates shuffled array derived from (seed, salt).
+ */
+export function seededShuffle<T>(
+  items: readonly T[],
+  seed: number,
+  salt: string
+): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const r = seededHash(seed, `${salt}_${i}`);
+    const j = Math.floor(r * (i + 1));
+    const tmp = copy[i];
+    copy[i] = copy[j];
+    copy[j] = tmp;
+  }
+  return copy;
+}
+
+export interface AllianceCompatibilityResult {
+  blocked: boolean;
+  score: number;
+  sharesCommonWarEnemy: boolean;
+  sharesCommonThreat: boolean;
+}
+
+/**
+ * Scores geopolitical alliance compatibility between two nations and enforces
+ * hard diplomatic guardrails (no allying with war enemies, embargoers,
+ * vassals, or allies of our active war enemies).
+ */
+export function computeAllianceCompatibilityScore(params: {
+  actor: Nation;
+  peer: Nation;
+  rel: DiplomaticRelation;
+  wars: ActiveWar[];
+  relations: Record<string, DiplomaticRelation>;
+  nations: Record<string, Nation>;
+  gameMode: GameModeId;
+  threatNeighborIds: string[];
+  actorPersonality?: string;
+  isDirectNeighbor?: boolean;
+  peerOwnsActorCore?: boolean;
+}): AllianceCompatibilityResult {
+  const {
+    actor,
+    peer,
+    rel,
+    wars,
+    relations,
+    nations,
+    gameMode,
+    threatNeighborIds,
+    actorPersonality,
+    isDirectNeighbor = false,
+    peerOwnsActorCore = false,
+  } = params;
+
+  const zeroBlocked: AllianceCompatibilityResult = {
+    blocked: true,
+    score: -100,
+    sharesCommonWarEnemy: false,
+    sharesCommonThreat: false,
+  };
+
+  if (
+    !actor ||
+    !peer ||
+    actor.id === peer.id ||
+    actor.isEliminated ||
+    peer.isEliminated
+  ) {
+    return zeroBlocked;
+  }
+
+  // Hard guardrails: active war, embargo, vassalage, or deep hatred
+  if (isAtWar(wars, actor.id, peer.id)) return zeroBlocked;
+  if (rel.hasEmbargo || getEmbargoingNationIds(rel).length > 0) return zeroBlocked;
+  if (actor.vassalOf || peer.vassalOf) return zeroBlocked;
+  if (rel.score <= -25) return zeroBlocked;
+
+  // Never ally with a nation that is allied to one of our active war enemies (or vice versa)
+  const actorEnemies = new Set<string>();
+  const peerEnemies = new Set<string>();
+  for (const w of wars) {
+    if (w.attackers.includes(actor.id)) {
+      w.defenders.forEach((id) => actorEnemies.add(id));
+    } else if (w.defenders.includes(actor.id)) {
+      w.attackers.forEach((id) => actorEnemies.add(id));
+    }
+    if (w.attackers.includes(peer.id)) {
+      w.defenders.forEach((id) => peerEnemies.add(id));
+    } else if (w.defenders.includes(peer.id)) {
+      w.attackers.forEach((id) => peerEnemies.add(id));
+    }
+  }
+
+  for (const enemyId of actorEnemies) {
+    const peerRelToEnemy = getOrCreateRelation(relations, peer.id, enemyId);
+    if (peerRelToEnemy.isAllied || Boolean(peerRelToEnemy.allianceType)) {
+      return zeroBlocked;
+    }
+  }
+  for (const enemyId of peerEnemies) {
+    const actorRelToEnemy = getOrCreateRelation(relations, actor.id, enemyId);
+    if (actorRelToEnemy.isAllied || Boolean(actorRelToEnemy.allianceType)) {
+      return zeroBlocked;
+    }
+  }
+
+  let sharesCommonWarEnemy = false;
+  for (const enemyId of actorEnemies) {
+    if (peerEnemies.has(enemyId)) {
+      sharesCommonWarEnemy = true;
+      break;
+    }
+  }
+
+  const sharesCommonThreat = threatNeighborIds.some((threatId) => {
+    if (threatId === peer.id) return false;
+    const peerRelToThreat = getOrCreateRelation(relations, peer.id, threatId);
+    return (
+      peerRelToThreat.score <= -15 ||
+      (nations[threatId]?.aggressiveExpansion ?? 0) >= 35
+    );
+  });
+
+  let score = rel.score * 0.75;
+  if (sharesCommonWarEnemy) score += 32;
+  if (sharesCommonThreat) score += 20;
+
+  // Shared faith (stronger in 1440 historical era)
+  if (actor.stateReligion && peer.stateReligion) {
+    if (actor.stateReligion === peer.stateReligion) {
+      score += gameMode === 'EMPIRES_1440' ? 12 : 4;
+    } else if (gameMode === 'EMPIRES_1440') {
+      score -= 6;
+    }
+  }
+
+  // Ideology alignment (stronger in 2026 modern era)
+  if (actor.ideology === peer.ideology) {
+    score += gameMode !== 'EMPIRES_1440' ? 10 : 5;
+  } else if (
+    (actor.ideology === 'DEMOCRACY' &&
+      (peer.ideology === 'AUTHORITARIAN' || peer.ideology === 'MILITARY_JUNTA')) ||
+    ((actor.ideology === 'AUTHORITARIAN' || actor.ideology === 'MILITARY_JUNTA') &&
+      peer.ideology === 'DEMOCRACY')
+  ) {
+    score -= 8;
+  }
+
+  // Existing diplomatic warmth & trust
+  if (rel.hasTradeAgreement) score += 8;
+  if (rel.hasNonAggression) score += 8;
+  if (rel.hasMilitaryAccess) score += 4;
+
+  // Aggressive expansion deterrence
+  if ((peer.aggressiveExpansion || 0) >= 45) score -= 28;
+  else if ((peer.aggressiveExpansion || 0) >= 30) score -= 14;
+
+  // Border ambition / revanchist friction
+  if (peerOwnsActorCore) score -= 24;
+  if (
+    isDirectNeighbor &&
+    (actorPersonality === 'CONQUEROR' || actorPersonality === 'REVANCHIST') &&
+    !sharesCommonThreat
+  ) {
+    score -= 8;
+  }
+
+  return {
+    blocked: false,
+    score: Math.round(score),
+    sharesCommonWarEnemy,
+    sharesCommonThreat,
   };
 }
 
@@ -104,6 +304,7 @@ export function evaluateWartimeAiOperations(params: {
   relations: Record<string, DiplomaticRelation>;
   wars: ActiveWar[];
   movements: ArmyMovement[];
+  seaArmies?: SeaArmy[];
   aiAggressiveness: AiAggressivenessLevel;
   maxActionsPerPass?: number;
 }): WartimeAiBatchResult | null {
@@ -115,6 +316,7 @@ export function evaluateWartimeAiOperations(params: {
     relations,
     wars,
     movements,
+    seaArmies = [],
     aiAggressiveness,
     maxActionsPerPass = 3,
   } = params;
@@ -559,8 +761,142 @@ export function evaluateWartimeAiOperations(params: {
           }
 
           actionsCount++;
+          continue;
         }
       }
+    }
+
+    // Step 4: Wartime Naval Operations — Counter-Blockade Interception & Amphibious Coastal Landings
+    const alreadyHasNavalMove =
+      movements.some((m) => m.ownerId === actorId && Boolean(m.isNaval)) ||
+      newMovements.some((m) => m.ownerId === actorId && Boolean(m.isNaval));
+    if (alreadyHasNavalMove) continue;
+
+    const coastalStrongProvs = refreshedOwned
+      .filter(
+        (p) =>
+          p &&
+          isTerritoryCoastal(p) &&
+          p.garrison >= 6500 &&
+          !p.siege &&
+          Boolean(p.centroid)
+      )
+      .sort((a, b) => b.garrison - a.garrison);
+    if (coastalStrongProvs.length === 0) continue;
+
+    const srcCoast = coastalStrongProvs[0];
+    const navalSendRatio = srcCoast.isCapital ? 0.45 : 0.55;
+    const navalTroops = Math.round(srcCoast.garrison * navalSendRatio);
+    if (navalTroops < 3000) continue;
+
+    // 4A. Counter-Fleet: intercept a hostile SeaArmy blockading our coastline
+    const hostileNearFleet = seaArmies
+      .filter(
+        (f) =>
+          f.ownerId !== actorId &&
+          Boolean(isAtWar(wars, actorId, f.ownerId)) &&
+          navalTroops >= f.troops * 0.85 &&
+          coastalStrongProvs.some(
+            (cp) =>
+              Math.hypot(
+                f.coords[0] - cp.centroid[0],
+                f.coords[1] - cp.centroid[1]
+              ) <= 7.5
+          )
+      )
+      .sort((a, b) => a.troops - b.troops)[0];
+
+    if (hostileNearFleet) {
+      const remainingGarrison = Math.max(2500, srcCoast.garrison - navalTroops);
+      nextTerritories[srcCoast.id] = {
+        ...srcCoast,
+        garrison: remainingGarrison,
+        units: scaleUnitComp(
+          srcCoast.units,
+          remainingGarrison / Math.max(1, srcCoast.garrison)
+        ),
+      };
+      newMovements.push({
+        id: `ai_naval_int_${nextTick}_${srcCoast.id}`,
+        ownerId: actorId,
+        fromTerritoryId: srcCoast.id,
+        toTerritoryId: srcCoast.id,
+        fromCoords: srcCoast.centroid,
+        toCoords: hostileNearFleet.coords,
+        targetSeaName: hostileNearFleet.name,
+        isNaval: true,
+        troops: navalTroops,
+        units: scaleUnitComp(srcCoast.units, navalSendRatio),
+        progress: 16,
+        isAttack: true,
+      });
+      if (hostileNearFleet.ownerId === playerNationId) {
+        playerAlerts.push(
+          `DÜŞMAN DONANMASI: ${actorNation.name} filosu (${(navalTroops / 1000).toFixed(1)}B asker) ${hostileNearFleet.name} birliğimize saldırmak üzere denize açıldı!`
+        );
+      }
+      actionsCount++;
+      continue;
+    }
+
+    // 4B. Amphibious Assault: cross open water to invade a vulnerable enemy coastal province
+    const enemyCoastalTargets = Object.values(nextTerritories)
+      .filter((t) => {
+        if (!t || t.ownerId === actorId || !isTerritoryCoastal(t) || !t.centroid) {
+          return false;
+        }
+        if (!isAtWar(wars, actorId, t.ownerId)) return false;
+        const alreadyTargeted =
+          movements.some(
+            (m) => m.ownerId === actorId && m.toTerritoryId === t.id
+          ) ||
+          newMovements.some(
+            (m) => m.ownerId === actorId && m.toTerritoryId === t.id
+          );
+        if (alreadyTargeted) return false;
+        const dist = Math.hypot(
+          srcCoast.centroid[0] - t.centroid[0],
+          srcCoast.centroid[1] - t.centroid[1]
+        );
+        return dist <= 28 && navalTroops >= Math.max(3000, t.garrison * 1.05);
+      })
+      .sort((a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a));
+
+    const amphibTarget = enemyCoastalTargets[0];
+    if (amphibTarget) {
+      const remainingGarrison = Math.max(2500, srcCoast.garrison - navalTroops);
+      nextTerritories[srcCoast.id] = {
+        ...srcCoast,
+        garrison: remainingGarrison,
+        units: scaleUnitComp(
+          srcCoast.units,
+          remainingGarrison / Math.max(1, srcCoast.garrison)
+        ),
+      };
+      newMovements.push({
+        id: `ai_amphib_${nextTick}_${srcCoast.id}_${amphibTarget.id}`,
+        ownerId: actorId,
+        fromTerritoryId: srcCoast.id,
+        toTerritoryId: amphibTarget.id,
+        finalDestinationId: amphibTarget.id,
+        fromCoords: srcCoast.centroid,
+        isNaval: true,
+        troops: navalTroops,
+        units: scaleUnitComp(srcCoast.units, navalSendRatio),
+        progress: 14,
+        isAttack: true,
+      });
+      if (amphibTarget.ownerId === playerNationId) {
+        playerAlerts.push(
+          `AMFİBİ ÇIKARMA UYARISI: ${actorNation.name} donanması (${(navalTroops / 1000).toFixed(1)}B asker) ${amphibTarget.name} kıyımıza çıkarma başlattı!`
+        );
+        newsItems.push({
+          title: `Amfibi Çıkarma: ${amphibTarget.name}`,
+          description: `${actorNation.name} donanması ${srcCoast.name} limanından açılarak ${amphibTarget.name} kıyısına çıkarma harekatı başlattı.`,
+          type: 'WAR',
+        });
+      }
+      actionsCount++;
     }
   }
 
@@ -592,6 +928,8 @@ export function evaluateMultiProvinceAiTurn(params: {
   movements?: ArmyMovement[];
   hasActiveIncomingOffer?: boolean;
   aiAggressiveness: AiAggressivenessLevel;
+  worldSeed?: number;
+  actorSlotOffset?: number;
 }): AiTurnResult | null {
   const {
     nextTick,
@@ -604,6 +942,8 @@ export function evaluateMultiProvinceAiTurn(params: {
     movements = [],
     hasActiveIncomingOffer = false,
     aiAggressiveness,
+    worldSeed,
+    actorSlotOffset = 0,
   } = params;
 
   // Include all active neighbors of the player, all nations in wars, all multi-province realms, and major presets
@@ -632,8 +972,23 @@ export function evaluateMultiProvinceAiTurn(params: {
   });
   if (majorAiIds.length === 0) return null;
 
-  const stepIndex = Math.max(0, Math.floor(nextTick / 3));
-  const actorId = majorAiIds[stepIndex % majorAiIds.length];
+  const baseStep = Math.max(0, Math.floor(nextTick / 3));
+  const stepIndex =
+    worldSeed !== undefined ? baseStep * 2 + actorSlotOffset : baseStep;
+
+  let actorId: string;
+  if (worldSeed !== undefined) {
+    const cycleIndex = Math.floor(stepIndex / majorAiIds.length);
+    const shuffledActors = seededShuffle(
+      majorAiIds,
+      worldSeed,
+      `ai_cycle_${cycleIndex}`
+    );
+    actorId = shuffledActors[stepIndex % shuffledActors.length];
+  } else {
+    actorId = majorAiIds[stepIndex % majorAiIds.length];
+  }
+
   let actorNation = nations[actorId];
   if (!actorNation) return null;
 
@@ -1316,36 +1671,61 @@ export function evaluateMultiProvinceAiTurn(params: {
 
     const actorAllianceCount = countExistingAlliances(actorId);
 
-    // 4B-1: Evaluate Direct Neighbors + Regional Peers (Enemy-of-My-Enemy Coalitions & Pacts)
-    const aiPeers = Array.from(
+    // 4B-1: Evaluate Direct Neighbors + Regional Peers (Smart Compatibility, Warming, Pacts & Coalitions)
+    const rawAiPeers = Array.from(
       new Set([...Array.from(neighborIds), ...Array.from(regionalIds)])
     ).filter(
       (id) => id !== playerNationId && nations[id] && !nations[id].isEliminated
     );
+    const aiPeers =
+      worldSeed !== undefined
+        ? seededShuffle(rawAiPeers, worldSeed, `peers_${nextTick}_${actorId}`)
+        : rawAiPeers;
 
+    // Precompute which peers hold any core province of the actor
+    const peersHoldingActorCore = new Set<string>();
+    for (const t of Object.values(activeTerrs)) {
+      if (t && t.coreOwnerId === actorId && t.ownerId !== actorId) {
+        peersHoldingActorCore.add(t.ownerId);
+      }
+    }
+
+    // Rank peers by alliance compatibility when looking for strategic pacts, while preserving seeded tie-breaking
     for (const peerId of aiPeers) {
       const peer = nations[peerId];
       if (!peer || isAtWar(wars, actorId, peerId)) continue;
 
       const rel = getOrCreateRelation(relations, actorId, peerId);
       const rKey = relationKey(actorId, peerId);
-      const sharesCommonThreat = threatNeighborIds.some((threatId) => {
-        const peerRelToThreat = getOrCreateRelation(relations, peerId, threatId);
-        return (
-          peerRelToThreat.score <= -15 ||
-          (nations[threatId]?.aggressiveExpansion ?? 0) >= 35
-        );
+      const compat = computeAllianceCompatibilityScore({
+        actor: actorNation,
+        peer,
+        rel,
+        wars,
+        relations,
+        nations,
+        gameMode,
+        threatNeighborIds,
+        actorPersonality,
+        isDirectNeighbor: neighborIds.has(peerId),
+        peerOwnsActorCore: peersHoldingActorCore.has(peerId),
       });
 
-      // 1) Form Defensive Pact when threatened or sharing a common enemy (cap 2 alliances per AI)
-      if (
-        (hasStrongerOrHighAeNeighbor || sharesCommonThreat) &&
+      // 1) Form Defensive Pact when compatible and threatened / sharing common threat (cap 2 alliances per AI)
+      const allianceReady =
+        !compat.blocked &&
         !rel.isAllied &&
         !rel.allianceType &&
-        rel.score >= (sharesCommonThreat ? 5 : 18) &&
         actorAllianceCount < 2 &&
-        countExistingAlliances(peerId) < 2
-      ) {
+        countExistingAlliances(peerId) < 2 &&
+        ((hasStrongerOrHighAeNeighbor ||
+          compat.sharesCommonThreat ||
+          compat.sharesCommonWarEnemy) &&
+          (compat.score >= 28 ||
+            (compat.sharesCommonThreat && rel.score >= 5) ||
+            rel.score >= 18));
+
+      if (allianceReady) {
         updatedRelations = {
           ...relations,
           [rKey]: {
@@ -1359,7 +1739,9 @@ export function evaluateMultiProvinceAiTurn(params: {
         };
         diploNewsItem = {
           title: `🛡️ Bölgesel Savunma Paktı: ${actorNation.name} & ${peer.name}`,
-          description: sharesCommonThreat
+          description: compat.sharesCommonWarEnemy
+            ? `${actorNation.name} ve ${peer.name}, ortak savaş düşmanlarına karşı savunma paktı kurdu.`
+            : compat.sharesCommonThreat
             ? `${actorNation.name} ve ${peer.name}, ortak bölgesel tehditlere karşı savunma paktı kurdu.`
             : `${actorNation.name} ve ${peer.name}, bölgesel güç dengesini korumak amacıyla ortak savunma paktı imzaladı.`,
           type: 'COALITION',
@@ -1367,8 +1749,39 @@ export function evaluateMultiProvinceAiTurn(params: {
         break;
       }
 
+      // 1B) Upgrade strong Defensive Pact to Offensive Coalition when interests align
+      if (
+        !compat.blocked &&
+        rel.allianceType === 'DEFENSIVE' &&
+        rel.score >= 42 &&
+        (compat.sharesCommonThreat ||
+          compat.sharesCommonWarEnemy ||
+          actorPersonality === 'CONQUEROR' ||
+          actorPersonality === 'REVANCHIST') &&
+        (worldSeed === undefined ||
+          seededHash(worldSeed, `off_upg_${nextTick}_${actorId}_${peerId}`) < 0.45)
+      ) {
+        updatedRelations = {
+          ...relations,
+          [rKey]: {
+            ...rel,
+            score: Math.min(100, rel.score + 8),
+            isAllied: true,
+            allianceType: 'OFFENSIVE',
+            hasMilitaryAccess: true,
+          },
+        };
+        diploNewsItem = {
+          title: `⚔️ Saldırı Koalisyonu: ${actorNation.name} & ${peer.name}`,
+          description: `${actorNation.name} ile ${peer.name}, mevcut savunma paktını ortak taarruz ittifakına yükseltti.`,
+          type: 'COALITION',
+        };
+        break;
+      }
+
       // 2) Sign Trade Agreement between peaceful non-hostile peers (especially MERCHANT)
       if (
+        !compat.blocked &&
         !rel.hasTradeAgreement &&
         !rel.hasEmbargo &&
         rel.score >= (actorPersonality === 'MERCHANT' ? -5 : 2)
@@ -1386,6 +1799,7 @@ export function evaluateMultiProvinceAiTurn(params: {
 
       // 3) Sign Non-Aggression Pact between peaceful neighbors of comparable strength
       if (
+        !compat.blocked &&
         neighborIds.has(peerId) &&
         !rel.hasNonAggression &&
         !rel.isAllied &&
@@ -1407,18 +1821,99 @@ export function evaluateMultiProvinceAiTurn(params: {
           break;
         }
       }
+
+      // 4) Organic Diplomatic Warming: compatible peers gradually warm relations so natural alliances emerge
+      if (
+        !compat.blocked &&
+        !rel.isAllied &&
+        rel.score < 32 &&
+        (compat.score >= 12 || compat.sharesCommonThreat || compat.sharesCommonWarEnemy) &&
+        (worldSeed === undefined ||
+          seededHash(worldSeed, `warm_${nextTick}_${actorId}_${peerId}`) < 0.42)
+      ) {
+        updatedRelations = {
+          ...relations,
+          [rKey]: {
+            ...rel,
+            score: Math.min(100, rel.score + 12),
+          },
+        };
+        break;
+      }
     }
 
-    // 4B-2: AI-to-AI / AI-to-Player Embargo against High-AE / Deeply Hostile Rivals
-    if (!updatedRelations && stepIndex % 4 === 0) {
-      const embargoTargetId = threatNeighborIds.find((nId) => {
+    // 4B-1C: Organic Border Friction (living world rivalries emerge dynamically across campaigns)
+    if (
+      !updatedRelations &&
+      worldSeed !== undefined &&
+      nextTick >= 12 &&
+      (actorPersonality === 'CONQUEROR' || actorPersonality === 'REVANCHIST' || seededHash(worldSeed, `fric_roll_${nextTick}_${actorId}`) < 0.22)
+    ) {
+      const frictionCandidates = seededShuffle(
+        Array.from(neighborIds).filter((nId) => {
+          const nb = nations[nId];
+          if (!nb || nb.isEliminated || nb.vassalOf === actorId || actorNation.vassalOf === nId) {
+            return false;
+          }
+          const rel = getOrCreateRelation(relations, actorId, nId);
+          return (
+            !rel.isAllied &&
+            !rel.allianceType &&
+            !rel.hasNonAggression &&
+            rel.truceUntilTick <= nextTick &&
+            rel.score > -45 &&
+            rel.score < 20
+          );
+        }),
+        worldSeed,
+        `fric_${nextTick}_${actorId}`
+      );
+      const frictionTargetId = frictionCandidates[0];
+      if (
+        frictionTargetId &&
+        seededHash(worldSeed, `fric_exec_${nextTick}_${actorId}_${frictionTargetId}`) < 0.35
+      ) {
+        const rel = getOrCreateRelation(relations, actorId, frictionTargetId);
+        const rKey = relationKey(actorId, frictionTargetId);
+        updatedRelations = {
+          ...relations,
+          [rKey]: {
+            ...rel,
+            score: Math.max(-100, rel.score - 12),
+          },
+        };
+      }
+    }
+
+    // 4B-2: AI-to-AI / AI-to-Player Embargo against High-AE / Deeply Hostile Rivals (Non-Repetitive!)
+    const embargoEligibleTick =
+      worldSeed !== undefined
+        ? nextTick >= 18 &&
+          seededHash(worldSeed, `emb_gate_${nextTick}_${actorId}`) < 0.35
+        : stepIndex % 4 === 0;
+
+    if (!updatedRelations && embargoEligibleTick) {
+      const candidateThreats =
+        worldSeed !== undefined
+          ? seededShuffle(threatNeighborIds, worldSeed, `emb_tgt_${nextTick}_${actorId}`)
+          : threatNeighborIds;
+
+      const embargoTargetId = candidateThreats.find((nId) => {
         const nbNat = nations[nId];
-        if (!nbNat || nbNat.isEliminated) return false;
+        if (
+          !nbNat ||
+          nbNat.isEliminated ||
+          nbNat.vassalOf === actorId ||
+          actorNation.vassalOf === nId
+        ) {
+          return false;
+        }
         const rel = getOrCreateRelation(relations, actorId, nId);
         const alreadyEmbargoedByActor = getEmbargoingNationIds(rel).includes(actorId);
         return (
           !alreadyEmbargoedByActor &&
           !rel.isAllied &&
+          !rel.allianceType &&
           (nbNat.aggressiveExpansion >= 45 || rel.score <= -40)
         );
       });
@@ -1575,11 +2070,25 @@ export function evaluateMultiProvinceAiTurn(params: {
     wars.length < maxAllowedGlobalWars;
 
   if (actorReadyForOffensiveWar) {
-    for (const prov of ownedProvinces) {
+    const candidateProvs =
+      worldSeed !== undefined
+        ? seededShuffle(ownedProvinces, worldSeed, `war_prov_${nextTick}_${actorId}`)
+        : ownedProvinces;
+
+    for (const prov of candidateProvs) {
       const currProv = activeTerrs[prov.id];
       if (!currProv || currProv.garrison < 22000) continue;
 
-      const candidateTargetId = currProv.neighbors.find((nId) => {
+      const candidateNeighbors =
+        worldSeed !== undefined
+          ? seededShuffle(
+              currProv.neighbors,
+              worldSeed,
+              `war_nb_${nextTick}_${currProv.id}`
+            )
+          : currProv.neighbors;
+
+      const candidateTargetId = candidateNeighbors.find((nId) => {
         const nTerr = activeTerrs[nId];
         if (!nTerr || nTerr.ownerId === actorId) return false;
         const targetOwner = nations[nTerr.ownerId];
@@ -1635,9 +2144,16 @@ export function evaluateMultiProvinceAiTurn(params: {
 
         const isRevanchistCoreClaim =
           actorPersonality === 'REVANCHIST' && nTerr.coreOwnerId === actorId;
-        const pWarMod = isRevanchistCoreClaim
+        const baseWarMod = isRevanchistCoreClaim
           ? 0.75
           : personalityMeta.warReadinessMod;
+        const seedJitter =
+          worldSeed !== undefined
+            ? 0.9 +
+              seededHash(worldSeed, `war_mod_${nextTick}_${actorId}_${targetOwner.id}`) *
+                0.22
+            : 1;
+        const pWarMod = baseWarMod * seedJitter;
 
         const isHighAeCoalition =
           targetOwner.aggressiveExpansion >= 55 &&

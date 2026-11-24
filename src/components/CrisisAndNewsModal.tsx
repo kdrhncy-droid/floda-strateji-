@@ -8,7 +8,6 @@ import {
   ShieldAlert,
   TrendingUp,
   X,
-  Sparkles,
 } from 'lucide-react';
 import {
   CrisisEventDefinition,
@@ -24,7 +23,6 @@ interface CrisisAndNewsModalProps {
   showNewsDrawer: boolean;
   onCloseNewsDrawer: () => void;
   newsEvents: WorldNewsEvent[];
-  onTriggerManualCabinetDecision: () => void;
 }
 
 export const CrisisAndNewsModal: React.FC<CrisisAndNewsModalProps> = ({
@@ -33,7 +31,6 @@ export const CrisisAndNewsModal: React.FC<CrisisAndNewsModalProps> = ({
   showNewsDrawer,
   onCloseNewsDrawer,
   newsEvents,
-  onTriggerManualCabinetDecision,
 }) => {
   const crisisDialogRef = useAccessibleDialog(
     Boolean(activeCrisis),
@@ -141,20 +138,6 @@ export const CrisisAndNewsModal: React.FC<CrisisAndNewsModalProps> = ({
                 className="min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-4 border-b border-slate-800/80 bg-slate-900/50">
-              <button
-                onClick={() => {
-                  sound.playClick();
-                  onCloseNewsDrawer();
-                  onTriggerManualCabinetDecision();
-                }}
-                className="w-full min-h-[44px] rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-200 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
-              >
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                Kabineyi Topla & Stratejik Karar Al
               </button>
             </div>
 

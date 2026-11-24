@@ -15,13 +15,18 @@ import {
   evaluateActiveStraits,
   TRADE_CORRIDORS,
 } from '../engine/straitsAndTradeEngine';
-import { GeoCountryFeature, relationKey } from '../engine/worldBuilder';
+import {
+  GeoCountryFeature,
+  isTerritoryCoastal,
+  relationKey,
+} from '../engine/worldBuilder';
 import {
   ActiveWar,
   ArmyMovement,
   DiplomaticRelation,
   MapMode,
   Nation,
+  SeaArmy,
   Territory,
 } from '../types/game';
 import { ClassifiedBorderMap } from './borderClassifier';
@@ -143,6 +148,7 @@ export function renderOceanAndPolygons(params: {
   fogOfWarEnabled: boolean;
   visibleTerritoryIds: Set<string>;
   classifiedBorders?: ClassifiedBorderMap | null;
+  borderThicknessMultiplier?: number;
 }): void {
   const {
     ctx,
@@ -165,6 +171,7 @@ export function renderOceanAndPolygons(params: {
     fogOfWarEnabled,
     visibleTerritoryIds,
     classifiedBorders,
+    borderThicknessMultiplier = 1.0,
   } = params;
 
   // 1. Sapphire & Deep Azure Ocean Background (Screen Space)
@@ -210,10 +217,9 @@ export function renderOceanAndPolygons(params: {
   const _unusedOrderId = armyOrderSourceId;
   void _unusedOrderId;
 
-  const zoomBorderScale = Math.min(
-    1.85,
-    1.0 + Math.log2(Math.max(1, transform.k)) * 0.3
-  );
+  const zoomBorderScale =
+    Math.min(1.85, 1.0 + Math.log2(Math.max(1, transform.k)) * 0.3) *
+    borderThicknessMultiplier;
 
   // 2. Render RBush-culled visible province polygons (Streamlined single-pass border for 60 FPS)
   visibleFeatures.forEach((feat) => {
@@ -542,13 +548,14 @@ export function renderArmyMovementsLayer(params: {
   movements.forEach((mv) => {
     const fromT = territories[mv.fromTerritoryId];
     const toT = territories[mv.toTerritoryId];
-    if (!fromT || !toT) return;
+    if (!mv.fromCoords && !fromT) return;
+    if (!mv.toCoords && !toT) return;
 
     // Hide distant war movements between non-allied foreign nations
     const involvesPlayerOrAlly =
       isPlayerOrAlly(mv.ownerId) ||
-      isPlayerOrAlly(fromT.ownerId) ||
-      isPlayerOrAlly(toT.ownerId);
+      isPlayerOrAlly(fromT?.ownerId) ||
+      isPlayerOrAlly(toT?.ownerId);
 
     if (!involvesPlayerOrAlly) {
       return;
@@ -557,14 +564,23 @@ export function renderArmyMovementsLayer(params: {
     if (
       fogOfWarEnabled &&
       mv.ownerId !== playerNationId &&
+      !mv.isNaval &&
       !visibleTerritoryIds.has(mv.fromTerritoryId) &&
       !visibleTerritoryIds.has(mv.toTerritoryId)
     ) {
       return;
     }
 
-    const p1 = projection(fromT.centroid);
-    const p2 = projection(toT.centroid);
+    const p1 = mv.fromCoords
+      ? projection(mv.fromCoords)
+      : fromT
+      ? projection(fromT.centroid)
+      : null;
+    const p2 = mv.toCoords
+      ? projection(mv.toCoords)
+      : toT
+      ? projection(toT.centroid)
+      : null;
     if (!p1 || !p2) return;
 
     const displayProgress = Math.max(
@@ -687,7 +703,11 @@ export function renderArmyMovementsLayer(params: {
       2,
       ((pillW - 26) * Math.min(100, displayProgress)) / 100
     );
-    ctx.fillStyle = mv.isAttack ? '#FB7185' : '#34D399';
+    ctx.fillStyle = mv.isAttack
+      ? '#FB7185'
+      : mv.isNaval
+      ? '#38BDF8'
+      : '#34D399';
     ctx.fillRect(-pillW / 2 + 24, pillH / 2 - 3, progW, 2);
 
     ctx.restore();
@@ -695,3 +715,212 @@ export function renderArmyMovementsLayer(params: {
 
   ctx.restore();
 }
+
+/**
+ * Renders armies stationed on open sea (SeaArmies / Naval Fleets) with a crisp ship silhouette,
+ * nation flag, and troop count badge directly on the ocean canvas.
+ */
+export function renderSeaArmiesLayer(params: {
+  ctx: CanvasRenderingContext2D;
+  width: number;
+  height: number;
+  transform: { k: number; x: number; y: number };
+  seaArmies: SeaArmy[];
+  territories?: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  wars: ActiveWar[];
+  projection: GeoProjection;
+  playerNationId: string;
+  selectedSeaArmyId: string | null;
+}): void {
+  const {
+    ctx,
+    width,
+    height,
+    transform,
+    seaArmies,
+    territories,
+    nations,
+    wars,
+    projection,
+    playerNationId,
+    selectedSeaArmyId,
+  } = params;
+
+  if (!seaArmies || seaArmies.length === 0) return;
+
+  const allTerritories = territories ? Object.values(territories) : [];
+
+  for (const fleet of seaArmies) {
+    const pt = projection(fleet.coords);
+    if (!pt) continue;
+    const sx = pt[0] * transform.k + transform.x;
+    const sy = pt[1] * transform.k + transform.y;
+    if (sx < -60 || sx > width + 60 || sy < -60 || sy > height + 60) continue;
+
+    const owner = nations[fleet.ownerId];
+    const isPlayer = fleet.ownerId === playerNationId;
+    const isSelected = fleet.id === selectedSeaArmyId;
+    const isEnemy =
+      !isPlayer &&
+      Boolean(isAtWar(wars, playerNationId, fleet.ownerId));
+
+    // Check active coastal naval blockades (fleet >= 2,000 troops within 4.5° of hostile coastal city)
+    const blockadedPorts: Array<{ tx: number; ty: number }> = [];
+    if (fleet.troops >= 2000 && allTerritories.length > 0 && wars.length > 0) {
+      for (const t of allTerritories) {
+        if (t.ownerId === fleet.ownerId) continue;
+        if (!(t.isCoastal || isTerritoryCoastal(t))) continue;
+        if (!isAtWar(wars, fleet.ownerId, t.ownerId)) continue;
+        const dxDeg = t.centroid[0] - fleet.coords[0];
+        const dyDeg = t.centroid[1] - fleet.coords[1];
+        if (dxDeg * dxDeg + dyDeg * dyDeg <= 4.5 * 4.5) {
+          const tPt = projection(t.centroid);
+          if (tPt) {
+            blockadedPorts.push({
+              tx: tPt[0] * transform.k + transform.x,
+              ty: tPt[1] * transform.k + transform.y,
+            });
+          }
+        }
+      }
+    }
+
+    const isBlockading = blockadedPorts.length > 0;
+
+    if (isBlockading) {
+      ctx.save();
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isPlayer
+        ? 'rgba(251, 191, 36, 0.78)'
+        : 'rgba(248, 113, 113, 0.82)';
+      for (const port of blockadedPorts) {
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(port.tx, port.ty);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(port.tx, port.ty, 5.5, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(248, 113, 113, 0.88)';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        ctx.setLineDash([5, 4]);
+      }
+      ctx.restore();
+    }
+
+    const troopStr =
+      fleet.troops >= 1000
+        ? `${(fleet.troops / 1000).toFixed(1)}B`
+        : `${Math.round(fleet.troops)}`;
+    const badgeW = 72;
+    const badgeH = 22;
+    const bx = sx - badgeW / 2;
+    const by = sy - badgeH / 2;
+
+    ctx.save();
+
+    // Subtle ocean ripple ring around anchored fleet
+    ctx.beginPath();
+    ctx.ellipse(sx, sy + 11, 22, 6, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = isSelected
+      ? 'rgba(251, 191, 36, 0.7)'
+      : 'rgba(56, 189, 248, 0.42)';
+    ctx.lineWidth = isSelected ? 1.5 : 1.0;
+    ctx.stroke();
+
+    // Ship silhouette crest above plate
+    ctx.fillStyle = isSelected
+      ? '#FDE68A'
+      : isPlayer
+      ? '#7DD3FC'
+      : isEnemy
+      ? '#FCA5A5'
+      : '#CBD5E1';
+    ctx.beginPath();
+    ctx.moveTo(sx - 9, by - 2);
+    ctx.lineTo(sx + 9, by - 2);
+    ctx.lineTo(sx + 6, by + 1);
+    ctx.lineTo(sx - 6, by + 1);
+    ctx.closePath();
+    ctx.fill();
+    // Sail triangle
+    ctx.beginPath();
+    ctx.moveTo(sx, by - 10);
+    ctx.lineTo(sx + 6, by - 3);
+    ctx.lineTo(sx - 4, by - 3);
+    ctx.closePath();
+    ctx.fill();
+
+    // Main naval counter plate
+    ctx.fillStyle = isPlayer
+      ? 'rgba(8, 30, 52, 0.96)'
+      : isEnemy
+      ? 'rgba(76, 18, 28, 0.96)'
+      : 'rgba(15, 25, 42, 0.94)';
+    ctx.strokeStyle = isSelected
+      ? '#FBBF24'
+      : isPlayer
+      ? '#38BDF8'
+      : isEnemy
+      ? '#F87171'
+      : 'rgba(148, 163, 184, 0.65)';
+    ctx.lineWidth = isSelected ? 1.8 : 1.2;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, badgeW, badgeH, 4.5);
+    ctx.fill();
+    ctx.stroke();
+
+    // Flag on left
+    drawNationFlagOnCanvas(
+      ctx,
+      bx + 2,
+      by + 2,
+      22,
+      badgeH - 4,
+      fleet.ownerId,
+      (owner?.flagCode || 'DNZ').slice(0, 3),
+      owner?.color || '#0284C7'
+    );
+
+    // Divider
+    ctx.strokeStyle = 'rgba(125, 211, 252, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(bx + 26, by + 2);
+    ctx.lineTo(bx + 26, by + badgeH - 2);
+    ctx.stroke();
+
+    // Troop count
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 10px "JetBrains Mono", monospace';
+    ctx.fillStyle = isSelected ? '#FEF08A' : '#F0F9FF';
+    ctx.fillText(troopStr, bx + 26 + (badgeW - 26) / 2, sy);
+
+    // Compact ABLUKA tag below plate when blockading hostile coastal ports
+    if (isBlockading) {
+      const tagW = 48;
+      const tagH = 12;
+      const tx = sx - tagW / 2;
+      const ty = by + badgeH + 2;
+      ctx.fillStyle = 'rgba(127, 29, 29, 0.94)';
+      ctx.strokeStyle = '#F87171';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.roundRect(tx, ty, tagW, tagH, 3);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = '700 7.5px "Plus Jakarta Sans", sans-serif';
+      ctx.fillStyle = '#FECACA';
+      ctx.fillText('ABLUKA', sx, ty + tagH / 2 + 0.5);
+    }
+
+    ctx.restore();
+  }
+}
+

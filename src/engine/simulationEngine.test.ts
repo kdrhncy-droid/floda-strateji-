@@ -7,6 +7,8 @@ import {
   calculateProvinceDevelopment,
   computeCombatStrength,
   computeNationManpowerCap,
+  computeNationNavalBonus,
+  computeNavalBlockadedTerritoryIds,
   formatGameDate,
   getOrCreateRelation,
   getWarScoreForNation,
@@ -45,7 +47,15 @@ import {
 } from './empireAndArmyActions';
 import { TECH_TREE, TECH_TREE_1440 } from '../data/techAndArmyTiers';
 import { isTerritoryCoastal } from './worldBuilder';
-import { ActiveBattle, ActiveWar, DiplomaticRelation, Nation, Territory } from '../types/game';
+import {
+  ActiveBattle,
+  ActiveWar,
+  ArmyMovement,
+  DiplomaticRelation,
+  Nation,
+  SeaArmy,
+  Territory,
+} from '../types/game';
 import { resolveTerritoryFillColor } from '../map/mapPolygonRenderer';
 import {
   formatProvinceMapLabel,
@@ -947,6 +957,7 @@ test('computeGameTick simulates AoH3 real-time sieges and frontline/backline mor
     movements: [],
     newsEvents: [],
     settings: {
+      ...DEFAULT_GAME_SETTINGS,
       aiAggressiveness: 'NORMAL',
       autoSaveIntervalDays: 90,
       fogOfWarEnabled: false,
@@ -1088,6 +1099,7 @@ test('timed technology research, construction queue, and gradual assimilation ad
     movements: [],
     newsEvents: [],
     settings: {
+      ...DEFAULT_GAME_SETTINGS,
       aiAggressiveness: 'NORMAL',
       autoSaveIntervalDays: 90,
       fogOfWarEnabled: false,
@@ -1234,6 +1246,7 @@ test('startMissionaryDomain initiates conversion and computeGameTick completes i
     movements: [],
     newsEvents: [],
     settings: {
+      ...DEFAULT_GAME_SETTINGS,
       aiAggressiveness: 'NORMAL',
       autoSaveIntervalDays: 90,
       fogOfWarEnabled: false,
@@ -4588,7 +4601,7 @@ test('batch empire management domains process assimilation, festivals, coastal-s
       unrest: 22,
       assimilation: 30,
       isAssimilating: false,
-      isOccupied: true,
+      isOccupied: false,
       garrison: 2000,
       units: { infantry: 2000, armor: 0, airDrone: 0 },
       buildings: { factory: 1, barracks: 1, fortress: 1, university: 0, tradeHub: 1, supplyDepot: 0, shipyard: 0 },
@@ -5048,7 +5061,1530 @@ test('Faz 4.2: respondToDiplomaticOfferDomain activates TRADE pact, transfers TR
   assert.equal(declined.relations?.['380_792'].score, -5);
 });
 
+test('Faz 3.6: gameSettings multipliers, shortcut list, and volume clamping work accurately', async () => {
+  const {
+    DEFAULT_GAME_SETTINGS,
+    KEYBOARD_SHORTCUTS_LIST,
+    getBorderThicknessMultiplier,
+    getGraphicsMaxDpr,
+    getMapLabelScaleMultiplier,
+  } = await import('./gameSettings');
 
+  assert.equal(getBorderThicknessMultiplier('THIN'), 0.75);
+  assert.equal(getBorderThicknessMultiplier('NORMAL'), 1.0);
+  assert.equal(getBorderThicknessMultiplier('BOLD'), 1.35);
+
+  assert.equal(getMapLabelScaleMultiplier('SMALL'), 0.86);
+  assert.equal(getMapLabelScaleMultiplier('NORMAL'), 1.0);
+  assert.equal(getMapLabelScaleMultiplier('LARGE'), 1.16);
+
+  assert.equal(getGraphicsMaxDpr('LOW'), 1.0);
+  assert.equal(getGraphicsMaxDpr('BALANCED'), 1.5);
+  assert.equal(getGraphicsMaxDpr('HIGH'), 2.0);
+
+  assert.equal(DEFAULT_GAME_SETTINGS.capitulationThresholdPct, 75);
+  assert.equal(DEFAULT_GAME_SETTINGS.smoothArmyAnimations, true);
+  assert.ok(KEYBOARD_SHORTCUTS_LIST.length >= 10);
+  assert.ok(KEYBOARD_SHORTCUTS_LIST.some((s) => s.keys === 'Boşluk'));
+  assert.ok(KEYBOARD_SHORTCUTS_LIST.some((s) => s.keys === 'Q'));
+  assert.ok(KEYBOARD_SHORTCUTS_LIST.some((s) => s.keys === 'B'));
+});
+
+test('Faz 3.6: evaluateAutomaticCapitulations respects custom capitulationThresholdPct (60% vs 100%)', () => {
+  const nations: Record<string, Nation> = {
+    '792': { id: '792', name: 'Osmanlı', treasury: 1000, stability: 75, aggressiveExpansion: 5, capitalTerritoryId: 'o1', isEliminated: false } as unknown as Nation,
+    '300': { id: '300', name: 'Bizans', treasury: 600, stability: 50, aggressiveExpansion: 0, capitalTerritoryId: 'b1', isEliminated: false } as unknown as Nation,
+  };
+  const makeTerritories = (): Record<string, Territory> => ({
+    o1: { id: 'o1', name: 'Edirne', ownerId: '792', coreOwnerId: '792', isOccupied: false, unrest: 0, assimilation: 100 } as unknown as Territory,
+    // 3 of 4 Byzantine cores occupied (75% occupied -> >= 60%, < 100%)
+    b1: { id: 'b1', name: 'Konstantinopolis', ownerId: '792', coreOwnerId: '300', isOccupied: true, unrest: 20, assimilation: 25 } as unknown as Territory,
+    b2: { id: 'b2', name: 'Selanik', ownerId: '792', coreOwnerId: '300', isOccupied: true, unrest: 20, assimilation: 25 } as unknown as Territory,
+    b3: { id: 'b3', name: 'Atina', ownerId: '792', coreOwnerId: '300', isOccupied: true, unrest: 20, assimilation: 25 } as unknown as Territory,
+    b4: { id: 'b4', name: 'Mora', ownerId: '300', coreOwnerId: '300', isOccupied: false, unrest: 5, assimilation: 100 } as unknown as Territory,
+  });
+  const wars: ActiveWar[] = [
+    {
+      id: 'w1',
+      name: 'Osmanlı-Bizans Savaşı',
+      attackerId: '792',
+      defenderId: '300',
+      attackers: ['792'],
+      defenders: ['300'],
+      startedTick: 1,
+      attackerWarScore: 80,
+      casualtiesAttacker: 1000,
+      casualtiesDefender: 5000,
+    },
+  ];
+
+  // With 100% threshold, 75% occupation must NOT capitulate
+  const at100 = evaluateAutomaticCapitulations({
+    nextTick: 30,
+    playerNationId: '792',
+    nations,
+    territories: makeTerritories(),
+    relations: {},
+    wars,
+    thresholdPct: 100,
+  });
+  assert.equal(at100.capitulatedCount, 0);
+  assert.equal(at100.updatedWars.length, 1);
+
+  // With 60% threshold, 75% occupation MUST capitulate Bizans
+  const at60 = evaluateAutomaticCapitulations({
+    nextTick: 30,
+    playerNationId: '792',
+    nations,
+    territories: makeTerritories(),
+    relations: {},
+    wars,
+    thresholdPct: 60,
+  });
+  assert.equal(at60.capitulatedCount, 1);
+  assert.equal(at60.updatedWars.length, 0);
+  assert.equal(at60.updatedTerritories.b1.isOccupied, false);
+});
+
+test('Gameplay fixes: 1x-5x speed profiles include 3x and slightly brisker cadence', async () => {
+  const { CLOCK_SPEED_PROFILES, getClockSpeedProfile } = await import('./gameSettings');
+  assert.ok(CLOCK_SPEED_PROFILES[3].rateLabel.includes('3x'));
+  assert.ok(CLOCK_SPEED_PROFILES[1].intervalMs < 700);
+  assert.ok(CLOCK_SPEED_PROFILES[2].intervalMs < 520);
+  assert.ok(CLOCK_SPEED_PROFILES[3].intervalMs < CLOCK_SPEED_PROFILES[2].intervalMs);
+  assert.ok(CLOCK_SPEED_PROFILES[4].intervalMs < CLOCK_SPEED_PROFILES[3].intervalMs);
+  assert.ok(CLOCK_SPEED_PROFILES[5].intervalMs < CLOCK_SPEED_PROFILES[4].intervalMs);
+  assert.equal(getClockSpeedProfile(3).hoursStep, 3);
+});
+
+test('Gameplay fixes: manpower cap and daily manpower scale properly when population is in thousands', () => {
+  const usa: Nation = {
+    id: '840',
+    name: 'ABD',
+    treasury: 10000,
+    manpower: 180000,
+    stability: 70,
+    taxRate: 25,
+    budget: { military: 30, research: 25, infrastructure: 25, administration: 20 },
+    unlockedTechs: [],
+    enactedReforms: [],
+    isEliminated: false,
+  } as unknown as Nation;
+
+  const usaTerrs: Record<string, Territory> = {
+    us1: {
+      id: 'us1',
+      name: 'Washington',
+      ownerId: '840',
+      coreOwnerId: '840',
+      population: 120000,
+      baseGdp: 500,
+      garrison: 20000,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 2, barracks: 2, fortress: 1, university: 1, tradeHub: 1, supplyDepot: 1, shipyard: 1, granary: 0 },
+      neighbors: [],
+    } as unknown as Territory,
+    us2: {
+      id: 'us2',
+      name: 'New York',
+      ownerId: '840',
+      coreOwnerId: '840',
+      population: 219000,
+      baseGdp: 500,
+      garrison: 15000,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 2, barracks: 2, fortress: 1, university: 1, tradeHub: 1, supplyDepot: 1, shipyard: 1, granary: 0 },
+      neighbors: [],
+    } as unknown as Territory,
+  };
+
+  const cap = computeNationManpowerCap(usa, usaTerrs);
+  assert.ok(cap > usa.manpower, `Expected USA cap (${cap}) > starting manpower (${usa.manpower})`);
+
+  const econ = calculateNationEconomy(usa, usaTerrs, { '840': usa }, {}, []);
+  assert.ok(econ.dailyManpower >= 1500, `Expected meaningful daily manpower for USA, got ${econ.dailyManpower}`);
+});
+
+test('Gameplay fixes: wartime occupied territories cannot be assimilated until permanently annexed after peace', async () => {
+  const { assimilateTerritoryDomain } = await import('./empireAndArmyActions');
+
+  const nations: Record<string, Nation> = {
+    '792': { id: '792', name: 'Osmanlı', treasury: 2000, manpower: 20000, stability: 70, enactedReforms: [] } as unknown as Nation,
+  };
+  const territories: Record<string, Territory> = {
+    occ: {
+      id: 'occ',
+      name: 'Selanik',
+      ownerId: '792',
+      coreOwnerId: '300',
+      isOccupied: true,
+      assimilation: 25,
+      isAssimilating: false,
+    } as unknown as Territory,
+    annexed: {
+      id: 'annexed',
+      name: 'Atina',
+      ownerId: '792',
+      coreOwnerId: '300',
+      isOccupied: false,
+      assimilation: 30,
+      isAssimilating: false,
+    } as unknown as Territory,
+  };
+
+  const occSingle = assimilateTerritoryDomain({ territoryId: 'occ', territories, nations, playerNationId: '792' });
+  assert.equal(occSingle.territories, undefined);
+  assert.ok(occSingle.toastMessage?.includes('Barış'));
+
+  const occBatch = batchAssimilateDomain({
+    territories: { occ: territories.occ },
+    nations,
+    playerNationId: '792',
+  });
+  assert.equal(occBatch.territories, undefined);
+
+  const annexedSingle = assimilateTerritoryDomain({ territoryId: 'annexed', territories, nations, playerNationId: '792' });
+  assert.equal(annexedSingle.territories?.annexed.isAssimilating, true);
+});
+
+test('Gameplay fixes: recapturing a lost allied core province returns ownership & color to the ally and returns player troops safely', async () => {
+  const { DEFAULT_GAME_SETTINGS } = await import('./gameSettings');
+  const { computeGameTick } = await import('./tickEngine');
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Türkiye',
+      color: '#dc2626',
+      treasury: 5000,
+      manpower: 50000,
+      stability: 75,
+      capitalTerritoryId: 'tr1',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+    '31': {
+      id: '31',
+      name: 'Azerbaycan',
+      color: '#0284c7',
+      treasury: 2000,
+      manpower: 20000,
+      stability: 70,
+      capitalTerritoryId: 'az1',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+    '643': {
+      id: '643',
+      name: 'Rusya',
+      color: '#15803d',
+      treasury: 4000,
+      manpower: 40000,
+      stability: 70,
+      capitalTerritoryId: 'ru1',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+  };
+
+  const territories: Record<string, Territory> = {
+    tr1: {
+      id: 'tr1',
+      name: 'Ankara',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCapital: true,
+      garrison: 10000,
+      units: { infantry: 10000, armor: 0, airDrone: 0 },
+      population: 50000,
+      baseGdp: 100,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 1, barracks: 1, fortress: 1, university: 0, tradeHub: 0, supplyDepot: 0, shipyard: 0 },
+      neighbors: ['az2'],
+      centroid: [33, 40],
+    } as unknown as Territory,
+    az1: {
+      id: 'az1',
+      name: 'Bakü',
+      ownerId: '31',
+      coreOwnerId: '31',
+      isCapital: true,
+      garrison: 5000,
+      units: { infantry: 5000, armor: 0, airDrone: 0 },
+      population: 10000,
+      baseGdp: 60,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 1, barracks: 1, fortress: 0, university: 0, tradeHub: 0, supplyDepot: 0, shipyard: 0 },
+      neighbors: ['az2'],
+      centroid: [49, 40],
+    } as unknown as Territory,
+    az2: {
+      id: 'az2',
+      name: 'Gence',
+      ownerId: '643',
+      coreOwnerId: '31',
+      isCapital: false,
+      isOccupied: true,
+      garrison: 0,
+      units: { infantry: 0, armor: 0, airDrone: 0 },
+      population: 8000,
+      baseGdp: 40,
+      unrest: 25,
+      assimilation: 25,
+      buildings: { factory: 0, barracks: 0, fortress: 0, university: 0, tradeHub: 0, supplyDepot: 0, shipyard: 0 },
+      neighbors: ['tr1', 'az1', 'ru1'],
+      centroid: [46, 40.5],
+    } as unknown as Territory,
+    ru1: {
+      id: 'ru1',
+      name: 'Moskova',
+      ownerId: '643',
+      coreOwnerId: '643',
+      isCapital: true,
+      garrison: 12000,
+      units: { infantry: 12000, armor: 0, airDrone: 0 },
+      population: 80000,
+      baseGdp: 150,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 1, barracks: 1, fortress: 1, university: 0, tradeHub: 0, supplyDepot: 0, shipyard: 0 },
+      neighbors: ['az2'],
+      centroid: [37, 55],
+    } as unknown as Territory,
+  };
+
+  const wars: ActiveWar[] = [
+    {
+      id: 'w_ally',
+      name: 'Büyük Savaş',
+      attackerId: '643',
+      defenderId: '31',
+      attackers: ['643'],
+      defenders: ['31', '792'],
+      startedTick: 1,
+      attackerWarScore: 10,
+      casualtiesAttacker: 0,
+      casualtiesDefender: 0,
+    },
+  ];
+
+  const movements: ArmyMovement[] = [
+    {
+      id: 'mv_lib',
+      ownerId: '792',
+      fromTerritoryId: 'tr1',
+      toTerritoryId: 'az2',
+      troops: 6000,
+      units: { infantry: 4800, armor: 1200, airDrone: 0 },
+      progress: 98,
+      isAttack: true,
+    },
+  ];
+
+  const out = computeGameTick({
+    tick: 5,
+    hour: 20,
+    hoursStep: 4,
+    speed: 5,
+    gameMode: 'STANDARD_2026',
+    playerNationId: '792',
+    nations,
+    territories,
+    relations: {
+      '31_792': {
+        nationA: '31',
+        nationB: '792',
+        score: 85,
+        isAllied: true,
+        hasTradeAgreement: true,
+        hasNonAggression: true,
+        hasMilitaryAccess: true,
+        hasEmbargo: false,
+        truceUntilTick: 0,
+      },
+    },
+    wars,
+    battles: [],
+    movements,
+    seaArmies: [],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+
+  // Territory must be returned to ally '31' with isOccupied = false, NOT '792'!
+  assert.equal(out.territories.az2.ownerId, '31');
+  assert.equal(out.territories.az2.isOccupied, false);
+  assert.equal(out.territories.az2.assimilation, 100);
+  // Player's 6000 troops must be safely returned to origin province tr1!
+  assert.ok(out.territories.tr1.garrison >= 16000, `Expected player troops returned to tr1, got ${out.territories.tr1.garrison}`);
+});
+
+test('Gameplay fixes: armies can embark onto open sea, anchor as SeaArmy, disembark to coast, and disband with manpower refund', async () => {
+  const { DEFAULT_GAME_SETTINGS } = await import('./gameSettings');
+  const { computeGameTick } = await import('./tickEngine');
+  const {
+    executeEmbarkToSeaDomain,
+    executeDisembarkFromSeaDomain,
+    disbandSeaArmyDomain,
+  } = await import('./empireAndArmyActions');
+
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Türkiye',
+      treasury: 5000,
+      manpower: 30000,
+      stability: 75,
+      capitalTerritoryId: 'izmir',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+  };
+
+  const territories: Record<string, Territory> = {
+    izmir: {
+      id: 'izmir',
+      name: 'İzmir',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCoastal: true,
+      isCapital: true,
+      garrison: 10000,
+      units: { infantry: 7000, armor: 2000, airDrone: 1000 },
+      population: 25000,
+      baseGdp: 80,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 1, barracks: 1, fortress: 0, university: 0, tradeHub: 0, supplyDepot: 0, shipyard: 1 },
+      neighbors: ['antalya'],
+      centroid: [27.1, 38.4],
+    } as unknown as Territory,
+    antalya: {
+      id: 'antalya',
+      name: 'Antalya',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCoastal: true,
+      isCapital: false,
+      garrison: 2000,
+      units: { infantry: 2000, armor: 0, airDrone: 0 },
+      population: 12000,
+      baseGdp: 50,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 0, barracks: 0, fortress: 0, university: 0, tradeHub: 0, supplyDepot: 0, shipyard: 0 },
+      neighbors: ['izmir'],
+      centroid: [30.7, 36.9],
+    } as unknown as Territory,
+  };
+
+  // 1. Embark 50% from Izmir to Aegean open water [25.5, 37.8]
+  const embarkPatch = executeEmbarkToSeaDomain({
+    sourceTerritoryId: 'izmir',
+    targetCoords: [25.5, 37.8],
+    territories,
+    nations,
+    movements: [],
+    seaArmies: [],
+    playerNationId: '792',
+    moveRatio: 0.5,
+    speed: 1,
+  });
+  assert.equal(embarkPatch.movements?.length, 1);
+  assert.equal(embarkPatch.movements?.[0].isNaval, true);
+  assert.deepEqual(embarkPatch.movements?.[0].toCoords, [25.5, 37.8]);
+  assert.ok((embarkPatch.territories?.izmir.garrison ?? 0) < 10000);
+
+  // 2. Advance movement to arrival via computeGameTick -> stations a SeaArmy!
+  const arrivingMove = { ...embarkPatch.movements![0], progress: 98 };
+  const tickOut = computeGameTick({
+    tick: 10,
+    hour: 20,
+    hoursStep: 4,
+    speed: 5,
+    gameMode: 'STANDARD_2026',
+    playerNationId: '792',
+    nations,
+    territories: embarkPatch.territories!,
+    relations: {},
+    wars: [],
+    battles: [],
+    movements: [arrivingMove],
+    seaArmies: [],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+  assert.equal(tickOut.seaArmies.length, 1);
+  const fleet = tickOut.seaArmies[0];
+  assert.equal(fleet.ownerId, '792');
+  assert.equal(fleet.troops, arrivingMove.troops);
+
+  // 3. Disembark 50% of fleet onto Antalya coast
+  const disembarkPatch = executeDisembarkFromSeaDomain({
+    sourceSeaArmyId: fleet.id,
+    toTerritoryId: 'antalya',
+    territories: tickOut.territories,
+    nations: tickOut.nations,
+    relations: {},
+    wars: [],
+    movements: [],
+    seaArmies: tickOut.seaArmies,
+    playerNationId: '792',
+    moveRatio: 0.5,
+    tick: 11,
+    gameMode: 'STANDARD_2026',
+    newsEvents: [],
+    speed: 1,
+  });
+  assert.equal(disembarkPatch.movements?.length, 1);
+  assert.equal(disembarkPatch.movements?.[0].toTerritoryId, 'antalya');
+  assert.equal(disembarkPatch.seaArmies?.length, 1);
+  assert.ok(disembarkPatch.seaArmies![0].troops < fleet.troops);
+
+  // 4. Disband remaining sea army and check 75% manpower refund
+  const remFleet = disembarkPatch.seaArmies![0];
+  const disbandPatch = disbandSeaArmyDomain({
+    seaArmyId: remFleet.id,
+    ratio: 1,
+    seaArmies: disembarkPatch.seaArmies!,
+    nations: tickOut.nations,
+    playerNationId: '792',
+  });
+  assert.equal(disbandPatch.seaArmies?.length, 0);
+  assert.equal(
+    disbandPatch.nations?.['792'].manpower,
+    tickOut.nations['792'].manpower + Math.round(remFleet.troops * 0.75)
+  );
+});
+
+test('Naval warfare: coastal blockade cuts economy and increases daily unrest while shipyards grant naval combat bonus', async () => {
+  const { DEFAULT_GAME_SETTINGS } = await import('./gameSettings');
+  const { computeGameTick } = await import('./tickEngine');
+
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Osmanlı',
+      treasury: 2000,
+      manpower: 20000,
+      stability: 80,
+      inflation: 2,
+      taxRate: 30,
+      budget: { military: 40, economy: 30, research: 15, welfare: 15 },
+      capitalTerritoryId: 'izmir',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+    '300': {
+      id: '300',
+      name: 'Venedik',
+      treasury: 2000,
+      manpower: 20000,
+      stability: 80,
+      inflation: 2,
+      taxRate: 30,
+      budget: { military: 40, economy: 30, research: 15, welfare: 15 },
+      capitalTerritoryId: 'venedik',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+  };
+
+  const territories: Record<string, Territory> = {
+    izmir: {
+      id: 'izmir',
+      name: 'İzmir',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCoastal: true,
+      isCapital: true,
+      garrison: 8000,
+      units: { infantry: 6000, armor: 1500, airDrone: 500 },
+      population: 30000,
+      baseGdp: 120,
+      resource: 'TICARET_BOGAZI',
+      unrest: 5,
+      assimilation: 100,
+      buildings: {
+        factory: 1,
+        barracks: 1,
+        fortress: 0,
+        university: 0,
+        tradeHub: 2,
+        supplyDepot: 0,
+        shipyard: 2,
+      },
+      neighbors: [],
+      centroid: [27.1, 38.4],
+    } as unknown as Territory,
+    venedik: {
+      id: 'venedik',
+      name: 'Venedik',
+      ownerId: '300',
+      coreOwnerId: '300',
+      isCoastal: true,
+      isCapital: true,
+      garrison: 8000,
+      units: { infantry: 6000, armor: 1500, airDrone: 500 },
+      population: 25000,
+      baseGdp: 110,
+      resource: 'TICARET_BOGAZI',
+      unrest: 0,
+      assimilation: 100,
+      buildings: {
+        factory: 0,
+        barracks: 0,
+        fortress: 0,
+        university: 0,
+        tradeHub: 1,
+        supplyDepot: 0,
+        shipyard: 0,
+      },
+      neighbors: [],
+      centroid: [12.3, 45.4],
+    } as unknown as Territory,
+  };
+
+  const wars: ActiveWar[] = [
+    {
+      id: 'war_aegean',
+      name: 'Ege Deniz Savaşı',
+      attackerId: '300',
+      defenderId: '792',
+      attackers: ['300'],
+      defenders: ['792'],
+      startedTick: 1,
+      attackerWarScore: 0,
+      casualtiesAttacker: 0,
+      casualtiesDefender: 0,
+    },
+  ];
+
+  // Shipyard bonus scales +8% per level (2 shipyards => 1.16x)
+  assert.equal(computeNationNavalBonus('792', territories), 1.16);
+  assert.equal(computeNationNavalBonus('300', territories), 1);
+
+  const enemyBlockadingFleet: SeaArmy = {
+    id: 'sea_venice_1',
+    ownerId: '300',
+    name: 'Venedik Abluka Filosu',
+    coords: [25.5, 38.0], // ~1.65° from Izmir (within 4.5° blockade radius)
+    troops: 4500,
+    units: { infantry: 3500, armor: 1000, airDrone: 0 },
+  };
+
+  const blockadedIds = computeNavalBlockadedTerritoryIds(territories, wars, [
+    enemyBlockadingFleet,
+  ]);
+  assert.equal(blockadedIds.has('izmir'), true);
+  assert.equal(blockadedIds.has('venedik'), false);
+
+  const econFree = calculateNationEconomy(
+    nations['792'],
+    territories,
+    nations,
+    {},
+    [],
+    wars,
+    'EMPIRES_1440',
+    []
+  );
+  const econBlockaded = calculateNationEconomy(
+    nations['792'],
+    territories,
+    nations,
+    {},
+    [],
+    wars,
+    'EMPIRES_1440',
+    [enemyBlockadingFleet]
+  );
+  assert.ok(
+    econBlockaded.taxIncome + econBlockaded.tradeIncome <
+      econFree.taxIncome + econFree.tradeIncome,
+    'Naval blockade should reduce coastal tax and trade income'
+  );
+
+  // Full day wrap adds +1.5 unrest pressure on blockaded coastal province
+  const tickOut = computeGameTick({
+    tick: 5,
+    hour: 20,
+    hoursStep: 4,
+    speed: 1,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations,
+    territories,
+    relations: {},
+    wars,
+    battles: [],
+    movements: [],
+    seaArmies: [enemyBlockadingFleet],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+  assert.ok(
+    tickOut.territories.izmir.unrest > territories.izmir.unrest,
+    `Expected blockaded Izmir unrest > ${territories.izmir.unrest}, got ${tickOut.territories.izmir.unrest}`
+  );
+});
+
+test('Naval warfare: open-sea interception applies shipyard bonus, updates war casualties/warScore, and logs World News', async () => {
+  const { DEFAULT_GAME_SETTINGS } = await import('./gameSettings');
+  const { computeGameTick } = await import('./tickEngine');
+
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Osmanlı',
+      treasury: 3000,
+      manpower: 25000,
+      stability: 80,
+      inflation: 1,
+      taxRate: 25,
+      budget: { military: 40, economy: 30, research: 15, welfare: 15 },
+      capitalTerritoryId: 'izmir',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+    '300': {
+      id: '300',
+      name: 'Venedik',
+      treasury: 3000,
+      manpower: 25000,
+      stability: 80,
+      inflation: 1,
+      taxRate: 25,
+      budget: { military: 40, economy: 30, research: 15, welfare: 15 },
+      capitalTerritoryId: 'venedik',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+  };
+
+  const territories: Record<string, Territory> = {
+    izmir: {
+      id: 'izmir',
+      name: 'İzmir',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCoastal: true,
+      isCapital: true,
+      garrison: 12000,
+      units: { infantry: 8000, armor: 2000, airDrone: 2000 },
+      population: 25000,
+      baseGdp: 100,
+      unrest: 0,
+      assimilation: 100,
+      buildings: {
+        factory: 0,
+        barracks: 1,
+        fortress: 0,
+        university: 0,
+        tradeHub: 1,
+        supplyDepot: 0,
+        shipyard: 4, // +32% naval power bonus
+      },
+      neighbors: [],
+      centroid: [27.1, 38.4],
+    } as unknown as Territory,
+    venedik: {
+      id: 'venedik',
+      name: 'Venedik',
+      ownerId: '300',
+      coreOwnerId: '300',
+      isCoastal: true,
+      isCapital: true,
+      garrison: 8000,
+      units: { infantry: 6000, armor: 2000, airDrone: 0 },
+      population: 20000,
+      baseGdp: 90,
+      unrest: 0,
+      assimilation: 100,
+      buildings: {
+        factory: 0,
+        barracks: 0,
+        fortress: 0,
+        university: 0,
+        tradeHub: 0,
+        supplyDepot: 0,
+        shipyard: 0,
+      },
+      neighbors: [],
+      centroid: [12.3, 45.4],
+    } as unknown as Territory,
+  };
+
+  const wars: ActiveWar[] = [
+    {
+      id: 'war_naval_1',
+      name: 'Akdeniz Deniz Savaşı',
+      attackerId: '792',
+      defenderId: '300',
+      attackers: ['792'],
+      defenders: ['300'],
+      startedTick: 1,
+      attackerWarScore: 0,
+      casualtiesAttacker: 0,
+      casualtiesDefender: 0,
+    },
+  ];
+
+  // Equal troop counts (5,000 vs 5,000), but Ottoman 4 shipyards give decisive naval victory
+  const enemyFleet: SeaArmy = {
+    id: 'sea_enemy_1',
+    ownerId: '300',
+    name: 'Venedik Kadırga Filosu',
+    coords: [24.0, 37.5],
+    troops: 5000,
+    units: { infantry: 4000, armor: 1000, airDrone: 0 },
+  };
+
+  const arrivingFleetMove: ArmyMovement = {
+    id: 'mv_naval_attack',
+    ownerId: '792',
+    fromTerritoryId: 'izmir',
+    toTerritoryId: 'SEA_AEGEAN',
+    toCoords: [24.2, 37.6], // Within 5.5° interception radius of enemyFleet
+    targetSeaName: 'Ege Açıkları',
+    troops: 5000,
+    units: { infantry: 4000, armor: 1000, airDrone: 0 },
+    progress: 98,
+    isAttack: true,
+    isNaval: true,
+  };
+
+  const out = computeGameTick({
+    tick: 12,
+    hour: 10,
+    hoursStep: 4,
+    speed: 3,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations,
+    territories,
+    relations: {},
+    wars,
+    battles: [],
+    movements: [arrivingFleetMove],
+    seaArmies: [enemyFleet],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+
+  // Enemy fleet sunk, Ottoman victorious fleet anchored on sea
+  assert.equal(out.seaArmies.length, 1);
+  assert.equal(out.seaArmies[0].ownerId, '792');
+  assert.ok(out.seaArmies[0].troops > 0 && out.seaArmies[0].troops < 5000);
+
+  // War score and casualties updated
+  const updatedWar = out.wars.find((w) => w.id === 'war_naval_1')!;
+  assert.equal(updatedWar.attackerWarScore, 8);
+  assert.equal(updatedWar.casualtiesDefender, 5000);
+  assert.ok(updatedWar.casualtiesAttacker > 0);
+
+  // Turkish naval victory news emitted
+  assert.ok(
+    out.newsEvents.some((e) => e.title.includes('Deniz Muharebesi Zaferi')),
+    'Expected Deniz Muharebesi Zaferi news event'
+  );
+});
+
+test('Naval warfare: wartime AI launches counter-blockade fleets and amphibious coastal assaults', () => {
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Oyuncu',
+      treasury: 4000,
+      manpower: 30000,
+      stability: 80,
+      capitalTerritoryId: 'p_coast',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+    '300': {
+      id: '300',
+      name: 'Venedik',
+      treasury: 4000,
+      manpower: 30000,
+      stability: 80,
+      capitalTerritoryId: 'ai_coast',
+      unlockedTechs: [],
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+  };
+
+  const makeTerritories = (): Record<string, Territory> => ({
+    p_coast: {
+      id: 'p_coast',
+      name: 'İzmir',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCoastal: true,
+      isCapital: true,
+      garrison: 2200,
+      units: { infantry: 2200, armor: 0, airDrone: 0 },
+      population: 15000,
+      baseGdp: 60,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 0, barracks: 0, fortress: 0, university: 0, tradeHub: 0, supplyDepot: 0 },
+      neighbors: [], // Purely across water (no land bridge)
+      centroid: [26.0, 38.0],
+    } as unknown as Territory,
+    ai_coast: {
+      id: 'ai_coast',
+      name: 'Venedik',
+      ownerId: '300',
+      coreOwnerId: '300',
+      isCoastal: true,
+      isCapital: true,
+      garrison: 18000,
+      units: { infantry: 13000, armor: 3000, airDrone: 2000 },
+      population: 25000,
+      baseGdp: 80,
+      unrest: 0,
+      assimilation: 100,
+      buildings: { factory: 0, barracks: 1, fortress: 0, university: 0, tradeHub: 1, supplyDepot: 0, shipyard: 1 },
+      neighbors: [], // Purely across water (no land bridge)
+      centroid: [18.0, 40.0], // ~8.2° across open water from p_coast (within 28° range)
+    } as unknown as Territory,
+  });
+
+  const wars: ActiveWar[] = [
+    {
+      id: 'war_med',
+      name: 'Deniz Savaşı',
+      attackerId: '300',
+      defenderId: '792',
+      attackers: ['300'],
+      defenders: ['792'],
+      startedTick: 1,
+      attackerWarScore: 0,
+      casualtiesAttacker: 0,
+      casualtiesDefender: 0,
+    },
+  ];
+
+  // Scenario A: Player blockades AI coastline -> AI dispatches naval counter-fleet to intercept
+  const blockadingPlayerFleet: SeaArmy = {
+    id: 'sea_player_blockade',
+    ownerId: '792',
+    name: '1. Abluka Filosu',
+    coords: [19.5, 39.5], // ~1.6° from ai_coast
+    troops: 4000,
+    units: { infantry: 3000, armor: 1000, airDrone: 0 },
+  };
+  const outCounter = evaluateWartimeAiOperations({
+    nextTick: 20,
+    playerNationId: '792',
+    territories: makeTerritories(),
+    nations,
+    relations: {},
+    wars,
+    movements: [],
+    seaArmies: [blockadingPlayerFleet],
+    aiAggressiveness: 'NORMAL',
+  });
+  assert.ok(outCounter, 'Expected AI wartime naval counter-fleet output');
+  const counterMove = outCounter.newMovements.find(
+    (m) => m.ownerId === '300' && m.isNaval && Boolean(m.toCoords)
+  );
+  assert.ok(counterMove, 'AI should launch naval counter-fleet against hostile blockading SeaArmy');
+  assert.deepEqual(counterMove?.toCoords, blockadingPlayerFleet.coords);
+
+  // Scenario B: No hostile fleet nearby -> AI launches amphibious assault on vulnerable player coast
+  const outAmphib = evaluateWartimeAiOperations({
+    nextTick: 21,
+    playerNationId: '792',
+    territories: makeTerritories(),
+    nations,
+    relations: {},
+    wars,
+    movements: [],
+    seaArmies: [],
+    aiAggressiveness: 'NORMAL',
+  });
+  assert.ok(outAmphib, 'Expected AI wartime amphibious assault output');
+  const amphibMove = outAmphib.newMovements.find(
+    (m) => m.ownerId === '300' && m.isNaval && m.toTerritoryId === 'p_coast'
+  );
+  assert.ok(amphibMove, 'AI should launch amphibious coastal assault across open water');
+  assert.equal(amphibMove?.isAttack, true);
+  assert.ok(
+    outAmphib.playerAlerts.some((a) => a.includes('AMFİBİ ÇIKARMA')),
+    'Expected Turkish amphibious assault alert for player'
+  );
+});
+
+test('seeded living world produces distinct AI permutations across seeds and blocks scripted Day-12 embargoes', async () => {
+  const { seededShuffle, seededHash } = await import('./aiAndRebellionEngine');
+
+  const sampleIds = ['300', '380', '276', '250', '643', '616', '348', '724'];
+  const permA = seededShuffle(sampleIds, 10101, 'ai_cycle_0');
+  const permB = seededShuffle(sampleIds, 90909, 'ai_cycle_0');
+  assert.notDeepEqual(
+    permA,
+    permB,
+    'Different worldSeed values should shuffle AI actor order differently'
+  );
+  assert.deepEqual(
+    permA,
+    seededShuffle(sampleIds, 10101, 'ai_cycle_0'),
+    'Same worldSeed must stay reproducible'
+  );
+  assert.notEqual(
+    seededHash(10101, 'emb_gate_18_300'),
+    seededHash(90909, 'emb_gate_18_300')
+  );
+
+  // Premature Day-12 scripted embargo must NOT trigger when worldSeed is active
+  const nations: Record<string, Nation> = {
+    '792': mkFaz3Nation('792', { name: 'Osmanlı', capitalTerritoryId: 'p_1' }),
+    '300': mkFaz3Nation('300', {
+      name: 'Bizans',
+      capitalTerritoryId: 'b_1',
+      treasury: 100, // Keep low so AI doesn't build/levy and reaches diplomacy step
+    }),
+  };
+  const territories: Record<string, Territory> = {
+    p_1: mkFaz3Territory('p_1', { ownerId: '792', garrison: 25000, neighbors: ['b_1'] }),
+    b_1: mkFaz3Territory('b_1', { ownerId: '300', garrison: 8000, neighbors: ['p_1'] }),
+  };
+  const relations: Record<string, DiplomaticRelation> = {
+    '300_792': {
+      nationA: '300',
+      nationB: '792',
+      score: -70,
+      isAllied: false,
+      hasNonAggression: false,
+      hasMilitaryAccess: false,
+      hasTradeAgreement: false,
+      hasEmbargo: false,
+      truceUntilTick: 0,
+    },
+  };
+
+  const day12Res = evaluateMultiProvinceAiTurn({
+    nextTick: 12,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations,
+    territories,
+    relations,
+    wars: [],
+    aiAggressiveness: 'NORMAL',
+    worldSeed: 424242,
+  });
+  const relAfter = day12Res?.updatedRelations?.['300_792'];
+  assert.equal(
+    Boolean(relAfter?.hasEmbargo),
+    false,
+    'Seeded live campaigns must not fire deterministic Day-12 embargoes on start'
+  );
+});
+
+test('computeAllianceCompatibilityScore blocks enemy-allies/embargoes and rewards shared war enemies and faith', async () => {
+  const { computeAllianceCompatibilityScore } = await import('./aiAndRebellionEngine');
+
+  const actor = mkFaz3Nation('A', {
+    ideology: 'MONARCHY',
+    stateReligion: 'ISLAM_SUNNI',
+  });
+  const friendlyPeer = mkFaz3Nation('B', {
+    ideology: 'MONARCHY',
+    stateReligion: 'ISLAM_SUNNI',
+  });
+  const enemyNation = mkFaz3Nation('E', {
+    ideology: 'MONARCHY',
+    stateReligion: 'CHRISTIAN_ORTHODOX',
+    aggressiveExpansion: 50,
+  });
+  const nations = { A: actor, B: friendlyPeer, E: enemyNation };
+
+  const activeWar: ActiveWar = {
+    id: 'w_ae',
+    name: 'A-E War',
+    attackerId: 'E',
+    defenderId: 'A',
+    attackers: ['E'],
+    defenders: ['A'],
+    startedTick: 1,
+    attackerWarScore: 0,
+    casualtiesAttacker: 0,
+    casualtiesDefender: 0,
+  };
+
+  // Case 1: Peer is allied to our active war enemy -> MUST be blocked!
+  const relAB: DiplomaticRelation = {
+    nationA: 'A',
+    nationB: 'B',
+    score: 40,
+    isAllied: false,
+    hasNonAggression: true,
+    hasMilitaryAccess: false,
+    hasTradeAgreement: true,
+    hasEmbargo: false,
+    truceUntilTick: 0,
+  };
+  const blockedByEnemyAlly = computeAllianceCompatibilityScore({
+    actor,
+    peer: friendlyPeer,
+    rel: relAB,
+    wars: [activeWar],
+    relations: {
+      A_B: relAB,
+      B_E: {
+        nationA: 'B',
+        nationB: 'E',
+        score: 60,
+        isAllied: true,
+        allianceType: 'DEFENSIVE',
+        hasNonAggression: true,
+        hasMilitaryAccess: true,
+        hasTradeAgreement: false,
+        hasEmbargo: false,
+        truceUntilTick: 0,
+      },
+    },
+    nations,
+    gameMode: 'EMPIRES_1440',
+    threatNeighborIds: ['E'],
+  });
+  assert.equal(
+    blockedByEnemyAlly.blocked,
+    true,
+    'AI must never ally with a nation allied to its active war enemy'
+  );
+
+  // Case 2: Embargoed peer -> MUST be blocked!
+  const blockedByEmbargo = computeAllianceCompatibilityScore({
+    actor,
+    peer: friendlyPeer,
+    rel: { ...relAB, hasEmbargo: true, embargoingNationIds: ['A'] },
+    wars: [],
+    relations: {},
+    nations,
+    gameMode: 'EMPIRES_1440',
+    threatNeighborIds: [],
+  });
+  assert.equal(blockedByEmbargo.blocked, true);
+
+  // Case 3: Compatible peer sharing threat + faith + ideology -> strong positive score
+  const compatible = computeAllianceCompatibilityScore({
+    actor,
+    peer: friendlyPeer,
+    rel: { ...relAB, score: 10 },
+    wars: [],
+    relations: {
+      B_E: {
+        nationA: 'B',
+        nationB: 'E',
+        score: -30,
+        isAllied: false,
+        hasNonAggression: false,
+        hasMilitaryAccess: false,
+        hasTradeAgreement: false,
+        hasEmbargo: false,
+        truceUntilTick: 0,
+      },
+    },
+    nations,
+    gameMode: 'EMPIRES_1440',
+    threatNeighborIds: ['E'],
+  });
+  assert.equal(compatible.blocked, false);
+  assert.equal(compatible.sharesCommonThreat, true);
+  assert.ok(
+    compatible.score >= 45,
+    `Expected strong alliance compatibility score (>= 45), got ${compatible.score}`
+  );
+});
+
+test('startNewGame auto-starts player research on Day 1 and tickEngine auto-chains next tech when autoResearch is enabled', async () => {
+  const { computeGameTick } = await import('./tickEngine');
+  const { DEFAULT_GAME_SETTINGS } = await import('./gameSettings');
+
+  useGameStore.getState().startNewGame();
+  const s = useGameStore.getState();
+  const p = s.nations[s.playerNationId];
+  assert.equal(p.autoResearch, true, 'New campaign should enable autoResearch by default');
+  assert.ok(
+    p.activeResearch && p.activeResearch.techId,
+    'New campaign should auto-start a research project immediately on Day 1'
+  );
+  assert.ok(s.worldSeed > 0, 'New campaign should assign a non-zero worldSeed');
+
+  const firstTechId = p.activeResearch.techId;
+  // Push active research nearly to completion and step 1 full day (24 hours)
+  const nearCompletePlayer: Nation = {
+    ...p,
+    activeResearch: {
+      ...p.activeResearch,
+      progress: Math.max(0, p.activeResearch.totalCost - 0.1),
+    },
+  };
+
+  const out = computeGameTick({
+    tick: 1,
+    hour: 23,
+    hoursStep: 2,
+    speed: 1,
+    gameMode: s.gameMode,
+    playerNationId: s.playerNationId,
+    nations: { ...s.nations, [s.playerNationId]: nearCompletePlayer },
+    territories: s.territories,
+    relations: s.relations,
+    wars: [],
+    battles: [],
+    movements: [],
+    seaArmies: [],
+    newsEvents: [],
+    settings: { ...DEFAULT_GAME_SETTINGS, crisisFrequencyDays: 0 },
+    worldSeed: s.worldSeed,
+  });
+
+  const updatedPlayer = out.nations[s.playerNationId];
+  assert.ok(
+    updatedPlayer.unlockedTechs.includes(firstTechId),
+    'Completed auto-started tech should be unlocked'
+  );
+  assert.ok(
+    updatedPlayer.activeResearch &&
+      updatedPlayer.activeResearch.techId !== firstTechId,
+    'With autoResearch enabled, tickEngine should automatically queue and start the next available tech'
+  );
+});
+
+test('toggleAutoResearchDomain starts next tech when toggled ON while idle and cancelResearchDomain disables autoResearch', async () => {
+  const { toggleAutoResearchDomain } = await import('./empireAndArmyActions');
+  const player = mkFaz3Nation('792', {
+    autoResearch: false,
+    activeResearch: null,
+    unlockedTechs: [],
+  });
+
+  const turnedOn = toggleAutoResearchDomain({
+    nations: { '792': player },
+    playerNationId: '792',
+    gameMode: 'EMPIRES_1440',
+    tick: 5,
+  });
+  assert.ok(turnedOn.nations);
+  const onPlayer = turnedOn.nations['792'];
+  assert.equal(onPlayer.autoResearch, true);
+  assert.ok(
+    onPlayer.activeResearch && onPlayer.activeResearch.techId,
+    'Enabling autoResearch while idle should start the next tech immediately'
+  );
+
+  const paused = cancelResearchDomain({
+    nations: { '792': onPlayer },
+    playerNationId: '792',
+  });
+  assert.ok(paused.nations);
+  assert.equal(paused.nations['792'].activeResearch, null);
+  assert.equal(
+    paused.nations['792'].autoResearch,
+    false,
+    'Pausing research should disable autoResearch so it does not immediately restart'
+  );
+});
+
+test('both 1440 and 2026 tech trees expose 40 illustrated branching technologies with valid prerequisites', async () => {
+  const { TECH_TREE, TECH_TREE_1440 } = await import('../data/techAndArmyTiers');
+
+  for (const [label, tree] of [
+    ['1440', TECH_TREE_1440],
+    ['2026', TECH_TREE],
+  ] as const) {
+    assert.equal(tree.length, 40, `${label} tech tree must have 40 technologies`);
+    const ids = new Set(tree.map((t) => t.id));
+    assert.equal(ids.size, 40, `${label} tech IDs must be unique`);
+
+    for (const branch of ['MILITARY', 'ECONOMY', 'ADMINISTRATION', 'SCIENCE'] as const) {
+      const branchItems = tree.filter((t) => t.branch === branch);
+      assert.equal(branchItems.length, 10, `${label} ${branch} must have 10 techs (2 tracks × 5 eras)`);
+      assert.equal(
+        branchItems.filter((t) => t.subRow === 0).length,
+        5,
+        `${label} ${branch} main track must have 5 tiers`
+      );
+      assert.equal(
+        branchItems.filter((t) => t.subRow === 1).length,
+        5,
+        `${label} ${branch} specialist track must have 5 tiers`
+      );
+    }
+
+    for (const tech of tree) {
+      assert.ok(tech.shortTitle && tech.shortTitle.length > 0, `${label} ${tech.id} missing shortTitle`);
+      assert.ok(tech.artKey && tech.artKey.length > 0, `${label} ${tech.id} missing artKey`);
+      assert.ok(tech.description && tech.description.length > 10, `${label} ${tech.id} missing description`);
+      assert.ok(tech.effectLabel && tech.effectLabel.length > 3, `${label} ${tech.id} missing effectLabel`);
+      if (tech.prerequisite) {
+        assert.ok(
+          ids.has(tech.prerequisite),
+          `${label} ${tech.id} prerequisite ${tech.prerequisite} must exist in tree`
+        );
+      }
+    }
+  }
+});
+
+test('new specialist technologies deliver real measurable effects across economy, naval, combat, supply, construction, and daily ticks', async () => {
+  const {
+    computeNationNavalBonus,
+    computeNationManpowerCap,
+    computeCombatStrength,
+  } = await import('./simulationEngine');
+  const { calculateProvinceSupplyLimit, getGameSeason } = await import(
+    './seasonSupplyAndAiProfile'
+  );
+  const { recruitUnitDomain, upgradeBuildingDomain } = await import('./empireAndArmyActions');
+  const { computeGameTick } = await import('./tickEngine');
+  const { DEFAULT_GAME_SETTINGS } = await import('./gameSettings');
+
+  const baseNation = mkFaz3Nation('792', {
+    treasury: 50000,
+    manpower: 20000,
+    diplomacyPoints: 50,
+    inflation: 10,
+    unlockedTechs: [],
+    activeResearch: null,
+    autoResearch: false,
+    budget: { military: 30, economy: 25, research: 25, welfare: 20 },
+  });
+  const vassalNation = mkFaz3Nation('300', {
+    treasury: 5000,
+    vassalOf: '792',
+    unlockedTechs: [],
+  });
+
+  const makeBaseTerritories = (): Record<string, Territory> => ({
+    '792': {
+      id: '792',
+      name: 'Kostantiniyye',
+      ownerId: '792',
+      coreOwnerId: '792',
+      population: 120000,
+      baseGdp: 200,
+      resource: 'TICARET_BOGAZI',
+      garrison: 8000,
+      units: { infantry: 6000, armor: 1500, airDrone: 500 },
+      unrest: 30,
+      assimilation: 40,
+      isAssimilating: true,
+      isOccupied: false,
+      isCoastal: true,
+      buildings: {
+        factory: 1,
+        barracks: 1,
+        fortress: 1,
+        university: 2,
+        tradeHub: 2,
+        supplyDepot: 1,
+        shipyard: 1,
+        mint: 0,
+        granary: 0,
+      },
+      neighbors: ['300'],
+      centroid: [28.9, 41.0],
+    } as unknown as Territory,
+    '300': {
+      id: '300',
+      name: 'Mora',
+      ownerId: '300',
+      coreOwnerId: '300',
+      population: 45000,
+      baseGdp: 120,
+      resource: 'LIMAN',
+      garrison: 2000,
+      units: { infantry: 2000, armor: 0, airDrone: 0 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: true,
+      buildings: {
+        factory: 1,
+        barracks: 1,
+        fortress: 0,
+        university: 0,
+        tradeHub: 1,
+        supplyDepot: 0,
+      },
+      neighbors: ['792'],
+      centroid: [22.4, 37.5],
+    } as unknown as Territory,
+  });
+
+  const tBase = makeBaseTerritories();
+  const nationsBase = { '792': baseNation, '300': vassalNation };
+
+  const econBase = calculateNationEconomy(baseNation, tBase, nationsBase, {}, [], []);
+  const specNation: Nation = {
+    ...baseNation,
+    unlockedTechs: [
+      'mil_1b',
+      'mil_2b',
+      'mil_3b',
+      'mil_4b',
+      'mil_5b',
+      'eco_1b',
+      'eco_2b',
+      'eco_3b',
+      'eco_4b',
+      'eco_5b',
+      'adm_1b',
+      'adm_2b',
+      'adm_3b',
+      'adm_4b',
+      'adm_5b',
+      'sci_1b',
+      'sci_2b',
+      'sci_3b',
+      'sci_4b',
+      'sci_5b',
+    ],
+  };
+  const nationsSpec = { '792': specNation, '300': vassalNation };
+  const econSpec = calculateNationEconomy(specNation, tBase, nationsSpec, {}, [], []);
+
+  assert.ok(econSpec.taxIncome > econBase.taxIncome, 'eco_3b/eco_5b must increase tax income');
+  assert.ok(econSpec.productionIncome > econBase.productionIncome, 'eco_2b/sci_4b must increase production income');
+  assert.ok(econSpec.tradeIncome > econBase.tradeIncome, 'eco_4b/mil_3b/sci_3b must increase trade income');
+  assert.ok(econSpec.vassalIncome > econBase.vassalIncome, 'adm_5b must boost vassal income');
+  assert.ok(econSpec.dailyResearch > econBase.dailyResearch * 1.4, 'sci_2b/sci_5b must strongly boost daily research');
+  assert.ok(econSpec.dailyManpower > econBase.dailyManpower, 'eco_1b/sci_1b must increase daily manpower');
+  assert.ok(econSpec.inflationRelief > econBase.inflationRelief, 'eco_3b/eco_5b must increase inflation relief');
+  assert.ok(econSpec.militaryUpkeep < econBase.militaryUpkeep, 'mil_5b must reduce military upkeep');
+
+  // Manpower Cap (adm_4b)
+  const capBase = computeNationManpowerCap(baseNation, tBase);
+  const capSpec = computeNationManpowerCap(specNation, tBase);
+  assert.ok(capSpec > capBase, 'adm_4b must increase national manpower cap');
+
+  // Naval Bonus (mil_1b + mil_3b + sci_3b)
+  const navalBase = computeNationNavalBonus('792', tBase, baseNation);
+  const navalSpec = computeNationNavalBonus('792', tBase, specNation);
+  assert.ok(navalSpec > navalBase + 0.4, 'mil_1b/mil_3b/sci_3b must boost naval combat multiplier');
+
+  // Combat Attack (mil_5b + sci_5b) & Defense (mil_2b + sci_5b)
+  const units = { infantry: 5000, armor: 1000, airDrone: 500 };
+  const atkBase = computeCombatStrength(baseNation, tBase['792'], false, units);
+  const atkSpec = computeCombatStrength(specNation, tBase['792'], false, units);
+  const defBase = computeCombatStrength(baseNation, tBase['792'], true, units);
+  const defSpec = computeCombatStrength(specNation, tBase['792'], true, units);
+  assert.ok(atkSpec >= atkBase + 0.34, 'mil_5b + sci_5b must boost offensive combat strength');
+  assert.ok(defSpec >= defBase + 0.29, 'mil_2b + sci_5b must boost defensive combat strength');
+
+  // Supply Limit (mil_4b + eco_4b)
+  const springSeason = getGameSeason(100, 'EMPIRES_1440');
+  const supplyBase = calculateProvinceSupplyLimit(tBase['792'], baseNation, springSeason);
+  const supplySpec = calculateProvinceSupplyLimit(tBase['792'], specNation, springSeason);
+  assert.ok(supplySpec > supplyBase * 1.35, 'mil_4b + eco_4b must expand province supply limit');
+
+  // Recruitment cost discount (mil_4b)
+  const recBase = recruitUnitDomain({
+    territoryId: '792',
+    unitType: 'infantry',
+    amount: 1000,
+    baseGoldCost: 120,
+    territories: tBase,
+    nations: nationsBase,
+    playerNationId: '792',
+  });
+  const recSpec = recruitUnitDomain({
+    territoryId: '792',
+    unitType: 'infantry',
+    amount: 1000,
+    baseGoldCost: 120,
+    territories: tBase,
+    nations: nationsSpec,
+    playerNationId: '792',
+  });
+  assert.ok(
+    (recSpec.nations?.['792']?.treasury ?? 0) > (recBase.nations?.['792']?.treasury ?? 0),
+    'mil_4b must lower unit recruitment gold cost'
+  );
+
+  // Construction cost discount (eco_2b + adm_1b + sci_4b) and duration discount (adm_3b)
+  const buildBase = upgradeBuildingDomain({
+    territoryId: '792',
+    building: 'factory',
+    territories: tBase,
+    nations: nationsBase,
+    playerNationId: '792',
+  });
+  const buildSpec = upgradeBuildingDomain({
+    territoryId: '792',
+    building: 'factory',
+    territories: tBase,
+    nations: nationsSpec,
+    playerNationId: '792',
+  });
+  assert.ok(
+    (buildSpec.nations?.['792']?.treasury ?? 0) > (buildBase.nations?.['792']?.treasury ?? 0),
+    'eco_2b/adm_1b/sci_4b must reduce building gold cost'
+  );
+  const baseDays = buildBase.territories?.['792']?.constructionQueue?.[0]?.totalDays ?? 999;
+  const specDays = buildSpec.territories?.['792']?.constructionQueue?.[0]?.totalDays ?? 999;
+  assert.ok(specDays < baseDays, 'adm_3b must shorten construction duration');
+
+  // Daily Tick: adm_2b diplomacy points, eco_1b/sci_1b population growth, adm_1b/adm_5b unrest calm, adm_4b assimilation speed
+  const runOneDay = (nationsIn: Record<string, Nation>) =>
+    computeGameTick({
+      tick: 1,
+      hour: 23,
+      hoursStep: 2,
+      speed: 1,
+      gameMode: 'EMPIRES_1440',
+      playerNationId: '792',
+      nations: nationsIn,
+      territories: makeBaseTerritories(),
+      relations: {},
+      wars: [],
+      battles: [],
+      movements: [],
+      seaArmies: [],
+      newsEvents: [],
+      settings: { ...DEFAULT_GAME_SETTINGS, crisisFrequencyDays: 0 },
+      worldSeed: 123456,
+    });
+
+  const dayBase = runOneDay(nationsBase);
+  const daySpec = runOneDay(nationsSpec);
+
+  assert.ok(
+    (daySpec.nations['792'].diplomacyPoints ?? 0) > (dayBase.nations['792'].diplomacyPoints ?? 0),
+    'adm_2b must grant +1 extra daily diplomacy point'
+  );
+  assert.ok(
+    daySpec.territories['792'].population > dayBase.territories['792'].population,
+    'eco_1b + sci_1b must accelerate daily province population growth'
+  );
+  assert.ok(
+    daySpec.territories['792'].unrest < dayBase.territories['792'].unrest,
+    'adm_1b + adm_5b must accelerate daily unrest calming'
+  );
+  assert.ok(
+    (daySpec.territories['792'].assimilation ?? 0) > (dayBase.territories['792'].assimilation ?? 0),
+    'adm_4b must accelerate daily assimilation progress'
+  );
+});
 
 
 

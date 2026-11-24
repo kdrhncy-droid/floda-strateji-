@@ -150,10 +150,10 @@
   - [x] Tek tıkla seçilen eyaletlerde özel üretim tesisi (İnek Çiftliği, Pamuk Tarlası, Kereste, Maden), ekonomik/askerî bina yükseltme ve kıyı limanı geliştirme (maliyet ve bütçe önizlemeli).
   - [x] Toplu asimilasyon, toplu istikrar/festival yatırımı ve sınır eyaletlerine toplu garnizon/seferberlik desteği.
   - [x] Mobil Dostu Yarı-Otomatik Cephe Komutanı (seçili ordulara taarruz/savunma duruşu ve toplu cephe sevki).
-- [ ] **3.6. Akıllı Kısayollar, Kategorili Gelişmiş Ayarlar ve Görsel/İkon Temizliği:**
-  - [ ] Hız kontrolü, başkent odağı, ordu yürütme, harita modları (Ekonomi/Kaynak dahil) ve toplu işlem paneli için tutarlı kısayollar.
-  - [ ] *Kategorili Ayarlar:* Grafik & Performans, Harita & Görünüm (sınır kalınlığı, şehir ismi boyutu, savaş sisi, UI ölçeği), Ses (ana/müzik/SFX ayrı sürgüler), Oynanış & AI (zorluk, kriz sıklığı, oto-kayıt, kapitülasyon eşiği).
-  - [ ] Anlamsız süs emojileri/ikonları temizlenecek; büyük kart yüzeyleri tutarlı tarihi yağlıboya/gravür diliyle sadeleştirilecek.
+- [x] **3.6. Akıllı Kısayollar, Kategorili Gelişmiş Ayarlar ve Görsel/İkon Temizliği:**
+  - [x] Hız kontrolü (`1/2/3/4`, `Boşluk`), başkent odağı (`H`/`Home`), ordu yürütme (`M`), harita modları (`Q/W/E/R/T` — Siyasi/Ekonomi/Kaynak/Diplomasi/Arazi), toplu işlem paneli (`B`) ve kapatma/iptal (`Esc`) için tutarlı kısayollar eklendi.
+  - [x] *Kategorili Ayarlar:* Ana Menü ve Oyun İçi Sistem Menüsü tek ortak bileşende birleştirildi; Grafik & Performans (çözünürlük kalitesi, 60 FPS akıcı animasyonlar, HUD ölçeği), Harita & Görünüm (sınır kalınlığı, şehir ismi boyutu, etiket yoğunluğu, savaş sisi), Ses (ana/müzik/SFX ayrı sürgüler + Mehterhane-i Hümayun), Oynanış & AI (zorluk, kriz sıklığı, oto-kayıt, kapitülasyon eşiği) ve Kısayollar sekmeleri eklendi.
+  - [x] Üst bilgi çubuğu, eyalet çekmecesi, dış diplomasi ve devlet diplomasi penceresindeki süs emojileri ve gereksiz yanıp sönen efektler temizlendi; pencereler sıcak kömür-bronz ve eskitme altın tarihî tema diliyle hizalandı.
 
 ### Faz 4 — İnsan Gibi Hissettiren Yapay Zekâ, Derin Diplomasi, İkmal/Mevsim Baskısı ve Ültimatomlar
 - [x] **4.1. Yapay Zekâ Kişilik Profilleri, Akıllı Ekonomi/Teknoloji/Seferberlik & Uzun Vadeli Strateji:** Her devlete dinamik stratejik eğilim (Fetihçi, Ticaret İmparatorluğu, Savunmacı, İntikamcı/Rövanşist) atandı; büyük devletler ekonomisine orantılı çok cepheli asker basıyor, yeni **Liman / Kaynak / Gelişim Puanı / Darphane / Ambar** binalarına bilinçli yatırım yapıyor ve kişiliğine uygun teknoloji dalında uzmanlaşıyor.

@@ -6,6 +6,7 @@ import {
   DiplomaticRelation,
   GameModeId,
   Nation,
+  SeaArmy,
   Territory,
   WorldNewsEvent,
 } from '../types/game';
@@ -28,9 +29,11 @@ export interface SaveGamePayload {
   wars: ActiveWar[];
   battles: ActiveBattle[];
   movements: ArmyMovement[];
+  seaArmies?: SeaArmy[];
   newsEvents: WorldNewsEvent[];
   tick: number;
   hour?: number;
+  worldSeed?: number;
 }
 
 export interface SaveSlotMetadata {
@@ -481,12 +484,25 @@ export function hydrateSavedPayload(
       (mv) =>
         mv &&
         mergedNations[mv.ownerId] &&
-        mergedTerritories[mv.fromTerritoryId] &&
-        mergedTerritories[mv.toTerritoryId]
+        (Boolean(mv.toCoords) ||
+          (mergedTerritories[mv.fromTerritoryId] &&
+            mergedTerritories[mv.toTerritoryId]))
+    ),
+    seaArmies: (rawPayload.seaArmies || []).filter(
+      (s) =>
+        s &&
+        mergedNations[s.ownerId] &&
+        Array.isArray(s.coords) &&
+        s.coords.length === 2 &&
+        Number.isFinite(s.troops) &&
+        s.troops > 0
     ),
     newsEvents: rawPayload.newsEvents || [],
     tick: Number.isFinite(rawPayload.tick) ? rawPayload.tick : 0,
     hour: Number.isFinite(rawPayload.hour) ? rawPayload.hour : 8,
+    worldSeed: Number.isFinite(rawPayload.worldSeed)
+      ? rawPayload.worldSeed
+      : undefined,
   };
 }
 

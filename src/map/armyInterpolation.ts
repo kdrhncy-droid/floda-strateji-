@@ -116,6 +116,15 @@ export function computeMarchAnimPhase(
   if (speed === 0) {
     return (fallbackProgress % 20) / 20;
   }
-  const cycleMs = speed === 1 ? 520 : speed === 2 ? 420 : speed === 4 ? 340 : 280;
+  const cycleMs =
+    speed === 1
+      ? 500
+      : speed === 2
+      ? 410
+      : speed === 3
+      ? 350
+      : speed === 4
+      ? 300
+      : 250;
   return (nowMs % cycleMs) / cycleMs;
 }

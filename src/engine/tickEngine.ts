@@ -9,6 +9,7 @@ import {
   IncomingDiplomaticOffer,
   Nation,
   QueuedBuildingConstruction,
+  SeaArmy,
   SpeedLevel,
   TacticalBattleState,
   Territory,
@@ -26,8 +27,12 @@ import { RELIGIONS } from '../data/religionAndCultureData';
 import {
   calculateNationEconomy,
   computeNationManpowerCap,
+  computeNationNavalBonus,
+  computeNavalBlockadedTerritoryIds,
   formatGameDate,
+  getOrCreateRelation,
   isAtWar,
+  resolveSeaRegionName,
 } from './simulationEngine';
 import {
   evaluateMultiProvinceAiTurn,
@@ -50,6 +55,7 @@ import {
   evaluateActiveStraits,
 } from './straitsAndTradeEngine';
 import { evaluatePlayerAiCommander } from './playerAiCommander';
+import { pickNextAutoResearchTech } from './empireAndArmyActions';
 import { GameSettings } from './gameSettings';
 
 export function scaleUnits(
@@ -101,11 +107,13 @@ export interface GameTickInput {
   wars: ActiveWar[];
   battles: ActiveBattle[];
   movements: ArmyMovement[];
+  seaArmies?: SeaArmy[];
   newsEvents: WorldNewsEvent[];
   settings: GameSettings;
   aiCommanderEnabled?: boolean;
   aiCommanderStance?: import('../types/game').AiCommanderStance;
   activeIncomingOffer?: IncomingDiplomaticOffer | null;
+  worldSeed?: number;
 }
 
 export interface GameTickOutput {
@@ -118,6 +126,7 @@ export interface GameTickOutput {
   wars: ActiveWar[];
   battles: ActiveBattle[];
   movements: ArmyMovement[];
+  seaArmies: SeaArmy[];
   newsEvents: WorldNewsEvent[];
   triggeredTacticalBattle: TacticalBattleState | null;
   triggeredCrisis: CrisisEventDefinition | null;
@@ -126,6 +135,51 @@ export interface GameTickOutput {
   shouldPause: boolean;
   toasts: string[];
   sounds: TickSoundCue[];
+}
+
+/**
+ * Checks whether a conquered territory is the core homeland of an active ally / war co-belligerent
+ * fighting on the same side as `conquerorId` against `previousOwnerId`.
+ * If so, returns that ally's nationId so the liberated land immediately returns to the ally's color!
+ */
+export function findAlliedLiberationBeneficiary(params: {
+  target: Territory;
+  conquerorId: string;
+  previousOwnerId: string;
+  wars: ActiveWar[];
+  relations: Record<string, DiplomaticRelation>;
+  nations: Record<string, Nation>;
+}): string | null {
+  const { target, conquerorId, previousOwnerId, wars, relations, nations } = params;
+  const coreId = target.coreOwnerId;
+  if (!coreId || coreId === conquerorId || coreId === previousOwnerId) return null;
+  if (!nations[coreId]) return null;
+  if (isAtWar(wars, conquerorId, coreId)) return null;
+
+  const sameWarSide = wars.some(
+    (w) =>
+      (w.attackers.includes(conquerorId) &&
+        w.attackers.includes(coreId) &&
+        w.defenders.includes(previousOwnerId)) ||
+      (w.defenders.includes(conquerorId) &&
+        w.defenders.includes(coreId) &&
+        w.attackers.includes(previousOwnerId))
+  );
+  if (sameWarSide) return coreId;
+
+  const rel = getOrCreateRelation(relations, conquerorId, coreId);
+  const coreNat = nations[coreId];
+  const conqNat = nations[conquerorId];
+  if (
+    rel.isAllied ||
+    Boolean(rel.allianceType) ||
+    coreNat?.vassalOf === conquerorId ||
+    conqNat?.vassalOf === coreId
+  ) {
+    return coreId;
+  }
+
+  return null;
 }
 
 export function pickEligibleCrisisEvent(
@@ -179,6 +233,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
   let nextRelations: Record<string, DiplomaticRelation> = input.relations;
   let nextWars: ActiveWar[] = input.wars;
   let nextMovements: ArmyMovement[] = [];
+  let nextSeaArmies: SeaArmy[] = input.seaArmies ? [...input.seaArmies] : [];
   let nextNewsEvents: WorldNewsEvent[] = input.newsEvents;
   let nextBattles: ActiveBattle[] = [...input.battles];
 
@@ -196,6 +251,127 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       territoriesCloned = true;
     }
     nextTerritories[id] = terr;
+  };
+
+  /**
+   * Applies conquest OR allied liberation cleanly:
+   * - If `target` belongs to a co-belligerent / ally's core homeland, returns it to the ally's ownership & color
+   *   while safely returning the conqueror's surviving army to their origin / nearest owned province (zero troop loss!).
+   * - Otherwise transfers ownership to `conquerorId` (temporary wartime occupation unless core).
+   */
+  const applyTerritoryCaptureOrLiberation = (args: {
+    target: Territory;
+    conquerorId: string;
+    survivors: number;
+    survivingUnits: UnitComposition;
+    originTerritoryId?: string;
+    unrestSpike: number;
+    wallHp?: number;
+    clearSiege?: boolean;
+  }): { liberatedAllyId: string | null; returnProvName: string | null } => {
+    const {
+      target,
+      conquerorId,
+      survivors,
+      survivingUnits,
+      originTerritoryId,
+      unrestSpike,
+      wallHp,
+      clearSiege,
+    } = args;
+
+    const previousOwnerId = target.ownerId;
+    const liberatedAllyId = findAlliedLiberationBeneficiary({
+      target,
+      conquerorId,
+      previousOwnerId,
+      wars: nextWars,
+      relations: nextRelations,
+      nations: nextNations,
+    });
+
+    if (liberatedAllyId) {
+      const allyNation = nextNations[liberatedAllyId];
+      const localMilitia = Math.max(600, Math.min(1500, Math.round(survivors * 0.15)));
+      const wasEliminated = Boolean(allyNation?.isEliminated);
+
+      writeTerritory(target.id, {
+        ...target,
+        ownerId: liberatedAllyId,
+        isCapital: wasEliminated ? true : target.isCapital,
+        garrison: localMilitia,
+        units: { infantry: localMilitia, armor: 0, airDrone: 0 },
+        unrest: Math.max(0, target.unrest - 15),
+        assimilation: 100,
+        isAssimilating: false,
+        isOccupied: false,
+        occupiedById: undefined,
+        ...(typeof wallHp === 'number' ? { castleWallHp: wallHp } : {}),
+        ...(clearSiege ? { siege: null } : {}),
+      });
+
+      if (allyNation && wasEliminated) {
+        writeNation(liberatedAllyId, {
+          ...allyNation,
+          isEliminated: false,
+          capitalTerritoryId: target.id,
+        });
+      }
+
+      // Return conqueror's surviving army intact to origin, adjacent friendly province, or capital
+      const originTerr = originTerritoryId
+        ? nextTerritories[originTerritoryId]
+        : undefined;
+      const adjacentOwned = target.neighbors
+        .map((nId) => nextTerritories[nId])
+        .find((t) => t && t.ownerId === conquerorId);
+      const conqNation = nextNations[conquerorId];
+      const capTerr = conqNation?.capitalTerritoryId
+        ? nextTerritories[conqNation.capitalTerritoryId]
+        : undefined;
+      const fallbackOwned =
+        (originTerr && originTerr.ownerId === conquerorId && originTerr) ||
+        adjacentOwned ||
+        (capTerr && capTerr.ownerId === conquerorId && capTerr) ||
+        Object.values(nextTerritories).find((t) => t && t.ownerId === conquerorId);
+
+      if (fallbackOwned) {
+        writeTerritory(fallbackOwned.id, {
+          ...fallbackOwned,
+          garrison: fallbackOwned.garrison + survivors,
+          units: {
+            infantry: (fallbackOwned.units?.infantry || 0) + (survivingUnits.infantry || 0),
+            armor: (fallbackOwned.units?.armor || 0) + (survivingUnits.armor || 0),
+            airDrone: (fallbackOwned.units?.airDrone || 0) + (survivingUnits.airDrone || 0),
+          },
+        });
+      }
+
+      return {
+        liberatedAllyId,
+        returnProvName: fallbackOwned?.name || null,
+      };
+    }
+
+    const isCoreForConqueror = target.coreOwnerId === conquerorId;
+    writeTerritory(target.id, {
+      ...target,
+      ownerId: conquerorId,
+      isCapital: false,
+      garrison: survivors,
+      units: survivingUnits,
+      unrest: isCoreForConqueror
+        ? Math.max(0, target.unrest - 10)
+        : Math.min(80, target.unrest + unrestSpike),
+      assimilation: isCoreForConqueror ? 100 : 25,
+      isAssimilating: false,
+      isOccupied: !isCoreForConqueror,
+      occupiedById: isCoreForConqueror ? undefined : conquerorId,
+      ...(typeof wallHp === 'number' ? { castleWallHp: wallHp } : {}),
+      ...(clearSiege ? { siege: null } : {}),
+    });
+
+    return { liberatedAllyId: null, returnProvName: null };
   };
 
   const toasts: string[] = [];
@@ -241,6 +417,200 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
     }
 
     for (const mv of arrived) {
+      // Naval arrival onto open sea coordinates -> Station / merge SeaArmy or resolve naval clash!
+      if (mv.toCoords) {
+        const destCoords = mv.toCoords;
+        const mergeTargetIdx = mv.targetSeaArmyId
+          ? nextSeaArmies.findIndex(
+              (s) => s.id === mv.targetSeaArmyId && s.ownerId === mv.ownerId
+            )
+          : nextSeaArmies.findIndex(
+              (s) =>
+                s.ownerId === mv.ownerId &&
+                Math.hypot(
+                  s.coords[0] - destCoords[0],
+                  s.coords[1] - destCoords[1]
+                ) <= 3.8
+            );
+
+        if (mergeTargetIdx !== -1) {
+          const existing = nextSeaArmies[mergeTargetIdx];
+          nextSeaArmies[mergeTargetIdx] = {
+            ...existing,
+            troops: existing.troops + mv.troops,
+            units: {
+              infantry: (existing.units?.infantry || 0) + (mv.units?.infantry || mv.troops),
+              armor: (existing.units?.armor || 0) + (mv.units?.armor || 0),
+              airDrone: (existing.units?.airDrone || 0) + (mv.units?.airDrone || 0),
+            },
+          };
+          if (mv.ownerId === playerNationId) {
+            toasts.push(`${existing.name} takviye edildi (${(nextSeaArmies[mergeTargetIdx].troops / 1000).toFixed(1)}B asker).`);
+          }
+          continue;
+        }
+
+        // Check for hostile fleet interception at destination coordinates (5.5 deg sea zone)
+        const enemyFleetIdx = nextSeaArmies.findIndex(
+          (s) =>
+            s.ownerId !== mv.ownerId &&
+            Boolean(isAtWar(nextWars, mv.ownerId, s.ownerId)) &&
+            Math.hypot(
+              s.coords[0] - destCoords[0],
+              s.coords[1] - destCoords[1]
+            ) <= 5.5
+        );
+
+        if (enemyFleetIdx !== -1) {
+          const enemyFleet = nextSeaArmies[enemyFleetIdx];
+          const attNationName = nextNations[mv.ownerId]?.name || mv.ownerId;
+          const defNationName = nextNations[enemyFleet.ownerId]?.name || enemyFleet.ownerId;
+          const attNavalMult = computeNationNavalBonus(
+            mv.ownerId,
+            nextTerritories,
+            nextNations[mv.ownerId]
+          );
+          const defNavalMult = computeNationNavalBonus(
+            enemyFleet.ownerId,
+            nextTerritories,
+            nextNations[enemyFleet.ownerId]
+          );
+          const attPow =
+            computeUnitWeightedPower(mv.units, mv.troops, nextNations[mv.ownerId]) *
+            attNavalMult;
+          const defPow =
+            computeUnitWeightedPower(
+              enemyFleet.units,
+              enemyFleet.troops,
+              nextNations[enemyFleet.ownerId]
+            ) * defNavalMult;
+
+          const attWon = attPow >= defPow;
+          let attLosses = 0;
+          let defLosses = 0;
+          const seaZoneName = mv.targetSeaName || enemyFleet.name || resolveSeaRegionName(destCoords);
+
+          if (attWon) {
+            const lossRatio = Math.min(0.65, (defPow / Math.max(1, attPow)) * 0.52);
+            const survivors = Math.max(400, Math.round(mv.troops * (1 - lossRatio)));
+            attLosses = Math.max(0, mv.troops - survivors);
+            defLosses = enemyFleet.troops;
+            nextSeaArmies.splice(enemyFleetIdx, 1);
+            nextSeaArmies.push({
+              id: `sea_${nextTick}_${Math.random().toString(36).slice(2, 7)}`,
+              ownerId: mv.ownerId,
+              name: seaZoneName,
+              coords: destCoords,
+              troops: survivors,
+              units: scaleUnits(mv.units, survivors / Math.max(1, mv.troops)),
+              anchorCoastId: mv.fromTerritoryId,
+            });
+            if (mv.ownerId === playerNationId) {
+              sounds.push('SELECT_TERRITORY');
+              toasts.push(
+                `Deniz Zaferi (${seaZoneName}): ${defNationName} donanması batırıldı (${(survivors / 1000).toFixed(1)}B asker hayatta).`
+              );
+              appendNews(
+                `Deniz Muharebesi Zaferi: ${seaZoneName}`,
+                `${attNationName} donanması açık denizde ${defNationName} filosunu (${enemyFleet.troops.toLocaleString('tr-TR')} asker) imha etti.`,
+                'WAR'
+              );
+            } else if (enemyFleet.ownerId === playerNationId) {
+              sounds.push('WAR_HORN');
+              toasts.push(
+                `Deniz Yenilgisi: ${enemyFleet.name} düşman ${attNationName} donanması tarafından batırıldı!`
+              );
+              appendNews(
+                `Donanma Kaybı: ${enemyFleet.name}`,
+                `${attNationName} filosu açık deniz muharebesinde ${enemyFleet.name} birliğimizi imha etti.`,
+                'WAR'
+              );
+            }
+          } else {
+            const lossRatio = Math.min(0.65, (attPow / Math.max(1, defPow)) * 0.52);
+            const defSurvivors = Math.max(
+              400,
+              Math.round(enemyFleet.troops * (1 - lossRatio))
+            );
+            attLosses = mv.troops;
+            defLosses = Math.max(0, enemyFleet.troops - defSurvivors);
+            nextSeaArmies[enemyFleetIdx] = {
+              ...enemyFleet,
+              troops: defSurvivors,
+              units: scaleUnits(
+                enemyFleet.units,
+                defSurvivors / Math.max(1, enemyFleet.troops)
+              ),
+            };
+            if (mv.ownerId === playerNationId) {
+              sounds.push('WAR_HORN');
+              toasts.push(
+                `Donanma taarruzu ${defNationName} (${enemyFleet.name}) karşısında püskürtüldü!`
+              );
+              appendNews(
+                `Deniz Taarruzu Başarısız: ${seaZoneName}`,
+                `${defNationName} donanması, ${attNationName} filosunun saldırısını püskürttü.`,
+                'WAR'
+              );
+            } else if (enemyFleet.ownerId === playerNationId) {
+              sounds.push('SELECT_TERRITORY');
+              toasts.push(
+                `${enemyFleet.name}, ${attNationName} donanmasının saldırısını püskürttü!`
+              );
+              appendNews(
+                `Deniz Savunma Zaferi: ${enemyFleet.name}`,
+                `${enemyFleet.name}, ${attNationName} filosunu (${mv.troops.toLocaleString('tr-TR')} asker) açık denizde imha etti.`,
+                'WAR'
+              );
+            }
+          }
+
+          // Update active war casualties and naval war score (+/- 8)
+          const scoreShift = attWon ? 8 : -8;
+          nextWars = nextWars.map((w) => {
+            const attIsWarAtt =
+              w.attackers.includes(mv.ownerId) &&
+              w.defenders.includes(enemyFleet.ownerId);
+            const attIsWarDef =
+              w.defenders.includes(mv.ownerId) &&
+              w.attackers.includes(enemyFleet.ownerId);
+            if (!attIsWarAtt && !attIsWarDef) return w;
+            return {
+              ...w,
+              attackerWarScore: Math.max(
+                -100,
+                Math.min(
+                  100,
+                  w.attackerWarScore + (attIsWarAtt ? scoreShift : -scoreShift)
+                )
+              ),
+              casualtiesAttacker:
+                w.casualtiesAttacker + (attIsWarAtt ? attLosses : defLosses),
+              casualtiesDefender:
+                w.casualtiesDefender + (attIsWarAtt ? defLosses : attLosses),
+            };
+          });
+          continue;
+        }
+
+        // Station new SeaArmy peacefully on open water!
+        const seaLabel = mv.targetSeaName || resolveSeaRegionName(destCoords);
+        nextSeaArmies.push({
+          id: `sea_${nextTick}_${Math.random().toString(36).slice(2, 7)}`,
+          ownerId: mv.ownerId,
+          name: seaLabel,
+          coords: destCoords,
+          troops: mv.troops,
+          units: mv.units || { infantry: mv.troops, armor: 0, airDrone: 0 },
+          anchorCoastId: mv.fromTerritoryId,
+        });
+        if (mv.ownerId === playerNationId) {
+          sounds.push('SELECT_TERRITORY');
+          toasts.push(`${seaLabel} demir attı (${(mv.troops / 1000).toFixed(1)}B asker). Tıklayarak kıyıya çıkarma yapabilirsiniz.`);
+        }
+        continue;
+      }
+
       const target = nextTerritories[mv.toTerritoryId];
       if (!target) continue;
 
@@ -438,21 +808,26 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           sounds.push('MARCH');
         }
       } else {
-        // Ungarrisoned territory with no fortress -> Swift occupation
+        // Ungarrisoned territory with no fortress -> Swift occupation OR Allied Liberation!
         const previousOwnerId = target.ownerId;
-        const isCoreForConqueror = target.coreOwnerId === mv.ownerId;
-        writeTerritory(target.id, {
-          ...target,
-          ownerId: mv.ownerId,
-          isCapital: false,
-          garrison: mv.troops,
-          units: mv.units || { infantry: mv.troops, armor: 0, airDrone: 0 },
-          unrest: isCoreForConqueror ? Math.max(0, target.unrest - 10) : Math.min(80, target.unrest + 18),
-          assimilation: isCoreForConqueror ? 100 : 25,
-          isAssimilating: false,
-          isOccupied: !isCoreForConqueror,
-          occupiedById: isCoreForConqueror ? undefined : mv.ownerId,
+        const captureRes = applyTerritoryCaptureOrLiberation({
+          target,
+          conquerorId: mv.ownerId,
+          survivors: mv.troops,
+          survivingUnits: mv.units || { infantry: mv.troops, armor: 0, airDrone: 0 },
+          originTerritoryId: mv.fromTerritoryId,
+          unrestSpike: 18,
         });
+
+        if (captureRes.liberatedAllyId && mv.ownerId === playerNationId) {
+          const allyName = nextNations[captureRes.liberatedAllyId]?.name || 'Müttefik';
+          sounds.push('SELECT_TERRITORY');
+          toasts.push(
+            captureRes.returnProvName
+              ? `${target.name} kurtarılarak müttefikiniz ${allyName} devletine iade edildi; ordunuz ${captureRes.returnProvName} şehrine döndü.`
+              : `${target.name} kurtarılarak müttefikiniz ${allyName} devletine iade edildi.`
+          );
+        }
 
         const remainingPrevProvs = Object.values(nextTerritories).filter(
           (t) => t && t.ownerId === previousOwnerId
@@ -635,20 +1010,16 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       if (attackerWon) {
         const previousOwnerId = target.ownerId;
         const survivors = Math.max(900, attTroops);
-        const isCoreForConqueror = target.coreOwnerId === btl.attackerId;
+        const scaledAttUnits = scaleUnits(attUnits, survivors / Math.max(1, attTroops));
 
-        writeTerritory(target.id, {
-          ...target,
-          ownerId: btl.attackerId,
-          isCapital: false,
-          garrison: survivors,
-          units: scaleUnits(attUnits, survivors / Math.max(1, attTroops)),
-          unrest: isCoreForConqueror ? Math.max(0, target.unrest - 10) : Math.min(80, target.unrest + 24),
-          assimilation: isCoreForConqueror ? 100 : 25,
-          isAssimilating: false,
-          isOccupied: !isCoreForConqueror,
-          occupiedById: isCoreForConqueror ? undefined : btl.attackerId,
-          castleWallHp: wallHp,
+        const captureRes = applyTerritoryCaptureOrLiberation({
+          target,
+          conquerorId: btl.attackerId,
+          survivors,
+          survivingUnits: scaledAttUnits,
+          originTerritoryId: btl.fromTerritoryId,
+          unrestSpike: 24,
+          wallHp,
         });
 
         // Check if previousOwner lost its capital or all territories
@@ -686,12 +1057,26 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
             });
           }
           sounds.push('SELECT_TERRITORY');
-          toasts.push(`⚔️ ${target.name} ele geçirildi`);
-          appendNews(
-            `⚔️ ${target.name} Fethedildi`,
-            `${attackerNation.name}, ${target.name} eyaletini ele geçirdi.`,
-            'WAR'
-          );
+          if (captureRes.liberatedAllyId) {
+            const allyName = nextNations[captureRes.liberatedAllyId]?.name || 'Müttefik';
+            toasts.push(
+              captureRes.returnProvName
+                ? `${target.name} kurtarılarak müttefikiniz ${allyName} devletine iade edildi; ordunuz ${captureRes.returnProvName} şehrine döndü.`
+                : `${target.name} kurtarılarak müttefikiniz ${allyName} devletine iade edildi.`
+            );
+            appendNews(
+              `${target.name} Kurtarıldı`,
+              `${attackerNation.name}, ${target.name} eyaletini kurtararak müttefiki ${allyName} devletine iade etti.`,
+              'WAR'
+            );
+          } else {
+            toasts.push(`⚔️ ${target.name} ele geçirildi`);
+            appendNews(
+              `⚔️ ${target.name} Fethedildi`,
+              `${attackerNation.name}, ${target.name} eyaletini ele geçirdi.`,
+              'WAR'
+            );
+          }
         } else if (previousOwnerId === playerNationId) {
           sounds.push('MARCH');
           toasts.push(`⚠️ ${target.name} düştü (${attackerNation.name})`);
@@ -826,28 +1211,23 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
     const nextWall = Math.max(0, siege.wallIntegrity - stepAdvance * 0.7);
 
     if (nextProgress >= 100 || nextWall <= 5) {
-      // Siege WON! Fortress capitulates to besieger
+      // Siege WON! Fortress capitulates to besieger (or returns to liberated ally!)
       const previousOwnerId = terr.ownerId;
       const survivors = Math.max(800, siege.attackerTroops);
-      const isCoreForConqueror = terr.coreOwnerId === siege.attackerId;
+      const siegeUnits = siege.attackerUnits || {
+        infantry: survivors,
+        armor: 0,
+        airDrone: 0,
+      };
 
-      writeTerritory(terr.id, {
-        ...terr,
-        ownerId: siege.attackerId,
-        isCapital: false,
-        garrison: survivors,
-        units: siege.attackerUnits || {
-          infantry: survivors,
-          armor: 0,
-          airDrone: 0,
-        },
-        unrest: isCoreForConqueror ? Math.max(0, terr.unrest - 10) : Math.min(80, terr.unrest + 22),
-        assimilation: isCoreForConqueror ? 100 : 25,
-        isAssimilating: false,
-        isOccupied: !isCoreForConqueror,
-        occupiedById: isCoreForConqueror ? undefined : siege.attackerId,
-        castleWallHp: 15,
-        siege: null,
+      const captureRes = applyTerritoryCaptureOrLiberation({
+        target: terr,
+        conquerorId: siege.attackerId,
+        survivors,
+        survivingUnits: siegeUnits,
+        unrestSpike: 22,
+        wallHp: 15,
+        clearSiege: true,
       });
 
       const remainingPrevProvs = Object.values(nextTerritories).filter(
@@ -862,13 +1242,27 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       }
 
       if (siege.attackerId === playerNationId) {
-        toasts.push(`♜ ${terr.name} kalesi fethedildi`);
         sounds.push('SELECT_TERRITORY');
-        appendNews(
-          `♜ ${terr.name} Kalesi Düştü`,
-          `${attackerNation.name} ordusu ${terr.name} kuşatmasını tamamladı.`,
-          'WAR'
-        );
+        if (captureRes.liberatedAllyId) {
+          const allyName = nextNations[captureRes.liberatedAllyId]?.name || 'Müttefik';
+          toasts.push(
+            captureRes.returnProvName
+              ? `${terr.name} kalesi kurtarılarak müttefikiniz ${allyName} devletine iade edildi; ordunuz ${captureRes.returnProvName} şehrine döndü.`
+              : `${terr.name} kalesi kurtarılarak müttefikiniz ${allyName} devletine iade edildi.`
+          );
+          appendNews(
+            `${terr.name} Kalesi Kurtarıldı`,
+            `${attackerNation.name}, ${terr.name} kalesini kurtararak müttefiki ${allyName} devletine iade etti.`,
+            'WAR'
+          );
+        } else {
+          toasts.push(`♜ ${terr.name} kalesi fethedildi`);
+          appendNews(
+            `♜ ${terr.name} Kalesi Düştü`,
+            `${attackerNation.name} ordusu ${terr.name} kuşatmasını tamamladı.`,
+            'WAR'
+          );
+        }
       } else if (previousOwnerId === playerNationId) {
         toasts.push(`⚠️ ${terr.name} kalesi düştü`);
         sounds.push('MARCH');
@@ -919,6 +1313,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       relations: nextRelations,
       wars: nextWars,
       movements: nextMovements,
+      seaArmies: nextSeaArmies,
       aiAggressiveness: settings.aiAggressiveness,
       maxActionsPerPass: dayWrapped ? 3 : 2,
     });
@@ -963,6 +1358,23 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
 
   // 2. Daily Economy Update & Weekly AI Treasury/Manpower Growth (triggers when a full 24-hour day completes)
   if (dayWrapped) {
+    // Apply daily naval blockade unrest pressure on hostile coastal provinces blockaded by an anchored SeaArmy
+    if (nextSeaArmies.length > 0 && nextWars.length > 0) {
+      const blockadedPorts = computeNavalBlockadedTerritoryIds(
+        nextTerritories,
+        nextWars,
+        nextSeaArmies
+      );
+      blockadedPorts.forEach((tId) => {
+        const t = nextTerritories[tId];
+        if (!t) return;
+        writeTerritory(tId, {
+          ...t,
+          unrest: Math.min(100, Number((t.unrest + 1.5).toFixed(1))),
+        });
+      });
+    }
+
     const pNation = nextNations[playerNationId];
     if (pNation) {
       const econ = calculateNationEconomy(
@@ -972,7 +1384,8 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         relations,
         nextMovements,
         nextWars,
-        gameMode
+        gameMode,
+        nextSeaArmies
       );
 
       let infDelta =
@@ -986,6 +1399,34 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         : null;
       let unlockedTechs = [...pNation.unlockedTechs];
       const researchProgressByTech = { ...(pNation.researchProgressByTech ?? {}) };
+
+      // Auto-start next research if autoResearch is enabled and no project is active
+      if (!activeProj && pNation.autoResearch === true) {
+        const autoNext = pickNextAutoResearchTech(
+          {
+            ...pNation,
+            unlockedTechs,
+            researchProgressByTech,
+          },
+          gameMode
+        );
+        if (autoNext) {
+          const saved = Math.max(
+            0,
+            Math.min(
+              autoNext.cost,
+              Number(researchProgressByTech[autoNext.id] ?? 0)
+            )
+          );
+          activeProj = {
+            techId: autoNext.id,
+            progress: saved,
+            totalCost: autoNext.cost,
+            startedTick: nextTick,
+          };
+          researchProgressByTech[autoNext.id] = saved;
+        }
+      }
 
       if (activeProj) {
         const dailyInvest = Math.max(0.4, econ.dailyResearch);
@@ -1002,9 +1443,43 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           delete researchProgressByTech[activeProj.techId];
           activeProj = null;
           sounds.push('TREATY');
+
+          let autoChainedName: string | null = null;
+          if (pNation.autoResearch === true) {
+            const nextTech = pickNextAutoResearchTech(
+              {
+                ...pNation,
+                unlockedTechs,
+                researchProgressByTech,
+              },
+              gameMode
+            );
+            if (nextTech) {
+              const saved = Math.max(
+                0,
+                Math.min(
+                  nextTech.cost,
+                  Number(researchProgressByTech[nextTech.id] ?? 0)
+                )
+              );
+              activeProj = {
+                techId: nextTech.id,
+                progress: saved,
+                totalCost: nextTech.cost,
+                startedTick: nextTick,
+              };
+              researchProgressByTech[nextTech.id] = saved;
+              autoChainedName = nextTech.name;
+            }
+          }
+
           toasts.push(
             techDef?.branch === 'MILITARY'
-              ? `🔬 Araştırma Tamamlandı: ${techName}! Yeni askeri birlikler ve ordu güncellemesi açıldı.`
+              ? autoChainedName
+                ? `🔬 Araştırma Tamamlandı: ${techName}! Sıradaki proje otomatik başladı: ${autoChainedName}.`
+                : `🔬 Araştırma Tamamlandı: ${techName}! Yeni askeri birlikler ve ordu güncellemesi açıldı.`
+              : autoChainedName
+              ? `🔬 Araştırma Tamamlandı: ${techName}! Sıradaki proje otomatik başladı: ${autoChainedName}.`
               : `🔬 Araştırma Tamamlandı: ${techName}!`
           );
         }
@@ -1021,7 +1496,12 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       writeNation(playerNationId, {
         ...pNation,
         treasury: Math.max(0, pNation.treasury + econ.netDailyGold),
-        diplomacyPoints: Math.min(100, (pNation.diplomacyPoints ?? 100) + 1),
+        diplomacyPoints: Math.min(
+          100,
+          (pNation.diplomacyPoints ?? 100) +
+            1 +
+            (unlockedTechs.includes('adm_2b') ? 1 : 0)
+        ),
         manpower: nextPlayerManpower,
         researchPoints: Number(
           (pNation.researchPoints + econ.dailyResearch).toFixed(1)
@@ -1067,16 +1547,24 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           granary: 0,
         };
 
+        const ownerNation = nextNations[t.ownerId];
+        const ownerTechs = ownerNation?.unlockedTechs ?? [];
+        const popTechMult =
+          1 +
+          (ownerTechs.includes('eco_1b') ? 0.25 : 0) +
+          (ownerTechs.includes('sci_1b') ? 0.3 : 0);
+
         // Province population is a living economic input. Previously it was
         // initialized once and never changed, so manpower and GDP could not
         // organically grow during a campaign. Keep growth modest and let
-        // unrest, supply depots, and granaries visibly affect the result.
+        // unrest, supply depots, granaries, and agrarian/medical techs visibly affect the result.
         const unrestGrowthFactor = Math.max(0.25, 1 - (t.unrest || 0) / 140);
         const dailyPopulationGrowth =
           (t.population || 0) *
           (0.00035 * unrestGrowthFactor +
             (buildings.supplyDepot || 0) * 0.00008 +
-            (buildings.granary || 0) * 0.00018);
+            (buildings.granary || 0) * 0.00018) *
+          popTechMult;
         const nextPopulation = Number(
           Math.max(0, (t.population || 0) + dailyPopulationGrowth).toFixed(2)
         );
@@ -1095,10 +1583,15 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           tModified = true;
         }
 
-        const ownerNation = nextNations[t.ownerId];
-        const ownerHasAdm5 = Boolean(ownerNation?.unlockedTechs?.includes('adm_5'));
-        if (ownerHasAdm5 && nextUnrest > 0) {
-          nextUnrest = Math.max(0, Number((nextUnrest - 0.35).toFixed(2)));
+        const ownerHasAdm5 = ownerTechs.includes('adm_5');
+        const ownerHasAdm1b = ownerTechs.includes('adm_1b');
+        const ownerHasAdm5b = ownerTechs.includes('adm_5b');
+        const techUnrestCalm =
+          (ownerHasAdm5 ? 0.35 : 0) +
+          (ownerHasAdm1b ? 0.2 : 0) +
+          (ownerHasAdm5b ? 0.25 : 0);
+        if (techUnrestCalm > 0 && nextUnrest > 0) {
+          nextUnrest = Math.max(0, Number((nextUnrest - techUnrestCalm).toFixed(2)));
           tModified = true;
         }
 
@@ -1137,9 +1630,12 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           }
         }
 
-        if (t.isAssimilating) {
+        if (t.isAssimilating && !t.isOccupied) {
           const currentVal = t.assimilation ?? 30;
-          const assimStep = ownerHasAdm5 ? 1.75 : 1.25;
+          const baseAssimStep = ownerHasAdm5 ? 1.75 : 1.25;
+          const assimStep = ownerTechs.includes('adm_4b')
+            ? Number((baseAssimStep * 1.2).toFixed(2))
+            : baseAssimStep;
           const updatedAssim = Math.min(
             100,
             Number((currentVal + assimStep).toFixed(2))
@@ -1418,59 +1914,65 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       clearIncomingOffer = true;
     }
 
-    // 3. Multi-Province Strategic AI Decisions (Every 3 days)
+    // 3. Multi-Province Strategic AI Decisions (Every 3 days — 2 distinct seeded actors in live campaigns)
     if (nextTick % 3 === 0) {
-      const aiRes = evaluateMultiProvinceAiTurn({
-        nextTick,
-        gameMode,
-        playerNationId,
-        nations: nextNations,
-        territories: nextTerritories,
-        relations: nextRelations,
-        wars: nextWars,
-        movements: nextMovements,
-        aiAggressiveness: settings.aiAggressiveness,
-        hasActiveIncomingOffer: Boolean(
-          input.activeIncomingOffer && !clearIncomingOffer
-        ),
-      });
+      const slotPasses = input.worldSeed !== undefined ? [0, 1] : [0];
+      for (const slotOffset of slotPasses) {
+        const aiRes = evaluateMultiProvinceAiTurn({
+          nextTick,
+          gameMode,
+          playerNationId,
+          nations: nextNations,
+          territories: nextTerritories,
+          relations: nextRelations,
+          wars: nextWars,
+          movements: nextMovements,
+          aiAggressiveness: settings.aiAggressiveness,
+          worldSeed: input.worldSeed,
+          actorSlotOffset: slotOffset,
+          hasActiveIncomingOffer: Boolean(
+            (input.activeIncomingOffer && !clearIncomingOffer) ||
+              incomingDiplomaticOffer
+          ),
+        });
 
-      if (aiRes) {
-        if (aiRes.updatedNations) {
-          nextNations = aiRes.updatedNations;
-          nationsCloned = true;
-        }
-        if (aiRes.updatedTerritories) {
-          nextTerritories = aiRes.updatedTerritories;
-          territoriesCloned = true;
-        }
-        if (aiRes.updatedWars) {
-          nextWars = aiRes.updatedWars;
-        }
-        if (aiRes.updatedRelations) {
-          nextRelations = aiRes.updatedRelations;
-        }
-        if (aiRes.newMovement) {
-          nextMovements = [...nextMovements, aiRes.newMovement];
-        }
-        if (aiRes.newWar) {
-          nextWars = [...nextWars, aiRes.newWar];
-        }
-        if (aiRes.newsItem) {
-          appendNews(
-            aiRes.newsItem.title,
-            aiRes.newsItem.description,
-            aiRes.newsItem.type
-          );
-        }
-        if (aiRes.playerAlert) {
-          sounds.push('WAR_HORN');
-          toasts.push(aiRes.playerAlert);
-        }
-        if (aiRes.incomingOffer) {
-          incomingDiplomaticOffer = aiRes.incomingOffer;
-          clearIncomingOffer = false;
-          sounds.push('TREATY');
+        if (aiRes) {
+          if (aiRes.updatedNations) {
+            nextNations = aiRes.updatedNations;
+            nationsCloned = true;
+          }
+          if (aiRes.updatedTerritories) {
+            nextTerritories = aiRes.updatedTerritories;
+            territoriesCloned = true;
+          }
+          if (aiRes.updatedWars) {
+            nextWars = aiRes.updatedWars;
+          }
+          if (aiRes.updatedRelations) {
+            nextRelations = aiRes.updatedRelations;
+          }
+          if (aiRes.newMovement) {
+            nextMovements = [...nextMovements, aiRes.newMovement];
+          }
+          if (aiRes.newWar) {
+            nextWars = [...nextWars, aiRes.newWar];
+          }
+          if (aiRes.newsItem) {
+            appendNews(
+              aiRes.newsItem.title,
+              aiRes.newsItem.description,
+              aiRes.newsItem.type
+            );
+          }
+          if (aiRes.playerAlert) {
+            sounds.push('WAR_HORN');
+            toasts.push(aiRes.playerAlert);
+          }
+          if (aiRes.incomingOffer) {
+            incomingDiplomaticOffer = aiRes.incomingOffer;
+            clearIncomingOffer = false;
+            sounds.push('TREATY');
+          }
         }
       }
     }
@@ -1484,7 +1986,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         territories: nextTerritories,
         relations: nextRelations,
         wars: nextWars,
-        thresholdPct: 75,
+        thresholdPct: settings.capitulationThresholdPct ?? 75,
       });
       if (capRes.capitulatedCount > 0) {
         nextNations = capRes.updatedNations;
@@ -1573,6 +2075,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
     wars: nextWars,
     battles: nextBattles,
     movements: nextMovements,
+    seaArmies: nextSeaArmies,
     newsEvents: nextNewsEvents,
     triggeredTacticalBattle,
     triggeredCrisis,
