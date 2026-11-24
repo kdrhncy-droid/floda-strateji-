@@ -1125,7 +1125,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                         src={artwork.src}
                                         alt={tech.shortTitle ?? tech.name}
                                         loading="eager"
-                                        decoding="async"
+                                        decoding="sync"
                                         draggable={false}
                                         referrerPolicy="no-referrer"
                                         onError={() =>
@@ -1137,7 +1137,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                         style={{
                                           objectPosition: artwork.objectPosition,
                                         }}
-                                        className={`absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                                        className={`absolute inset-0 w-full h-full object-cover transition-transform duration-300 ${
                                           !prereqMet && !isUnlocked && !isActive
                                             ? "grayscale-[55%] brightness-75"
                                             : isUnlocked
@@ -1389,7 +1389,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                   src={getTechArtwork("COURT", "ADMINISTRATION").src}
                   alt="Başkent Külliyesi"
                   loading="eager"
-                  decoding="async"
+                  decoding="sync"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover brightness-90"
                 />
@@ -1641,7 +1641,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                           src={art.src}
                           alt={edu.title}
                           loading="eager"
-                          decoding="async"
+                          decoding="sync"
                           referrerPolicy="no-referrer"
                           className="w-12 h-10 rounded-lg object-cover border border-[#caa15a]/35 shrink-0"
                         />
@@ -1864,7 +1864,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                           src={art.src}
                           alt={vizier.role}
                           loading="eager"
-                          decoding="async"
+                          decoding="sync"
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover brightness-90"
                         />

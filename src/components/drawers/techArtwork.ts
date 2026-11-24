@@ -86,11 +86,15 @@ export function getTechArtwork(
   return TECH_ARTWORK_MAP[BRANCH_DEFAULT_ART[branch]];
 }
 
-// Eagerly preload all 10 local artwork assets into browser memory so iOS Safari never delays rendering inside scroll containers
+// Eagerly preload and decode all local artwork so iOS Safari never delays painting inside scroll containers.
+// References are kept at module scope so the images are not garbage-collected before they finish loading.
+const preloadedTechArtwork: HTMLImageElement[] = [];
 if (typeof window !== 'undefined' && typeof Image !== 'undefined') {
   Object.values(TECH_ARTWORK_MAP).forEach((asset) => {
     const img = new Image();
-    img.decoding = 'async';
+    img.decoding = 'sync';
     img.src = asset.src;
+    preloadedTechArtwork.push(img);
+    img.decode?.().catch(() => undefined);
   });
 }
