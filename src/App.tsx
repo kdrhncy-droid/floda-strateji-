@@ -826,6 +826,7 @@ function GameAppInner() {
           onDiplomaticAction={store.diplomaticAction}
           onPeaceDeal={store.peaceDeal}
           onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
+          seaArmies={seaArmies}
         />
       )}
 
