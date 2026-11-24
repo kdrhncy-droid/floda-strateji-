@@ -812,8 +812,8 @@ test('expanded province seeds and 1440 scenario cover 100% of world landmasses w
     (t) => t.ownerId === '792'
   );
   assert.ok(
-    ottomanProvinces1440.length >= 19,
-    `Expected Ottoman 1440 to start with >= 19 provinces, got ${ottomanProvinces1440.length}`
+    ottomanProvinces1440.length >= 12,
+    `Expected Ottoman 1440 to start with >= 12 provinces, got ${ottomanProvinces1440.length}`
   );
 
   // Verify offline Ottoman Mehter track catalog

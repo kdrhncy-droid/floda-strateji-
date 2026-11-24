@@ -22,18 +22,18 @@ interface Empire1440Def {
 export const EMPIRES_1440_DEFS: Empire1440Def[] = [
   {
     id: '792',
-    name: 'Osmanlı Devleti (1440)',
+    name: 'Osmanlı İmparatorluğu',
     flagCode: 'OSM',
     color: '#183222',
     ideology: 'MONARCHY',
-    capitalName: '★ İstanbul',
-    capitalTerritoryId: '792_IST',
+    capitalName: '★ Edirne',
+    capitalTerritoryId: '792_EDR',
     treasury: 3200,
     manpower: 165000,
-    absorbedCountryIds: ['792', '100', '807', '008'],
+    absorbedCountryIds: ['792', '100', '807'],
     provinceRenames: {
       '792': 'Ankara',
-      '792_EDR': 'Edirne',
+      '792_EDR': '★ Edirne',
       '792_GLB': 'Gelibolu',
       '792_IST': '★ İstanbul',
       '792_BUR': 'Bursa',
@@ -181,7 +181,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     capitalName: '★ Semerkant',
     treasury: 2950,
     manpower: 160000,
-    absorbedCountryIds: ['364', '795', '004', '512', '784', '414', '634'],
+    absorbedCountryIds: ['364', '795', '004'],
     provinceRenames: {
       '364': '★ Tahran',
       '364_ISF': 'İsfahan',
@@ -1133,6 +1133,24 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
   },
 ];
 
+// Province-level historical corrections for 1444 (applied over country-level absorption)
+const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
+  '792_ERZ': '031',
+  '792_VAN': '031',
+  '792_DYB': '031',
+  '792_MLT': '031',
+  '792_TRB': '268', // Trebizond: nearest Christian Caucasian realm
+  '792_GZP': '818', // Dulkadir / Maras under Mamluk sphere
+  '792_ADA': '818', // Ramazanoglu / Adana under Mamluk sphere
+};
+const COUNTRY_OWNER_OVERRIDES_1440: Record<string, string> = {
+  '008': '380', // Albania: Venice / Italian states coast, not Ottoman in 1444
+  '512': '887',
+  '784': '887',
+  '634': '887',
+  '414': '031',
+};
+
 export function transformBundleTo1440Scenario(
   baseBundle: InitialWorldBundle
 ): InitialWorldBundle {
@@ -1147,6 +1165,8 @@ export function transformBundleTo1440Scenario(
     });
   });
 
+  const allRenames1440: Record<string, string> = {};
+  EMPIRES_1440_DEFS.forEach((emp) => Object.assign(allRenames1440, emp.provinceRenames));
   const nations: Record<string, Nation> = {};
   const territories: Record<string, Territory> = {};
   const features: GeoCountryFeature[] = [];
@@ -1220,7 +1240,10 @@ export function transformBundleTo1440Scenario(
     const baseT = baseBundle.territories[feat.id];
     if (!baseT) return;
 
-    let targetEmpireId = countryToEmpireId[baseCountryId];
+    let targetEmpireId =
+      PROVINCE_OWNER_OVERRIDES_1440[feat.id] ??
+      COUNTRY_OWNER_OVERRIDES_1440[baseCountryId] ??
+      countryToEmpireId[baseCountryId];
     if (!targetEmpireId) {
       // Find closest regional 1440 empire by centroid so no land polygon is ever dropped
       let bestId = '792';
@@ -1238,7 +1261,7 @@ export function transformBundleTo1440Scenario(
     }
 
     const empDef = empireDefMap[targetEmpireId];
-    const renames = empDef?.provinceRenames || {};
+    const renames = { ...allRenames1440, ...(empDef?.provinceRenames || {}) };
     const customName =
       renames[feat.id] ||
       renames[feat.id.toLowerCase()] ||
