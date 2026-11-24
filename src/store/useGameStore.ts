@@ -8,6 +8,7 @@ import {
   BuildingType,
   CrisisEventDefinition,
   CrisisEventOption,
+  DiplomaticActionType,
   DiplomaticRelation,
   GameModeId,
   GameScreenState,
@@ -15,6 +16,7 @@ import {
   IncomingDiplomaticOffer,
   MapMode,
   Nation,
+  PeaceDealType,
   PendingWarMoveRequest,
   SeaArmy,
   SpeedLevel,
@@ -23,10 +25,6 @@ import {
   UnitType,
   WorldNewsEvent,
 } from '../types/game';
-import {
-  DiplomaticActionType,
-  PeaceDealType,
-} from '../components/drawers/drawerTypes';
 import {
   COMMANDERS,
   getCommandersForMode,

@@ -16,7 +16,7 @@ import {
   ResourceType,
   UnitComposition,
 } from '../types/game';
-import { isTerritoryCoastal, relationKey } from './worldBuilder';
+import { isTerritoryCoastal } from './worldBuilder';
 import { TERRAIN_INFO } from './pashaAndFiefEngine';
 import {
   calculateNationTradeAndStraits,
@@ -50,49 +50,22 @@ export function adjustAggressiveExpansionGain(
   return Number((baseGain * factor).toFixed(2));
 }
 
-type EmbargoRelation = Pick<
-  DiplomaticRelation,
-  'nationA' | 'nationB' | 'hasEmbargo' | 'embargoingNationIds'
->;
+import {
+  getEmbargoingNationIds,
+  getOrCreateRelation,
+  isAtWar,
+  isNationEmbargoed,
+  isNationEmbargoing,
+  relationKey,
+} from './core/diplomacyHelpers';
 
-export function getEmbargoingNationIds(
-  relation: EmbargoRelation
-): string[] {
-  if (Array.isArray(relation.embargoingNationIds)) {
-    return Array.from(
-      new Set(
-        relation.embargoingNationIds.filter(
-          (nationId) =>
-            nationId === relation.nationA || nationId === relation.nationB
-        )
-      )
-    );
-  }
-  return relation.hasEmbargo ? [relation.nationA] : [];
-}
-
-export function isNationEmbargoing(
-  relation: EmbargoRelation,
-  nationId: string
-): boolean {
-  return getEmbargoingNationIds(relation).includes(nationId);
-}
-
-export function isNationEmbargoed(
-  relation: EmbargoRelation,
-  targetNationId: string
-): boolean {
-  const embargoingNationId =
-    targetNationId === relation.nationA
-      ? relation.nationB
-      : targetNationId === relation.nationB
-        ? relation.nationA
-        : null;
-
-  return embargoingNationId
-    ? isNationEmbargoing(relation, embargoingNationId)
-    : false;
-}
+export {
+  getEmbargoingNationIds,
+  getOrCreateRelation,
+  isAtWar,
+  isNationEmbargoed,
+  isNationEmbargoing,
+};
 
 export interface NationEconomyBreakdown {
   territoryCount: number;
@@ -321,30 +294,6 @@ export function calculateProvinceDevelopment(
   };
 }
 
-export function getOrCreateRelation(
-  relations: Record<string, DiplomaticRelation>,
-  a: string,
-  b: string
-): DiplomaticRelation {
-  const key = relationKey(a, b);
-  if (relations[key]) {
-    return relations[key];
-  }
-  return {
-    nationA: a < b ? a : b,
-    nationB: a < b ? b : a,
-    score: 0,
-    isAllied: false,
-    allianceType: null,
-    hasNonAggression: false,
-    hasTradeAgreement: false,
-    hasEmbargo: false,
-    embargoingNationIds: [],
-    hasMilitaryAccess: false,
-    truceUntilTick: 0,
-  };
-}
-
 export interface WarParticipantsResolution {
   attackers: string[];
   defenders: string[];
@@ -422,18 +371,6 @@ export function resolveWarParticipants(
     offensiveAlliesCalled,
     defensiveAlliesCalled,
   };
-}
-
-export function isAtWar(
-  wars: ActiveWar[],
-  nationA: string,
-  nationB: string
-): ActiveWar | undefined {
-  return wars.find(
-    (w) =>
-      (w.attackers.includes(nationA) && w.defenders.includes(nationB)) ||
-      (w.attackers.includes(nationB) && w.defenders.includes(nationA))
-  );
 }
 
 export function getWarScoreForNation(

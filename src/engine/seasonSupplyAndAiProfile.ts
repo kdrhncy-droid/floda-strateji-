@@ -9,9 +9,13 @@ import {
   UnitComposition,
   WorldNewsEvent,
 } from '../types/game';
-import { getOrCreateRelation, isAtWar } from './simulationEngine';
-import { isTerritoryCoastal, relationKey } from './worldBuilder';
-import { applyConquestDiplomaticPenalty } from './diplomacyAndWarActions';
+import {
+  applyConquestDiplomaticPenalty,
+  getOrCreateRelation,
+  isAtWar,
+  relationKey,
+} from './core/diplomacyHelpers';
+import { isTerritoryCoastal } from './worldBuilder';
 
 export interface GameSeasonInfo {
   id: SeasonId;
@@ -356,7 +360,55 @@ export function isTerritoryEncircled(
   territories: Record<string, Territory>,
   nations: Record<string, Nation>
 ): boolean {
-  return computeEncircledProvinceIds(territories, nations).has(territoryId);
+  const target = territories[territoryId];
+  if (!target || !target.ownerId) return false;
+
+  const ownerId = target.ownerId;
+  const provs: Territory[] = [];
+  for (const t of Object.values(territories)) {
+    if (t && t.ownerId === ownerId) {
+      provs.push(t);
+    }
+  }
+  if (provs.length <= 1) return false;
+
+  const nation = nations[ownerId];
+  const ownedSet = new Set(provs.map((p) => p.id));
+  const supplyRoots: string[] = [];
+
+  for (const p of provs) {
+    const isCap =
+      p.isCapital || (nation?.capitalTerritoryId && p.id === nation.capitalTerritoryId);
+    if (isCap || isTerritoryCoastal(p)) {
+      if (p.id === territoryId) return false;
+      supplyRoots.push(p.id);
+    }
+  }
+
+  if (supplyRoots.length === 0) {
+    const fallbackRoot = [...provs].sort((a, b) => b.garrison - a.garrison)[0];
+    if (fallbackRoot) {
+      if (fallbackRoot.id === territoryId) return false;
+      supplyRoots.push(fallbackRoot.id);
+    }
+  }
+
+  const supplied = new Set<string>(supplyRoots);
+  const queue = [...supplyRoots];
+  while (queue.length > 0) {
+    const curId = queue.shift()!;
+    const curTerr = territories[curId];
+    if (!curTerr) continue;
+    for (const nbId of curTerr.neighbors) {
+      if (ownedSet.has(nbId) && !supplied.has(nbId)) {
+        if (nbId === territoryId) return false;
+        supplied.add(nbId);
+        queue.push(nbId);
+      }
+    }
+  }
+
+  return true;
 }
 
 /**

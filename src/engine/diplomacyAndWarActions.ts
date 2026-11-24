@@ -2,29 +2,32 @@ import {
   ActiveWar,
   AiPersonality,
   ArmyMovement,
+  DiplomaticActionType,
   DiplomaticRelation,
   GameModeId,
   IncomingDiplomaticOffer,
   Nation,
+  PeaceDealType,
   TacticalBattleState,
   Territory,
   WorldNewsEvent,
 } from '../types/game';
 import {
-  DiplomaticActionType,
-  PeaceDealType,
-} from '../components/drawers/drawerTypes';
-import { relationKey } from './worldBuilder';
+  applyConquestDiplomaticPenalty,
+  getEmbargoingNationIds,
+  getOrCreateRelation,
+  isAtWar,
+  relationKey,
+} from './core/diplomacyHelpers';
 import {
   adjustAggressiveExpansionGain,
   calculateProvinceDevelopment,
   formatGameDate,
-  getEmbargoingNationIds,
-  getOrCreateRelation,
-  isAtWar,
   resolveWarParticipants,
 } from './simulationEngine';
 import { evaluateWartimeAiOperations } from './aiAndRebellionEngine';
+
+export { applyConquestDiplomaticPenalty };
 import {
   AI_PERSONALITY_META,
   resolveNationAiPersonality,
@@ -90,85 +93,6 @@ function prependNews(
     },
     ...newsEvents.slice(0, 39),
   ];
-}
-
-export function applyConquestDiplomaticPenalty(params: {
-  conquerorId: string;
-  victimId: string;
-  provincesTakenCount: number;
-  isFullAnnexation: boolean;
-  nations: Record<string, Nation>;
-  relations: Record<string, DiplomaticRelation>;
-}): {
-  updatedRelations: Record<string, DiplomaticRelation>;
-  affectedNames: string[];
-} {
-  const {
-    conquerorId,
-    victimId,
-    provincesTakenCount,
-    isFullAnnexation,
-    nations,
-    relations,
-  } = params;
-  const victim = nations[victimId];
-  if (!victim) return { updatedRelations: relations, affectedNames: [] };
-
-  const updatedRelations: Record<string, DiplomaticRelation> = { ...relations };
-  const affectedNames: string[] = [];
-  const scale = isFullAnnexation
-    ? 1.25
-    : Math.min(1.3, 0.75 + Math.max(1, provincesTakenCount) * 0.15);
-
-  for (const third of Object.values(nations)) {
-    if (
-      !third ||
-      third.isEliminated ||
-      third.id === conquerorId ||
-      third.id === victimId
-    ) {
-      continue;
-    }
-
-    const relWithVictim = getOrCreateRelation(updatedRelations, third.id, victimId);
-    const isAllyOfVictim = Boolean(
-      relWithVictim.isAllied || relWithVictim.allianceType
-    );
-    const isFriendOrPartner =
-      relWithVictim.hasTradeAgreement ||
-      relWithVictim.hasNonAggression ||
-      relWithVictim.score >= 25;
-    const isSameCultureOrReligion =
-      Boolean(
-        victim.stateReligion && third.stateReligion === victim.stateReligion
-      ) ||
-      Boolean(
-        victim.primaryCulture && third.primaryCulture === victim.primaryCulture
-      );
-
-    let penalty = 0;
-    if (isAllyOfVictim) {
-      penalty = Math.round(35 * scale);
-    } else if (isFriendOrPartner) {
-      penalty = Math.round(20 * scale);
-    } else if (isSameCultureOrReligion) {
-      penalty = Math.round(12 * scale);
-    }
-
-    if (penalty <= 0) continue;
-
-    const key = relationKey(conquerorId, third.id);
-    const curRel = getOrCreateRelation(updatedRelations, conquerorId, third.id);
-    updatedRelations[key] = {
-      ...curRel,
-      score: Math.max(-100, curRel.score - penalty),
-    };
-    if (isAllyOfVictim || isFriendOrPartner) {
-      affectedNames.push(`${third.name} (-${penalty})`);
-    }
-  }
-
-  return { updatedRelations, affectedNames };
 }
 
 export function executeDiplomaticActionDomain(params: {
@@ -824,7 +748,8 @@ export function executeDiplomaticActionDomain(params: {
     const newGarrison = Math.max(400, Math.round(bestFortProv.garrison * 0.86));
     const ratio = newGarrison / Math.max(1, bestFortProv.garrison);
     const casualties = bestFortProv.garrison - newGarrison;
-    const nextWallHp = Math.min(35, Math.max(15, (bestFortProv.castleWallHp ?? 100) - 55));
+    const currentWallHp = bestFortProv.castleWallHp ?? 100;
+    const nextWallHp = Math.min(currentWallHp, Math.min(35, Math.max(15, currentWallHp - 55)));
     const nextSiege = bestFortProv.siege
       ? {
           ...bestFortProv.siege,
@@ -971,9 +896,10 @@ export function executeDiplomaticActionDomain(params: {
     );
     if ('error' in spent) return { toast: spent.error };
 
+    const availableTreasury = Math.max(0, target.treasury ?? 0);
     const stolenGold = Math.min(
-      520,
-      Math.max(210, Math.round((target.treasury || 600) * 0.22))
+      availableTreasury,
+      Math.min(520, Math.max(210, Math.round(availableTreasury * 0.22)))
     );
     const stolenResearch = 35;
 

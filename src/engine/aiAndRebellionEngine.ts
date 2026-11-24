@@ -34,7 +34,7 @@ import {
   getGameSeason,
   resolveNationAiPersonality,
 } from './seasonSupplyAndAiProfile';
-import { applyConquestDiplomaticPenalty } from './diplomacyAndWarActions';
+import { applyConquestDiplomaticPenalty } from './core/diplomacyHelpers';
 import { isTerritoryCoastal, relationKey } from './worldBuilder';
 
 function scaleUnitComp(units: UnitComposition, ratio: number): UnitComposition {

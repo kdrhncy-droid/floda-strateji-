@@ -3,10 +3,12 @@ import {
   ArmyMovement,
   BottomDrawerTab,
   BuildingType,
+  DiplomaticActionType,
   DiplomaticRelation,
   GameModeId,
   IdeologyId,
   Nation,
+  PeaceDealType,
   Territory,
   UnitType,
 } from '../../types/game';
@@ -16,28 +18,7 @@ import {
   BatchRecruitUnitMode,
 } from '../../engine/empireAndArmyActions';
 
-export type DiplomaticActionType =
-  | 'IMPROVE'
-  | 'INSULT'
-  | 'ALLIANCE'
-  | 'DEFENSIVE_PACT'
-  | 'OFFENSIVE_PACT'
-  | 'NON_AGGRESSION'
-  | 'MILITARY_ACCESS'
-  | 'TRADE'
-  | 'EMBARGO'
-  | 'ULTIMATUM_VASSAL'
-  | 'ANNEX_VASSAL'
-  | 'DECLARE_WAR'
-  | 'ESPIONAGE_SABOTAGE_FORT'
-  | 'ESPIONAGE_INCITE_REVOLT'
-  | 'ESPIONAGE_SIPHON_TREASURY';
-
-export type PeaceDealType =
-  | 'ANNEX_OCCUPIED'
-  | 'VASSALIZE'
-  | 'REPARATIONS'
-  | 'WHITE_PEACE';
+export type { DiplomaticActionType, PeaceDealType };
 
 export interface CommandDrawersProps {
   activeTab: BottomDrawerTab;

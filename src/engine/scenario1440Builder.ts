@@ -1,6 +1,7 @@
 import { DiplomaticRelation, IdeologyId, Nation, Territory } from '../types/game';
 import { STRATEGIC_STRAITS } from './straitsAndTradeEngine';
-import { GeoCountryFeature, InitialWorldBundle, relationKey } from './worldBuilder';
+import { GeoCountryFeature, InitialWorldBundle } from './core/worldTypes';
+import { relationKey } from './core/diplomacyHelpers';
 
 interface Empire1440Def {
   id: string;

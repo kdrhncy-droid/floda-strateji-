@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "test": "node scripts/run-tests.mjs",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check:arch": "node scripts/check-circular-deps.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -87,6 +87,14 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
     [territories, nations, relations, playerNation.id]
   );
 
+  const isEncircled = React.useMemo(
+    () =>
+      selectedTerritory
+        ? isTerritoryEncircled(selectedTerritory.id, territories, nations)
+        : false,
+    [selectedTerritory, territories, nations]
+  );
+
   if (!selectedTerritory) {
     return (
       <div className="p-6 text-center text-xs text-slate-400 bg-slate-950/70 rounded-2xl border border-slate-800">
@@ -116,11 +124,6 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
     selectedOwner
   );
   const seasonInfo = getGameSeason(tick, gameMode);
-  const isEncircled = isTerritoryEncircled(
-    selectedTerritory.id,
-    territories,
-    nations
-  );
   const supplyLimit = Math.round(
     calculateProvinceSupplyLimit(
       selectedTerritory,

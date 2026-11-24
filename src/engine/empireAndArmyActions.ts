@@ -46,7 +46,7 @@ import {
 } from './pashaAndFiefEngine';
 import { findArmyRouteAStar } from './pathfindingEngine';
 import { evaluateWartimeAiOperations } from './aiAndRebellionEngine';
-import { scaleUnits } from './tickEngine';
+import { scaleUnits } from './core/unitHelpers';
 import { sound } from '../utils/soundEngine';
 
 export interface EmpireActionPatch {

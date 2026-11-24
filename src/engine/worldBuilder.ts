@@ -22,26 +22,11 @@ import {
 import { determineProvinceTerrain } from './pashaAndFiefEngine';
 import { transformBundleTo1440Scenario } from './scenario1440Builder';
 import { STRATEGIC_STRAITS } from './straitsAndTradeEngine';
+import type { GeoCountryFeature, InitialWorldBundle } from './core/worldTypes';
+import { relationKey } from './core/diplomacyHelpers';
 
-export interface GeoCountryFeature {
-  type: 'Feature';
-  id: string;
-  properties: {
-    name: string;
-  };
-  geometry: Geometry;
-}
-
-export interface InitialWorldBundle {
-  features: GeoCountryFeature[];
-  nations: Record<string, Nation>;
-  territories: Record<string, Territory>;
-  relations: Record<string, DiplomaticRelation>;
-}
-
-export function relationKey(a: string, b: string): string {
-  return a < b ? `${a}_${b}` : `${b}_${a}`;
-}
+export type { GeoCountryFeature, InitialWorldBundle };
+export { relationKey };
 
 const STRAIT_SHORE_ID_SET = new Set<string>(
   STRATEGIC_STRAITS.flatMap((s) => s.shoreIds)
