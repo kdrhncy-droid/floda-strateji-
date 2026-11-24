@@ -8,7 +8,6 @@ import {
   Play,
   Volume2,
   VolumeX,
-  Newspaper,
   Globe,
   Coins,
   Calendar,
@@ -42,6 +41,8 @@ import {
 } from '../engine/gameSettings';
 import { music, MUSIC_TRACKS } from '../engine/musicEngine';
 import { PWAInstallButton } from './PWAInstallButton';
+import { NationFlagCanvasBadge } from '../map/nationFlagRenderer';
+import { cleanNationName } from '../utils/formatters';
 import { sound } from '../utils/soundEngine';
 import { useAccessibleDialog } from '../hooks/useAccessibleDialog';
 
@@ -52,8 +53,6 @@ interface SystemAndSaveModalProps {
   onUpdateSettings: (partial: Partial<GameSettings>) => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
-  newsCount: number;
-  onOpenNewsDrawer: () => void;
   onReturnToTitleMenu: () => void;
   onSaveToSlot: (slotId: SaveSlotId) => SaveSlotMetadata | null;
   onLoadRecord: (record: SaveSlotRecord) => void;
@@ -67,8 +66,6 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
   onUpdateSettings,
   soundEnabled,
   onToggleSound,
-  newsCount,
-  onOpenNewsDrawer,
   onReturnToTitleMenu,
   onSaveToSlot,
   onLoadRecord,
@@ -230,19 +227,7 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
             <div className="text-xs font-semibold text-slate-400">
               Hızlı Komuta & Ekran Araçları
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <button
-                onClick={() => {
-                  sound.playClick();
-                  onClose();
-                  onOpenNewsDrawer();
-                }}
-                className="min-h-[44px] px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center gap-2 text-xs font-semibold text-amber-300"
-              >
-                <Newspaper className="w-4 h-4 text-amber-400 shrink-0" />
-                <span className="truncate">Haberler ({newsCount})</span>
-              </button>
-
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 onClick={onToggleSound}
                 className="min-h-[44px] px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center gap-2 text-xs font-semibold text-slate-200"
@@ -642,12 +627,13 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
                     >
                       <div className="flex items-start sm:items-center gap-3 min-w-0">
                         {meta ? (
-                          <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center font-display font-bold text-xs text-white shrink-0 shadow"
-                            style={{ backgroundColor: meta.nationColor }}
-                          >
-                            {meta.flagCode}
-                          </div>
+                          <NationFlagCanvasBadge
+                            nationId={meta.playerNationId}
+                            flagCode={meta.flagCode}
+                            color={meta.nationColor}
+                            width={44}
+                            height={30}
+                          />
                         ) : (
                           <div className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shrink-0">
                             <Save className="w-4 h-4" />
@@ -661,7 +647,7 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
                             </span>
                             {meta && (
                               <span className="text-xs font-semibold text-white truncate">
-                                · {meta.nationName}
+                                · {cleanNationName(meta.nationName)}
                               </span>
                             )}
                           </div>

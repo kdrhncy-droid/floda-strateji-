@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Swords, ArrowRight } from "lucide-react";
 import { CommandDrawersProps } from "./drawerTypes";
 import { ProvinceForeignDiplomacyPanel } from "./ProvinceForeignDiplomacyPanel";
@@ -8,10 +8,8 @@ import {
   COMMANDERS,
   IDEOLOGIES,
   RESOURCE_INFO,
-  calculateArmyModernizationCost,
   getArmyGenerationInfo,
   getNationModernizedTier,
-  getNationUnlockedMilTier,
 } from "../../data/world2026Data";
 import {
   CULTURES,
@@ -29,6 +27,8 @@ import {
   getProvinceCorridorNames,
   getProvinceStraitBadge,
 } from "../../engine/straitsAndTradeEngine";
+import { NationFlagCanvasBadge } from "../../map/nationFlagRenderer";
+import { cleanNationName, cleanProvinceName } from "../../utils/formatters";
 import { sound } from "../../utils/soundEngine";
 import {
   TerrainPanoramaSvg,
@@ -56,7 +56,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   onPeaceDeal,
   onSelectTerritory,
   onInspectNation,
-  onModernizeNationalArmy,
+  onOpenWarModal,
   onAssignFiefLord,
   onBestowFavorOnLord,
   onSiegeBombardment,
@@ -64,6 +64,19 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   fogOfWarEnabled = true,
 }) => {
   const [provinceSubTab, setProvinceSubTab] = useState<"ARMY" | "ECONOMY" | "FIEF">("ARMY");
+
+  const visibleTerritoryIds = useMemo(
+    () =>
+      computeVisibleTerritoryIds(
+        territories,
+        nations,
+        relations,
+        [],
+        [],
+        playerNation.id
+      ),
+    [territories, nations, relations, playerNation.id]
+  );
 
   if (!selectedTerritory) {
     return (
@@ -76,22 +89,8 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   const selectedOwner = nations[selectedTerritory.ownerId];
   if (!selectedOwner) return null;
 
-  const unlockedMilTier = getNationUnlockedMilTier(playerNation);
   const modernizedTier = getNationModernizedTier(playerNation);
   const activeArmyGen = getArmyGenerationInfo(gameMode, modernizedTier);
-  const hasPendingArmyUpgrade = unlockedMilTier > modernizedTier;
-  const modernizationCost = calculateArmyModernizationCost(
-    playerNation,
-    playerEconomy.totalGarrison
-  );
-  const visibleTerritoryIds = computeVisibleTerritoryIds(
-    territories,
-    nations,
-    relations,
-    [],
-    [],
-    playerNation.id
-  );
   const isSelectedPlayerOwned = selectedTerritory.ownerId === playerNation.id;
   const hasSelectedIntel = !fogOfWarEnabled || visibleTerritoryIds.has(selectedTerritory.id);
 
@@ -123,20 +122,21 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/35 to-transparent p-3 flex items-end justify-between">
                       <div className="flex items-center gap-2.5">
-                        <span
-                          className="w-9 h-9 rounded-xl flex items-center justify-center font-display font-bold text-xs text-white shadow-lg border border-white/20"
-                          style={{ backgroundColor: selectedOwner.color }}
-                        >
-                          {selectedOwner.flagCode}
-                        </span>
+                        <NationFlagCanvasBadge
+                          nationId={selectedOwner.id}
+                          flagCode={selectedOwner.flagCode}
+                          color={selectedOwner.color}
+                          width={38}
+                          height={26}
+                        />
                         <div>
                           <div className="text-sm sm:text-base font-bold text-white drop-shadow">
                             {selectedTerritory.isCapital ? '★ ' : ''}
-                            {selectedTerritory.name.replace(/^★\s*/, '')}
+                            {cleanProvinceName(selectedTerritory.name)}
                           </div>
                           <div className="text-[11px] text-amber-200/95 flex flex-wrap items-center gap-1.5 mt-0.5">
                             <span>
-                              {selectedOwner.name} ·{' '}
+                              {cleanNationName(selectedOwner.name)} ·{' '}
                               {IDEOLOGIES[selectedOwner.ideology]?.name ?? 'Monarşi'}
                             </span>
                             <span className="text-slate-500">·</span>
@@ -193,10 +193,10 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                           : '? (Savaş Sisi)'}
                       </div>
                     </div>
-                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-2.5">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Üretim Kaynağı & Değer</span>
-                        <span className="text-[10px] font-mono-num text-emerald-300 font-bold">
+                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-2.5 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-400">
+                        <span className="truncate">Üretim Kaynağı</span>
+                        <span className="text-[10px] font-mono-num text-emerald-300 font-bold shrink-0">
                           ×{provDev.totalInvestmentMult} Yatırım
                         </span>
                       </div>
@@ -215,7 +215,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                   {/* City Development Score & Investment Breakdown Strip */}
                   <div className="bg-emerald-950/35 border border-emerald-500/35 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
                     <div className="min-w-0">
-                      <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+                      <div className="font-bold text-emerald-300 flex flex-wrap items-center gap-1.5">
                         <span>★ Şehir Gelişim Puanı: {provDev.developmentScore}</span>
                         <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] text-emerald-200 border border-emerald-500/30">
                           {provDev.tierLabel}
@@ -230,25 +230,34 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     </div>
                   </div>
 
-                  {/* Detailed Unit Breakdown Bar */}
-                  <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                  {/* Detailed Unit Breakdown Bar with Explicit Unit Classes */}
+                  <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
                     {hasSelectedIntel ? (
                       <>
-                        <div>
+                        <div className="min-w-0">
+                          <span className="text-[10px] text-emerald-300/90 font-semibold block">
+                            {activeArmyGen.infantryClassLabel}
+                          </span>
                           <span className="text-slate-400">{activeArmyGen.infantryShort}: </span>
                           <strong className="font-mono-num text-slate-200">
                             {((selectedTerritory.units?.infantry || 0) / 1000).toFixed(1)}B
                           </strong>
                         </div>
-                        <span aria-hidden="true" className="text-slate-600">·</span>
-                        <div>
+                        <span aria-hidden="true" className="text-slate-700">|</span>
+                        <div className="min-w-0">
+                          <span className="text-[10px] text-amber-300/90 font-semibold block">
+                            {activeArmyGen.armorClassLabel}
+                          </span>
                           <span className="text-slate-400">{activeArmyGen.armorShort}: </span>
                           <strong className="font-mono-num text-amber-400">
                             {((selectedTerritory.units?.armor || 0) / 1000).toFixed(1)}B
                           </strong>
                         </div>
-                        <span aria-hidden="true" className="text-slate-600">·</span>
-                        <div>
+                        <span aria-hidden="true" className="text-slate-700">|</span>
+                        <div className="min-w-0">
+                          <span className="text-[10px] text-sky-300/90 font-semibold block">
+                            {activeArmyGen.airArtilleryClassLabel}
+                          </span>
                           <span className="text-slate-400">{activeArmyGen.airArtilleryShort}: </span>
                           <strong className="font-mono-num text-sky-400">
                             {((selectedTerritory.units?.airDrone || 0) / 1000).toFixed(1)}B
@@ -550,16 +559,11 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-semibold text-slate-200">
-                          Seferberlik ({activeArmyGen.generationLabel}: {activeArmyGen.eraTitle})
+                          Seferberlik · {activeArmyGen.generationLabel} ({activeArmyGen.eraTitle})
                         </span>
-                        {hasPendingArmyUpgrade && (
-                          <button
-                            onClick={onModernizeNationalArmy}
-                            className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold animate-pulse"
-                          >
-                            ⚡ Orduyu Güncelle ({modernizationCost}G)
-                          </button>
-                        )}
+                        <span className="text-[10px] font-mono-num px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/35 text-amber-300 font-bold">
+                          +{activeArmyGen.combatBonusPct}% Güç
+                        </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         <button
@@ -746,6 +750,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     onPeaceDeal={onPeaceDeal}
                     onSelectTerritory={onSelectTerritory}
                     onInspectNation={onInspectNation}
+                    onOpenWarModal={onOpenWarModal}
                     onSiegeBombardment={onSiegeBombardment}
                     onClose={onClose}
                   />

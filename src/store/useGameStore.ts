@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   ActiveBattle,
   ActiveWar,
+  AiCommanderStance,
   ArmyMovement,
   BottomDrawerTab,
   BuildingType,
@@ -67,7 +68,9 @@ import {
   disbandArmyDomain,
   enactReformDomain,
   executeArmyMoveDomain,
+  executeBatchArmyMoveDomain,
   formEmpireDomain,
+  hireMercenaryDomain,
   investSpecialtyProductionDomain,
   mergeNeighborArmiesDomain,
   modernizeNationalArmyDomain,
@@ -116,6 +119,7 @@ export interface GameStoreState {
   pendingWarMove: PendingWarMoveRequest | null;
   moveRatio: number;
   aiCommanderEnabled: boolean;
+  aiCommanderStance: AiCommanderStance;
   soundEnabled: boolean;
   settings: GameSettings;
   toastMessage: string | null;
@@ -140,6 +144,7 @@ export interface GameStoreState {
   confirmPendingWarMove: () => void;
   setMoveRatio: (ratio: number) => void;
   toggleAiCommander: () => void;
+  setAiCommanderStance: (stance: AiCommanderStance) => void;
   toggleSound: () => void;
   updateSettings: (partial: Partial<GameSettings>) => void;
   showToast: (msg: string | null) => void;
@@ -170,6 +175,7 @@ export interface GameStoreState {
     amount: number,
     baseGoldCost: number
   ) => void;
+  hireMercenary: (territoryId: string, companyId: string) => void;
   recruitOrAssignGeneral: (generalId: string) => void;
   upgradeBuilding: (territoryId: string, building: BuildingType) => void;
   investSpecialtyProduction: (
@@ -180,6 +186,11 @@ export interface GameStoreState {
   startMissionary: (territoryId: string) => void;
   formEmpire: (empireId: string) => void;
   executeArmyMove: (fromId: string, toId: string) => void;
+  executeBatchArmyMove: (
+    sourceIds: string[],
+    toId: string,
+    ratioOverride?: number
+  ) => void;
   mergeNeighborArmies: (targetTerritoryId: string) => void;
   disbandArmy: (territoryId: string, ratio: 0.5 | 1) => void;
   modernizeNationalArmy: () => void;
@@ -254,6 +265,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   pendingWarMove: null,
   moveRatio: 1,
   aiCommanderEnabled: false,
+  aiCommanderStance: 'BALANCED',
   soundEnabled: true,
   settings: loadGameSettings(),
   toastMessage: null,
@@ -293,12 +305,22 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   confirmPendingWarMove: () =>
     set((s) => {
       if (!s.pendingWarMove) return {};
-      const patch = executeArmyMoveDomain({
-        ...s,
-        fromId: s.pendingWarMove.fromId,
-        toId: s.pendingWarMove.toId,
-        forceDeclareWar: true,
-      });
+      const sourceIds = s.pendingWarMove.sourceTerritoryIds;
+      const patch =
+        sourceIds && sourceIds.length > 0
+          ? executeBatchArmyMoveDomain({
+              ...s,
+              sourceIds,
+              moveRatio: s.pendingWarMove.moveRatio ?? s.moveRatio,
+              toId: s.pendingWarMove.toId,
+              forceDeclareWar: true,
+            })
+          : executeArmyMoveDomain({
+              ...s,
+              fromId: s.pendingWarMove.fromId,
+              toId: s.pendingWarMove.toId,
+              forceDeclareWar: true,
+            });
       return {
         ...patch,
         pendingWarMove: null,
@@ -340,6 +362,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         wars: s.wars,
         battles: s.battles,
         movements: s.movements,
+        stance: s.aiCommanderStance,
       });
       if (immediateRes) {
         sound.playMarch();
@@ -356,6 +379,22 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         aiCommanderEnabled: true,
         toastMessage:
           '🤖 Yapay Zekâ Komutanı aktif! Uygun cephe fırsatı oluştuğunda birlikleri otomatik yönetecek.',
+      };
+    }),
+  setAiCommanderStance: (stance) =>
+    set((s) => {
+      sound.playClick();
+      const stanceName =
+        stance === 'AGGRESSIVE'
+          ? 'Taarruz Duruşu (Agresif İlerleyiş)'
+          : stance === 'DEFENSIVE'
+          ? 'Savunma Duruşu (Güçlü Garnizon & Kuşatma Kurtarma)'
+          : 'Dengeli Duruş (Standart Strateji)';
+      return {
+        aiCommanderStance: stance,
+        toastMessage: s.aiCommanderEnabled
+          ? `🤖 YZ Cephe Duruşu güncellendi: ${stanceName}`
+          : `🤖 YZ Cephe Duruşu seçildi: ${stanceName}`,
       };
     }),
   toggleSound: () =>
@@ -820,6 +859,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       newsEvents: s.newsEvents,
       settings: s.settings,
       aiCommanderEnabled: s.aiCommanderEnabled,
+      aiCommanderStance: s.aiCommanderStance,
     });
 
     for (const cue of out.sounds) {
@@ -904,6 +944,17 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       })
     ),
 
+  hireMercenary: (territoryId, companyId) =>
+    set((s) =>
+      hireMercenaryDomain({
+        territoryId,
+        companyId,
+        territories: s.territories,
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+      })
+    ),
+
   recruitOrAssignGeneral: (generalId) =>
     set((s) =>
       recruitOrAssignGeneralDomain({
@@ -971,6 +1022,21 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   executeArmyMove: (fromId, toId) =>
     set((s) => {
       const patch = executeArmyMoveDomain({ ...s, fromId, toId });
+      return {
+        ...patch,
+        ...(patch.movements ? { moveRatio: 1 } : {}),
+        ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
+      };
+    }),
+
+  executeBatchArmyMove: (sourceIds, toId, ratioOverride) =>
+    set((s) => {
+      const patch = executeBatchArmyMoveDomain({
+        ...s,
+        sourceIds,
+        toId,
+        moveRatio: ratioOverride ?? s.moveRatio,
+      });
       return {
         ...patch,
         ...(patch.movements ? { moveRatio: 1 } : {}),

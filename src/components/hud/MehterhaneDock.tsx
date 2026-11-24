@@ -2,7 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { SkipForward, X, Music, Volume2, VolumeX } from 'lucide-react';
 import { music, MUSIC_TRACKS } from '../../engine/musicEngine';
 
-export const MehterhaneDock: React.FC = () => {
+interface MehterhaneDockProps {
+  hideCompactOnMobile?: boolean;
+}
+
+export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
+  hideCompactOnMobile = false,
+}) => {
   const [, setTick] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -17,7 +23,11 @@ export const MehterhaneDock: React.FC = () => {
   }
 
   return (
-    <div className="hud-mehter-dock fixed bottom-16 right-3 z-30 flex flex-col items-end gap-1.5 pointer-events-none">
+    <div
+      className={`hud-mehter-dock fixed bottom-16 right-3 z-30 flex flex-col items-end gap-1.5 pointer-events-none ${
+        hideCompactOnMobile && !isExpanded ? 'hud-mehter-yield' : ''
+      }`}
+    >
       {/* Expanded Offline Mehterhane Selector */}
       {isExpanded && (
         <div className="pointer-events-auto w-68 sm:w-76 rounded-2xl bg-[#090e1a]/98 border border-amber-500/50 shadow-2xl p-3 space-y-2.5 text-xs text-slate-100">

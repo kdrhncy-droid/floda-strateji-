@@ -9,9 +9,7 @@ import {
   Flag,
   Flame,
   Handshake,
-  Landmark,
   MapPin,
-  ScrollText,
   Shield,
   Swords,
   Timer,
@@ -19,6 +17,7 @@ import {
 } from 'lucide-react';
 import {
   ActiveWar,
+  AiCommanderStance,
   ArmyMovement,
   BottomDrawerTab,
   DiplomaticRelation,
@@ -49,8 +48,10 @@ interface NationDiplomacyModalProps {
   tick: number;
   gameMode: GameModeId;
   aiCommanderEnabled?: boolean;
+  aiCommanderStance?: AiCommanderStance;
   isPlayerAtWar?: boolean;
   onToggleAiCommander?: () => void;
+  onSetAiCommanderStance?: (stance: AiCommanderStance) => void;
   onClose: () => void;
   onSelectInspectedNation: (nationId: string) => void;
   onSelectTerritory: (territoryId: string) => void;
@@ -159,12 +160,13 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
   tick,
   gameMode,
   aiCommanderEnabled = false,
+  aiCommanderStance = 'BALANCED',
   isPlayerAtWar = false,
   onToggleAiCommander,
+  onSetAiCommanderStance,
   onClose,
   onSelectInspectedNation,
   onSelectTerritory,
-  onSetActiveTab,
   onDiplomaticAction,
   onPeaceDeal,
   onOpenWarModal,
@@ -637,31 +639,6 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
             {isPlayerNation ? (
               <>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      onClose();
-                      onSetActiveTab('GOVERNMENT');
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-sky-600/25 hover:bg-sky-600/35 border border-sky-500/40 text-sky-200 text-xs font-bold flex items-center gap-1.5"
-                  >
-                    <Landmark className="w-3.5 h-3.5" />
-                    <span>Divan & Teknoloji</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      onClose();
-                      onSetActiveTab('DIPLOMACY');
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/45 text-amber-200 text-xs font-bold flex items-center gap-1.5"
-                  >
-                    <ScrollText className="w-3.5 h-3.5" />
-                    <span>Diplomasi Masası</span>
-                  </button>
-
                   {onToggleAiCommander && (
                     <button
                       type="button"
@@ -705,6 +682,35 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                           : 'Yapay Zekâya Devret'}
                       </span>
                     </button>
+                  )}
+
+                  {onSetAiCommanderStance && (
+                    <div className="flex items-center gap-1 rounded-xl bg-slate-950/90 border border-slate-800 p-0.5">
+                      {(
+                        [
+                          { id: 'BALANCED', label: 'Dengeli' },
+                          { id: 'AGGRESSIVE', label: 'Taarruz' },
+                          { id: 'DEFENSIVE', label: 'Savunma' },
+                        ] as const
+                      ).map((st) => {
+                        const active = aiCommanderStance === st.id;
+                        return (
+                          <button
+                            key={st.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => onSetAiCommanderStance(st.id)}
+                            className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                              active
+                                ? 'bg-amber-500 text-slate-950'
+                                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                            }`}
+                          >
+                            {st.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
                 <button
@@ -750,8 +756,20 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     className="px-2.5 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/35 border border-sky-500/45 text-sky-200 text-[11px] font-bold"
                   >
                     {playerRel?.allianceType === 'DEFENSIVE'
-                      ? '🛡️ Paktı Feshet'
+                      ? '🛡️ Savunma Feshet'
                       : '🛡️ Savunma Paktı'}
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="modal-offensive-pact-btn"
+                    onClick={() =>
+                      onDiplomaticAction(summary.nation.id, 'OFFENSIVE_PACT')
+                    }
+                    className="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/45 text-emerald-200 text-[11px] font-bold"
+                  >
+                    {playerRel?.allianceType === 'OFFENSIVE'
+                      ? '⚔️ İttifak Feshet'
+                      : '⚔️ Tam İttifak'}
                   </button>
                   <button
                     type="button"
@@ -761,6 +779,15 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     className="px-2.5 py-1.5 rounded-xl bg-teal-600/20 hover:bg-teal-600/35 border border-teal-500/45 text-teal-200 text-[11px] font-bold"
                   >
                     {playerRel?.hasNonAggression ? 'Saldırmazlık Aktif' : 'Saldırmazlık'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onDiplomaticAction(summary.nation.id, 'MILITARY_ACCESS')
+                    }
+                    className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/35 border border-indigo-500/45 text-indigo-200 text-[11px] font-bold"
+                  >
+                    {playerRel?.hasMilitaryAccess ? '🧭 Geçiş Aktif' : '🧭 Askeri Geçiş'}
                   </button>
                   {activePlayerWar ? (
                     <button

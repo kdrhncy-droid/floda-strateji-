@@ -135,8 +135,12 @@ export interface FormableEmpireDefinition {
   stabilityReward: number;
 }
 
+export type AiCommanderStance = 'BALANCED' | 'AGGRESSIVE' | 'DEFENSIVE';
+
 export interface PendingWarMoveRequest {
   fromId: string;
+  sourceTerritoryIds?: string[];
+  moveRatio?: number;
   toId: string;
   targetNationId: string;
 }
@@ -239,6 +243,8 @@ export interface QueuedBuildingConstruction {
   progressDays: number;
   totalDays: number;
   goldCost: number;
+  gdpBonus?: number;
+  specialtyName?: string;
 }
 
 export interface ActiveSiege {

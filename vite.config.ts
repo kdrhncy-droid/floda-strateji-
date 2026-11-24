@@ -11,12 +11,12 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        injectRegister: 'auto',
-        includeManifestIcons: false,
+        injectRegister: null,
+        includeManifestIcons: true,
         manifest: {
           id: '/',
           name: 'Floda Strateji Oyunu',
-          short_name: 'Floda Strateji',
+          short_name: 'Floda',
           description:
             '1440 ve 2026 dönemlerinde duraklatılabilir gerçek zamanlı dünya haritası, derin diplomasi, ekonomi, teknoloji ve ordu yönetimi sunan çevrimdışı büyük strateji oyunu.',
           theme_color: '#15120F',
@@ -51,6 +51,7 @@ export default defineConfig(() => {
           clientsClaim: true,
           skipWaiting: true,
           navigateFallback: '/index.html',
+          navigateFallbackAllowlist: [/^\/($|\?)/, /^\/[^.]*$/],
           navigateFallbackDenylist: [/^\/api\//],
           ignoreURLParametersMatching: [/.*/],
           globPatterns: [
@@ -60,7 +61,7 @@ export default defineConfig(() => {
             '**/game_map_*.png',
             '**/game_screenshot_*.png',
           ],
-          maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+          maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

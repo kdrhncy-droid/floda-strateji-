@@ -1,6 +1,7 @@
 import {
   ActiveBattle,
   ActiveWar,
+  AiCommanderStance,
   ArmyMovement,
   DiplomaticRelation,
   Nation,
@@ -21,6 +22,7 @@ export interface PlayerAiCommanderInput {
   wars: ActiveWar[];
   battles: ActiveBattle[];
   movements: ArmyMovement[];
+  stance?: AiCommanderStance;
 }
 
 export interface PlayerAiCommanderOutput {
@@ -92,7 +94,42 @@ export function evaluatePlayerAiCommander(
     wars,
     battles,
     movements,
+    stance = 'BALANCED',
   } = input;
+
+  const stanceProfile =
+    stance === 'AGGRESSIVE'
+      ? {
+          capitalReserve: 2200,
+          borderReserve: 1200,
+          maxTotalMoves: 6,
+          maxReliefDispatches: 2,
+          attackRatioThreshold: 1.0,
+          overkillCap: 1.75,
+          minSendable: 1000,
+          rearThreshold: 2500,
+        }
+      : stance === 'DEFENSIVE'
+      ? {
+          capitalReserve: 5000,
+          borderReserve: 3200,
+          maxTotalMoves: 4,
+          maxReliefDispatches: 4,
+          attackRatioThreshold: 1.55,
+          overkillCap: 1.25,
+          minSendable: 1500,
+          rearThreshold: 4200,
+        }
+      : {
+          capitalReserve: 3500,
+          borderReserve: 2000,
+          maxTotalMoves: 4,
+          maxReliefDispatches: 2,
+          attackRatioThreshold: 1.15,
+          overkillCap: 1.4,
+          minSendable: 1200,
+          rearThreshold: 4000,
+        };
 
   const playerNation = nations[playerNationId];
   if (!playerNation || playerNation.isEliminated) return null;
@@ -151,8 +188,8 @@ export function evaluatePlayerAiCommander(
       const nb = workingTerritories[nId];
       return Boolean(nb && nb.ownerId !== playerNationId && enemyIds.has(nb.ownerId));
     });
-    if (terr.isCapital && bordersWarEnemy) return 3500;
-    if (bordersWarEnemy) return 2000;
+    if (terr.isCapital && bordersWarEnemy) return stanceProfile.capitalReserve;
+    if (bordersWarEnemy) return stanceProfile.borderReserve;
     return 500;
   };
 
@@ -161,7 +198,7 @@ export function evaluatePlayerAiCommander(
     if (busyOriginIds.has(terr.id)) return false;
     if (terr.siege || battleMap.has(terr.id)) return false;
     const reserve = getReserveForProvince(terr);
-    return terr.garrison - reserve >= 1200;
+    return terr.garrison - reserve >= stanceProfile.minSendable;
   };
 
   const dispatchMovement = (params: {
@@ -276,7 +313,11 @@ export function evaluatePlayerAiCommander(
 
   let reliefDispatches = 0;
   for (const task of urgentTasks) {
-    if (reliefDispatches >= 2 || newMovements.length >= 4) break;
+    if (
+      reliefDispatches >= stanceProfile.maxReliefDispatches ||
+      newMovements.length >= stanceProfile.maxTotalMoves
+    )
+      break;
     const destTerr = workingTerritories[task.targetId];
     if (!destTerr) continue;
 
@@ -338,7 +379,7 @@ export function evaluatePlayerAiCommander(
 
     const reserve = getReserveForProvince(src);
     const sendable = Math.floor(src.garrison - reserve);
-    if (sendable < 1200) continue;
+    if (sendable < stanceProfile.minSendable) continue;
 
     for (const nbId of src.neighbors) {
       const enemyTerr = workingTerritories[nbId];
@@ -360,11 +401,11 @@ export function evaluatePlayerAiCommander(
         Math.max(800, enemyTerr.garrison) * computeTerrainDefenseMultiplier(enemyTerr);
       const effectiveOffense = (sendable + alreadyIncoming * 0.5) * playerTierMod;
 
-      // Require realistic 1.15x advantage (or if already incoming + our push decisively breaks it)
-      if (effectiveOffense < effectiveDefense * 1.15) continue;
+      // Require realistic advantage per stance (1.0x AGGRESSIVE, 1.15x BALANCED, 1.55x DEFENSIVE)
+      if (effectiveOffense < effectiveDefense * stanceProfile.attackRatioThreshold) continue;
 
-      // Skip target if we already have >= 1.5x effectiveDefense marching on it
-      if (alreadyIncoming >= effectiveDefense * 1.4) continue;
+      // Skip target if we already have sufficient effectiveDefense marching on it
+      if (alreadyIncoming >= effectiveDefense * stanceProfile.overkillCap) continue;
 
       const isLostCore = enemyTerr.coreOwnerId === playerNationId;
       const strategicScore =
@@ -386,12 +427,14 @@ export function evaluatePlayerAiCommander(
 
   offensiveCandidates.sort((a, b) => b.score - a.score);
   for (const cand of offensiveCandidates) {
-    if (newMovements.length >= 4) break;
+    if (newMovements.length >= stanceProfile.maxTotalMoves) break;
     if (busyOriginIds.has(cand.fromId)) continue;
     const dst = workingTerritories[cand.toId];
     if (!dst) continue;
-    // Avoid piling two separate attacks into the exact same enemy province in one tick if it's already covered
-    if ((incomingPlayerTroopsByTarget[cand.toId] || 0) >= Math.max(2500, dst.garrison * 1.4)) {
+    if (
+      (incomingPlayerTroopsByTarget[cand.toId] || 0) >=
+      Math.max(2500, dst.garrison * stanceProfile.overkillCap)
+    ) {
       continue;
     }
 
@@ -408,7 +451,7 @@ export function evaluatePlayerAiCommander(
   // =========================================================================
   // PRIORITY 4: March Idle Interior Reserves & Fresh Recruits to the Active Frontline
   // =========================================================================
-  if (newMovements.length < 4) {
+  if (newMovements.length < stanceProfile.maxTotalMoves) {
     const activeFrontTargets = playerTerrIds
       .map((id) => workingTerritories[id])
       .filter((t): t is Territory => {
@@ -431,12 +474,12 @@ export function evaluatePlayerAiCommander(
             const nb = workingTerritories[nId];
             return Boolean(nb && nb.ownerId !== playerNationId && enemyIds.has(nb.ownerId));
           });
-          return !touchesEnemy && t.garrison >= 4000;
+          return !touchesEnemy && t.garrison >= stanceProfile.rearThreshold;
         })
         .sort((a, b) => b.garrison - a.garrison);
 
-      for (const rear of idleInteriorReserves.slice(0, 2)) {
-        if (newMovements.length >= 4) break;
+      for (const rear of idleInteriorReserves.slice(0, stance === 'AGGRESSIVE' ? 3 : 2)) {
+        if (newMovements.length >= stanceProfile.maxTotalMoves) break;
         const bestFront = [...activeFrontTargets].sort((a, b) => {
           const distA = sphericalDegDist(rear.centroid, a.centroid);
           const distB = sphericalDegDist(rear.centroid, b.centroid);

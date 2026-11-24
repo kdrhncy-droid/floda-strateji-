@@ -275,35 +275,32 @@
   .hud-province-quickbar {
     bottom: 0.4rem !important;
     left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
-    right: auto !important;
+    right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
     width: auto !important;
-    max-width: min(68vw, calc(100vw - 12.5rem)) !important;
+    max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 1rem) !important;
     padding: 0.35rem 0.5rem !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 0.4rem !important;
+    gap: 0.45rem !important;
+  }
+  .hud-province-thumb {
+    display: none !important;
   }
   .hud-province-summary {
     flex: 1 1 auto !important;
-    min-width: 0 !important;
+    min-width: 155px !important;
     gap: 0.35rem !important;
   }
   .hud-province-actions {
     flex: 0 1 auto !important;
     min-width: 0 !important;
-    max-width: 54% !important;
+    max-width: 58% !important;
     gap: 0.3rem !important;
   }
   .hud-province-actions button {
     min-height: 2rem !important;
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
-  }
-  .hud-mapmode-bar {
-    top: 0.35rem !important;
-    left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
-    gap: 0.35rem !important;
-    max-width: min(68vw, 620px) !important;
   }
   .hud-mapmode-shell,
   .hud-macro-bar {
@@ -312,23 +309,19 @@
   .hud-mapmode-shell button,
   .hud-macro-bar button {
     min-height: 1.9rem !important;
-    padding-left: 0.55rem !important;
-    padding-right: 0.55rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
   }
-  .hud-macro-bar {
-    max-width: min(68vw, 620px) !important;
-  }
-  .hud-toast-banner {
-    top: calc(env(safe-area-inset-top, 0px) + 2.9rem) !important;
-    padding: 0.25rem 0.65rem !important;
-  }
-  .hud-outliner {
-    top: 0.35rem !important;
-    right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+  .hud-macro-tray {
+    max-width: min(390px, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 10rem)) !important;
+    max-height: calc(100dvh - 6.4rem) !important;
   }
   .hud-mehter-dock {
     bottom: calc(2.9rem + env(safe-area-inset-bottom, 0px)) !important;
     right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+  }
+  .hud-mehter-yield {
+    display: none !important;
   }
   .hud-onboarding-card {
     bottom: calc(2.9rem + env(safe-area-inset-bottom, 0px)) !important;
@@ -341,9 +334,9 @@
     padding: 0.65rem 0.75rem !important;
   }
   .hud-world-toast-stack {
-    top: 5.2rem !important;
+    top: 2.95rem !important;
     right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
-    width: min(270px, 44vw) !important;
+    width: min(230px, 38vw) !important;
   }
   .aoh3-menu-panel {
     padding: 0.65rem 0.85rem !important;
@@ -367,17 +360,15 @@
 [data-ui-scale="COMPACT"] .hud-header,
 [data-ui-scale="COMPACT"] .hud-bottom-nav,
 [data-ui-scale="COMPACT"] .hud-province-quickbar,
-[data-ui-scale="COMPACT"] .hud-mapmode-bar,
-[data-ui-scale="COMPACT"] .hud-outliner {
+[data-ui-scale="COMPACT"] .hud-top-overlay {
   zoom: 0.88;
 }
 
 [data-ui-scale="LARGE"] .hud-header,
 [data-ui-scale="LARGE"] .hud-bottom-nav,
 [data-ui-scale="LARGE"] .hud-province-quickbar,
-[data-ui-scale="LARGE"] .hud-mapmode-bar,
-[data-ui-scale="LARGE"] .hud-outliner {
-  zoom: 1.1;
+[data-ui-scale="LARGE"] .hud-top-overlay {
+  zoom: 1.08;
 }
 
 @media (min-width: 901px) {
@@ -417,35 +408,16 @@
   }
 }
 
-.hud-toast-banner {
-  transform: translateX(-50%);
-}
-
 @media (max-width: 1024px) and (hover: none) and (pointer: coarse) {
-  button,
-  [role="button"] {
-    min-height: 44px !important;
-    min-width: 44px !important;
+  .hud-bottom-nav-btn,
+  .aoh3-menu-btn,
+  .aoh3-menu-btn-primary {
+    min-height: 44px;
   }
 
   input:not([type="checkbox"]):not([type="radio"]),
   select {
-    min-height: 44px;
-  }
-
-  .hud-toast-banner {
-    position: fixed !important;
-    top: calc(var(--hud-toast-top, 4rem) + env(safe-area-inset-top, 0px) + 0.5rem) !important;
-    left: 50% !important;
-    width: 92vw !important;
-    max-width: min(92vw, 34rem) !important;
-    max-height: min(30vh, 14rem) !important;
-    transform: translateX(-50%) !important;
-    z-index: 35 !important;
-    overflow-y: auto !important;
-    overflow-wrap: anywhere;
-    pointer-events: auto !important;
-    white-space: normal !important;
+    min-height: 40px;
   }
 }
 
@@ -456,9 +428,25 @@
 }
 
 @media (max-width: 900px) and (orientation: portrait) {
+  .hud-top-overlay {
+    left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
+    right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+  }
+
+  .hud-province-quickbar {
+    left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
+    right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+    bottom: 0.5rem !important;
+  }
+
+  .hud-bottom-nav {
+    padding-left: max(0.25rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.25rem, env(safe-area-inset-right, 0px)) !important;
+  }
+
   .hud-drawer-wrapper {
-    top: var(--hud-drawer-top, 4rem) !important;
-    bottom: 4rem !important;
+    top: var(--hud-drawer-top, 5.75rem) !important;
+    bottom: calc(4.15rem + env(safe-area-inset-bottom, 0px)) !important;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -471,16 +459,6 @@
 }
 
 @media (max-width: 400px) and (hover: none) and (pointer: coarse) {
-  .hud-header > div:first-child {
-    flex-wrap: wrap;
-  }
-
-  .hud-header > div:first-child > div:first-child,
-  .hud-header > div:first-child > div:last-child {
-    width: 100%;
-    justify-content: space-between;
-  }
-
   .hud-drawer-header {
     flex-wrap: wrap;
     align-items: flex-start;
@@ -504,37 +482,16 @@
   }
 }
 
-@media (max-width: 360px) and (orientation: portrait) {
+@media (max-width: 639px) and (orientation: portrait) {
   .hud-drawer-wrapper {
-    --hud-drawer-top: 13.25rem;
+    --hud-drawer-top: 5.75rem;
   }
-
-  .hud-toast-banner {
-    --hud-toast-top: 13.25rem;
+  .hud-mehter-yield {
+    display: none !important;
   }
 }
 
-@media (min-width: 361px) and (max-width: 400px) and (orientation: portrait) {
-  .hud-drawer-wrapper {
-    --hud-drawer-top: 10.125rem;
-  }
-
-  .hud-toast-banner {
-    --hud-toast-top: 10.125rem;
-  }
-}
-
-@media (min-width: 401px) and (max-width: 639px) and (orientation: portrait) {
-  .hud-drawer-wrapper {
-    --hud-drawer-top: 7rem;
-  }
-
-  .hud-toast-banner {
-    --hud-toast-top: 7rem;
-  }
-}
-
-@media (max-width: 360px) and (orientation: portrait) and (hover: none) and (pointer: coarse) {
+@media (max-width: 350px) and (orientation: portrait) {
   .hud-header > div:nth-child(2) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -543,6 +500,10 @@
 
   .hud-header > div:nth-child(2) > button {
     width: 100%;
+  }
+
+  .hud-drawer-wrapper {
+    --hud-drawer-top: 8.5rem;
   }
 }
 
@@ -561,24 +522,8 @@
     padding-right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
   }
 
-  .hud-header button,
-  .hud-bottom-nav button,
-  .hud-province-actions button,
-  .hud-mapmode-shell button,
-  .hud-macro-bar button,
-  .hud-mehter-dock button {
-    min-height: 2.15rem !important;
-    min-width: 2.15rem !important;
-  }
-
   .hud-bottom-nav {
     height: calc(2.6rem + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  .hud-toast-banner {
-    top: calc(env(safe-area-inset-top, 0px) + 3rem) !important;
-    max-height: min(26vh, 6rem) !important;
-    z-index: 35 !important;
   }
 
   .hud-drawer-wrapper {

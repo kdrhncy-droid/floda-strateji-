@@ -14,388 +14,388 @@ export interface ProvinceSubSeed {
 
 // Curated authentic sub-provinces for major and regional countries (Expanded to ~335+ provinces worldwide)
 export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
-  // Türkiye / Osmanlı Coğrafyası (20 Tarihsel Sancak & Eyalet)
+  // Türkiye / Osmanlı Coğrafyası (20 Şehir)
   '792': [
-    { suffixId: 'ANK', name: 'Ankara & Bozok Sancağı', lon: 32.85, lat: 39.92, isCapital: true, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
-    { suffixId: 'IST', name: 'Kostantiniyye & Boğazlar', lon: 28.97, lat: 41.02, gdpShare: 0.13, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'EDR', name: 'Edirne & Doğu Trakya', lon: 26.55, lat: 41.67, gdpShare: 0.06, resource: 'TAHIL' },
-    { suffixId: 'GLB', name: 'Çanakkale & Gelibolu Boğazı', lon: 26.65, lat: 39.95, gdpShare: 0.04, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'BUR', name: 'Hüdavendigar & Bursa', lon: 29.06, lat: 40.18, gdpShare: 0.07, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'IZM', name: 'Aydın & Saruhan (İzmir)', lon: 27.14, lat: 38.42, gdpShare: 0.07, resource: 'PAMUK' },
-    { suffixId: 'MUG', name: 'Muğla & Menteşe Kıyısı', lon: 28.36, lat: 37.21, gdpShare: 0.04, resource: 'KERESTE' },
-    { suffixId: 'KUT', name: 'Germiyan & Kütahya', lon: 29.98, lat: 39.42, gdpShare: 0.04, resource: 'ALTIN' },
-    { suffixId: 'ANT', name: 'Teke & Antalya Sancağı', lon: 30.70, lat: 36.88, gdpShare: 0.05, resource: 'KERESTE' },
-    { suffixId: 'KNY', name: 'Karaman & Konya', lon: 32.48, lat: 37.87, gdpShare: 0.05, resource: 'TAHIL' },
-    { suffixId: 'KYS', name: 'Rum & Sivas-Kayseri', lon: 36.15, lat: 39.20, gdpShare: 0.05, resource: 'SIGIR' },
-    { suffixId: 'KST', name: 'Candar & Kastamonu-Sinop', lon: 34.05, lat: 41.55, gdpShare: 0.04, resource: 'KERESTE' },
-    { suffixId: 'SAM', name: 'Samsun & Amasya (Canik)', lon: 36.33, lat: 41.28, gdpShare: 0.04, resource: 'TAHIL' },
-    { suffixId: 'ADA', name: 'Çukurova & Adana', lon: 35.32, lat: 37.00, gdpShare: 0.04, resource: 'PAMUK' },
-    { suffixId: 'GZP', name: 'Gaziantep & Maraş', lon: 37.38, lat: 37.35, gdpShare: 0.04, resource: 'PAMUK' },
-    { suffixId: 'MLT', name: 'Malatya & Harput', lon: 38.55, lat: 38.65, gdpShare: 0.03, resource: 'ALTIN' },
-    { suffixId: 'TRB', name: 'Trabzon & Doğu Karadeniz', lon: 39.71, lat: 41.00, gdpShare: 0.04, resource: 'KERESTE' },
-    { suffixId: 'ERZ', name: 'Erzurum & Kars Sancağı', lon: 41.60, lat: 40.10, gdpShare: 0.03, resource: 'SIGIR' },
-    { suffixId: 'DYB', name: 'Diyarbekir & Urfa (El-Cezire)', lon: 40.23, lat: 37.91, gdpShare: 0.03, resource: 'PETROL' },
-    { suffixId: 'VAN', name: 'Van & Bitlis Serhaddi', lon: 43.15, lat: 38.50, gdpShare: 0.02, resource: 'SIGIR' },
+    { suffixId: 'ANK', name: 'Ankara', lon: 32.85, lat: 39.92, isCapital: true, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
+    { suffixId: 'IST', name: 'İstanbul', lon: 28.97, lat: 41.02, gdpShare: 0.13, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'EDR', name: 'Edirne', lon: 26.55, lat: 41.67, gdpShare: 0.06, resource: 'TAHIL' },
+    { suffixId: 'GLB', name: 'Çanakkale', lon: 26.65, lat: 39.95, gdpShare: 0.04, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'BUR', name: 'Bursa', lon: 29.06, lat: 40.18, gdpShare: 0.07, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'IZM', name: 'İzmir', lon: 27.14, lat: 38.42, gdpShare: 0.07, resource: 'PAMUK' },
+    { suffixId: 'MUG', name: 'Muğla', lon: 28.36, lat: 37.21, gdpShare: 0.04, resource: 'KERESTE' },
+    { suffixId: 'KUT', name: 'Kütahya', lon: 29.98, lat: 39.42, gdpShare: 0.04, resource: 'ALTIN' },
+    { suffixId: 'ANT', name: 'Antalya', lon: 30.70, lat: 36.88, gdpShare: 0.05, resource: 'KERESTE' },
+    { suffixId: 'KNY', name: 'Konya', lon: 32.48, lat: 37.87, gdpShare: 0.05, resource: 'TAHIL' },
+    { suffixId: 'KYS', name: 'Sivas', lon: 36.15, lat: 39.20, gdpShare: 0.05, resource: 'SIGIR' },
+    { suffixId: 'KST', name: 'Kastamonu', lon: 34.05, lat: 41.55, gdpShare: 0.04, resource: 'KERESTE' },
+    { suffixId: 'SAM', name: 'Samsun', lon: 36.33, lat: 41.28, gdpShare: 0.04, resource: 'TAHIL' },
+    { suffixId: 'ADA', name: 'Adana', lon: 35.32, lat: 37.00, gdpShare: 0.04, resource: 'PAMUK' },
+    { suffixId: 'GZP', name: 'Gaziantep', lon: 37.38, lat: 37.35, gdpShare: 0.04, resource: 'PAMUK' },
+    { suffixId: 'MLT', name: 'Malatya', lon: 38.55, lat: 38.65, gdpShare: 0.03, resource: 'ALTIN' },
+    { suffixId: 'TRB', name: 'Trabzon', lon: 39.71, lat: 41.00, gdpShare: 0.04, resource: 'KERESTE' },
+    { suffixId: 'ERZ', name: 'Erzurum', lon: 41.60, lat: 40.10, gdpShare: 0.03, resource: 'SIGIR' },
+    { suffixId: 'DYB', name: 'Diyarbakır', lon: 40.23, lat: 37.91, gdpShare: 0.03, resource: 'PETROL' },
+    { suffixId: 'VAN', name: 'Van', lon: 43.15, lat: 38.50, gdpShare: 0.02, resource: 'SIGIR' },
   ],
-  // Yunanistan (4 Bölge)
+  // Yunanistan (4 Şehir)
   '300': [
-    { suffixId: 'ATH', name: 'Atina & Mora', lon: 23.72, lat: 37.98, isCapital: true, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'SKG', name: 'Selanik & Batı Trakya', lon: 22.94, lat: 40.64, gdpShare: 0.26, resource: 'PAMUK' },
-    { suffixId: 'IOA', name: 'Yanya & Epir', lon: 20.85, lat: 39.66, gdpShare: 0.14, resource: 'SIGIR' },
-    { suffixId: 'CRT', name: 'Girit & Ege Adaları', lon: 25.14, lat: 35.33, gdpShare: 0.18, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'ATH', name: 'Atina', lon: 23.72, lat: 37.98, isCapital: true, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SKG', name: 'Selanik', lon: 22.94, lat: 40.64, gdpShare: 0.26, resource: 'PAMUK' },
+    { suffixId: 'IOA', name: 'Yanya', lon: 20.85, lat: 39.66, gdpShare: 0.14, resource: 'SIGIR' },
+    { suffixId: 'CRT', name: 'Girit', lon: 25.14, lat: 35.33, gdpShare: 0.18, resource: 'TICARET_BOGAZI' },
   ],
-  // Bulgaristan (3 Bölge)
+  // Bulgaristan (3 Şehir)
   '100': [
-    { suffixId: 'SOF', name: 'Sofya & Batı Rumeli', lon: 23.32, lat: 42.69, isCapital: true, gdpShare: 0.44, resource: 'DEMIR_CELIK' },
-    { suffixId: 'PDV', name: 'Filibe & Meriç Vadisi', lon: 24.74, lat: 42.14, gdpShare: 0.30, resource: 'TAHIL' },
-    { suffixId: 'VAR', name: 'Varna & Deliorman', lon: 27.91, lat: 43.21, gdpShare: 0.26, resource: 'KERESTE' },
+    { suffixId: 'SOF', name: 'Sofya', lon: 23.32, lat: 42.69, isCapital: true, gdpShare: 0.44, resource: 'DEMIR_CELIK' },
+    { suffixId: 'PDV', name: 'Filibe', lon: 24.74, lat: 42.14, gdpShare: 0.30, resource: 'TAHIL' },
+    { suffixId: 'VAR', name: 'Varna', lon: 27.91, lat: 43.21, gdpShare: 0.26, resource: 'KERESTE' },
   ],
-  // Sırbistan (2 Bölge)
+  // Sırbistan (2 Şehir)
   '688': [
-    { suffixId: 'BEG', name: 'Belgrad & Tuna Boyu', lon: 20.46, lat: 44.81, isCapital: true, gdpShare: 0.58, resource: 'ALTIN' },
-    { suffixId: 'NIS', name: 'Niş & Morava Vadisi', lon: 21.89, lat: 43.32, gdpShare: 0.42, resource: 'SIGIR' },
+    { suffixId: 'BEG', name: 'Belgrad', lon: 20.46, lat: 44.81, isCapital: true, gdpShare: 0.58, resource: 'ALTIN' },
+    { suffixId: 'NIS', name: 'Niş', lon: 21.89, lat: 43.32, gdpShare: 0.42, resource: 'SIGIR' },
   ],
-  // Bosna-Hersek (2 Bölge)
+  // Bosna-Hersek (2 Şehir)
   '070': [
-    { suffixId: 'SJJ', name: 'Saraybosna & Bosna Sancağı', lon: 18.41, lat: 43.85, isCapital: true, gdpShare: 0.60, resource: 'DEMIR_CELIK' },
-    { suffixId: 'OMO', name: 'Mostar & Hersek Sancağı', lon: 17.80, lat: 43.34, gdpShare: 0.40, resource: 'TAHIL' },
+    { suffixId: 'SJJ', name: 'Saraybosna', lon: 18.41, lat: 43.85, isCapital: true, gdpShare: 0.60, resource: 'DEMIR_CELIK' },
+    { suffixId: 'OMO', name: 'Mostar', lon: 17.80, lat: 43.34, gdpShare: 0.40, resource: 'TAHIL' },
   ],
-  // Hırvatistan (2 Bölge)
+  // Hırvatistan (2 Şehir)
   '191': [
-    { suffixId: 'ZAG', name: 'Zagreb & Slavonya', lon: 15.98, lat: 45.81, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
-    { suffixId: 'SPU', name: 'Split & Dalmaçya Kıyısı', lon: 16.44, lat: 43.50, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'ZAG', name: 'Zagreb', lon: 15.98, lat: 45.81, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
+    { suffixId: 'SPU', name: 'Split', lon: 16.44, lat: 43.50, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
   ],
-  // Romanya (5 Bölge)
+  // Romanya (5 Şehir)
   '642': [
-    { suffixId: 'BUH', name: 'Bükreş & Eflak', lon: 26.10, lat: 44.42, isCapital: true, gdpShare: 0.32, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'CLJ', name: 'Kaloşvar & Erdel (Transilvanya)', lon: 23.60, lat: 46.77, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
-    { suffixId: 'TSR', name: 'Temeşvar & Banat', lon: 21.23, lat: 45.75, gdpShare: 0.14, resource: 'TAHIL' },
-    { suffixId: 'IAS', name: 'Yaş & Batı Boğdan', lon: 27.60, lat: 47.16, gdpShare: 0.16, resource: 'TAHIL' },
-    { suffixId: 'CND', name: 'Köstence & Dobruca', lon: 28.63, lat: 44.17, gdpShare: 0.16, resource: 'PETROL' },
+    { suffixId: 'BUH', name: 'Bükreş', lon: 26.10, lat: 44.42, isCapital: true, gdpShare: 0.32, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'CLJ', name: 'Kaloşvar', lon: 23.60, lat: 46.77, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
+    { suffixId: 'TSR', name: 'Temeşvar', lon: 21.23, lat: 45.75, gdpShare: 0.14, resource: 'TAHIL' },
+    { suffixId: 'IAS', name: 'Yaş', lon: 27.60, lat: 47.16, gdpShare: 0.16, resource: 'TAHIL' },
+    { suffixId: 'CND', name: 'Köstence', lon: 28.63, lat: 44.17, gdpShare: 0.16, resource: 'PETROL' },
   ],
-  // Macaristan (3 Bölge)
+  // Macaristan (3 Şehir)
   '348': [
-    { suffixId: 'BUD', name: 'Budin & Peşte', lon: 19.04, lat: 47.49, isCapital: true, gdpShare: 0.46, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'DEB', name: 'Debrecen & Tisa Ovası', lon: 21.62, lat: 47.53, gdpShare: 0.30, resource: 'TAHIL' },
-    { suffixId: 'PEC', name: 'Peçuy (Pécs) & Güney Tuna', lon: 18.23, lat: 46.07, gdpShare: 0.24, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BUD', name: 'Budin', lon: 19.04, lat: 47.49, isCapital: true, gdpShare: 0.46, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'DEB', name: 'Debrecen', lon: 21.62, lat: 47.53, gdpShare: 0.30, resource: 'TAHIL' },
+    { suffixId: 'PEC', name: 'Peçuy', lon: 18.23, lat: 46.07, gdpShare: 0.24, resource: 'DEMIR_CELIK' },
   ],
-  // Avusturya (3 Bölge)
+  // Avusturya (3 Şehir)
   '040': [
-    { suffixId: 'VIE', name: 'Viyana & Aşağı Avusturya', lon: 16.37, lat: 48.20, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'GRZ', name: 'Graz & Steiermark', lon: 15.43, lat: 47.07, gdpShare: 0.28, resource: 'DEMIR_CELIK' },
-    { suffixId: 'INN', name: 'Innsbruck & Tirol Alpleri', lon: 11.40, lat: 47.26, gdpShare: 0.24, resource: 'YARI_ILETKEN' },
+    { suffixId: 'VIE', name: 'Viyana', lon: 16.37, lat: 48.20, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'GRZ', name: 'Graz', lon: 15.43, lat: 47.07, gdpShare: 0.28, resource: 'DEMIR_CELIK' },
+    { suffixId: 'INN', name: 'Innsbruck', lon: 11.40, lat: 47.26, gdpShare: 0.24, resource: 'YARI_ILETKEN' },
   ],
-  // Çekya / Bohemya (2 Bölge)
+  // Çekya (2 Şehir)
   '203': [
-    { suffixId: 'PRG', name: 'Prag & Bohemya', lon: 14.43, lat: 50.07, isCapital: true, gdpShare: 0.60, resource: 'DEMIR_CELIK' },
-    { suffixId: 'BRQ', name: 'Brno & Moravya', lon: 16.60, lat: 49.19, gdpShare: 0.40, resource: 'YARI_ILETKEN' },
+    { suffixId: 'PRG', name: 'Prag', lon: 14.43, lat: 50.07, isCapital: true, gdpShare: 0.60, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BRQ', name: 'Brno', lon: 16.60, lat: 49.19, gdpShare: 0.40, resource: 'YARI_ILETKEN' },
   ],
-  // Suriye (4 Bölge)
+  // Suriye (4 Şehir)
   '760': [
-    { suffixId: 'DAM', name: 'Şam & Güney Suriye', lon: 36.29, lat: 33.51, isCapital: true, gdpShare: 0.34, resource: 'TAHIL' },
-    { suffixId: 'ALP', name: 'Halep & Kuzey Şam', lon: 37.16, lat: 36.20, gdpShare: 0.30, resource: 'TAHIL' },
-    { suffixId: 'LTK', name: 'Lazkiye & Akdeniz Kıyısı', lon: 35.78, lat: 35.53, gdpShare: 0.18, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'DEZ', name: 'Deyrizor & Fırat Havzası', lon: 40.14, lat: 35.33, gdpShare: 0.18, resource: 'PETROL' },
+    { suffixId: 'DAM', name: 'Şam', lon: 36.29, lat: 33.51, isCapital: true, gdpShare: 0.34, resource: 'TAHIL' },
+    { suffixId: 'ALP', name: 'Halep', lon: 37.16, lat: 36.20, gdpShare: 0.30, resource: 'TAHIL' },
+    { suffixId: 'LTK', name: 'Lazkiye', lon: 35.78, lat: 35.53, gdpShare: 0.18, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'DEZ', name: 'Deyrizor', lon: 40.14, lat: 35.33, gdpShare: 0.18, resource: 'PETROL' },
   ],
-  // Irak (4 Bölge)
+  // Irak (4 Şehir)
   '368': [
-    { suffixId: 'BGW', name: 'Bağdat & Mezopotamya', lon: 44.36, lat: 33.31, isCapital: true, gdpShare: 0.36, resource: 'PETROL' },
-    { suffixId: 'BSR', name: 'Basra & Şattülarap', lon: 47.78, lat: 30.50, gdpShare: 0.28, resource: 'PETROL' },
-    { suffixId: 'EBL', name: 'Musul & Ninova', lon: 43.13, lat: 36.34, gdpShare: 0.20, resource: 'DOGALGAZ' },
-    { suffixId: 'KIK', name: 'Kerkük & Şehrizor', lon: 44.39, lat: 35.46, gdpShare: 0.16, resource: 'PETROL' },
+    { suffixId: 'BGW', name: 'Bağdat', lon: 44.36, lat: 33.31, isCapital: true, gdpShare: 0.36, resource: 'PETROL' },
+    { suffixId: 'BSR', name: 'Basra', lon: 47.78, lat: 30.50, gdpShare: 0.28, resource: 'PETROL' },
+    { suffixId: 'EBL', name: 'Musul', lon: 43.13, lat: 36.34, gdpShare: 0.20, resource: 'DOGALGAZ' },
+    { suffixId: 'KIK', name: 'Kerkük', lon: 44.39, lat: 35.46, gdpShare: 0.16, resource: 'PETROL' },
   ],
-  // Gürcistan (2 Bölge)
+  // Gürcistan (2 Şehir)
   '268': [
-    { suffixId: 'TBS', name: 'Tiflis & Kartli-Kaheti', lon: 44.78, lat: 41.71, isCapital: true, gdpShare: 0.62, resource: 'DEMIR_CELIK' },
-    { suffixId: 'BUS', name: 'Batum & Acara Kıyısı', lon: 41.63, lat: 41.64, gdpShare: 0.38, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'TBS', name: 'Tiflis', lon: 44.78, lat: 41.71, isCapital: true, gdpShare: 0.62, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BUS', name: 'Batum', lon: 41.63, lat: 41.64, gdpShare: 0.38, resource: 'TICARET_BOGAZI' },
   ],
-  // Azerbaycan (3 Bölge)
+  // Azerbaycan (3 Şehir)
   '031': [
-    { suffixId: 'BAK', name: 'Bakü & Şirvan (Hazar)', lon: 49.86, lat: 40.40, isCapital: true, gdpShare: 0.50, resource: 'PETROL' },
-    { suffixId: 'GNJ', name: 'Gence & Arran', lon: 46.36, lat: 40.68, gdpShare: 0.28, resource: 'DOGALGAZ' },
-    { suffixId: 'SKX', name: 'Şuşa & Karabağ', lon: 46.75, lat: 39.76, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BAK', name: 'Bakü', lon: 49.86, lat: 40.40, isCapital: true, gdpShare: 0.50, resource: 'PETROL' },
+    { suffixId: 'GNJ', name: 'Gence', lon: 46.36, lat: 40.68, gdpShare: 0.28, resource: 'DOGALGAZ' },
+    { suffixId: 'SKX', name: 'Şuşa', lon: 46.75, lat: 39.76, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
   ],
-  // İran (7 Bölge)
+  // İran (7 Şehir)
   '364': [
-    { suffixId: 'THR', name: 'Tahran & Rey', lon: 51.38, lat: 35.68, isCapital: true, gdpShare: 0.22, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'TBZ', name: 'Tebriz & Güney Azerbaycan', lon: 46.29, lat: 38.08, gdpShare: 0.16, resource: 'DOGALGAZ' },
-    { suffixId: 'ISF', name: 'İsfahan & Merkez İran', lon: 51.67, lat: 32.65, gdpShare: 0.16, resource: 'DEMIR_CELIK' },
-    { suffixId: 'AWZ', name: 'Ahvaz & Huzistan (Hürmüz)', lon: 48.67, lat: 31.32, gdpShare: 0.15, resource: 'PETROL' },
-    { suffixId: 'SYZ', name: 'Şiraz & Fars Eyaleti', lon: 52.53, lat: 29.59, gdpShare: 0.11, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'KER', name: 'Kirman & Güneydoğu İran', lon: 57.08, lat: 30.28, gdpShare: 0.09, resource: 'NADIR_TOPRAK' },
-    { suffixId: 'MHD', name: 'Meşhed & Horasan', lon: 59.60, lat: 36.29, gdpShare: 0.11, resource: 'DEMIR_CELIK' },
+    { suffixId: 'THR', name: 'Tahran', lon: 51.38, lat: 35.68, isCapital: true, gdpShare: 0.22, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'TBZ', name: 'Tebriz', lon: 46.29, lat: 38.08, gdpShare: 0.16, resource: 'DOGALGAZ' },
+    { suffixId: 'ISF', name: 'İsfahan', lon: 51.67, lat: 32.65, gdpShare: 0.16, resource: 'DEMIR_CELIK' },
+    { suffixId: 'AWZ', name: 'Ahvaz', lon: 48.67, lat: 31.32, gdpShare: 0.15, resource: 'PETROL' },
+    { suffixId: 'SYZ', name: 'Şiraz', lon: 52.53, lat: 29.59, gdpShare: 0.11, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'KER', name: 'Kirman', lon: 57.08, lat: 30.28, gdpShare: 0.09, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'MHD', name: 'Meşhed', lon: 59.60, lat: 36.29, gdpShare: 0.11, resource: 'DEMIR_CELIK' },
   ],
-  // Almanya (6 Bölge)
+  // Almanya (6 Şehir)
   '276': [
-    { suffixId: 'BER', name: 'Berlin & Brandenburg', lon: 13.40, lat: 52.52, isCapital: true, gdpShare: 0.20, resource: 'YARI_ILETKEN' },
-    { suffixId: 'MUC', name: 'Münih & Bavyera', lon: 11.58, lat: 48.13, gdpShare: 0.20, resource: 'YARI_ILETKEN' },
-    { suffixId: 'STR', name: 'Stuttgart & Svabya', lon: 9.18, lat: 48.78, gdpShare: 0.14, resource: 'YARI_ILETKEN' },
-    { suffixId: 'FRA', name: 'Frankfurt & Ren-Vestfalya', lon: 7.50, lat: 50.90, gdpShare: 0.20, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'HAM', name: 'Hamburg & Aşağı Saksonya', lon: 9.99, lat: 53.55, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'DRS', name: 'Dresden & Saksonya', lon: 13.73, lat: 51.05, gdpShare: 0.12, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BER', name: 'Berlin', lon: 13.40, lat: 52.52, isCapital: true, gdpShare: 0.20, resource: 'YARI_ILETKEN' },
+    { suffixId: 'MUC', name: 'Münih', lon: 11.58, lat: 48.13, gdpShare: 0.20, resource: 'YARI_ILETKEN' },
+    { suffixId: 'STR', name: 'Stuttgart', lon: 9.18, lat: 48.78, gdpShare: 0.14, resource: 'YARI_ILETKEN' },
+    { suffixId: 'FRA', name: 'Frankfurt', lon: 7.50, lat: 50.90, gdpShare: 0.20, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'HAM', name: 'Hamburg', lon: 9.99, lat: 53.55, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'DRS', name: 'Dresden', lon: 13.73, lat: 51.05, gdpShare: 0.12, resource: 'DEMIR_CELIK' },
   ],
-  // Fransa (6 Bölge)
+  // Fransa (6 Şehir)
   '250': [
-    { suffixId: 'PAR', name: 'Paris & Île-de-France', lon: 2.35, lat: 48.85, isCapital: true, gdpShare: 0.26, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'LYO', name: 'Lyon & Burgunya', lon: 4.83, lat: 45.76, gdpShare: 0.18, resource: 'YARI_ILETKEN' },
-    { suffixId: 'MRS', name: 'Marsilya & Provence', lon: 5.36, lat: 43.29, gdpShare: 0.16, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'TLS', name: 'Toulouse & Languedoc', lon: 1.44, lat: 43.60, gdpShare: 0.12, resource: 'TAHIL' },
-    { suffixId: 'BDX', name: 'Bordeaux & Akitanya', lon: -0.57, lat: 44.83, gdpShare: 0.14, resource: 'TAHIL' },
-    { suffixId: 'NTE', name: 'Normandiya & Bretonya', lon: -1.55, lat: 47.90, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'PAR', name: 'Paris', lon: 2.35, lat: 48.85, isCapital: true, gdpShare: 0.26, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'LYO', name: 'Lyon', lon: 4.83, lat: 45.76, gdpShare: 0.18, resource: 'YARI_ILETKEN' },
+    { suffixId: 'MRS', name: 'Marsilya', lon: 5.36, lat: 43.29, gdpShare: 0.16, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'TLS', name: 'Toulouse', lon: 1.44, lat: 43.60, gdpShare: 0.12, resource: 'TAHIL' },
+    { suffixId: 'BDX', name: 'Bordeaux', lon: -0.57, lat: 44.83, gdpShare: 0.14, resource: 'TAHIL' },
+    { suffixId: 'NTE', name: 'Nantes', lon: -1.55, lat: 47.90, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
   ],
-  // Birleşik Krallık (4 Bölge)
+  // Birleşik Krallık (4 Şehir)
   '826': [
-    { suffixId: 'LON', name: 'Londra & Güney İngiltere', lon: -0.12, lat: 51.50, isCapital: true, gdpShare: 0.40, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'MAN', name: 'Manchester & York (Kuzey)', lon: -2.24, lat: 53.48, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
-    { suffixId: 'CWL', name: 'Cardiff & Galler', lon: -3.18, lat: 51.48, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
-    { suffixId: 'EDI', name: 'Edinburgh & İskoçya', lon: -3.18, lat: 56.50, gdpShare: 0.20, resource: 'PETROL' },
+    { suffixId: 'LON', name: 'Londra', lon: -0.12, lat: 51.50, isCapital: true, gdpShare: 0.40, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MAN', name: 'Manchester', lon: -2.24, lat: 53.48, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
+    { suffixId: 'CWL', name: 'Cardiff', lon: -3.18, lat: 51.48, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
+    { suffixId: 'EDI', name: 'Edinburgh', lon: -3.18, lat: 56.50, gdpShare: 0.20, resource: 'PETROL' },
   ],
-  // İtalya (6 Bölge)
+  // İtalya (6 Şehir)
   '380': [
-    { suffixId: 'ROM', name: 'Roma & Lazio', lon: 12.49, lat: 41.90, isCapital: true, gdpShare: 0.22, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'FLR', name: 'Floransa & Toskana', lon: 11.25, lat: 43.77, gdpShare: 0.14, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'MIL', name: 'Milano & Lombardiya', lon: 9.19, lat: 45.46, gdpShare: 0.24, resource: 'YARI_ILETKEN' },
-    { suffixId: 'VCE', name: 'Venedik & Veneto', lon: 12.31, lat: 45.44, gdpShare: 0.16, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'NAP', name: 'Napoli & Güney İtalya', lon: 14.26, lat: 40.85, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'PMO', name: 'Palermo & Sicilya Adası', lon: 13.80, lat: 37.55, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'ROM', name: 'Roma', lon: 12.49, lat: 41.90, isCapital: true, gdpShare: 0.22, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'FLR', name: 'Floransa', lon: 11.25, lat: 43.77, gdpShare: 0.14, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MIL', name: 'Milano', lon: 9.19, lat: 45.46, gdpShare: 0.24, resource: 'YARI_ILETKEN' },
+    { suffixId: 'VCE', name: 'Venedik', lon: 12.31, lat: 45.44, gdpShare: 0.16, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'NAP', name: 'Napoli', lon: 14.26, lat: 40.85, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'PMO', name: 'Palermo', lon: 13.80, lat: 37.55, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
   ],
-  // İspanya (6 Bölge)
+  // İspanya (6 Şehir)
   '724': [
-    { suffixId: 'MAD', name: 'Madrid & Kastilya', lon: -3.70, lat: 40.41, isCapital: true, gdpShare: 0.26, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'BCN', name: 'Barselona & Aragon-Katalonya', lon: 2.17, lat: 41.38, gdpShare: 0.22, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'VLC', name: 'Valensiya & Doğu Kıyısı', lon: -0.38, lat: 39.47, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'SEV', name: 'Sevilla & Batı Endülüs', lon: -5.98, lat: 37.38, gdpShare: 0.14, resource: 'TAHIL' },
-    { suffixId: 'GRX', name: 'Granada & Doğu Endülüs', lon: -3.60, lat: 37.18, gdpShare: 0.10, resource: 'TAHIL' },
-    { suffixId: 'BIO', name: 'Bilbao & Galiçya-Asturias', lon: -5.80, lat: 43.00, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
+    { suffixId: 'MAD', name: 'Madrid', lon: -3.70, lat: 40.41, isCapital: true, gdpShare: 0.26, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'BCN', name: 'Barselona', lon: 2.17, lat: 41.38, gdpShare: 0.22, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'VLC', name: 'Valensiya', lon: -0.38, lat: 39.47, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SEV', name: 'Sevilla', lon: -5.98, lat: 37.38, gdpShare: 0.14, resource: 'TAHIL' },
+    { suffixId: 'GRX', name: 'Granada', lon: -3.60, lat: 37.18, gdpShare: 0.10, resource: 'TAHIL' },
+    { suffixId: 'BIO', name: 'Bilbao', lon: -5.80, lat: 43.00, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
   ],
-  // Portekiz (2 Bölge)
+  // Portekiz (2 Şehir)
   '620': [
-    { suffixId: 'LIS', name: 'Lizbon & Tejo Kıyısı', lon: -9.13, lat: 38.72, isCapital: true, gdpShare: 0.60, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'OPO', name: 'Porto & Kuzey Portekiz', lon: -8.62, lat: 41.15, gdpShare: 0.40, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'LIS', name: 'Lizbon', lon: -9.13, lat: 38.72, isCapital: true, gdpShare: 0.60, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'OPO', name: 'Porto', lon: -8.62, lat: 41.15, gdpShare: 0.40, resource: 'FINANS_MERKEZI' },
   ],
-  // Ukrayna (4 Bölge)
+  // Ukrayna (4 Şehir)
   '804': [
-    { suffixId: 'KYV', name: 'Kiev & Dinyeper', lon: 30.52, lat: 50.45, isCapital: true, gdpShare: 0.32, resource: 'TAHIL' },
-    { suffixId: 'LVV', name: 'Lviv & Galiçya-Podolya', lon: 24.03, lat: 49.84, gdpShare: 0.22, resource: 'TAHIL' },
-    { suffixId: 'ODS', name: 'Odessa & Özi-Kefe Kıyısı', lon: 30.72, lat: 46.48, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'HRK', name: 'Harkiv & Donbas Bozkırı', lon: 36.23, lat: 49.00, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
+    { suffixId: 'KYV', name: 'Kiev', lon: 30.52, lat: 50.45, isCapital: true, gdpShare: 0.32, resource: 'TAHIL' },
+    { suffixId: 'LVV', name: 'Lviv', lon: 24.03, lat: 49.84, gdpShare: 0.22, resource: 'TAHIL' },
+    { suffixId: 'ODS', name: 'Odessa', lon: 30.72, lat: 46.48, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'HRK', name: 'Harkiv', lon: 36.23, lat: 49.00, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
   ],
-  // Polonya (4 Bölge)
+  // Polonya (4 Şehir)
   '616': [
-    { suffixId: 'WAW', name: 'Varşova & Mazovya', lon: 21.01, lat: 52.23, isCapital: true, gdpShare: 0.34, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'POZ', name: 'Poznań & Büyük Polonya', lon: 16.92, lat: 52.40, gdpShare: 0.20, resource: 'TAHIL' },
-    { suffixId: 'KRK', name: 'Krakow & Silezya', lon: 19.94, lat: 50.06, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
-    { suffixId: 'GDN', name: 'Gdansk & Baltık Prusyası', lon: 18.64, lat: 54.35, gdpShare: 0.20, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'WAW', name: 'Varşova', lon: 21.01, lat: 52.23, isCapital: true, gdpShare: 0.34, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'POZ', name: 'Poznań', lon: 16.92, lat: 52.40, gdpShare: 0.20, resource: 'TAHIL' },
+    { suffixId: 'KRK', name: 'Krakow', lon: 19.94, lat: 50.06, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
+    { suffixId: 'GDN', name: 'Gdansk', lon: 18.64, lat: 54.35, gdpShare: 0.20, resource: 'TICARET_BOGAZI' },
   ],
-  // Belarus (2 Bölge)
+  // Belarus (2 Şehir)
   '112': [
-    { suffixId: 'MSQ', name: 'Minsk & Beyaz Rusya', lon: 27.56, lat: 53.90, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
-    { suffixId: 'BQT', name: 'Brest & Polotsk', lon: 23.68, lat: 52.09, gdpShare: 0.42, resource: 'DEMIR_CELIK' },
+    { suffixId: 'MSQ', name: 'Minsk', lon: 27.56, lat: 53.90, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
+    { suffixId: 'BQT', name: 'Brest', lon: 23.68, lat: 52.09, gdpShare: 0.42, resource: 'DEMIR_CELIK' },
   ],
-  // Litvanya (2 Bölge)
+  // Litvanya (2 Şehir)
   '440': [
-    { suffixId: 'VNO', name: 'Vilnius & Doğu Litvanya', lon: 25.27, lat: 54.68, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
-    { suffixId: 'KUN', name: 'Kaunas & Samogitya', lon: 23.90, lat: 54.89, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'VNO', name: 'Vilnius', lon: 25.27, lat: 54.68, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
+    { suffixId: 'KUN', name: 'Kaunas', lon: 23.90, lat: 54.89, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
   ],
-  // İsveç (3 Bölge)
+  // İsveç (3 Şehir)
   '752': [
-    { suffixId: 'STO', name: 'Stokholm & Svealand', lon: 18.06, lat: 59.32, isCapital: true, gdpShare: 0.45, resource: 'YARI_ILETKEN' },
-    { suffixId: 'GOT', name: 'Göteborg & Götaland', lon: 11.97, lat: 57.70, gdpShare: 0.33, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'KIR', name: 'Kiruna & Kuzey Laponya', lon: 20.22, lat: 67.85, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
+    { suffixId: 'STO', name: 'Stokholm', lon: 18.06, lat: 59.32, isCapital: true, gdpShare: 0.45, resource: 'YARI_ILETKEN' },
+    { suffixId: 'GOT', name: 'Göteborg', lon: 11.97, lat: 57.70, gdpShare: 0.33, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'KIR', name: 'Kiruna', lon: 20.22, lat: 67.85, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
   ],
-  // Norveç (3 Bölge)
+  // Norveç (3 Şehir)
   '578': [
-    { suffixId: 'OSL', name: 'Oslo & Güney Norveç', lon: 10.75, lat: 59.91, isCapital: true, gdpShare: 0.46, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'BGO', name: 'Bergen & Kuzey Denizi', lon: 5.32, lat: 60.39, gdpShare: 0.34, resource: 'DOGALGAZ' },
-    { suffixId: 'TOS', name: 'Tromsø & Arktik Kıyısı', lon: 18.95, lat: 69.64, gdpShare: 0.20, resource: 'PETROL' },
+    { suffixId: 'OSL', name: 'Oslo', lon: 10.75, lat: 59.91, isCapital: true, gdpShare: 0.46, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'BGO', name: 'Bergen', lon: 5.32, lat: 60.39, gdpShare: 0.34, resource: 'DOGALGAZ' },
+    { suffixId: 'TOS', name: 'Tromsø', lon: 18.95, lat: 69.64, gdpShare: 0.20, resource: 'PETROL' },
   ],
-  // Finlandiya (2 Bölge)
+  // Finlandiya (2 Şehir)
   '246': [
-    { suffixId: 'HEL', name: 'Helsinki & Güney Finlandiya', lon: 24.93, lat: 60.16, isCapital: true, gdpShare: 0.64, resource: 'YARI_ILETKEN' },
-    { suffixId: 'OUL', name: 'Oulu & Karelya-Laponya', lon: 25.46, lat: 65.01, gdpShare: 0.36, resource: 'DEMIR_CELIK' },
+    { suffixId: 'HEL', name: 'Helsinki', lon: 24.93, lat: 60.16, isCapital: true, gdpShare: 0.64, resource: 'YARI_ILETKEN' },
+    { suffixId: 'OUL', name: 'Oulu', lon: 25.46, lat: 65.01, gdpShare: 0.36, resource: 'DEMIR_CELIK' },
   ],
-  // Rusya (10 Bölge)
+  // Rusya (10 Şehir)
   '643': [
-    { suffixId: 'MOW', name: 'Moskova & Merkez Rusya', lon: 37.61, lat: 55.75, isCapital: true, gdpShare: 0.20, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'LED', name: 'St. Petersburg & Novgorod', lon: 30.33, lat: 59.93, gdpShare: 0.13, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'KRR', name: 'Krasnodar & Kırım-Kuban', lon: 39.00, lat: 45.03, gdpShare: 0.10, resource: 'TAHIL' },
-    { suffixId: 'VOG', name: 'Volgograd & Aşağı Volga', lon: 44.51, lat: 48.70, gdpShare: 0.08, resource: 'DEMIR_CELIK' },
-    { suffixId: 'ASF', name: 'Astrahan & İdil Deltası', lon: 48.03, lat: 46.34, gdpShare: 0.08, resource: 'PETROL' },
-    { suffixId: 'KZN', name: 'Kazan & İdil-Bulgar', lon: 49.10, lat: 55.79, gdpShare: 0.10, resource: 'DOGALGAZ' },
-    { suffixId: 'SVX', name: 'Yekaterinburg & Ural', lon: 60.60, lat: 56.83, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
-    { suffixId: 'OVB', name: 'Novosibirsk & Batı Sibirya', lon: 82.92, lat: 55.00, gdpShare: 0.08, resource: 'DOGALGAZ' },
-    { suffixId: 'IKT', name: 'İrkutsk & Baykal Sibirya', lon: 104.30, lat: 52.28, gdpShare: 0.07, resource: 'NADIR_TOPRAK' },
-    { suffixId: 'VVO', name: 'Vladivostok & Uzak Doğu', lon: 131.89, lat: 43.12, gdpShare: 0.07, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'MOW', name: 'Moskova', lon: 37.61, lat: 55.75, isCapital: true, gdpShare: 0.20, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'LED', name: 'St. Petersburg', lon: 30.33, lat: 59.93, gdpShare: 0.13, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'KRR', name: 'Krasnodar', lon: 39.00, lat: 45.03, gdpShare: 0.10, resource: 'TAHIL' },
+    { suffixId: 'VOG', name: 'Volgograd', lon: 44.51, lat: 48.70, gdpShare: 0.08, resource: 'DEMIR_CELIK' },
+    { suffixId: 'ASF', name: 'Astrahan', lon: 48.03, lat: 46.34, gdpShare: 0.08, resource: 'PETROL' },
+    { suffixId: 'KZN', name: 'Kazan', lon: 49.10, lat: 55.79, gdpShare: 0.10, resource: 'DOGALGAZ' },
+    { suffixId: 'SVX', name: 'Yekaterinburg', lon: 60.60, lat: 56.83, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
+    { suffixId: 'OVB', name: 'Novosibirsk', lon: 82.92, lat: 55.00, gdpShare: 0.08, resource: 'DOGALGAZ' },
+    { suffixId: 'IKT', name: 'İrkutsk', lon: 104.30, lat: 52.28, gdpShare: 0.07, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'VVO', name: 'Vladivostok', lon: 131.89, lat: 43.12, gdpShare: 0.07, resource: 'TICARET_BOGAZI' },
   ],
-  // Kazakistan (4 Bölge)
+  // Kazakistan (4 Şehir)
   '398': [
-    { suffixId: 'NQZ', name: 'Astana & Deşt-i Kıpçak', lon: 71.44, lat: 51.16, isCapital: true, gdpShare: 0.32, resource: 'DEMIR_CELIK' },
-    { suffixId: 'ALA', name: 'Almatı & Yedisu', lon: 76.88, lat: 43.23, gdpShare: 0.28, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'SCO', name: 'Aktau & Mangışlak (Hazar)', lon: 51.19, lat: 43.65, gdpShare: 0.22, resource: 'PETROL' },
-    { suffixId: 'CIT', name: 'Çimkent & Türkistan (Yesi)', lon: 68.50, lat: 42.90, gdpShare: 0.18, resource: 'TAHIL' },
+    { suffixId: 'NQZ', name: 'Astana', lon: 71.44, lat: 51.16, isCapital: true, gdpShare: 0.32, resource: 'DEMIR_CELIK' },
+    { suffixId: 'ALA', name: 'Almatı', lon: 76.88, lat: 43.23, gdpShare: 0.28, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'SCO', name: 'Aktau', lon: 51.19, lat: 43.65, gdpShare: 0.22, resource: 'PETROL' },
+    { suffixId: 'CIT', name: 'Çimkent', lon: 68.50, lat: 42.90, gdpShare: 0.18, resource: 'TAHIL' },
   ],
-  // Özbekistan / Maveraünnehir (3 Bölge)
+  // Özbekistan (3 Şehir)
   '860': [
-    { suffixId: 'TAS', name: 'Taşkent & Fergana Vadisi', lon: 69.24, lat: 41.29, isCapital: true, gdpShare: 0.42, resource: 'TAHIL' },
-    { suffixId: 'SKD', name: 'Semerkant & Buhara', lon: 66.95, lat: 39.65, gdpShare: 0.36, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'UGC', name: 'Hive & Harezm', lon: 60.63, lat: 41.55, gdpShare: 0.22, resource: 'DOGALGAZ' },
+    { suffixId: 'TAS', name: 'Taşkent', lon: 69.24, lat: 41.29, isCapital: true, gdpShare: 0.42, resource: 'TAHIL' },
+    { suffixId: 'SKD', name: 'Semerkant', lon: 66.95, lat: 39.65, gdpShare: 0.36, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'UGC', name: 'Hive', lon: 60.63, lat: 41.55, gdpShare: 0.22, resource: 'DOGALGAZ' },
   ],
-  // Türkmenistan (2 Bölge)
+  // Türkmenistan (2 Şehir)
   '795': [
-    { suffixId: 'ASB', name: 'Aşkabat & Merv', lon: 58.38, lat: 37.96, isCapital: true, gdpShare: 0.58, resource: 'DOGALGAZ' },
-    { suffixId: 'KRW', name: 'Türkmenbaşı & Balkan (Hazar)', lon: 53.00, lat: 40.02, gdpShare: 0.42, resource: 'PETROL' },
+    { suffixId: 'ASB', name: 'Aşkabat', lon: 58.38, lat: 37.96, isCapital: true, gdpShare: 0.58, resource: 'DOGALGAZ' },
+    { suffixId: 'KRW', name: 'Türkmenbaşı', lon: 53.00, lat: 40.02, gdpShare: 0.42, resource: 'PETROL' },
   ],
-  // Afganistan (3 Bölge)
+  // Afganistan (3 Şehir)
   '004': [
-    { suffixId: 'KBL', name: 'Kabil & Hindukuş', lon: 69.17, lat: 34.52, isCapital: true, gdpShare: 0.42, resource: 'NADIR_TOPRAK' },
-    { suffixId: 'HEA', name: 'Herat & Batı Horasan', lon: 62.20, lat: 34.35, gdpShare: 0.32, resource: 'TAHIL' },
-    { suffixId: 'KDH', name: 'Kandahar & Hilmend', lon: 65.73, lat: 31.62, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
+    { suffixId: 'KBL', name: 'Kabil', lon: 69.17, lat: 34.52, isCapital: true, gdpShare: 0.42, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'HEA', name: 'Herat', lon: 62.20, lat: 34.35, gdpShare: 0.32, resource: 'TAHIL' },
+    { suffixId: 'KDH', name: 'Kandahar', lon: 65.73, lat: 31.62, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
   ],
-  // ABD (8 Bölge)
+  // ABD (8 Şehir)
   '840': [
-    { suffixId: 'WAS', name: 'Washington & Orta Atlantik', lon: -77.50, lat: 38.40, isCapital: true, gdpShare: 0.16, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'NYC', name: 'New York & New England', lon: -73.80, lat: 41.50, gdpShare: 0.16, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'CHI', name: 'Şikago & Büyük Göller', lon: -87.62, lat: 41.87, gdpShare: 0.13, resource: 'TAHIL' },
-    { suffixId: 'ATL', name: 'Atlanta & Güneydoğu', lon: -84.38, lat: 33.74, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
-    { suffixId: 'MIA', name: 'Miami & Florida Yarımadası', lon: -81.50, lat: 27.60, gdpShare: 0.08, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'HOU', name: 'Teksas & Orta Güney', lon: -98.50, lat: 31.50, gdpShare: 0.13, resource: 'PETROL' },
-    { suffixId: 'LAX', name: 'Kaliforniya & Güney Pasifik', lon: -119.50, lat: 36.20, gdpShare: 0.15, resource: 'YARI_ILETKEN' },
-    { suffixId: 'SEA', name: 'Seattle & Kuzeybatı Pasifik', lon: -121.80, lat: 46.80, gdpShare: 0.09, resource: 'YARI_ILETKEN' },
+    { suffixId: 'WAS', name: 'Washington', lon: -77.50, lat: 38.40, isCapital: true, gdpShare: 0.16, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'NYC', name: 'New York', lon: -73.80, lat: 41.50, gdpShare: 0.16, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'CHI', name: 'Şikago', lon: -87.62, lat: 41.87, gdpShare: 0.13, resource: 'TAHIL' },
+    { suffixId: 'ATL', name: 'Atlanta', lon: -84.38, lat: 33.74, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
+    { suffixId: 'MIA', name: 'Miami', lon: -81.50, lat: 27.60, gdpShare: 0.08, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'HOU', name: 'Houston', lon: -98.50, lat: 31.50, gdpShare: 0.13, resource: 'PETROL' },
+    { suffixId: 'LAX', name: 'Los Angeles', lon: -119.50, lat: 36.20, gdpShare: 0.15, resource: 'YARI_ILETKEN' },
+    { suffixId: 'SEA', name: 'Seattle', lon: -121.80, lat: 46.80, gdpShare: 0.09, resource: 'YARI_ILETKEN' },
   ],
-  // Kanada (3 Bölge)
+  // Kanada (3 Şehir)
   '124': [
-    { suffixId: 'YOW', name: 'Ottawa & Ontario', lon: -75.69, lat: 45.42, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'YVR', name: 'Vancouver & Batı Kanada', lon: -123.12, lat: 49.28, gdpShare: 0.30, resource: 'PETROL' },
-    { suffixId: 'YUL', name: 'Montreal & Quebec', lon: -71.20, lat: 46.81, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
+    { suffixId: 'YOW', name: 'Ottawa', lon: -75.69, lat: 45.42, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'YVR', name: 'Vancouver', lon: -123.12, lat: 49.28, gdpShare: 0.30, resource: 'PETROL' },
+    { suffixId: 'YUL', name: 'Montreal', lon: -71.20, lat: 46.81, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
   ],
-  // Meksika (3 Bölge)
+  // Meksika (3 Şehir)
   '484': [
-    { suffixId: 'MEX', name: 'Meksiko & Tenochtitlan', lon: -99.13, lat: 19.43, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'MTY', name: 'Monterrey & Kuzey Meksika', lon: -100.31, lat: 25.68, gdpShare: 0.32, resource: 'DEMIR_CELIK' },
-    { suffixId: 'GDL', name: 'Guadalajara & Yucatan', lon: -103.34, lat: 20.65, gdpShare: 0.24, resource: 'PETROL' },
+    { suffixId: 'MEX', name: 'Meksiko', lon: -99.13, lat: 19.43, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MTY', name: 'Monterrey', lon: -100.31, lat: 25.68, gdpShare: 0.32, resource: 'DEMIR_CELIK' },
+    { suffixId: 'GDL', name: 'Guadalajara', lon: -103.34, lat: 20.65, gdpShare: 0.24, resource: 'PETROL' },
   ],
-  // Çin (8 Bölge)
+  // Çin (8 Şehir)
   '156': [
-    { suffixId: 'BJS', name: 'Pekin & Kuzey Çin', lon: 116.40, lat: 39.90, isCapital: true, gdpShare: 0.18, resource: 'DEMIR_CELIK' },
-    { suffixId: 'SHA', name: 'Nanjing & Şanghay Kıyısı', lon: 121.47, lat: 31.23, gdpShare: 0.20, resource: 'YARI_ILETKEN' },
-    { suffixId: 'CAN', name: 'Kanton (Guangzhou) & Güney', lon: 113.26, lat: 23.12, gdpShare: 0.17, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'SIA', name: 'Xi\'an (Chang\'an) & Sarı Nehir', lon: 108.94, lat: 34.26, gdpShare: 0.10, resource: 'TAHIL' },
-    { suffixId: 'SHE', name: 'Mançurya & Şenyang', lon: 123.43, lat: 43.80, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
-    { suffixId: 'CTU', name: 'Siçuan & İç Çin', lon: 104.06, lat: 30.67, gdpShare: 0.10, resource: 'NADIR_TOPRAK' },
-    { suffixId: 'LXA', name: 'Lhasa & Tibet Platosu', lon: 91.11, lat: 29.65, gdpShare: 0.06, resource: 'NADIR_TOPRAK' },
-    { suffixId: 'URC', name: 'Doğu Türkistan & Kaşgar', lon: 85.61, lat: 41.50, gdpShare: 0.09, resource: 'PETROL' },
+    { suffixId: 'BJS', name: 'Pekin', lon: 116.40, lat: 39.90, isCapital: true, gdpShare: 0.18, resource: 'DEMIR_CELIK' },
+    { suffixId: 'SHA', name: 'Şanghay', lon: 121.47, lat: 31.23, gdpShare: 0.20, resource: 'YARI_ILETKEN' },
+    { suffixId: 'CAN', name: 'Kanton', lon: 113.26, lat: 23.12, gdpShare: 0.17, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SIA', name: 'Xi\'an', lon: 108.94, lat: 34.26, gdpShare: 0.10, resource: 'TAHIL' },
+    { suffixId: 'SHE', name: 'Şenyang', lon: 123.43, lat: 43.80, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
+    { suffixId: 'CTU', name: 'Çengdu', lon: 104.06, lat: 30.67, gdpShare: 0.10, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'LXA', name: 'Lhasa', lon: 91.11, lat: 29.65, gdpShare: 0.06, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'URC', name: 'Urumçi', lon: 85.61, lat: 41.50, gdpShare: 0.09, resource: 'PETROL' },
   ],
-  // Moğolistan (2 Bölge)
+  // Moğolistan (2 Şehir)
   '496': [
-    { suffixId: 'ULN', name: 'Ulanbator & Halha Bozkırı', lon: 106.90, lat: 47.88, isCapital: true, gdpShare: 0.58, resource: 'DEMIR_CELIK' },
-    { suffixId: 'Kov', name: 'Karakurum & Altaylar', lon: 95.50, lat: 47.50, gdpShare: 0.42, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'ULN', name: 'Ulanbator', lon: 106.90, lat: 47.88, isCapital: true, gdpShare: 0.58, resource: 'DEMIR_CELIK' },
+    { suffixId: 'Kov', name: 'Karakurum', lon: 95.50, lat: 47.50, gdpShare: 0.42, resource: 'NADIR_TOPRAK' },
   ],
-  // Mısır (4 Bölge)
+  // Mısır (4 Şehir)
   '818': [
-    { suffixId: 'CAI', name: 'Kahire & Nil Deltası', lon: 31.23, lat: 30.04, isCapital: true, gdpShare: 0.38, resource: 'TAHIL' },
-    { suffixId: 'ALY', name: 'İskenderiye & Batı Kıyısı', lon: 29.91, lat: 31.20, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'SUZ', name: 'Süveyş & Sina Yarımadası', lon: 33.20, lat: 29.50, gdpShare: 0.20, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'ASW', name: 'Luksor & Yukarı Mısır', lon: 31.50, lat: 25.00, gdpShare: 0.18, resource: 'PETROL' },
+    { suffixId: 'CAI', name: 'Kahire', lon: 31.23, lat: 30.04, isCapital: true, gdpShare: 0.38, resource: 'TAHIL' },
+    { suffixId: 'ALY', name: 'İskenderiye', lon: 29.91, lat: 31.20, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SUZ', name: 'Süveyş', lon: 33.20, lat: 29.50, gdpShare: 0.20, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'ASW', name: 'Asvan', lon: 31.50, lat: 25.00, gdpShare: 0.18, resource: 'PETROL' },
   ],
-  // Libya (2 Bölge)
+  // Libya (2 Şehir)
   '434': [
-    { suffixId: 'TIP', name: 'Trablus & Trablusgarp', lon: 13.19, lat: 32.88, isCapital: true, gdpShare: 0.56, resource: 'PETROL' },
-    { suffixId: 'BEN', name: 'Bingazi & Sirenayka', lon: 20.06, lat: 32.11, gdpShare: 0.44, resource: 'PETROL' },
+    { suffixId: 'TIP', name: 'Trablus', lon: 13.19, lat: 32.88, isCapital: true, gdpShare: 0.56, resource: 'PETROL' },
+    { suffixId: 'BEN', name: 'Bingazi', lon: 20.06, lat: 32.11, gdpShare: 0.44, resource: 'PETROL' },
   ],
-  // Tunus (2 Bölge)
+  // Tunus (2 Şehir)
   '788': [
-    { suffixId: 'TUN', name: 'Tunus & Kartaca Kıyısı', lon: 10.18, lat: 36.80, isCapital: true, gdpShare: 0.60, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'SFA', name: 'Kayrevan & Safaks', lon: 10.10, lat: 34.74, gdpShare: 0.40, resource: 'PETROL' },
+    { suffixId: 'TUN', name: 'Tunus', lon: 10.18, lat: 36.80, isCapital: true, gdpShare: 0.60, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SFA', name: 'Kayrevan', lon: 10.10, lat: 34.74, gdpShare: 0.40, resource: 'PETROL' },
   ],
-  // Cezayir (3 Bölge)
+  // Cezayir (3 Şehir)
   '012': [
-    { suffixId: 'ALG', name: 'Cezayir & Kabîliye', lon: 3.05, lat: 36.75, isCapital: true, gdpShare: 0.46, resource: 'DOGALGAZ' },
-    { suffixId: 'ORN', name: 'Oran & Tilimsan', lon: -0.63, lat: 35.69, gdpShare: 0.32, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'HME', name: 'Güney Cezayir & Sahra', lon: 4.00, lat: 29.00, gdpShare: 0.22, resource: 'PETROL' },
+    { suffixId: 'ALG', name: 'Cezayir', lon: 3.05, lat: 36.75, isCapital: true, gdpShare: 0.46, resource: 'DOGALGAZ' },
+    { suffixId: 'ORN', name: 'Oran', lon: -0.63, lat: 35.69, gdpShare: 0.32, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'HME', name: 'Tamanrasset', lon: 4.00, lat: 29.00, gdpShare: 0.22, resource: 'PETROL' },
   ],
-  // Fas (3 Bölge)
+  // Fas (3 Şehir)
   '504': [
-    { suffixId: 'RBA', name: 'Rabat & Kazablanka', lon: -6.84, lat: 34.02, isCapital: true, gdpShare: 0.44, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'FEZ', name: 'Fes & Tanca (Cebelitarık)', lon: -5.00, lat: 35.10, gdpShare: 0.28, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'RAK', name: 'Marakeş & Atlas Dağları', lon: -7.98, lat: 31.62, gdpShare: 0.28, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'RBA', name: 'Rabat', lon: -6.84, lat: 34.02, isCapital: true, gdpShare: 0.44, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'FEZ', name: 'Fes', lon: -5.00, lat: 35.10, gdpShare: 0.28, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'RAK', name: 'Marakeş', lon: -7.98, lat: 31.62, gdpShare: 0.28, resource: 'NADIR_TOPRAK' },
   ],
-  // Suudi Arabistan (4 Bölge)
+  // Suudi Arabistan (4 Şehir)
   '682': [
-    { suffixId: 'RUH', name: 'Riyad & Necd', lon: 46.71, lat: 24.71, isCapital: true, gdpShare: 0.32, resource: 'PETROL' },
-    { suffixId: 'JED', name: 'Mekke & Cidde (Hicaz)', lon: 39.19, lat: 21.48, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'MED', name: 'Medine & Tebük', lon: 38.50, lat: 25.50, gdpShare: 0.18, resource: 'TAHIL' },
-    { suffixId: 'DMM', name: 'Dammam & El-Ahsa (Körfez)', lon: 50.10, lat: 26.42, gdpShare: 0.26, resource: 'PETROL' },
+    { suffixId: 'RUH', name: 'Riyad', lon: 46.71, lat: 24.71, isCapital: true, gdpShare: 0.32, resource: 'PETROL' },
+    { suffixId: 'JED', name: 'Mekke', lon: 39.19, lat: 21.48, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'MED', name: 'Medine', lon: 38.50, lat: 25.50, gdpShare: 0.18, resource: 'TAHIL' },
+    { suffixId: 'DMM', name: 'Dammam', lon: 50.10, lat: 26.42, gdpShare: 0.26, resource: 'PETROL' },
   ],
-  // Yemen (2 Bölge)
+  // Yemen (2 Şehir)
   '887': [
-    { suffixId: 'SAH', name: 'Sana & Dağlık Yemen', lon: 44.20, lat: 15.35, isCapital: true, gdpShare: 0.54, resource: 'TAHIL' },
-    { suffixId: 'ADE', name: 'Aden & Babülmendep Boğazı', lon: 45.03, lat: 12.78, gdpShare: 0.46, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SAH', name: 'Sana', lon: 44.20, lat: 15.35, isCapital: true, gdpShare: 0.54, resource: 'TAHIL' },
+    { suffixId: 'ADE', name: 'Aden', lon: 45.03, lat: 12.78, gdpShare: 0.46, resource: 'TICARET_BOGAZI' },
   ],
-  // Etiyopya / Habeşistan (2 Bölge)
+  // Etiyopya (2 Şehir)
   '231': [
-    { suffixId: 'ADD', name: 'Addis Ababa & Habeş Yaylası', lon: 38.74, lat: 9.03, isCapital: true, gdpShare: 0.62, resource: 'TAHIL' },
-    { suffixId: 'DIR', name: 'Harar & Ogaden', lon: 42.12, lat: 9.31, gdpShare: 0.38, resource: 'DEMIR_CELIK' },
+    { suffixId: 'ADD', name: 'Addis Ababa', lon: 38.74, lat: 9.03, isCapital: true, gdpShare: 0.62, resource: 'TAHIL' },
+    { suffixId: 'DIR', name: 'Harar', lon: 42.12, lat: 9.31, gdpShare: 0.38, resource: 'DEMIR_CELIK' },
   ],
-  // Nijerya (2 Bölge)
+  // Nijerya (2 Şehir)
   '566': [
-    { suffixId: 'ABV', name: 'Abuja & Kuzey Hausa', lon: 7.49, lat: 9.07, isCapital: true, gdpShare: 0.48, resource: 'TAHIL' },
-    { suffixId: 'LOS', name: 'Lagos & Nijer Deltası', lon: 3.37, lat: 6.52, gdpShare: 0.52, resource: 'PETROL' },
+    { suffixId: 'ABV', name: 'Abuja', lon: 7.49, lat: 9.07, isCapital: true, gdpShare: 0.48, resource: 'TAHIL' },
+    { suffixId: 'LOS', name: 'Lagos', lon: 3.37, lat: 6.52, gdpShare: 0.52, resource: 'PETROL' },
   ],
-  // Güney Afrika (2 Bölge)
+  // Güney Afrika (2 Şehir)
   '710': [
-    { suffixId: 'JNB', name: 'Pretoria & Transvaal', lon: 28.04, lat: -26.20, isCapital: true, gdpShare: 0.58, resource: 'NADIR_TOPRAK' },
-    { suffixId: 'CPT', name: 'Cape Town & Ümit Burnu', lon: 18.42, lat: -33.92, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'JNB', name: 'Pretoria', lon: 28.04, lat: -26.20, isCapital: true, gdpShare: 0.58, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'CPT', name: 'Cape Town', lon: 18.42, lat: -33.92, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
   ],
-  // Pakistan (3 Bölge)
+  // Pakistan (3 Şehir)
   '586': [
-    { suffixId: 'ISB', name: 'İslamabad & Lahor (Pencap)', lon: 73.04, lat: 33.68, isCapital: true, gdpShare: 0.44, resource: 'TAHIL' },
-    { suffixId: 'KHI', name: 'Karaçi & Sind Kıyısı', lon: 67.00, lat: 24.86, gdpShare: 0.36, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'PEW', name: 'Peşaver & Belucistan', lon: 71.52, lat: 34.01, gdpShare: 0.20, resource: 'DEMIR_CELIK' },
+    { suffixId: 'ISB', name: 'İslamabad', lon: 73.04, lat: 33.68, isCapital: true, gdpShare: 0.44, resource: 'TAHIL' },
+    { suffixId: 'KHI', name: 'Karaçi', lon: 67.00, lat: 24.86, gdpShare: 0.36, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'PEW', name: 'Peşaver', lon: 71.52, lat: 34.01, gdpShare: 0.20, resource: 'DEMIR_CELIK' },
   ],
-  // Hindistan (7 Bölge)
+  // Hindistan (7 Şehir)
   '356': [
-    { suffixId: 'DEL', name: 'Yeni Delhi & Kuzey Hindistan', lon: 77.20, lat: 28.61, isCapital: true, gdpShare: 0.21, resource: 'TAHIL' },
-    { suffixId: 'AMD', name: 'Ahmedabad & Gücerat', lon: 72.57, lat: 23.02, gdpShare: 0.13, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'BOM', name: 'Mumbai & Batı Dekkan', lon: 73.50, lat: 18.80, gdpShare: 0.19, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'HYD', name: 'Haydarabad & Orta Hindistan', lon: 78.48, lat: 17.38, gdpShare: 0.13, resource: 'DEMIR_CELIK' },
-    { suffixId: 'BLR', name: 'Bangalore & Güney (Vijayanagara)', lon: 77.59, lat: 12.97, gdpShare: 0.13, resource: 'YARI_ILETKEN' },
-    { suffixId: 'PAT', name: 'Patna & Ganj Vadisi', lon: 84.80, lat: 25.60, gdpShare: 0.09, resource: 'TAHIL' },
-    { suffixId: 'CCU', name: 'Kalküta & Bengal Havzası', lon: 88.36, lat: 22.57, gdpShare: 0.12, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'DEL', name: 'Yeni Delhi', lon: 77.20, lat: 28.61, isCapital: true, gdpShare: 0.21, resource: 'TAHIL' },
+    { suffixId: 'AMD', name: 'Ahmedabad', lon: 72.57, lat: 23.02, gdpShare: 0.13, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'BOM', name: 'Mumbai', lon: 73.50, lat: 18.80, gdpShare: 0.19, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'HYD', name: 'Haydarabad', lon: 78.48, lat: 17.38, gdpShare: 0.13, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BLR', name: 'Bangalore', lon: 77.59, lat: 12.97, gdpShare: 0.13, resource: 'YARI_ILETKEN' },
+    { suffixId: 'PAT', name: 'Patna', lon: 84.80, lat: 25.60, gdpShare: 0.09, resource: 'TAHIL' },
+    { suffixId: 'CCU', name: 'Kalküta', lon: 88.36, lat: 22.57, gdpShare: 0.12, resource: 'TICARET_BOGAZI' },
   ],
-  // Endonezya (3 Bölge)
+  // Endonezya (3 Şehir)
   '360': [
-    { suffixId: 'JKT', name: 'Cakarta & Cava Adası', lon: 106.84, lat: -6.20, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'MES', name: 'Medan & Sumatra (Malakka)', lon: 98.67, lat: 3.59, gdpShare: 0.28, resource: 'PETROL' },
-    { suffixId: 'BPN', name: 'Kalimantan & Doğu Adaları', lon: 116.83, lat: -1.26, gdpShare: 0.24, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'JKT', name: 'Cakarta', lon: 106.84, lat: -6.20, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MES', name: 'Medan', lon: 98.67, lat: 3.59, gdpShare: 0.28, resource: 'PETROL' },
+    { suffixId: 'BPN', name: 'Balikpapan', lon: 116.83, lat: -1.26, gdpShare: 0.24, resource: 'NADIR_TOPRAK' },
   ],
-  // Güney Kore (2 Bölge)
+  // Güney Kore (2 Şehir)
   '410': [
-    { suffixId: 'SEL', name: 'Seul & Gyeonggi', lon: 126.97, lat: 37.56, isCapital: true, gdpShare: 0.62, resource: 'YARI_ILETKEN' },
-    { suffixId: 'PUS', name: 'Busan & Güneydoğu', lon: 129.07, lat: 35.17, gdpShare: 0.38, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SEL', name: 'Seul', lon: 126.97, lat: 37.56, isCapital: true, gdpShare: 0.62, resource: 'YARI_ILETKEN' },
+    { suffixId: 'PUS', name: 'Busan', lon: 129.07, lat: 35.17, gdpShare: 0.38, resource: 'TICARET_BOGAZI' },
   ],
-  // Japonya (3 Bölge)
+  // Japonya (3 Şehir)
   '392': [
-    { suffixId: 'TYO', name: 'Tokyo & Kanto', lon: 139.69, lat: 35.68, isCapital: true, gdpShare: 0.46, resource: 'YARI_ILETKEN' },
-    { suffixId: 'OSA', name: 'Kyoto-Osaka & Kansai', lon: 135.50, lat: 34.69, gdpShare: 0.32, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'SPK', name: 'Sapporo & Kuzey Japonya', lon: 141.35, lat: 42.00, gdpShare: 0.22, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'TYO', name: 'Tokyo', lon: 139.69, lat: 35.68, isCapital: true, gdpShare: 0.46, resource: 'YARI_ILETKEN' },
+    { suffixId: 'OSA', name: 'Osaka', lon: 135.50, lat: 34.69, gdpShare: 0.32, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'SPK', name: 'Sapporo', lon: 141.35, lat: 42.00, gdpShare: 0.22, resource: 'TICARET_BOGAZI' },
   ],
-  // Brezilya (3 Bölge)
+  // Brezilya (3 Şehir)
   '076': [
-    { suffixId: 'BSB', name: 'Brasilia & Merkez Yayla', lon: -47.88, lat: -15.79, isCapital: true, gdpShare: 0.30, resource: 'TAHIL' },
-    { suffixId: 'GRU', name: 'Sao Paulo & Rio Kıyısı', lon: -46.63, lat: -23.55, gdpShare: 0.45, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'MAO', name: 'Manaus & Amazon Havzası', lon: -60.02, lat: -4.00, gdpShare: 0.25, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'BSB', name: 'Brasilia', lon: -47.88, lat: -15.79, isCapital: true, gdpShare: 0.30, resource: 'TAHIL' },
+    { suffixId: 'GRU', name: 'Sao Paulo', lon: -46.63, lat: -23.55, gdpShare: 0.45, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MAO', name: 'Manaus', lon: -60.02, lat: -4.00, gdpShare: 0.25, resource: 'NADIR_TOPRAK' },
   ],
-  // Arjantin (3 Bölge)
+  // Arjantin (3 Şehir)
   '032': [
-    { suffixId: 'BUE', name: 'Buenos Aires & Pampa', lon: -58.38, lat: -34.60, isCapital: true, gdpShare: 0.50, resource: 'TAHIL' },
-    { suffixId: 'COR', name: 'Córdoba & Kuzey Andlar', lon: -64.18, lat: -31.42, gdpShare: 0.28, resource: 'DEMIR_CELIK' },
-    { suffixId: 'USH', name: 'Patagonya & Güney Kıyısı', lon: -68.50, lat: -45.80, gdpShare: 0.22, resource: 'DOGALGAZ' },
+    { suffixId: 'BUE', name: 'Buenos Aires', lon: -58.38, lat: -34.60, isCapital: true, gdpShare: 0.50, resource: 'TAHIL' },
+    { suffixId: 'COR', name: 'Córdoba', lon: -64.18, lat: -31.42, gdpShare: 0.28, resource: 'DEMIR_CELIK' },
+    { suffixId: 'USH', name: 'Ushuaia', lon: -68.50, lat: -45.80, gdpShare: 0.22, resource: 'DOGALGAZ' },
   ],
-  // Avustralya (3 Bölge)
+  // Avustralya (3 Şehir)
   '036': [
-    { suffixId: 'SYD', name: 'Kanberra & Yeni Güney Galler', lon: 149.13, lat: -35.28, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'MEL', name: 'Melbourne & Victoria', lon: 144.96, lat: -37.81, gdpShare: 0.30, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'PER', name: 'Perth & Batı Avustralya', lon: 115.86, lat: -31.95, gdpShare: 0.26, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'SYD', name: 'Kanberra', lon: 149.13, lat: -35.28, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MEL', name: 'Melbourne', lon: 144.96, lat: -37.81, gdpShare: 0.30, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'PER', name: 'Perth', lon: 115.86, lat: -31.95, gdpShare: 0.26, resource: 'NADIR_TOPRAK' },
   ],
 };
 

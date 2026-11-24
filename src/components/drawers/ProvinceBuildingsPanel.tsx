@@ -77,8 +77,12 @@ export const ProvinceBuildingsPanel: React.FC<ProvinceBuildingsPanelProps> = ({
                   {queuedItem && (
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between text-[10px] font-mono-num text-amber-300">
-                        <span>İnşa Sürüyor (Sv. {queuedItem.targetLevel})</span>
-                        <span>
+                        <span className="truncate">
+                          {queuedItem.specialtyName
+                            ? `${queuedItem.specialtyName} (Sv. ${queuedItem.targetLevel})`
+                            : `İnşa Sürüyor (Sv. ${queuedItem.targetLevel})`}
+                        </span>
+                        <span className="shrink-0 ml-1">
                           {queuedItem.totalDays - queuedItem.progressDays} Gün
                           Kaldı
                         </span>

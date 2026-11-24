@@ -97,6 +97,7 @@ export interface GameTickInput {
   newsEvents: WorldNewsEvent[];
   settings: GameSettings;
   aiCommanderEnabled?: boolean;
+  aiCommanderStance?: import('../types/game').AiCommanderStance;
 }
 
 export interface GameTickOutput {
@@ -938,6 +939,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         wars: nextWars,
         battles: nextBattles,
         movements: nextMovements,
+        stance: input.aiCommanderStance || 'BALANCED',
       });
       if (playerAiRes && playerAiRes.newMovements.length > 0) {
         nextTerritories = playerAiRes.updatedTerritories;
@@ -1034,6 +1036,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         let tModified = false;
         let nextQueue = t.constructionQueue;
         let nextBuildings = t.buildings;
+        let nextBaseGdp = t.baseGdp;
         let nextAssim = t.assimilation;
         let nextIsAssimilating = t.isAssimilating;
         let nextCoreOwner = t.coreOwnerId;
@@ -1080,16 +1083,24 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           for (const item of t.constructionQueue) {
             const nextDays = item.progressDays + 1;
             if (nextDays >= item.totalDays) {
+              const bDef = BUILDINGS.find((b) => b.id === item.building);
+              const maxLvl = bDef?.maxLevel ?? 5;
+              const cappedLevel = Math.min(maxLvl, item.targetLevel);
               nextBuildings = {
                 ...nextBuildings,
-                [item.building]: item.targetLevel,
+                [item.building]: Math.max(nextBuildings[item.building] || 0, cappedLevel),
               };
+              if (item.gdpBonus && item.gdpBonus > 0) {
+                nextBaseGdp = Math.round((nextBaseGdp || 40) + item.gdpBonus);
+              }
               tModified = true;
               if (t.ownerId === playerNationId) {
                 sounds.push('TREATY');
-                const bDef = BUILDINGS.find((b) => b.id === item.building);
+                const facilityLabel = item.specialtyName
+                  ? `${item.specialtyName} (${bDef?.name || item.building})`
+                  : bDef?.name || item.building;
                 toasts.push(
-                  `🏛️ ${t.name}: ${bDef?.name || item.building} (Sv. ${item.targetLevel}) inşası tamamlandı!`
+                  `🏛️ ${t.name}: ${facilityLabel} (Sv. ${cappedLevel}/${maxLvl}) inşası tamamlandı!`
                 );
               }
             } else {
@@ -1146,6 +1157,7 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           writeTerritory(t.id, {
             ...t,
             population: nextPopulation,
+            baseGdp: nextBaseGdp,
             buildings: nextBuildings,
             constructionQueue: nextQueue,
             assimilation: nextAssim,

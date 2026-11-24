@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { geoNaturalEarth1 } from 'd3-geo';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { geoNaturalEarth1, GeoProjection } from 'd3-geo';
 import { Crosshair } from 'lucide-react';
 import { computeVisibleTerritoryIds } from '../engine/fogOfWarEngine';
 import { GeoCountryFeature } from '../engine/worldBuilder';
@@ -49,6 +49,7 @@ interface WorldMapCanvasProps {
   movements: ArmyMovement[];
   playerNationId: string;
   selectedTerritoryId: string | null;
+  multiSelectedTerritoryIds?: string[];
   armyOrderSourceId: string | null;
   mapMode: MapMode;
   mapLabelDensity?: MapLabelDensityOption;
@@ -70,6 +71,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   movements,
   playerNationId,
   selectedTerritoryId,
+  multiSelectedTerritoryIds,
   armyOrderSourceId,
   mapMode,
   mapLabelDensity = 'BALANCED',
@@ -103,11 +105,29 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     mapMode: MapMode;
     playerNationId: string;
     selectedTerritoryId: string | null;
+    multiSelectedTerritoryIds?: string[];
     armyOrderSourceId: string | null;
     fogOfWarEnabled: boolean;
   } | null>(null);
   const lastCenteredKeyRef = useRef<string>('');
+  const projectionCacheRef = useRef<{
+    dimsKey: string;
+    projection: GeoProjection;
+  } | null>(null);
   const [viewportRevision, setViewportRevision] = useState(0);
+
+  const visibleTerritoryIds = useMemo(
+    () =>
+      computeVisibleTerritoryIds(
+        territories,
+        nations,
+        relations,
+        movements,
+        battles,
+        playerNationId
+      ),
+    [territories, nations, relations, movements, battles, playerNationId]
+  );
 
   useEffect(() => {
     performanceTelemetry.start();
@@ -265,12 +285,19 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const baseScale = getBaseProjectionScale(width, height);
-    const projection = geoNaturalEarth1()
-      .scale(baseScale)
-      .translate([width / 2, height / 2]);
+    const sizeKey = `${width}x${height}`;
+    let projection: GeoProjection;
+    if (projectionCacheRef.current?.dimsKey === sizeKey) {
+      projection = projectionCacheRef.current.projection;
+    } else {
+      const baseScale = getBaseProjectionScale(width, height);
+      projection = geoNaturalEarth1()
+        .scale(baseScale)
+        .translate([width / 2, height / 2]);
+      projectionCacheRef.current = { dimsKey: sizeKey, projection };
+    }
 
-    const dimsKey = `${width}x${height}_${features.length}`;
+    const dimsKey = `${sizeKey}_${features.length}`;
     if (
       !geometryCacheRef.current ||
       geometryCacheRef.current.dimsKey !== dimsKey
@@ -288,14 +315,6 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       width,
       height,
       transform
-    );
-    const visibleTerritoryIds = computeVisibleTerritoryIds(
-      territories,
-      nations,
-      relations,
-      movements,
-      battles,
-      playerNationId
     );
 
     if (!baseCanvasRef.current) {
@@ -323,6 +342,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       prevDeps.mapMode === mapMode &&
       prevDeps.playerNationId === playerNationId &&
       prevDeps.selectedTerritoryId === selectedTerritoryId &&
+      prevDeps.multiSelectedTerritoryIds === multiSelectedTerritoryIds &&
       prevDeps.armyOrderSourceId === armyOrderSourceId &&
       prevDeps.fogOfWarEnabled === fogOfWarEnabled;
 
@@ -378,6 +398,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           mapMode,
           playerNationId,
           selectedTerritoryId,
+          multiSelectedTerritoryIds,
           armyOrderSourceId,
           fogOfWarEnabled,
           visibleTerritoryIds,
@@ -397,6 +418,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           mapMode,
           playerNationId,
           selectedTerritoryId,
+          multiSelectedTerritoryIds,
           armyOrderSourceId,
           fogOfWarEnabled,
         };
@@ -424,6 +446,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         transform,
         territories,
         nations,
+        relations,
         movements,
         projection,
         playerNationId,
@@ -484,10 +507,12 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     playerNationId,
     relations,
     selectedTerritoryId,
+    multiSelectedTerritoryIds,
     speed,
     territories,
     transform,
     viewportRevision,
+    visibleTerritoryIds,
     wars,
   ]);
 
@@ -499,11 +524,11 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         className="w-full h-full cursor-grab active:cursor-grabbing block touch-none"
       />
 
-      {armyOrderSourceId && territories[armyOrderSourceId] && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-amber-950/95 border border-amber-500/50 text-amber-100 shadow-xl max-w-[94vw]">
+      {armyOrderSourceId && territories[armyOrderSourceId] && !selectedTerritoryId && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-amber-950/95 border border-amber-500/50 text-amber-100 shadow-xl max-w-[calc(100vw-1.5rem)]">
           <Crosshair className="w-4 h-4 text-amber-400 shrink-0" />
           <span className="text-xs font-medium truncate">
-            <strong>{territories[armyOrderSourceId].name}</strong> ordusu için haritadan hedef şehir seçin (Doğrudan hareket)
+            <strong>{territories[armyOrderSourceId].name}</strong> ordusu için haritadan hedef şehir seçin
           </span>
           <button
             onClick={onCancelArmyOrder}

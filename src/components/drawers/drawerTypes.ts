@@ -53,6 +53,7 @@ export interface CommandDrawersProps {
     amount: number,
     goldCost: number
   ) => void;
+  onHireMercenary?: (territoryId: string, companyId: string) => void;
   onRecruitOrAssignGeneral: (generalId: string) => void;
   onUpgradeBuilding: (territoryId: string, building: BuildingType) => void;
   onAssimilateTerritory: (territoryId: string) => void;
@@ -76,6 +77,7 @@ export interface CommandDrawersProps {
   onSelectTerritory: (territoryId: string) => void;
   onInspectNation?: (nationId: string) => void;
   onOpenWarModal?: (warId: string) => void;
+  onCallAllyToWar?: (warId: string, allyNationId: string) => void;
   onModernizeNationalArmy: () => void;
   onAssignFiefLord: (territoryId: string, lordId: string | null) => void;
   onBestowFavorOnLord?: (lordId: string) => void;

@@ -23,6 +23,7 @@ interface ProvinceForeignDiplomacyPanelProps {
   onPeaceDeal: (warId: string, dealType: PeaceDealType) => void;
   onSelectTerritory: (territoryId: string) => void;
   onInspectNation?: (nationId: string) => void;
+  onOpenWarModal?: (warId: string) => void;
   onSiegeBombardment: (territoryId: string, method: "ARTILLERY" | "DRONE_RAID") => void;
   onClose: () => void;
 }
@@ -40,6 +41,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
   onPeaceDeal,
   onSelectTerritory,
   onInspectNation,
+  onOpenWarModal,
   onSiegeBombardment,
   onClose,
 }) => {
@@ -553,17 +555,22 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                               </>
                             ) : (
                               <button
-                                onClick={() =>
-                                  onPeaceDeal(activeWar.id, 'ANNEX_OCCUPIED')
-                                }
+                                onClick={() => {
+                                  if (onOpenWarModal) {
+                                    onClose();
+                                    onOpenWarModal(activeWar.id);
+                                  } else {
+                                    onPeaceDeal(activeWar.id, 'ANNEX_OCCUPIED');
+                                  }
+                                }}
                                 className="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-left flex items-center justify-between transition-colors"
                               >
                                 <div>
                                   <div className="text-xs font-bold">
-                                    İşgal Edilen Bölgeleri İlhak Et & Barış
+                                    ⚔️ Savaş & Barış Masasını Aç
                                   </div>
                                   <div className="text-[11px] text-slate-800">
-                                    Savaşı lehinize sonlandırın
+                                    Cephe skoru, toprak talebi ve tazminat görüşmesi
                                   </div>
                                 </div>
                                 <Handshake className="w-4 h-4 text-slate-950 shrink-0" />

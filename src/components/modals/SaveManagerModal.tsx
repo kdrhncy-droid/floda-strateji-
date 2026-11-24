@@ -26,6 +26,8 @@ import {
   SaveSlotMetadata,
   SaveSlotRecord,
 } from '../../engine/saveManager';
+import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
+import { cleanNationName } from '../../utils/formatters';
 import { useAccessibleDialog } from '../../hooks/useAccessibleDialog';
 import { sound } from '../../utils/soundEngine';
 
@@ -205,12 +207,13 @@ export const SaveManagerModal: React.FC<SaveManagerModalProps> = ({
                 >
                   <div className="flex items-start sm:items-center gap-3 min-w-0">
                     {meta ? (
-                      <div
-                        className="w-11 h-11 rounded-lg flex items-center justify-center font-display font-bold text-xs text-white shrink-0 shadow"
-                        style={{ backgroundColor: meta.nationColor }}
-                      >
-                        {meta.flagCode}
-                      </div>
+                      <NationFlagCanvasBadge
+                        nationId={meta.playerNationId}
+                        flagCode={meta.flagCode}
+                        color={meta.nationColor}
+                        width={44}
+                        height={30}
+                      />
                     ) : (
                       <div className="w-11 h-11 rounded-lg bg-[#211d18] border border-[#3a3228] flex items-center justify-center text-[#7f7463] shrink-0">
                         <Save className="w-4 h-4" />
@@ -224,7 +227,7 @@ export const SaveManagerModal: React.FC<SaveManagerModalProps> = ({
                         </span>
                         {meta && (
                           <span className="text-xs font-semibold text-[#f0e6d2] truncate">
-                            · {meta.nationName}
+                            · {cleanNationName(meta.nationName)}
                           </span>
                         )}
                       </div>

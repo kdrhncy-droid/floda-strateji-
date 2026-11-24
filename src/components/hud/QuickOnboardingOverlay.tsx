@@ -65,7 +65,7 @@ export const QuickOnboardingOverlay: React.FC<QuickOnboardingOverlayProps> = ({
   const isLast = stepIdx === STEPS.length - 1;
 
   return (
-    <div className="hud-onboarding-card fixed bottom-[74px] sm:bottom-[86px] inset-x-0 mx-auto z-30 w-[calc(100vw-1.5rem)] max-w-md pointer-events-auto">
+    <div className="hud-onboarding-card fixed bottom-[114px] sm:bottom-[86px] inset-x-0 mx-auto z-30 w-[calc(100vw-1.5rem)] max-w-md pointer-events-auto">
       <div className="rounded-2xl bg-slate-950/95 border border-amber-500/50 shadow-2xl p-3.5 text-slate-100 backdrop-blur-md">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 min-w-0">

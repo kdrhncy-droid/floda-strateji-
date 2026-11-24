@@ -7,10 +7,8 @@ import {
   Users,
   Shield,
   FlaskConical,
-  Save,
   Menu,
   Newspaper,
-  Scale,
   Compass,
 } from 'lucide-react';
 import {
@@ -27,6 +25,7 @@ import {
 import { getClockSpeedProfile } from '../../engine/gameSettings';
 import { music } from '../../engine/musicEngine';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
+import { cleanNationName } from '../../utils/formatters';
 import { sound } from '../../utils/soundEngine';
 
 interface TopHudBarProps {
@@ -73,7 +72,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
   onFocusCapital,
   onInspectNation,
 }) => {
-  const cleanNationName = playerNation.name.replace(/\s*\(1440\)\s*$/, '');
+  const nationTitle = cleanNationName(playerNation.name);
   const dateLabel = formatGameDate(tick, gameMode);
   const hourLabel = `${String(hour % 24).padStart(2, '0')}:00`;
   const hourlyRateLabel = getClockSpeedProfile(speed).rateLabel;
@@ -91,11 +90,11 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
   };
 
   return (
-    <header className="hud-header hud-surface px-2.5 py-1.5 sm:py-0 sm:h-14 sm:px-4 border-b border-amber-500/35 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2 z-30 shrink-0">
+    <header className="hud-header hud-surface px-2 py-1.5 sm:py-0 sm:h-14 sm:px-4 border-b border-amber-500/35 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 z-30 shrink-0">
       {/* Row 1 on Portrait / Left+Right Wrapper on Mobile */}
-      <div className="flex items-center justify-between gap-2 w-full sm:w-auto sm:justify-start min-w-0">
+      <div className="flex items-center justify-between gap-1 sm:gap-2 w-full sm:w-auto sm:justify-start min-w-0">
         {/* Left: Menu + AoH3 Top-Left Imperial Flag Shield & Nation Hub */}
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0">
           <button
             onClick={() => {
               sound.playClick();
@@ -103,7 +102,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               onOpenSystemModal();
             }}
             title="Sistem Menüsü, UI Ölçeği & Kayıt Merkezi"
-            className="min-w-[36px] min-h-[36px] sm:min-h-[38px] px-2 rounded-xl hud-chip hover:bg-slate-800 flex items-center justify-center gap-1.5 text-slate-200 shrink-0"
+            className="min-w-[32px] min-h-[34px] sm:min-w-[36px] sm:min-h-[38px] px-1.5 sm:px-2 rounded-xl hud-chip hover:bg-slate-800 flex items-center justify-center gap-1.5 text-slate-200 shrink-0"
           >
             <Menu className="w-4 h-4 text-amber-400 shrink-0" />
             <span className="hidden lg:inline text-xs font-semibold">Menü</span>
@@ -123,28 +122,28 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             }}
             aria-label="Ülke diplomasisi ve ittifak özetini aç"
             title="Ülke Diplomasisi, Müttefikler, Paktlar ve Savaş Özeti (Bayrak Menüsü)"
-            data-full-text={`${cleanNationName} — ${IDEOLOGIES[playerNation.ideology]?.name ?? 'Monarşi'} (İstikrar %${Math.round(playerNation.stability)}). Ülke diplomasisi, müttefikler, savunma paktları ve savaş özetini açmak için dokun.`}
-            className="flex items-center gap-2 text-left min-w-0 px-1.5 py-0.5 rounded-xl hover:bg-amber-500/15 border border-transparent hover:border-amber-500/35 transition-colors"
+            data-full-text={`${nationTitle} — ${IDEOLOGIES[playerNation.ideology]?.name ?? 'Monarşi'} (İstikrar %${Math.round(playerNation.stability)}). Ülke diplomasisi, müttefikler, savunma paktları ve savaş özetini açmak için dokun.`}
+            className="flex items-center gap-1.5 sm:gap-2 text-left min-w-0 px-1 sm:px-1.5 py-0.5 rounded-xl hover:bg-amber-500/15 border border-transparent hover:border-amber-500/35 transition-colors"
           >
             <div className="relative shrink-0">
               <NationFlagCanvasBadge
                 nationId={playerNation.id}
                 flagCode={playerNation.flagCode}
                 color={playerNation.color}
-                width={38}
-                height={28}
+                width={34}
+                height={24}
               />
-              <span className="absolute -bottom-1 -right-1 px-1 rounded bg-slate-950 border border-amber-400/60 text-[8px] font-mono-num text-amber-300">
+              <span className="absolute -bottom-1 -right-1 px-0.5 rounded bg-slate-950 border border-amber-400/60 text-[8px] font-mono-num text-amber-300">
                 %{Math.round(playerNation.stability)}
               </span>
             </div>
             <div className="hud-narrow-landscape-hide min-w-0">
-              <div className="font-display text-xs sm:text-sm font-bold text-amber-100 truncate max-w-[104px] lg:max-w-[180px]">
-                {cleanNationName}
+              <div className="font-display text-[11px] sm:text-sm font-bold text-amber-100 truncate max-w-[92px] min-[390px]:max-w-[116px] lg:max-w-[180px]">
+                {nationTitle}
               </div>
-              <div className="hud-landscape-hide text-[10px] text-amber-400 sm:text-slate-400 truncate leading-tight font-mono-num sm:font-sans">
+              <div className="hud-landscape-hide text-[9px] sm:text-[10px] text-amber-400 sm:text-slate-400 whitespace-nowrap leading-tight font-mono-num sm:font-sans">
                 <span className="sm:hidden font-semibold">
-                  {dateLabel} · 🕒 {hourLabel}
+                  {dateLabel} · {hourLabel}
                 </span>
                 <span className="hidden sm:inline text-amber-300/90">
                   {IDEOLOGIES[playerNation.ideology]?.name ?? 'Monarşi'} · Diplomasi
@@ -161,7 +160,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               }}
               title="Başkente Odakla"
               aria-label="Başkente Odakla"
-              className="min-w-[32px] min-h-[32px] sm:min-w-[34px] sm:min-h-[34px] rounded-xl bg-[#0c1324] hover:bg-slate-800 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0"
+              className="w-7 h-[32px] sm:w-[34px] sm:h-[34px] rounded-xl bg-[#0c1324] hover:bg-slate-800 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0"
             >
               <Compass className="w-3.5 h-3.5" />
             </button>
@@ -176,9 +175,9 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               onOpenNewsDrawer();
             }}
             title="Dünya Haberleri & Divan"
-            className="min-w-[34px] min-h-[34px] px-1.5 rounded-xl bg-[#0c1324] border border-amber-500/30 flex items-center justify-center gap-1 text-[11px] font-mono-num font-bold text-amber-300"
+            className="min-w-[30px] h-[32px] px-1 rounded-xl bg-[#0c1324] border border-amber-500/30 flex items-center justify-center gap-0.5 text-[10px] font-mono-num font-bold text-amber-300"
           >
-            <Newspaper className="w-3.5 h-3.5 text-amber-400" />
+            <Newspaper className="w-3 h-3 text-amber-400 shrink-0" />
             <span>{newsCount}</span>
           </button>
 
@@ -187,24 +186,26 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               sound.playClick();
               onTogglePause();
             }}
-            className={`min-w-[34px] min-h-[34px] rounded-xl flex items-center justify-center border transition-colors ${
+            aria-label={speed === 0 ? 'Oyunu devam ettir' : 'Oyunu duraklat'}
+            className={`w-[30px] h-[32px] rounded-xl flex items-center justify-center border transition-colors ${
               speed === 0
                 ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
                 : 'bg-[#0c1324] text-slate-200 border-amber-500/30'
             }`}
           >
             {speed === 0 ? (
-              <Play className="w-3.5 h-3.5 fill-current" />
+              <Play className="w-3 h-3 fill-current" />
             ) : (
-              <Pause className="w-3.5 h-3.5" />
+              <Pause className="w-3 h-3" />
             )}
           </button>
 
           <button
             onClick={cycleSpeed}
-            className="min-w-[38px] min-h-[34px] px-1.5 rounded-xl bg-[#0c1324] border border-amber-500/30 flex items-center justify-center gap-0.5 text-[11px] font-mono-num font-bold text-amber-400"
+            aria-label="Zaman hızını değiştir"
+            className="min-w-[32px] h-[32px] px-1 rounded-xl bg-[#0c1324] border border-amber-500/30 flex items-center justify-center gap-0.5 text-[10px] font-mono-num font-bold text-amber-400"
           >
-            <FastForward className="w-3 h-3 shrink-0" />
+            <FastForward className="w-2.5 h-2.5 shrink-0" />
             <span>{speed === 0 ? '1x' : `${speed}x`}</span>
           </button>
 
@@ -213,7 +214,8 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               sound.playClick();
               music.toggle();
             }}
-            className={`min-w-[32px] min-h-[34px] rounded-xl border flex items-center justify-center text-xs font-bold ${
+            aria-label="Müziği aç veya kapat"
+            className={`w-[28px] h-[32px] rounded-xl border flex items-center justify-center text-xs font-bold ${
               isMusicPlaying
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
                 : 'bg-[#0c1324] text-slate-400 border-slate-800'
@@ -316,19 +318,6 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             </span>
           </button>
         )}
-
-        <button
-          onClick={() =>
-            onSetActiveTab(activeTab === 'GOVERNMENT' ? 'NONE' : 'GOVERNMENT')
-          }
-          title="İmparatorluk İstikrarı"
-          className="hud-landscape-hide hidden md:flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-[#0c1324] border border-amber-500/25 hover:border-amber-400 shrink-0"
-        >
-          <Scale className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="font-mono-num text-xs font-bold text-white whitespace-nowrap">
-            %{Math.round(playerNation.stability)}
-          </span>
-        </button>
       </div>
 
       {/* Landscape / Desktop Right: AoH3 Clock & 5-Pip Speed Gauge */}
@@ -421,19 +410,6 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
         >
           <Newspaper className="w-3.5 h-3.5 text-amber-400 shrink-0" />
           <span className="hidden lg:inline font-mono-num">{newsCount}</span>
-        </button>
-
-        <button
-          onClick={() => {
-            sound.playClick();
-            onSetSpeed(0);
-            onOpenSystemModal();
-          }}
-          title="Kayıt Merkezi & Yedekleme"
-          className="hidden xl:flex min-w-[40px] min-h-[38px] px-2.5 rounded-xl bg-[#0c1324] hover:bg-slate-800 border border-emerald-500/35 items-center justify-center gap-1.5 text-xs font-semibold text-slate-200 shrink-0"
-        >
-          <Save className="w-4 h-4 text-emerald-400" />
-          <span>Kaydet</span>
         </button>
       </div>
     </header>

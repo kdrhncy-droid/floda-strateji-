@@ -436,30 +436,33 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                   )}
                 </div>
 
-                {/* 4 Branch Filters */}
+                {/* 4 Branch Filters + All Branches Tree Toggle */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  <div className="flex gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 overflow-x-auto w-full sm:w-auto">
+                  <div className="flex gap-1.5 bg-[#120f0c] p-1 rounded-xl border border-[#caa15a]/35 overflow-x-auto w-full sm:w-auto">
                     {(
                       [
-                        { id: 'MILITARY', label: '⚔️ Askeri' },
-                        { id: 'ECONOMY', label: '💰 Ekonomi' },
-                        { id: 'ADMINISTRATION', label: '🏛️ İdare' },
-                        { id: 'SCIENCE', label: '🔭 Bilim' },
+                        { id: 'MILITARY', label: '⚔️ Askeri Doktrin' },
+                        { id: 'ECONOMY', label: '💰 Ekonomi & Üretim' },
+                        { id: 'ADMINISTRATION', label: '🏛️ İdare & Devlet' },
+                        { id: 'SCIENCE', label: '🔭 Bilim & Çağ' },
                       ] as const
                     ).map((b) => (
                       <button
                         key={b.id}
                         onClick={() => setTechBranchFilter(b.id)}
-                        className={`min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-1 sm:flex-initial ${
+                        className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-1 sm:flex-initial cursor-pointer ${
                           techBranchFilter === b.id
-                            ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
-                            : 'text-slate-400 hover:text-white'
+                            ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow-md'
+                            : 'text-[#d8cbb5] hover:text-white'
                         }`}
                       >
                         {b.label}
                       </button>
                     ))}
                   </div>
+                  <span className="text-[11px] font-mono-num text-[#c5b79e]">
+                    Açılan Teknoloji: <strong className="text-amber-300">{playerNation.unlockedTechs.length}/{activeTechTree.length}</strong>
+                  </span>
                 </div>
 
                 {/* National Army Modernization Panel synced with Military Tech Tree */}
@@ -472,160 +475,230 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                   />
                 )}
 
-                {/* Technologies List */}
-                <div className="space-y-3">
-                  {activeTechTree
-                    .filter((t) => t.branch === techBranchFilter)
-                    .map((tech) => {
-                      const isUnlocked = playerNation.unlockedTechs.includes(
-                        tech.id
-                      );
-                      const isActivelyResearching =
-                        activeProj?.techId === tech.id;
-                      const savedProgressValue =
-                        playerNation.researchProgressByTech?.[tech.id] ?? 0;
-                      const savedProgress = Number.isFinite(savedProgressValue)
-                        ? Math.max(0, savedProgressValue)
-                        : 0;
-                      const hasSavedProgress =
-                        !isActivelyResearching && savedProgress > 0;
-                      const progressForTech = isActivelyResearching
-                        ? activeProj?.progress ?? 0
-                        : savedProgress;
-                      const progressTotalForTech = isActivelyResearching
-                        ? activeProj?.totalCost ?? tech.cost
-                        : tech.cost;
-                      const progressPctForTech = Math.min(
-                        100,
-                        Math.round(
-                          (progressForTech / Math.max(1, progressTotalForTech)) * 100
-                        )
-                      );
-                      const prereqMet =
-                        !tech.prerequisite ||
-                        playerNation.unlockedTechs.includes(tech.prerequisite);
-                      const prereqDef = tech.prerequisite
-                        ? activeTechTree.find((t) => t.id === tech.prerequisite)
-                        : null;
-
-                      const estDaysForThis = Math.max(
-                        1,
-                        Math.ceil(
-                          tech.cost / Math.max(0.4, playerEconomy.dailyResearch)
-                        )
-                      );
-
-                      return (
+                {/* AoH3 Horizontal Tiered Technology Tree (Kademe I -> Kademe II -> Kademe III -> Kademe IV) */}
+                <div
+                  data-testid="aoh3-tech-tree-canvas"
+                  className="rounded-2xl bg-[#13100d] border border-[#caa15a]/45 p-2.5 sm:p-3 overflow-x-auto shadow-inner"
+                >
+                  <div className="min-w-[500px] space-y-2.5">
+                    {/* Era / Tier Column Headers */}
+                    <div className="grid grid-cols-4 gap-2 pb-2 border-b border-[#caa15a]/25">
+                      {[
+                        { tier: 1, title: 'KADEME I', subtitle: 'Erken Doktrin' },
+                        { tier: 2, title: 'KADEME II', subtitle: 'Teşkilat & Ocak' },
+                        { tier: 3, title: 'KADEME III', subtitle: 'İmparatorluk' },
+                        { tier: 4, title: 'KADEME IV', subtitle: 'Cihan Hakimiyeti' },
+                      ].map((col) => (
                         <div
-                          key={tech.id}
-                          className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                            isUnlocked
-                              ? 'bg-sky-950/20 border-sky-500/40'
-                              : isActivelyResearching
-                              ? 'bg-sky-950/50 border-sky-400 ring-2 ring-sky-500/30'
-                              : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
-                          }`}
+                          key={col.tier}
+                          className="px-2 py-1.5 rounded-lg bg-[#1d1813] border border-[#caa15a]/30 flex items-center justify-between gap-1"
                         >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold border shrink-0"
-                                style={{
-                                  color: TECH_BRANCH_META[tech.branch]?.color || '#62b7d7',
-                                  borderColor: `${TECH_BRANCH_META[tech.branch]?.color || '#62b7d7'}66`,
-                                  backgroundColor: `${TECH_BRANCH_META[tech.branch]?.color || '#62b7d7'}18`,
-                                }}
-                              >
-                                {TECH_BRANCH_META[tech.branch]?.glyph || '◆'}
-                              </span>
-                              <span className="font-mono-num text-[10px] text-sky-400 font-bold px-1.5 py-0.5 rounded bg-sky-950/60 border border-sky-500/30">
-                                Kademe {tech.tier}
-                              </span>
-                              <span className="text-sm font-bold text-white">
-                                {tech.name}
-                              </span>
-                              {isActivelyResearching && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500 text-slate-950 animate-pulse">
-                                  Araştırılıyor
-                                </span>
-                              )}
-                              {hasSavedProgress && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/30">
-                                  Beklemede · %{progressPctForTech}
-                                </span>
-                              )}
+                          <div className="min-w-0">
+                            <div className="text-[10px] font-display font-extrabold text-amber-300 tracking-wider truncate">
+                              {col.title}
                             </div>
-                            <p className="hidden sm:block text-xs text-slate-400 mt-1 line-clamp-1">
-                              {tech.description}
-                            </p>
-                            <div className="inline-flex max-w-full text-[10px] font-semibold text-emerald-300 mt-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 truncate">
-                              {tech.effectLabel}
+                            <div className="text-[9px] text-[#b8a990] truncate">
+                              {col.subtitle}
                             </div>
+                          </div>
+                          <span className="w-4 h-4 rounded-full bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-[9px] font-mono-num font-bold text-amber-200 shrink-0">
+                            {col.tier}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
 
-                            {(isActivelyResearching || hasSavedProgress) && (
-                              <div className="mt-2 w-full max-w-xs h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                                <div
-                                  className={`h-full transition-all rounded-full ${
-                                    isActivelyResearching
-                                      ? 'bg-sky-400'
-                                      : 'bg-amber-400'
-                                  }`}
-                                  style={{
-                                    width: `${Math.max(4, progressPctForTech)}%`,
-                                  }}
-                                />
+                    {/* Horizontal Connected Node Columns */}
+                    <div className="grid grid-cols-4 gap-2 items-stretch">
+                      {[1, 2, 3, 4].map((tierNum) => {
+                        const tierTechs = activeTechTree.filter(
+                          (t) => t.branch === techBranchFilter && t.tier === tierNum
+                        );
+                        return (
+                          <div
+                            key={tierNum}
+                            className="flex flex-col justify-center gap-2 relative min-w-0"
+                          >
+                            {tierTechs.length === 0 ? (
+                              <div className="p-3 rounded-xl border border-dashed border-[#caa15a]/20 text-center text-[11px] text-[#8c7e6a]">
+                                Bu kademede dal düğümü yok
                               </div>
+                            ) : (
+                              tierTechs.map((tech) => {
+                                const isUnlocked =
+                                  playerNation.unlockedTechs.includes(tech.id);
+                                const isActivelyResearching =
+                                  activeProj?.techId === tech.id;
+                                const savedProgressValue =
+                                  playerNation.researchProgressByTech?.[tech.id] ?? 0;
+                                const savedProgress = Number.isFinite(savedProgressValue)
+                                  ? Math.max(0, savedProgressValue)
+                                  : 0;
+                                const hasSavedProgress =
+                                  !isActivelyResearching && savedProgress > 0;
+                                const progressForTech = isActivelyResearching
+                                  ? activeProj?.progress ?? 0
+                                  : savedProgress;
+                                const progressTotalForTech = isActivelyResearching
+                                  ? activeProj?.totalCost ?? tech.cost
+                                  : tech.cost;
+                                const progressPctForTech = Math.min(
+                                  100,
+                                  Math.round(
+                                    (progressForTech /
+                                      Math.max(1, progressTotalForTech)) *
+                                      100
+                                  )
+                                );
+                                const prereqMet =
+                                  !tech.prerequisite ||
+                                  playerNation.unlockedTechs.includes(
+                                    tech.prerequisite
+                                  );
+                                const prereqDef = tech.prerequisite
+                                  ? activeTechTree.find(
+                                      (t) => t.id === tech.prerequisite
+                                    )
+                                  : null;
+                                const estDaysForThis = Math.max(
+                                  1,
+                                  Math.ceil(
+                                    tech.cost /
+                                      Math.max(0.4, playerEconomy.dailyResearch)
+                                  )
+                                );
+                                const branchColor =
+                                  TECH_BRANCH_META[tech.branch]?.color || '#e0ad52';
+
+                                return (
+                                  <div
+                                    key={tech.id}
+                                    className="relative flex items-center"
+                                  >
+                                    {/* Left Connector Line from Previous Tier */}
+                                    {tierNum > 1 && (
+                                      <div
+                                        aria-hidden="true"
+                                        className={`hidden sm:block absolute -left-3 top-1/2 -translate-y-1/2 w-3 h-0.5 ${
+                                          isUnlocked
+                                            ? 'bg-emerald-400'
+                                            : prereqMet
+                                            ? 'bg-[#caa15a]'
+                                            : 'bg-slate-700'
+                                        }`}
+                                      />
+                                    )}
+
+                                    <div
+                                      className={`w-full rounded-xl border p-2.5 flex flex-col justify-between gap-2 transition-all shadow-lg ${
+                                        isUnlocked
+                                          ? 'bg-gradient-to-b from-emerald-950/60 to-[#171f1a] border-emerald-500/70'
+                                          : isActivelyResearching
+                                          ? 'bg-gradient-to-b from-amber-950/70 to-[#1f1912] border-amber-400 ring-2 ring-amber-400/35'
+                                          : prereqMet
+                                          ? 'bg-[#1c1712] border-[#caa15a]/55 hover:border-amber-300'
+                                          : 'bg-[#14110e]/75 border-slate-800/90 opacity-75'
+                                      }`}
+                                    >
+                                      {/* Top Node Header: Icon + Name + Cost Badge */}
+                                      <div className="space-y-1.5">
+                                        <div className="flex items-start justify-between gap-1.5">
+                                          <span
+                                            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold border shrink-0 shadow-inner"
+                                            style={{
+                                              color: branchColor,
+                                              borderColor: `${branchColor}66`,
+                                              backgroundColor: `${branchColor}18`,
+                                            }}
+                                          >
+                                            {TECH_BRANCH_META[tech.branch]?.glyph || '◆'}
+                                          </span>
+                                          <span className="px-1.5 py-0.5 rounded bg-black/50 border border-[#caa15a]/30 font-mono-num text-[10px] font-bold text-amber-300">
+                                            {tech.cost} RP
+                                          </span>
+                                        </div>
+
+                                        <div className="text-xs font-display font-bold text-[#f3ead7] leading-snug">
+                                          {tech.name}
+                                        </div>
+
+                                        <div className="text-[10px] font-semibold text-emerald-300 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 leading-tight">
+                                          {tech.effectLabel}
+                                        </div>
+
+                                        <p className="text-[10px] text-[#b8a990] line-clamp-2 leading-relaxed">
+                                          {tech.description}
+                                        </p>
+                                      </div>
+
+                                      {/* Active / Saved Progress Bar Inside Node */}
+                                      {(isActivelyResearching || hasSavedProgress) && (
+                                        <div className="space-y-0.5">
+                                          <div className="flex items-center justify-between text-[9px] font-mono-num text-amber-200">
+                                            <span>
+                                              {isActivelyResearching
+                                                ? 'Araştırılıyor'
+                                                : 'Duraklatıldı'}
+                                            </span>
+                                            <span>%{progressPctForTech}</span>
+                                          </div>
+                                          <div className="w-full h-1.5 bg-black/60 rounded-full overflow-hidden border border-[#caa15a]/30">
+                                            <div
+                                              className={`h-full transition-all ${
+                                                isActivelyResearching
+                                                  ? 'bg-amber-400'
+                                                  : 'bg-amber-600'
+                                              }`}
+                                              style={{
+                                                width: `${Math.max(5, progressPctForTech)}%`,
+                                              }}
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Node Action Button */}
+                                      <button
+                                        disabled={
+                                          isUnlocked ||
+                                          !prereqMet ||
+                                          isActivelyResearching
+                                        }
+                                        onClick={() => handleStartResearch(tech.id)}
+                                        className={`w-full min-h-[34px] px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer ${
+                                          isUnlocked
+                                            ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 cursor-default'
+                                            : isActivelyResearching
+                                            ? 'bg-amber-500/25 text-amber-200 border border-amber-400/60 cursor-default'
+                                            : prereqMet
+                                            ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] hover:from-[#d9b26b] hover:to-[#ecc77f] text-[#14110e] shadow'
+                                            : 'bg-black/45 text-slate-500 border border-slate-800 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        {isUnlocked ? (
+                                          <>
+                                            <Check className="w-3.5 h-3.5" /> Açıldı
+                                          </>
+                                        ) : isActivelyResearching ? (
+                                          `⏳ %${activePct} (~${activeEstDays}g)`
+                                        ) : !prereqMet ? (
+                                          `🔒 ${prereqDef?.name || 'Önceki Kademe'}`
+                                        ) : hasSavedProgress ? (
+                                          `▶ Devam Et (~${estDaysForThis}g)`
+                                        ) : (
+                                          `🔬 Araştır (~${estDaysForThis}g)`
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
                             )}
                           </div>
-
-                          <div className="shrink-0 flex sm:flex-col items-center sm:items-end justify-between gap-2">
-                            <div className="font-mono-num text-[11px] text-slate-400">
-                              Maliyet:{' '}
-                              <strong className="text-amber-300">
-                                {tech.cost} RP
-                              </strong>
-                              {!isUnlocked && (
-                                <span className="block text-[10px] text-sky-400">
-                                  Tahmini ~{estDaysForThis} Gün
-                                </span>
-                              )}
-                            </div>
-
-                            <button
-                              disabled={
-                                isUnlocked ||
-                                !prereqMet ||
-                                isActivelyResearching
-                              }
-                              onClick={() => handleStartResearch(tech.id)}
-                              className={`min-h-[44px] min-w-[130px] px-3.5 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 ${
-                                isUnlocked
-                                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 cursor-default'
-                                  : isActivelyResearching
-                                  ? 'bg-sky-500/20 text-sky-300 border border-sky-400/50 cursor-default'
-                                  : prereqMet
-                                  ? 'bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20'
-                                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                              }`}
-                            >
-                              {isUnlocked ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5" /> Araştırıldı
-                                </>
-                              ) : isActivelyResearching ? (
-                                `%${activePct} (${activeEstDays}g)`
-                              ) : !prereqMet ? (
-                                `Kilitli (${prereqDef?.name || 'Önceki Kademe'})`
-                              ) : hasSavedProgress ? (
-                                'Devam Et'
-                              ) : (
-                                'Araştırmaya Başla'
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

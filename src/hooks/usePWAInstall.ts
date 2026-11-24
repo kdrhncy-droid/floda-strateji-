@@ -5,6 +5,8 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
+export type OfflineCacheStatus = 'READY' | 'CACHING' | 'DEV' | 'UNSUPPORTED';
+
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -13,6 +15,13 @@ export function usePWAInstall() {
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
+  const [offlineStatus, setOfflineStatus] = useState<OfflineCacheStatus>(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      return 'UNSUPPORTED';
+    }
+    if (!import.meta.env.PROD) return 'DEV';
+    return navigator.serviceWorker.controller ? 'READY' : 'CACHING';
+  });
 
   useEffect(() => {
     const isStandalone =
@@ -37,11 +46,28 @@ export function usePWAInstall() {
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+    const handleOfflineReady = () => setOfflineStatus('READY');
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('floda-pwa-offline-ready', handleOfflineReady);
+
+    let cancelled = false;
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+      if (navigator.serviceWorker.controller) {
+        setOfflineStatus('READY');
+      } else {
+        navigator.serviceWorker.ready
+          .then((reg) => {
+            if (!cancelled && reg.active) {
+              setOfflineStatus('READY');
+            }
+          })
+          .catch(() => {});
+      }
+    }
 
     // Request Screen Wake Lock on mobile so screen doesn't dim while watching real-time strategy flow
     let wakeLockSentinel: { release?: () => Promise<void> } | null = null;
@@ -60,6 +86,7 @@ export function usePWAInstall() {
     requestWakeLock();
 
     return () => {
+      cancelled = true;
       window.removeEventListener(
         'beforeinstallprompt',
         handleBeforeInstallPrompt
@@ -67,6 +94,7 @@ export function usePWAInstall() {
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('floda-pwa-offline-ready', handleOfflineReady);
       wakeLockSentinel?.release?.().catch(() => {});
     };
   }, []);
@@ -88,6 +116,7 @@ export function usePWAInstall() {
     isInstalled,
     isIOS,
     isOnline,
+    offlineStatus,
     install,
   };
 }

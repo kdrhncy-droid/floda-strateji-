@@ -16,10 +16,7 @@ import {
 import type { MapLabelDensityOption } from '../engine/gameSettings';
 import { TERRAIN_INFO } from '../engine/pashaAndFiefEngine';
 import { GeoCountryFeature } from '../engine/worldBuilder';
-import {
-  drawAoH3SoldierUnitOnCanvas,
-  drawNationFlagOnCanvas,
-} from './nationFlagRenderer';
+import { drawNationFlagOnCanvas } from './nationFlagRenderer';
 
 export interface PlacedBox {
   x1: number;
@@ -79,10 +76,45 @@ export function getMapLabelThresholds(
     : { capitalNameMinZoom: 1.55, provinceNameMinZoom: 2.05 };
 }
 
+const DYNASTY_PREFIX_TO_CITY_MAP: Record<string, string> = {
+  'Candaroğulları Sancağı': 'Kastamonu',
+  'Candaroğulları': 'Kastamonu',
+  'Ramazanoğulları Sancağı': 'Adana',
+  'Ramazanoğulları': 'Adana',
+  'Dulkadiroğulları Sancağı': 'Maraş',
+  'Dulkadiroğulları': 'Maraş',
+  'Germiyan Sancağı': 'Kütahya',
+  'Karaman Beylerbeyliği': 'Konya',
+  'Eflak Voyvodalığı': 'Bükreş',
+  'Boğdan Voyvodalığı': 'Yaş',
+  'Bohemya Krallığı': 'Prag',
+  'Bavyera Dükalığı': 'Münih',
+  'Saksonya & Brandenburg': 'Berlin',
+  'Avusturya Arşidüklüğü': 'Viyana',
+  'Hicaz & Mekke-i Mükerreme': 'Mekke',
+  'Kudüs & Filistin': 'Kudüs',
+};
+
+function sanitizeCityLabelName(raw: string): string {
+  const withoutStar = raw.replace(/^★\s*/, '').trim();
+  const withoutParens = withoutStar.replace(/\s*\([^)]*\)/g, '').trim();
+  if (DYNASTY_PREFIX_TO_CITY_MAP[withoutParens]) {
+    return DYNASTY_PREFIX_TO_CITY_MAP[withoutParens];
+  }
+  const stripped =
+    withoutParens
+      .replace(
+        /\s+(Sancağı|Beylerbeyliği|Eyaleti|Dükalığı|Arşidüklüğü|Voyvodalığı|Krallığı|İmamlığı|Kalesi|Boğazı|Serhaddi|Prensliği|Hanlığı|Beyliği|Sultanlığı)$/i,
+        ''
+      )
+      .trim() || withoutParens;
+  return DYNASTY_PREFIX_TO_CITY_MAP[stripped] || stripped;
+}
+
 /**
- * Formats a city/province map label so that zooming in (>= 3.0) or selecting a province
- * ALWAYS shows its complete, untruncated name (zero "…"), wrapping long titles cleanly
- * across 2 balanced lines when needed to stay legible above neighboring provinces.
+ * Formats a city/province map label so that only pure city names are shown
+ * (no legacy dynasty/country names), and zooming in (>= 3.0) or selecting a province
+ * shows its full name without truncation.
  */
 export function formatProvinceMapLabel(
   rawName: string,
@@ -91,7 +123,7 @@ export function formatProvinceMapLabel(
   zoomK: number,
   isMobileViewport: boolean
 ): { lines: string[]; isFull: boolean } {
-  const cleanName = rawName.replace(/^★\s*/, '').trim();
+  const cleanName = sanitizeCityLabelName(rawName);
   const showFull = isSelected || zoomK >= 3.0;
 
   if (showFull) {
@@ -128,16 +160,8 @@ export function formatProvinceMapLabel(
     return { lines: [fullText], isFull: true };
   }
 
-  // Overview zoom (< 3.0): clean suffix-trimmed label with generous cap
-  const compactMapName =
-    cleanName
-      .replace(/\s*\([^)]*\)/g, '')
-      .replace(
-        /\s+(Sancağı|Beylerbeyliği|Eyaleti|Dükalığı|Krallığı|İmamlığı|Kalesi|Boğazı|Serhaddi)$/i,
-        ''
-      )
-      .trim() || cleanName;
-  const rawLabel = isCapital ? `★ ${compactMapName}` : compactMapName;
+  // Overview zoom (< 3.0): pure city label
+  const rawLabel = isCapital ? `★ ${cleanName}` : cleanName;
   const maxChars = isMobileViewport ? 20 : 24;
   const labelText =
     rawLabel.length > maxChars
@@ -145,6 +169,24 @@ export function formatProvinceMapLabel(
       : rawLabel;
 
   return { lines: [labelText], isFull: !labelText.endsWith('…') };
+}
+
+export function isNationPlayerOrAlly(
+  nationId: string | undefined,
+  playerNationId: string,
+  nations: Record<string, Nation>,
+  relations: Record<string, DiplomaticRelation>
+): boolean {
+  if (!nationId) return false;
+  if (nationId === playerNationId) return true;
+  const rel = getOrCreateRelation(relations, playerNationId, nationId);
+  if (rel.isAllied || Boolean(rel.allianceType)) return true;
+  const nat = nations[nationId];
+  const playerNat = nations[playerNationId];
+  if (nat?.vassalOf === playerNationId || playerNat?.vassalOf === nationId) {
+    return true;
+  }
+  return false;
 }
 
 export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
@@ -180,8 +222,16 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         box.x1 < b.x2 && box.x2 > b.x1 && box.y1 < b.y2 && box.y2 > b.y1
     );
 
-  // Track provinces with active battles so stationary shield doesn't overlap the live battle widget
-  const battleTerritorySet = new Set(battles.map((b) => b.territoryId));
+  // Only show battles where the player or a player ally/vassal is involved
+  const visibleBattles = battles.filter(
+    (b) =>
+      isNationPlayerOrAlly(b.attackerId, playerNationId, nations, relations) ||
+      isNationPlayerOrAlly(b.defenderId, playerNationId, nations, relations) ||
+      territories[b.territoryId]?.ownerId === playerNationId
+  );
+
+  // Track provinces with visible active battles so stationary shield doesn't overlap the live battle widget
+  const battleTerritorySet = new Set(visibleBattles.map((b) => b.territoryId));
 
   const visibleTerritories: Territory[] = [];
   for (const feat of visibleFeatures) {
@@ -385,13 +435,14 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     const isAlliedOrVassal =
       !isPlayerTerritory &&
       (Boolean(rel?.isAllied) ||
+        Boolean(rel?.allianceType) ||
         owner?.vassalOf === playerNationId ||
         nations[playerNationId]?.vassalOf === t.ownerId);
 
     const isCapital = Boolean(t.isCapital || t.id === t.ownerId);
     const hasIntel = !fogOfWarEnabled || visibleTerritoryIds.has(t.id);
 
-    // 1. Province / Sancak Name Label (Only when zoomed in or when explicitly selected, avoiding map clutter)
+    // 1. Province / City Name Label (Only pure city names, no old dynasty/country prefixes)
     const wantsName =
       isSelected ||
       (isCapital && transform.k >= labelThresholds.capitalNameMinZoom) ||
@@ -487,8 +538,15 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       }
     }
 
-    // 1B. AoH3 Real-Time Siege Widget on Map (if territory is under siege)
-    if (t.siege && !battleTerritorySet.has(t.id)) {
+    // 1B. AoH3 Real-Time Siege Widget on Map (ONLY shown if player or player's allies/vassals are involved!)
+    const canSeeSiege =
+      Boolean(t.siege) &&
+      (isPlayerTerritory ||
+        isAlliedOrVassal ||
+        isNationPlayerOrAlly(t.siege?.attackerId, playerNationId, nations, relations) ||
+        isNationPlayerOrAlly(t.siege?.defenderId, playerNationId, nations, relations));
+
+    if (t.siege && canSeeSiege && !battleTerritorySet.has(t.id)) {
       const siege = t.siege;
       const siegeAttacker = nations[siege.attackerId];
       const siegeBadgeY = namePlaced ? sy + 8 : sy;
@@ -506,16 +564,11 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         const bx = sx - siegeW / 2;
         const by = siegeBadgeY - siegeH / 2;
 
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.35)';
-        ctx.beginPath();
-        ctx.roundRect(bx - 2, by - 2, siegeW + 4, siegeH + 4, 6);
-        ctx.fill();
-
         ctx.fillStyle = 'rgba(15, 23, 42, 0.96)';
-        ctx.strokeStyle = '#F59E0B';
-        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.75)';
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.roundRect(bx, by, siegeW, siegeH, 4.5);
+        ctx.roundRect(bx, by, siegeW, siegeH, 4);
         ctx.fill();
         ctx.stroke();
 
@@ -533,15 +586,15 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         ctx.font = '700 9px "JetBrains Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#FEF08A';
+        ctx.fillStyle = '#F8FAFC';
         ctx.fillText(
-          `♜ %${Math.round(siege.progress)}`,
+          `%${Math.round(siege.progress)}`,
           bx + 23 + (siegeW - 23) / 2,
           siegeBadgeY - 1
         );
 
         const progW = ((siegeW - 25) * Math.min(100, siege.progress)) / 100;
-        ctx.fillStyle = '#F59E0B';
+        ctx.fillStyle = '#F87171';
         ctx.fillRect(bx + 23, by + siegeH - 3, progW, 2);
       }
     }
@@ -549,7 +602,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     // 1C. Compact Resource Icon & Investment Value Badge (in RESOURCES or ECONOMIC MapMode)
     const isResourceOrEcoLens =
       mapMode === 'RESOURCES' || mapMode === 'ECONOMIC';
-    if (isResourceOrEcoLens && !battleTerritorySet.has(t.id) && !t.siege) {
+    if (isResourceOrEcoLens && !battleTerritorySet.has(t.id) && !canSeeSiege) {
       const resMeta = RESOURCE_INFO[t.resource] || RESOURCE_INFO.TAHIL;
       const dev = calculateProvinceDevelopment(t, owner);
       const showResourceBadge =
@@ -610,12 +663,12 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       }
     }
 
-    // 2. AoH3-Style Army Counter Shield with Graphical National Flag & Soldier Unit Miniature
+    // 2. Clean AoH3-Style Army Counter Plate (Graphical National Flag + Pure Troop Number, NO tiny soldier icons)
     const garrison = t.garrison || 0;
     const wantsArmyShield =
       !isResourceOrEcoLens &&
       !battleTerritorySet.has(t.id) &&
-      !t.siege &&
+      !canSeeSiege &&
       (isSelected ||
         (hasIntel &&
           garrison >= 500 &&
@@ -625,9 +678,9 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
             (isAlliedOrVassal &&
               (isCapital || garrison >= 5000) &&
               transform.k >= 1.15) ||
-            (isCapital && transform.k >= 1.2) ||
-            (garrison >= 6000 && transform.k >= 1.35) ||
-            transform.k >= (isMobileViewport ? 1.85 : 1.65))));
+            (isCapital && transform.k >= 1.35) ||
+            (garrison >= 6000 && transform.k >= 1.55) ||
+            transform.k >= (isMobileViewport ? 2.0 : 1.8))));
 
     if (wantsArmyShield && (garrison > 0 || isSelected)) {
       const badgeY = namePlaced ? sy + 9 : sy + 2;
@@ -635,39 +688,20 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         ? formatTroopBadgeNumber(garrison, transform.k)
         : '?';
       const flagCode = (owner?.flagCode || '??').slice(0, 3);
-      const roleIcon = isPlayerTerritory
-        ? '🛡'
-        : isEnemy
-        ? '⚔'
-        : isAlliedOrVassal
-        ? '🤝'
-        : '';
 
-      const mainText = roleIcon ? `${roleIcon} ${troopStr}` : troopStr;
+      const mainText = troopStr;
       const isCompactZoom = transform.k < 1.55 && !isSelected;
-      const badgeH = isCompactZoom ? 16 : 19;
-      const flagBoxW = isCompactZoom ? 22 : 26;
+      const badgeH = isCompactZoom ? 16 : 18;
+      const flagBoxW = isCompactZoom ? 21 : 24;
       const numBoxW = Math.max(
-        isCompactZoom ? 30 : 36,
-        mainText.length * (isCompactZoom ? 5.5 : 6.2) + 8
+        isCompactZoom ? 28 : 34,
+        mainText.length * (isCompactZoom ? 5.6 : 6.2) + 8
       );
       const badgeW = flagBoxW + numBoxW;
 
-      // Determine whether to show the AoH3 3D/Miniature Soldier + Flag Standard above the counter
-      const wantsSoldierVisual =
-        hasIntel &&
-        garrison >= 1000 &&
-        (isSelected ||
-          mapMode === 'MILITARY' ||
-          ((isPlayerTerritory || isEnemy) &&
-            (isCapital || garrison >= 9000 || transform.k >= 1.35)) ||
-          (isCapital && transform.k >= 1.45) ||
-          transform.k >= 1.75);
-
-      const topReserve = namePlaced ? 1 : wantsSoldierVisual ? 14 : 2;
       const badgeBox: PlacedBox = {
         x1: sx - badgeW / 2 - 2,
-        y1: badgeY - badgeH / 2 - topReserve,
+        y1: badgeY - badgeH / 2 - 2,
         x2: sx + badgeW / 2 + 2,
         y2: badgeY + badgeH / 2 + 2,
       };
@@ -680,62 +714,32 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         const bx = sx - badgeW / 2;
         const by = badgeY - badgeH / 2;
 
-        // 2a. Draw AoH3 Miniature Soldier Figure + Waving National Flag Standard above/beside plate!
-        if (wantsSoldierVisual) {
-          const soldierScale = isSelected
-            ? 0.92
-            : isCompactZoom
-            ? 0.72
-            : 0.84;
-          const soldierX = namePlaced ? bx - 8 : sx;
-          const soldierY = namePlaced ? badgeY + 4 : by - 1.5;
-          drawAoH3SoldierUnitOnCanvas(ctx, soldierX, soldierY, soldierScale, {
-            nationId: t.ownerId,
-            flagCode,
-            nationColor: owner?.color || '#475569',
-            isPlayer: isPlayerTerritory,
-            isEnemy,
-          });
-        }
-
-        // 2b. Outer tactical halo for Player and Enemy armies
-        if (isPlayerTerritory || isEnemy || isSelected) {
-          ctx.fillStyle = isSelected
-            ? 'rgba(250, 204, 21, 0.34)'
-            : isPlayerTerritory
-            ? 'rgba(16, 185, 129, 0.28)'
-            : 'rgba(244, 63, 94, 0.36)';
-          ctx.beginPath();
-          ctx.roundRect(bx - 2.5, by - 2.5, badgeW + 5, badgeH + 5, 6);
-          ctx.fill();
-        }
-
-        // 2c. Main AoH3 Shield Plate Body
+        // Clean AoH3 Counter Plate Body (crisp, non-glowing)
         ctx.fillStyle = isPlayerTerritory
-          ? 'rgba(6, 78, 59, 0.97)' // Emerald Royal Shield for Player
+          ? 'rgba(15, 34, 28, 0.95)'
           : isEnemy
-          ? 'rgba(127, 29, 29, 0.97)' // Crimson War Shield for Enemy
+          ? 'rgba(80, 18, 24, 0.95)'
           : isAlliedOrVassal
-          ? 'rgba(12, 74, 110, 0.96)' // Cobalt Shield for Ally/Vassal
-          : 'rgba(15, 23, 42, 0.95)'; // Obsidian Slate for Neutral
+          ? 'rgba(14, 46, 72, 0.95)'
+          : 'rgba(18, 22, 30, 0.94)';
 
         ctx.strokeStyle = isSelected
-          ? '#FACC15'
+          ? '#F8FAFC'
           : isPlayerTerritory
-          ? '#FBBF24' // Gold trim on Player armies
+          ? 'rgba(110, 231, 183, 0.55)'
           : isEnemy
-          ? '#FB7185' // Bright rose trim on Enemy armies
+          ? '#F87171'
           : isAlliedOrVassal
           ? '#38BDF8'
-          : 'rgba(148, 163, 184, 0.78)';
-        ctx.lineWidth = isSelected || isPlayerTerritory || isEnemy ? 1.65 : 1.15;
+          : 'rgba(148, 163, 184, 0.55)';
+        ctx.lineWidth = isSelected ? 1.45 : 1.0;
 
         ctx.beginPath();
-        ctx.roundRect(bx, by, badgeW, badgeH, 4.5);
+        ctx.roundRect(bx, by, badgeW, badgeH, 3.5);
         ctx.fill();
         ctx.stroke();
 
-        // 2d. Left Graphical Nation Flag inside Shield (Real AoH3 Flag instead of plain text!)
+        // 2c. Left Graphical Nation Flag inside Counter
         drawNationFlagOnCanvas(
           ctx,
           bx + 1.5,
@@ -747,32 +751,30 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
           owner?.color || '#475569'
         );
 
-        // Subtle gold vertical divider between flag and troop count
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.55)';
+        // Subtle slate vertical divider between flag and troop count
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(bx + flagBoxW, by + 1.5);
         ctx.lineTo(bx + flagBoxW, by + badgeH - 1.5);
         ctx.stroke();
 
-        // 2e. Right Troop Count Text
+        // 2d. Right Pure Troop Count Text
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.font = `700 ${isCompactZoom ? '9px' : '10px'} "JetBrains Mono", monospace`;
         ctx.fillStyle = !hasIntel
           ? '#94A3B8'
-          : isPlayerTerritory
-          ? '#FEF08A'
           : isEnemy
           ? '#FFE4E6'
           : '#F8FAFC';
         ctx.fillText(
           mainText,
           bx + flagBoxW + numBoxW / 2,
-          badgeY - (hasIntel ? 1.2 : 0)
+          badgeY - (hasIntel ? 1.0 : 0)
         );
 
-        // 2f. Bottom 2px Unit Composition Bar (Green = Infantry, Amber = Cavalry/Armor, Sky = Siege/Air)
+        // 2e. Bottom 2px Unit Composition Bar
         if (hasIntel && t.units && garrison > 0) {
           const totalU = Math.max(
             1,
@@ -784,14 +786,14 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
           const armW = ((t.units.armor || 0) / totalU) * (numBoxW - 4);
           const airW = Math.max(0, numBoxW - 4 - infW - armW);
           const barX = bx + flagBoxW + 2;
-          const barY = by + badgeH - 3.2;
+          const barY = by + badgeH - 3.0;
 
           ctx.fillStyle = '#34D399';
-          ctx.fillRect(barX, barY, infW, 2);
+          ctx.fillRect(barX, barY, infW, 1.8);
           ctx.fillStyle = '#FBBF24';
-          ctx.fillRect(barX + infW, barY, armW, 2);
+          ctx.fillRect(barX + infW, barY, armW, 1.8);
           ctx.fillStyle = '#38BDF8';
-          ctx.fillRect(barX + infW + armW, barY, airW, 2);
+          ctx.fillRect(barX + infW + armW, barY, airW, 1.8);
         }
 
         // Terrain / Fief Lord Micro-Indicator only in TERRAIN mode or when selected/fief-assigned
@@ -813,9 +815,8 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     }
   }
 
-  // 3. AoH3 Live On-Map Battle Simulation Widget (Clashing Soldiers + Graphical Flags + Tug-of-War Bar)
-  const animPhase = (Date.now() % 1000) / 1000;
-  for (const btl of battles) {
+  // 3. AoH3 Live On-Map Battle Widget (Clean Graphical Flags + Tug-of-War Bar, filtered to player & allied wars)
+  for (const btl of visibleBattles) {
     const t = territories[btl.territoryId];
     if (!t) continue;
     const pt = projection(t.centroid);
@@ -836,98 +837,70 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       Math.min(0.88, btl.attackerTroops / totalTroops)
     );
 
-    const pillW = 124;
-    const pillH = 24;
+    const pillW = 120;
+    const pillH = 22;
     const bx = sx - pillW / 2;
-    const by = sy - 10 - pillH / 2;
+    const by = sy - 8 - pillH / 2;
 
-    // 3a. Two Opposing AoH3 Soldiers Clashing Swords Above the Battle Bar!
-    drawAoH3SoldierUnitOnCanvas(ctx, sx - 18, by - 2, 0.85, {
-      nationId: btl.attackerId,
-      flagCode: attFlag,
-      nationColor: attNation?.color || '#DC2626',
-      isPlayer: btl.attackerId === playerNationId,
-      isEnemy: btl.attackerId !== playerNationId,
-      isFighting: true,
-      facingLeft: false,
-      animPhase,
-    });
-    drawAoH3SoldierUnitOnCanvas(ctx, sx + 18, by - 2, 0.85, {
-      nationId: btl.defenderId,
-      flagCode: defFlag,
-      nationColor: defNation?.color || '#2563EB',
-      isPlayer: btl.defenderId === playerNationId,
-      isEnemy: btl.defenderId !== playerNationId,
-      isFighting: true,
-      facingLeft: true,
-      animPhase,
-    });
-
-    // 3b. Outer combat pulse halo
-    ctx.fillStyle = 'rgba(245, 158, 11, 0.38)';
+    // Main dark battle frame (clean crisp border, no yellow glow)
+    ctx.fillStyle = 'rgba(14, 16, 22, 0.96)';
+    ctx.strokeStyle = 'rgba(226, 232, 240, 0.78)';
+    ctx.lineWidth = 1.25;
     ctx.beginPath();
-    ctx.roundRect(bx - 3, by - 3, pillW + 6, pillH + 6, 7);
-    ctx.fill();
-
-    // 3c. Main dark battle frame
-    ctx.fillStyle = 'rgba(9, 14, 26, 0.97)';
-    ctx.strokeStyle = '#FBBF24';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, pillW, pillH, 5);
+    ctx.roundRect(bx, by, pillW, pillH, 4);
     ctx.fill();
     ctx.stroke();
 
-    // 3d. Left Attacker Graphical Flag & Right Defender Graphical Flag
+    // 3c. Left Attacker Graphical Flag & Right Defender Graphical Flag
     drawNationFlagOnCanvas(
       ctx,
       bx + 1.5,
       by + 1.5,
-      21,
-      pillH - 7,
+      20,
+      pillH - 6.5,
       btl.attackerId,
       attFlag,
       attNation?.color || '#DC2626'
     );
     drawNationFlagOnCanvas(
       ctx,
-      bx + pillW - 22.5,
+      bx + pillW - 21.5,
       by + 1.5,
-      21,
-      pillH - 7,
+      20,
+      pillH - 6.5,
       btl.defenderId,
       defFlag,
       defNation?.color || '#2563EB'
     );
 
-    // 3e. Attacker Troops vs Crossed Swords vs Defender Troops
+    // 3d. Attacker Troops vs Defender Troops
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '700 8.5px "JetBrains Mono", monospace';
     ctx.fillStyle =
       btl.attackerId === playerNationId ? '#A7F3D0' : '#FECDD3';
-    ctx.fillText(attStr, bx + 40, by + 9.5);
+    ctx.fillText(attStr, bx + 38, by + 9);
 
-    ctx.font = '700 9.5px Inter, sans-serif';
-    ctx.fillStyle = '#FBBF24';
-    ctx.fillText('⚔', sx, by + 9.5);
+    ctx.font = '700 9px Inter, sans-serif';
+    ctx.fillStyle = '#F87171';
+    ctx.fillText('⚔', sx, by + 9);
 
     ctx.font = '700 8.5px "JetBrains Mono", monospace';
     ctx.fillStyle =
       btl.defenderId === playerNationId ? '#A7F3D0' : '#E2E8F0';
-    ctx.fillText(defStr, bx + pillW - 40, by + 9.5);
+    ctx.fillText(defStr, bx + pillW - 38, by + 9);
 
-    // 3f. Bottom Tug-of-War Balance Bar
-    const barY = by + pillH - 4.5;
+    // 3e. Bottom Tug-of-War Balance Bar
+    const barY = by + pillH - 4;
     const barW = pillW - 4;
     const attBarW = Math.round(barW * attRatio);
 
     ctx.fillStyle =
       btl.attackerId === playerNationId ? '#10B981' : '#EF4444';
-    ctx.fillRect(bx + 2, barY, attBarW, 3);
+    ctx.fillRect(bx + 2, barY, attBarW, 2.5);
 
     ctx.fillStyle =
       btl.defenderId === playerNationId ? '#10B981' : '#3B82F6';
-    ctx.fillRect(bx + 2 + attBarW, barY, barW - attBarW, 3);
+    ctx.fillRect(bx + 2 + attBarW, barY, barW - attBarW, 2.5);
   }
 }

@@ -925,10 +925,12 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
               </div>
             </div>
 
-            {/* Live Acceptance Status Banner */}
+            {/* Live Acceptance Status Banner (+25 War Score Requirement) */}
             <div
               className={`px-3 py-2 rounded-xl border flex items-center justify-between gap-2 text-xs ${
-                isOverBudget
+                displayScore < 25
+                  ? 'bg-amber-950/65 border-amber-500/60 text-amber-200'
+                  : isOverBudget
                   ? 'bg-rose-950/60 border-rose-500/60 text-rose-200'
                   : totalSpentPoints > 0
                   ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-200'
@@ -936,13 +938,15 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
               }`}
             >
               <div className="flex items-center gap-2">
-                {isOverBudget ? (
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                {displayScore < 25 || isOverBudget ? (
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                 ) : (
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 )}
                 <span>
-                  {isOverBudget
+                  {displayScore < 25
+                    ? `🔒 Savaş ilan edildikten hemen sonra barış yapılamaz! Barış antlaşması imzalayabilmek için Savaş Skorunda en az +25% önde olmalısınız (Mevcut: ${displayScore > 0 ? `+${displayScore}%` : `${displayScore}%`}).`
+                    : isOverBudget
                     ? `Puan Bütçesi Aşıldı (+${totalSpentPoints - availableBudget} Puan fazla). Daha fazla şehir işgal edin veya talepleri azaltın.`
                     : totalSpentPoints > 0
                     ? `${enemyNation.name} seçilen barış şartlarını (${totalSpentPoints} Puan) kabul ediyor!`
@@ -1122,7 +1126,12 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={!canSignDemands}
+              disabled={!canSignDemands || displayScore < 25}
+              title={
+                displayScore < 25
+                  ? `Barış antlaşması için en az +25% Savaş Skoru gereklidir (Mevcut: ${displayScore}%)`
+                  : undefined
+              }
               onClick={() =>
                 onResolvePeaceConference({
                   warId: war.id,
@@ -1137,21 +1146,33 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
             >
               <Handshake className="w-4 h-4" />
               <span>
-                📜 Barış Talebini İmzala ({totalSpentPoints}/{availableBudget} Puan)
+                {displayScore < 25
+                  ? `🔒 Barış İmzala (+25% Skor Şartı)`
+                  : `📜 Barış Talebini İmzala (${totalSpentPoints}/${availableBudget} Puan)`}
               </span>
             </button>
 
             <button
               type="button"
+              disabled={displayScore < 25}
+              title={
+                displayScore < 25
+                  ? `Beyaz barış için en az +25% Savaş Skoru gereklidir (Mevcut: ${displayScore}%)`
+                  : undefined
+              }
               onClick={() =>
                 onResolvePeaceConference({
                   warId: war.id,
                   mode: 'WHITE_PEACE',
                 })
               }
-              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-45 disabled:cursor-not-allowed border border-slate-600 text-slate-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
             >
-              <span>🕊️ Galipsiz Barış (Beyaz Barış)</span>
+              <span>
+                {displayScore < 25
+                  ? '🔒 Galipsiz Barış (+25% Şart)'
+                  : '🕊️ Galipsiz Barış (Beyaz Barış)'}
+              </span>
             </button>
 
             <button

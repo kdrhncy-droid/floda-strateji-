@@ -26,10 +26,7 @@ import {
 } from '../types/game';
 import { ClassifiedBorderMap } from './borderClassifier';
 import { MapGeometryCache } from './spatialIndex';
-import {
-  drawAoH3SoldierUnitOnCanvas,
-  drawNationFlagOnCanvas,
-} from './nationFlagRenderer';
+import { drawNationFlagOnCanvas } from './nationFlagRenderer';
 
 export function resolveTerritoryFillColor(params: {
   territory: Territory;
@@ -141,6 +138,7 @@ export function renderOceanAndPolygons(params: {
   mapMode: MapMode;
   playerNationId: string;
   selectedTerritoryId: string | null;
+  multiSelectedTerritoryIds?: string[];
   armyOrderSourceId: string | null;
   fogOfWarEnabled: boolean;
   visibleTerritoryIds: Set<string>;
@@ -162,6 +160,7 @@ export function renderOceanAndPolygons(params: {
     mapMode,
     playerNationId,
     selectedTerritoryId,
+    multiSelectedTerritoryIds = [],
     armyOrderSourceId,
     fogOfWarEnabled,
     visibleTerritoryIds,
@@ -365,7 +364,26 @@ export function renderOceanAndPolygons(params: {
     ctx.restore();
   }
 
-  // 2b. Dedicated Top-Pass for Selected Province so neighbors never paint over its golden ring!
+  // 2b. Dedicated Top-Pass for Selected Province & Batch Multi-Selected Provinces
+  if (multiSelectedTerritoryIds.length > 0) {
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    for (const mId of multiSelectedTerritoryIds) {
+      const mPath = cache.paths[mId];
+      if (!mPath) continue;
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.24)';
+      ctx.fill(mPath);
+      ctx.lineWidth = (2.8 * zoomBorderScale) / transform.k;
+      ctx.strokeStyle = 'rgba(2, 6, 23, 0.9)';
+      ctx.stroke(mPath);
+      ctx.lineWidth = (1.75 * zoomBorderScale) / transform.k;
+      ctx.strokeStyle = '#38BDF8';
+      ctx.stroke(mPath);
+    }
+    ctx.restore();
+  }
+
   if (selectedTerritoryId && cache.paths[selectedTerritoryId]) {
     const selPath = cache.paths[selectedTerritoryId];
     ctx.save();
@@ -480,6 +498,7 @@ export function renderArmyMovementsLayer(params: {
   transform: { k: number; x: number; y: number };
   territories: Record<string, Territory>;
   nations: Record<string, Nation>;
+  relations?: Record<string, DiplomaticRelation>;
   movements: ArmyMovement[];
   projection: GeoProjection;
   playerNationId: string;
@@ -493,22 +512,48 @@ export function renderArmyMovementsLayer(params: {
     transform,
     territories,
     nations,
+    relations = {},
     movements,
     projection,
     playerNationId,
     fogOfWarEnabled,
     visibleTerritoryIds,
     interpolatedProgress,
-    animPhaseOverride,
   } = params;
 
   if (movements.length === 0) return;
+
+  const isPlayerOrAlly = (nationId: string | undefined): boolean => {
+    if (!nationId) return false;
+    if (nationId === playerNationId) return true;
+    const rel = relations[relationKey(playerNationId, nationId)];
+    if (rel?.isAllied || Boolean(rel?.allianceType)) return true;
+    const nat = nations[nationId];
+    const playerNat = nations[playerNationId];
+    return Boolean(
+      nat?.vassalOf === playerNationId || playerNat?.vassalOf === nationId
+    );
+  };
 
   ctx.save();
   ctx.translate(transform.x, transform.y);
   ctx.scale(transform.k, transform.k);
 
   movements.forEach((mv) => {
+    const fromT = territories[mv.fromTerritoryId];
+    const toT = territories[mv.toTerritoryId];
+    if (!fromT || !toT) return;
+
+    // Hide distant war movements between non-allied foreign nations
+    const involvesPlayerOrAlly =
+      isPlayerOrAlly(mv.ownerId) ||
+      isPlayerOrAlly(fromT.ownerId) ||
+      isPlayerOrAlly(toT.ownerId);
+
+    if (!involvesPlayerOrAlly) {
+      return;
+    }
+
     if (
       fogOfWarEnabled &&
       mv.ownerId !== playerNationId &&
@@ -517,10 +562,6 @@ export function renderArmyMovementsLayer(params: {
     ) {
       return;
     }
-
-    const fromT = territories[mv.fromTerritoryId];
-    const toT = territories[mv.toTerritoryId];
-    if (!fromT || !toT) return;
 
     const p1 = projection(fromT.centroid);
     const p2 = projection(toT.centroid);
@@ -595,84 +636,59 @@ export function renderArmyMovementsLayer(params: {
       : '#38BDF8';
     ctx.fill();
 
-    // AoH3-Style Floating Marching Soldier Figure + Flag & Counter Pill at (curX, curY)
+    // Clean AoH3-Style Floating Marching Counter Plate at (curX, curY)
     ctx.save();
     ctx.translate(curX, curY);
     ctx.scale(1 / transform.k, 1 / transform.k);
 
-    const troopLabel = `${mv.isAttack ? '⚔' : '🛡'} ${(mv.troops / 1000).toFixed(1)}B`;
+    const troopLabel = `${(mv.troops / 1000).toFixed(1)}B`;
     const flagStr = (mvOwner?.flagCode || 'ORD').slice(0, 3);
-    const pillW = 68;
-    const pillH = 20;
+    const pillW = 62;
+    const pillH = 19;
 
-    // 1. Animated Marching AoH3 Soldier + Waving National Flag Standard Above Counter
-    drawAoH3SoldierUnitOnCanvas(ctx, 0, -pillH / 2 - 2, 0.88, {
-      nationId: mv.ownerId,
-      flagCode: flagStr,
-      nationColor: mvOwner?.color || '#E11D48',
-      isPlayer: isPlayerArmy,
-      isEnemy: mv.isAttack && !isPlayerArmy,
-      isMarching: true,
-      facingLeft: p2[0] < p1[0],
-      animPhase:
-        typeof animPhaseOverride === 'number'
-          ? animPhaseOverride
-          : (displayProgress % 20) / 20,
-    });
-
-    // 2. Outer glow
+    // Pill background (crisp dark body, no outer glow halo or gold frame)
     ctx.fillStyle = mv.isAttack
-      ? 'rgba(239, 68, 68, 0.38)'
+      ? 'rgba(80, 18, 24, 0.96)'
       : isPlayerArmy
-      ? 'rgba(16, 185, 129, 0.38)'
-      : 'rgba(56, 189, 248, 0.3)';
-    ctx.beginPath();
-    ctx.roundRect(-pillW / 2 - 2, -pillH / 2 - 2, pillW + 4, pillH + 4, 6);
-    ctx.fill();
-
-    // 3. Pill background
-    ctx.fillStyle = mv.isAttack
-      ? 'rgba(127, 29, 29, 0.97)'
-      : isPlayerArmy
-      ? 'rgba(6, 78, 59, 0.97)'
-      : 'rgba(15, 23, 42, 0.96)';
+      ? 'rgba(15, 34, 28, 0.96)'
+      : 'rgba(18, 22, 30, 0.95)';
     ctx.strokeStyle = mv.isAttack
-      ? '#FCA5A5'
+      ? '#F87171'
       : isPlayerArmy
-      ? '#FBBF24'
+      ? 'rgba(110, 231, 183, 0.72)'
       : '#38BDF8';
-    ctx.lineWidth = 1.65;
+    ctx.lineWidth = 1.15;
     ctx.beginPath();
-    ctx.roundRect(-pillW / 2, -pillH / 2, pillW, pillH, 4.5);
+    ctx.roundRect(-pillW / 2, -pillH / 2, pillW, pillH, 3.5);
     ctx.fill();
     ctx.stroke();
 
-    // 4. Graphical National Flag on Left of Marching Pill
+    // Graphical National Flag on Left of Marching Pill
     drawNationFlagOnCanvas(
       ctx,
       -pillW / 2 + 1.5,
       -pillH / 2 + 1.5,
-      23,
+      22,
       pillH - 3,
       mv.ownerId,
       flagStr,
-      mvOwner?.color || '#E11D48'
+      mvOwner?.color || '#183222'
     );
 
-    // 5. Troop count on right
+    // Troop count on right
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '700 9px "JetBrains Mono", monospace';
-    ctx.fillStyle = isPlayerArmy ? '#FEF08A' : '#FFFFFF';
-    ctx.fillText(troopLabel, 11.5, -1);
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillText(troopLabel, 10, -1);
 
-    // 6. Live Progress bar at bottom of moving army pill
+    // 5. Live Progress bar at bottom of moving army pill
     const progW = Math.max(
       2,
-      ((pillW - 27) * Math.min(100, displayProgress)) / 100
+      ((pillW - 26) * Math.min(100, displayProgress)) / 100
     );
     ctx.fillStyle = mv.isAttack ? '#FB7185' : '#34D399';
-    ctx.fillRect(-pillW / 2 + 25, pillH / 2 - 3, progW, 2);
+    ctx.fillRect(-pillW / 2 + 24, pillH / 2 - 3, progW, 2);
 
     ctx.restore();
   });

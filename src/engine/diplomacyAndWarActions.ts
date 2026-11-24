@@ -1001,12 +1001,18 @@ export function resolvePeaceDealDomain(params: {
         war.defenders.includes(t.coreOwnerId))
   );
 
-  // Enforce realistic AoH3 War Score thresholds before accepting peace demands!
+  // Effective war score including occupied provinces (+25 required for peace deals!)
+  const effectiveDealScore = Math.max(
+    playerWarScore,
+    Math.round(Math.max(0, playerWarScore) + occupiedProvs.length * 14)
+  );
+
+  // Enforce realistic AoH3 +25 War Score threshold before accepting peace demands or white peace!
   if (dealType === 'ANNEX_OCCUPIED') {
-    if (occupiedProvs.length === 0 && playerWarScore < 25) {
+    if (effectiveDealScore < 25) {
       sound.playClick();
       return {
-        toast: `🛑 ${enemy?.name || 'Düşman'} toprak vermeyi reddediyor! İlhak için önce cephede eyalet fethetmeli veya Savaş Skorunu en az +%25 yapmalısınız (Mevcut: %${playerWarScore}).`,
+        toast: `🛑 ${enemy?.name || 'Düşman'} barış masasına oturmuyor! Barış anlaşması için Savaş Skorunda en az +25 önde olmalısınız (Mevcut: %${effectiveDealScore}).`,
       };
     }
   } else if (dealType === 'VASSALIZE') {
@@ -1017,17 +1023,17 @@ export function resolvePeaceDealDomain(params: {
       };
     }
   } else if (dealType === 'REPARATIONS') {
-    if (playerWarScore < 20) {
+    if (effectiveDealScore < 25) {
       sound.playClick();
       return {
-        toast: `🛑 ${enemy?.name || 'Düşman'} savaş tazminatı ödemeyi reddediyor! En az +%20 Savaş Skoru gerekli (Mevcut: %${playerWarScore}).`,
+        toast: `🛑 ${enemy?.name || 'Düşman'} savaş tazminatı ödemeyi reddediyor! En az +25 Savaş Skoru gerekli (Mevcut: %${effectiveDealScore}).`,
       };
     }
   } else if (dealType === 'WHITE_PEACE') {
-    if (playerWarScore < -35 && playerNation.treasury < 350) {
+    if (effectiveDealScore < 25) {
       sound.playClick();
       return {
-        toast: `🛑 Savaşta ağır yenilgi durumundasınız (%${playerWarScore})! Ateşkes için hazinede en az 350 Altın bulunmalıdır.`,
+        toast: `🛑 Savaş ilan edildikten hemen sonra barış yapılamaz! Barış imzalamak için Savaş Skorunda en az +25 önde olmalısınız (Mevcut: %${effectiveDealScore}).`,
       };
     }
   }
@@ -1436,12 +1442,17 @@ export function resolvePeaceConferenceDomain(params: {
   let workingRelations = { ...relations };
   let nextNews = newsEvents;
 
-  // 1. WHITE PEACE (Galipsiz Barış)
+  const effectivePeaceScore =
+    signedWarScore >= 0
+      ? Math.max(signedWarScore, availableBudget)
+      : signedWarScore;
+
+  // 1. WHITE PEACE (Galipsiz Barış) — requires +25 effective war score
   if (request.mode === 'WHITE_PEACE') {
-    if (signedWarScore < -30 && playerNation.treasury < 300) {
+    if (effectivePeaceScore < 25) {
       sound.playClick();
       return {
-        toast: `🛑 Savaşta geridesiniz (%${signedWarScore})! Galipsiz barış için hazinede en az 300 Altın bulunmalıdır.`,
+        toast: `🛑 Savaş ilan edildikten hemen sonra barış yapılamaz! Barış anlaşması için Savaş Skorunda en az +25 önde olmalısınız (Mevcut: %${effectivePeaceScore}).`,
       };
     }
 
@@ -1472,13 +1483,6 @@ export function resolvePeaceConferenceDomain(params: {
         };
       }
     });
-
-    if (signedWarScore < -30) {
-      nextNations[playerNationId] = {
-        ...playerNation,
-        treasury: Math.max(0, playerNation.treasury - 300),
-      };
-    }
 
     const curRel = getOrCreateRelation(
       workingRelations,
@@ -1581,7 +1585,13 @@ export function resolvePeaceConferenceDomain(params: {
     };
   }
 
-  // 3. PEACE_DEMANDS (Savaş Puanı Bütçeli Barış Konferansı)
+  // 3. PEACE_DEMANDS (Savaş Puanı Bütçeli Barış Konferansı — requires +25 effective war score)
+  if (effectivePeaceScore < 25) {
+    sound.playClick();
+    return {
+      toast: `🛑 Barış antlaşması imzalamak için Savaş Skorunda en az +25 önde olmalısınız (Mevcut: %${effectivePeaceScore}).`,
+    };
+  }
   const claimableMap = new Map<string, Territory>();
   for (const t of claimableEnemyProvinces) {
     claimableMap.set(t.id, t);

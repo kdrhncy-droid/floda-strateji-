@@ -8,13 +8,16 @@ import {
   Layers,
   Navigation,
   Scissors,
-  SlidersHorizontal,
   Swords,
   Trash2,
   UserPlus,
   X,
 } from 'lucide-react';
-import { RESOURCE_INFO } from '../../data/world2026Data';
+import {
+  RESOURCE_INFO,
+  getArmyGenerationInfo,
+  getNationModernizedTier,
+} from '../../data/world2026Data';
 import { computeVisibleTerritoryIds } from '../../engine/fogOfWarEngine';
 import { TERRAIN_INFO } from '../../engine/pashaAndFiefEngine';
 import {
@@ -27,10 +30,16 @@ import {
   ActiveBattle,
   ActiveWar,
   DiplomaticRelation,
+  GameModeId,
   Nation,
   Territory,
 } from '../../types/game';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
+import {
+  cleanNationName,
+  cleanProvinceName,
+  formatTroopsShort,
+} from '../../utils/formatters';
 import { sound } from '../../utils/soundEngine';
 import { TerrainPanoramaSvg } from '../illustrations/AoH3Illustrations';
 
@@ -42,6 +51,7 @@ interface SelectedProvinceBarProps {
   relations: Record<string, DiplomaticRelation>;
   wars: ActiveWar[];
   battles?: ActiveBattle[];
+  gameMode: GameModeId;
   fogOfWarEnabled: boolean;
   armyOrderSourceId: string | null;
   moveRatio: number;
@@ -53,7 +63,6 @@ interface SelectedProvinceBarProps {
   onDisbandArmy?: (territoryId: string, ratio: 0.5 | 1) => void;
   onSelectTerritory: (territoryId: string) => void;
   onOpenFullDrawer: () => void;
-  onOpenDiplomacyDrawer: () => void;
   onInspectNation?: (nationId: string) => void;
   onOpenBattleOverview?: () => void;
   onClear: () => void;
@@ -67,6 +76,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   relations,
   wars,
   battles = [],
+  gameMode,
   fogOfWarEnabled,
   armyOrderSourceId,
   moveRatio,
@@ -78,12 +88,10 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   onDisbandArmy,
   onSelectTerritory,
   onOpenFullDrawer,
-  onOpenDiplomacyDrawer,
   onInspectNation,
   onOpenBattleOverview,
   onClear,
 }) => {
-  const [actionsOpen, setActionsOpen] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
   const [disbandOpen, setDisbandOpen] = useState(false);
 
@@ -92,26 +100,18 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
     setDisbandOpen(false);
   }, [territory.id]);
 
-  const owner = nations[territory.ownerId];
-  if (!owner) return null;
-
-  const isPlayerOwned = territory.ownerId === playerNationId;
-  const visibleIds = computeVisibleTerritoryIds(
-    territories,
-    nations,
-    relations,
-    [],
-    [],
-    playerNationId
+  const visibleIds = useMemo(
+    () =>
+      computeVisibleTerritoryIds(
+        territories,
+        nations,
+        relations,
+        [],
+        [],
+        playerNationId
+      ),
+    [territories, nations, relations, playerNationId]
   );
-  const hasIntel =
-    isPlayerOwned || !fogOfWarEnabled || visibleIds.has(territory.id);
-  const atWar =
-    !isPlayerOwned && Boolean(isAtWar(wars, playerNationId, owner.id));
-  const rel = !isPlayerOwned
-    ? getOrCreateRelation(relations, playerNationId, owner.id)
-    : null;
-  const isAllied = Boolean(rel?.isAllied || rel?.allianceType);
 
   // Owned provinces list for 1-tap mobile cycling (< / >)
   const ownedTerritoryIds = useMemo(
@@ -122,6 +122,19 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
         .map((t) => t.id),
     [territories, playerNationId]
   );
+
+  const owner = nations[territory.ownerId];
+  if (!owner) return null;
+
+  const isPlayerOwned = territory.ownerId === playerNationId;
+  const hasIntel =
+    isPlayerOwned || !fogOfWarEnabled || visibleIds.has(territory.id);
+  const atWar =
+    !isPlayerOwned && Boolean(isAtWar(wars, playerNationId, owner.id));
+  const rel = !isPlayerOwned
+    ? getOrCreateRelation(relations, playerNationId, owner.id)
+    : null;
+  const isAllied = Boolean(rel?.isAllied || rel?.allianceType);
 
   const cycleOwnedProvince = (dir: -1 | 1) => {
     if (ownedTerritoryIds.length === 0) return;
@@ -136,8 +149,8 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
     onSelectTerritory(ownedTerritoryIds[nextIdx]);
   };
 
-  const cleanName = territory.name.replace(/^★\s*/, '');
-  const cleanOwnerName = owner.name.replace(/\s*\(1440\)\s*$/, '');
+  const cleanName = cleanProvinceName(territory.name);
+  const cleanOwnerName = cleanNationName(owner.name);
   const titleText = territory.isCapital ? `★ ${cleanName}` : cleanName;
   const terrainMeta =
     TERRAIN_INFO[territory.terrain || 'OVA'] || TERRAIN_INFO.OVA;
@@ -159,9 +172,13 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   ).toFixed(1);
   const armK = ((territory.units?.armor ?? 0) / 1000).toFixed(1);
   const airK = ((territory.units?.airDrone ?? 0) / 1000).toFixed(1);
+  const armyGen = getArmyGenerationInfo(
+    gameMode,
+    getNationModernizedTier(owner)
+  );
 
   return (
-    <div className="hud-province-quickbar absolute bottom-2.5 left-2.5 right-14 sm:right-auto sm:w-[680px] sm:max-w-[calc(100vw-8rem)] z-20 rounded-2xl bg-[#090e1a]/96 border border-amber-500/50 shadow-2xl px-3 py-2 flex flex-col gap-2">
+    <div className="hud-province-quickbar absolute bottom-2.5 left-2.5 right-2.5 sm:right-auto sm:w-[560px] sm:max-w-[calc(100vw-8rem)] z-20 rounded-2xl bg-[#090e1a]/96 border border-amber-500/50 shadow-2xl px-2.5 sm:px-3 py-2 flex flex-col gap-2">
       {/* Direct Movement Prompt Banner (No Forced Percentage Split!) */}
       {isOrderActive && (
         <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-sky-950/90 border border-sky-400/50 text-[11px]">
@@ -257,9 +274,9 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
         </div>
       )}
 
-      <div className="hud-province-summary flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        {/* Top Row (Portrait) / Left Block (Landscape): Illustrated Terrain Badge + Province Title + Army Breakdown */}
-        <div className="flex items-center justify-between gap-2 min-w-0 sm:flex-1">
+      <div className="hud-province-summary flex flex-col gap-2">
+        {/* Top Row: Illustrated Terrain Badge + Province Title + Army Breakdown */}
+        <div className="flex items-center justify-between gap-2 min-w-0">
           {/* Mobile 1-Tap Province Cycle Left */}
           {ownedTerritoryIds.length > 1 && (
             <button
@@ -279,7 +296,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             className="flex items-center gap-2.5 min-w-0 text-left flex-1"
           >
             {/* AoH3 Mini Illustrated Terrain + Flag Crest */}
-            <div className="relative w-12 h-10 rounded-xl overflow-hidden border border-amber-500/40 shrink-0 shadow">
+            <div className="hud-province-thumb relative w-12 h-10 rounded-xl overflow-hidden border border-amber-500/40 shrink-0 shadow">
               <TerrainPanoramaSvg
                 terrain={territory.terrain || 'OVA'}
                 fortLevel={territory.buildings.fortress}
@@ -349,9 +366,16 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                       : 'text-amber-300'
                   }`}
                 >
-                  {hasIntel
-                    ? `${(territory.garrison / 1000).toFixed(1)}B (${infK}P/${armK}Z/${airK}T)`
-                    : '? İstihbarat'}
+                  {hasIntel ? (
+                    <>
+                      {formatTroopsShort(territory.garrison)}
+                      <span className="hud-landscape-hide text-[10px] text-slate-300 font-sans">
+                        {' '}· {armyGen.infantryShort}: {infK}B · {armyGen.armorShort}: {armK}B · {armyGen.airArtilleryShort}: {airK}B
+                      </span>
+                    </>
+                  ) : (
+                    '? İstihbarat'
+                  )}
                 </span>
                 <span className="text-slate-600">·</span>
                 <span
@@ -386,20 +410,21 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             </button>
           )}
 
-          {/* Mobile-Only Close Button on Top Right */}
+          {/* Close Button on Top Right */}
           <button
             onClick={() => {
               sound.playClick();
               onClear();
             }}
             title="Seçimi Kaldır"
-            className="sm:hidden w-7 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white shrink-0"
+            aria-label="Eyalet seçimini kaldır"
+            className="w-7 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Bottom Row (Portrait) / Right Block (Landscape): Direct Army Actions + Province Controls */}
+        {/* Bottom Row: Direct Army Actions + Province Controls */}
         <div className="hud-province-actions flex items-center gap-1.5 shrink-0 overflow-x-auto no-scrollbar">
           {isUnderCombat && onOpenBattleOverview && (
             <button
@@ -520,23 +545,9 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               </button>
             )}
 
-          <button
-            type="button"
-            onClick={() => setActionsOpen((open) => !open)}
-            aria-expanded={actionsOpen}
-            aria-label="Eyalet eylemlerini aç veya kapat"
-            className={`min-h-[36px] px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 ${
-              actionsOpen
-                ? 'bg-sky-500 text-slate-950 border-sky-400'
-                : 'bg-slate-900/90 text-slate-300 border-slate-700 hover:text-white'
-            }`}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-            <span>{actionsOpen ? 'Kapat' : 'Eylemler'}</span>
-          </button>
-
-          {actionsOpen && isPlayerOwned && (
+          {isPlayerOwned && (
             <button
+              type="button"
               onClick={() => {
                 sound.playClick();
                 onQuickRecruitInfantry(territory.id);
@@ -546,19 +557,6 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             >
               <UserPlus className="w-3.5 h-3.5 shrink-0" />
               <span>+1B Asker</span>
-            </button>
-          )}
-
-          {actionsOpen && !isPlayerOwned && (
-            <button
-              onClick={() => {
-                sound.playClick();
-                onOpenDiplomacyDrawer();
-              }}
-              className="min-h-[36px] px-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
-            >
-              <Swords className="w-3.5 h-3.5 shrink-0" />
-              <span>Diplomasi</span>
             </button>
           )}
 
@@ -596,17 +594,6 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                 <span>İncele</span>
               </>
             )}
-          </button>
-
-          <button
-            onClick={() => {
-              sound.playClick();
-              onClear();
-            }}
-            title="Seçimi Kaldır"
-            className="hidden sm:flex w-8 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 items-center justify-center text-slate-400 hover:text-white transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>

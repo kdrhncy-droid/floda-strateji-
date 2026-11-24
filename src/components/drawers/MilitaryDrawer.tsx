@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Award, MapPin, TrendingUp, UserPlus } from "lucide-react";
+import { Award, Coins, MapPin, Shield, Swords, TrendingUp, UserPlus } from "lucide-react";
 import { CommandDrawersProps } from "./drawerTypes";
 import { ArmyModernizationCard } from "./ArmyModernizationCard";
 import {
@@ -7,11 +7,14 @@ import {
   getCommandersForMode,
   getNationModernizedTier,
 } from "../../data/world2026Data";
+import { MERCENARY_COMPANIES } from "../../engine/empireAndArmyActions";
 import {
   BESTOW_FAVOR_GOLD_COST,
   getLordLoyaltySummary,
   getLordRetinueTroops,
 } from "../../engine/pashaAndFiefEngine";
+import { NationFlagCanvasBadge } from "../../map/nationFlagRenderer";
+import { cleanNationName, cleanProvinceName } from "../../utils/formatters";
 import {
   CommanderPortraitSvg,
   UnitTypeIllustrationSvg,
@@ -24,6 +27,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   territories,
   nations,
   onRecruitUnit,
+  onHireMercenary,
   onRecruitOrAssignGeneral,
   onBestowFavorOnLord,
   onToggleCallLordToBanner,
@@ -32,6 +36,8 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   gameMode = "EMPIRES_1440",
 }) => {
   const [rankingSortBy, setRankingSortBy] = useState<"SCORE" | "GDP" | "ARMY" | "PROVINCES">("SCORE");
+  const [recruitmentTab, setRecruitmentTab] = useState<"REGULAR" | "MERCENARY">("REGULAR");
+
   const ownedProvinces = useMemo(
     () =>
       Object.values(territories)
@@ -69,18 +75,76 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   const modernizedTier = getNationModernizedTier(playerNation);
   const activeArmyGen = getArmyGenerationInfo(gameMode, modernizedTier);
 
+  const { fiefCountByCommander, rankedList, playerRankIndex } = useMemo(() => {
+    const fiefCounts = new Map<string, number>();
+    const statsByNation = new Map<
+      string,
+      { ownedCount: number; army: number; gdp: number }
+    >();
+
+    for (const t of Object.values(territories)) {
+      if (!t) continue;
+      if (t.ownerId === playerNation.id && t.fiefLordId) {
+        fiefCounts.set(t.fiefLordId, (fiefCounts.get(t.fiefLordId) || 0) + 1);
+      }
+      const prev = statsByNation.get(t.ownerId) || {
+        ownedCount: 0,
+        army: 0,
+        gdp: 0,
+      };
+      prev.ownedCount += 1;
+      prev.army += t.garrison || 0;
+      prev.gdp += t.baseGdp * (1 + t.buildings.factory * 0.25);
+      statsByNation.set(t.ownerId, prev);
+    }
+
+    const list = Object.values(nations)
+      .filter((n) => !n.isEliminated)
+      .map((n) => {
+        const st = statsByNation.get(n.id) || {
+          ownedCount: 0,
+          army: 0,
+          gdp: 0,
+        };
+        const score = Math.round(
+          st.gdp * 2 + st.army / 250 + n.unlockedTechs.length * 80
+        );
+        return {
+          nation: n,
+          ownedCount: st.ownedCount,
+          army: st.army,
+          gdp: st.gdp,
+          score,
+        };
+      })
+      .sort((a, b) => {
+        if (rankingSortBy === 'GDP') return b.gdp - a.gdp;
+        if (rankingSortBy === 'ARMY') return b.army - a.army;
+        if (rankingSortBy === 'PROVINCES')
+          return b.ownedCount - a.ownedCount || b.score - a.score;
+        return b.score - a.score;
+      });
+
+    return {
+      fiefCountByCommander: fiefCounts,
+      rankedList: list,
+      playerRankIndex: list.findIndex((r) => r.nation.id === playerNation.id),
+    };
+  }, [territories, nations, playerNation.id, rankingSortBy]);
+
   return (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              {/* Left 6 Cols: Direct Recruitment, Army Modernization, Generals & National Unit Composition */}
+              {/* Left 6 Cols: AoH3 3-Line Recruitment & Mercenary Hiring, Army Modernization, Generals */}
               <div className="lg:col-span-6 space-y-4">
                 {activeRecruitCity && (
-                  <div className="bg-slate-950/90 border border-amber-500/40 rounded-2xl p-4 space-y-3">
+                  <div className="bg-[#14110e] border border-[#caa15a]/50 rounded-2xl p-4 space-y-3 shadow-xl">
+                    {/* Top Header + Resources */}
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <UserPlus className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>Asker Bas &amp; Birlik Seferberliği</span>
+                      <h3 className="text-sm font-display font-bold text-amber-200 flex items-center gap-2">
+                        <UserPlus className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span>AoH3 Ordugah &amp; Kiralık Asker Karargâhı</span>
                       </h3>
-                      <div className="flex items-center gap-2 text-[11px] font-mono-num">
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono-num">
                         <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold">
                           🪙 {Math.round(playerNation.treasury).toLocaleString('tr-TR')} Altın
                         </span>
@@ -90,21 +154,52 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                       </div>
                     </div>
 
+                    {/* AoH3 Mode Tabs: Regular Army (Nizamiye) vs Mercenary Hiring (Paralı Asker Kiralama) */}
+                    <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-black/50 border border-[#caa15a]/30">
+                      <button
+                        type="button"
+                        data-testid="recruit-tab-regular"
+                        onClick={() => setRecruitmentTab("REGULAR")}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          recruitmentTab === "REGULAR"
+                            ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
+                            : "text-[#d8cbb5] hover:text-white"
+                        }`}
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>Nizamiye Ordu Bas (İG + Altın)</span>
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="recruit-tab-mercenary"
+                        onClick={() => setRecruitmentTab("MERCENARY")}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          recruitmentTab === "MERCENARY"
+                            ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow"
+                            : "text-[#d8cbb5] hover:text-white"
+                        }`}
+                      >
+                        <Coins className="w-3.5 h-3.5" />
+                        <span>Paralı Asker Kirala (0 İG)</span>
+                      </button>
+                    </div>
+
+                    {/* Province / Barracks Selector */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <label htmlFor="military-recruit-city" className="text-[11px] font-semibold text-slate-300 shrink-0">
-                        Kışla / Şehir Seçimi:
+                      <label htmlFor="military-recruit-city" className="text-[11px] font-semibold text-[#c5b79e] shrink-0">
+                        Toplanma Şehri:
                       </label>
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         <select
                           id="military-recruit-city"
                           value={activeRecruitCity.id}
                           onChange={(e) => setRecruitCityId(e.target.value)}
-                          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-amber-400"
+                          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-black/60 border border-[#caa15a]/40 text-xs font-semibold text-[#f3ead7] focus:outline-none focus:border-amber-400"
                         >
                           {ownedProvinces.map((prov) => (
                             <option key={prov.id} value={prov.id}>
                               {prov.isCapital ? '★ ' : ''}
-                              {prov.name.replace(/^★\s*/, '')} ({(prov.garrison / 1000).toFixed(1)}B Asker)
+                              {cleanProvinceName(prov.name)} ({(prov.garrison / 1000).toFixed(1)}B Garnizon)
                             </option>
                           ))}
                         </select>
@@ -112,7 +207,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                           type="button"
                           onClick={() => onSelectTerritory(activeRecruitCity.id)}
                           title="Seçili şehri haritada göster"
-                          className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-semibold text-slate-200 flex items-center gap-1 whitespace-nowrap shrink-0"
+                          className="px-2.5 py-1.5 rounded-xl bg-black/50 hover:bg-black/75 border border-[#caa15a]/35 text-[11px] font-semibold text-amber-200 flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                           <span>Odaklan</span>
@@ -120,82 +215,200 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        {
-                          key: 'inf1',
-                          unitType: 'infantry' as const,
-                          amount: 1000,
-                          gold: 150,
-                          label: `+1B ${activeArmyGen.infantryShort}`,
-                          tone: 'emerald',
-                        },
-                        {
-                          key: 'inf5',
-                          unitType: 'infantry' as const,
-                          amount: 5000,
-                          gold: 250,
-                          label: `+5B ${activeArmyGen.infantryShort}`,
-                          tone: 'emerald',
-                        },
-                        {
-                          key: 'arm25',
-                          unitType: 'armor' as const,
-                          amount: 2500,
-                          gold: 420,
-                          label: `+2.5B ${activeArmyGen.armorShort}`,
-                          tone: 'amber',
-                        },
-                        {
-                          key: 'air1',
-                          unitType: 'airDrone' as const,
-                          amount: 1000,
-                          gold: 500,
-                          label: `+1B ${activeArmyGen.airArtilleryShort}`,
-                          tone: 'sky',
-                        },
-                      ].map((opt) => {
-                        const affordable =
-                          playerNation.treasury >= opt.gold &&
-                          playerNation.manpower >= opt.amount;
-                        const toneClass =
-                          !affordable
-                            ? 'bg-slate-900/60 border-slate-800 text-slate-500 cursor-not-allowed'
-                            : opt.tone === 'amber'
-                            ? 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/45 text-amber-200'
-                            : opt.tone === 'sky'
-                            ? 'bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/45 text-sky-200'
-                            : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/45 text-emerald-200';
-                        return (
-                          <button
-                            key={opt.key}
-                            type="button"
-                            disabled={!affordable}
-                            onClick={() =>
-                              onRecruitUnit(
-                                activeRecruitCity.id,
-                                opt.unitType,
-                                opt.amount,
-                                opt.gold
-                              )
-                            }
-                            className={`p-2 rounded-xl border text-center flex flex-col items-center justify-center gap-1 transition-colors ${toneClass}`}
+                    {recruitmentTab === "REGULAR" ? (
+                      /* AoH3 3-Line Tactical Recruitment Grid (1. Hat Piyade / Kanat Süvari / 2. Hat Topçu) */
+                      <div className="space-y-2">
+                        {[
+                          {
+                            unitType: "infantry" as const,
+                            lineBadge: `1. HAT · ${activeArmyGen.infantryClassLabel.toUpperCase()}`,
+                            title: activeArmyGen.infantryName,
+                            shortName: activeArmyGen.infantryShort,
+                            desc: "Ön cephede piyade ve okçu ateş desteğiyle ana savunma ve hücum hattını tutar.",
+                            borderTone: "border-emerald-500/40 bg-emerald-950/20",
+                            badgeTone: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+                            regiments: [
+                              { amount: 1000, gold: 120, label: "+1.000" },
+                              { amount: 3000, gold: 200, label: "+3.000" },
+                              { amount: 5000, gold: 250, label: "+5.000" },
+                            ],
+                          },
+                          {
+                            unitType: "armor" as const,
+                            lineBadge: `KANAT · ${activeArmyGen.armorClassLabel.toUpperCase()}`,
+                            title: activeArmyGen.armorName,
+                            shortName: activeArmyGen.armorShort,
+                            desc: "Hızlı kanat manevrası, atlı okçu tacizi ve ağır yarma taarruzu gerçekleştirir.",
+                            borderTone: "border-amber-500/40 bg-amber-950/20",
+                            badgeTone: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+                            regiments: [
+                              { amount: 1000, gold: 180, label: "+1.000" },
+                              { amount: 2500, gold: 420, label: "+2.500" },
+                              { amount: 5000, gold: 780, label: "+5.000" },
+                            ],
+                          },
+                          {
+                            unitType: "airDrone" as const,
+                            lineBadge: `2. HAT · ${activeArmyGen.airArtilleryClassLabel.toUpperCase()}`,
+                            title: activeArmyGen.airArtilleryName,
+                            shortName: activeArmyGen.airArtilleryShort,
+                            desc: "Arka hattan düşman saflarını ve kale surlarını yoğun ateş altına alır.",
+                            borderTone: "border-sky-500/40 bg-sky-950/20",
+                            badgeTone: "bg-sky-500/20 text-sky-300 border-sky-500/40",
+                            regiments: [
+                              { amount: 1000, gold: 500, label: "+1.000" },
+                              { amount: 2500, gold: 1100, label: "+2.500" },
+                            ],
+                          },
+                        ].map((row) => (
+                          <div
+                            key={row.unitType}
+                            className={`p-2.5 rounded-xl border ${row.borderTone} flex flex-col sm:flex-row sm:items-center justify-between gap-2.5`}
                           >
-                            <UnitTypeIllustrationSvg
-                              unitType={opt.unitType}
-                              modeId={gameMode}
-                              className="w-7 h-7"
-                            />
-                            <span className="text-[11px] font-bold leading-tight">
-                              {opt.label}
-                            </span>
-                            <span className="text-[10px] font-mono-num opacity-90">
-                              {opt.gold}A · {(opt.amount / 1000).toFixed(opt.amount % 1000 === 0 ? 0 : 1)}B İG
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <UnitTypeIllustrationSvg
+                                unitType={row.unitType}
+                                modeId={gameMode}
+                                className="w-9 h-9 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold border ${row.badgeTone}`}>
+                                    {row.lineBadge}
+                                  </span>
+                                  <span className="text-xs font-bold text-[#f3ead7] truncate">
+                                    {row.title}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-[#b8a990] line-clamp-1 mt-0.5">
+                                  {row.desc}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {row.regiments.map((reg) => {
+                                const affordable =
+                                  playerNation.treasury >= reg.gold &&
+                                  playerNation.manpower >= reg.amount;
+                                return (
+                                  <button
+                                    key={reg.amount}
+                                    type="button"
+                                    disabled={!affordable}
+                                    onClick={() =>
+                                      onRecruitUnit(
+                                        activeRecruitCity.id,
+                                        row.unitType,
+                                        reg.amount,
+                                        reg.gold
+                                      )
+                                    }
+                                    className={`px-2.5 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                                      affordable
+                                        ? "bg-black/60 hover:bg-amber-500/25 border-[#caa15a]/50 hover:border-amber-400 text-[#f3ead7]"
+                                        : "bg-black/30 border-slate-800 text-slate-500 cursor-not-allowed"
+                                    }`}
+                                  >
+                                    <div className="text-[11px] font-extrabold text-amber-300">
+                                      {reg.label}
+                                    </div>
+                                    <div className="text-[9px] font-mono-num text-[#c5b79e]">
+                                      {reg.gold}A · {(reg.amount / 1000).toFixed(reg.amount % 1000 === 0 ? 0 : 1)}B İG
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* AoH3 Mercenary Hiring (Kiralık Ordu / Paralı Askerler — Instant Deployment, 0 Manpower Cost) */
+                      <div className="space-y-2" data-testid="aoh3-mercenary-panel">
+                        <div className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 flex items-center justify-between">
+                          <span>
+                            ⚡ <strong>Age of History 3 Paralı Asker Sistemi:</strong> İnsan gücü (İG) harcamaz, sadece Altın ile anında seçili şehre katılır!
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {MERCENARY_COMPANIES.map((merc) => {
+                            const canAffordMerc = playerNation.treasury >= merc.costGold;
+                            const title =
+                              gameMode === "EMPIRES_1440"
+                                ? merc.historicalName
+                                : merc.modernName;
+                            const desc = merc.tagline;
+                            return (
+                              <div
+                                key={merc.id}
+                                className="p-2.5 rounded-xl bg-black/55 border border-[#caa15a]/40 flex flex-col justify-between gap-2"
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <span className="text-xs font-display font-bold text-amber-200 flex items-center gap-1">
+                                      <span>{merc.icon}</span>
+                                      <span>{title}</span>
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-950/90 border border-emerald-500/40 font-mono-num text-[10px] font-extrabold text-emerald-300">
+                                      +{(merc.troops / 1000).toFixed(1)}B Asker
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-[#b8a990] mt-1 leading-snug">
+                                    {desc}
+                                  </p>
+                                  <div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-mono-num">
+                                    {merc.composition.infantry > 0 && (
+                                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                        Piyade {(merc.composition.infantry / 1000).toFixed(1)}B
+                                      </span>
+                                    )}
+                                    {merc.composition.armor > 0 && (
+                                      <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                        Süvari/Zırhlı {(merc.composition.armor / 1000).toFixed(1)}B
+                                      </span>
+                                    )}
+                                    {merc.composition.airDrone > 0 && (
+                                      <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                                        Topçu/Destek {(merc.composition.airDrone / 1000).toFixed(1)}B
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  disabled={!canAffordMerc}
+                                  data-testid={`hire-mercenary-${merc.id}`}
+                                  onClick={() => {
+                                    if (onHireMercenary) {
+                                      onHireMercenary(activeRecruitCity.id, merc.id);
+                                    } else {
+                                      onRecruitUnit(
+                                        activeRecruitCity.id,
+                                        "infantry",
+                                        merc.troops,
+                                        merc.costGold
+                                      );
+                                    }
+                                  }}
+                                  className={`w-full py-1.5 px-3 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                    canAffordMerc
+                                      ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow"
+                                      : "bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed"
+                                  }`}
+                                >
+                                  <Swords className="w-3.5 h-3.5" />
+                                  <span>
+                                    Kirala ({merc.costGold} Altın · 0 İG)
+                                  </span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -207,15 +420,18 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                 />
 
                 {/* AoH3 Visual National Army Composition Strip */}
-                <div className="grid grid-cols-3 gap-2.5 bg-slate-950/90 border border-slate-800 rounded-2xl p-3">
-                  <div className="flex items-center gap-2 bg-slate-900/90 border border-emerald-500/30 rounded-xl p-2">
+                <div className="grid grid-cols-3 gap-2 bg-slate-950/90 border border-slate-800 rounded-2xl p-3">
+                  <div className="flex items-center gap-2 bg-slate-900/90 border border-emerald-500/30 rounded-xl p-2 min-w-0">
                     <UnitTypeIllustrationSvg
                       unitType="infantry"
                       modeId={gameMode}
-                      className="w-9 h-9 shrink-0"
+                      className="w-8 h-8 shrink-0"
                     />
                     <div className="min-w-0">
-                      <div className="text-[10px] text-slate-400 truncate">
+                      <div className="text-[9px] text-emerald-300/90 font-bold truncate">
+                        {activeArmyGen.infantryClassLabel}
+                      </div>
+                      <div className="text-[10px] text-slate-300 truncate">
                         {activeArmyGen.infantryShort}
                       </div>
                       <div className="font-mono-num text-xs font-bold text-emerald-300">
@@ -223,14 +439,17 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-slate-900/90 border border-amber-500/30 rounded-xl p-2">
+                  <div className="flex items-center gap-2 bg-slate-900/90 border border-amber-500/30 rounded-xl p-2 min-w-0">
                     <UnitTypeIllustrationSvg
                       unitType="armor"
                       modeId={gameMode}
-                      className="w-9 h-9 shrink-0"
+                      className="w-8 h-8 shrink-0"
                     />
                     <div className="min-w-0">
-                      <div className="text-[10px] text-slate-400 truncate">
+                      <div className="text-[9px] text-amber-300/90 font-bold truncate">
+                        {activeArmyGen.armorClassLabel}
+                      </div>
+                      <div className="text-[10px] text-slate-300 truncate">
                         {activeArmyGen.armorShort}
                       </div>
                       <div className="font-mono-num text-xs font-bold text-amber-300">
@@ -238,14 +457,17 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 bg-slate-900/90 border border-sky-500/30 rounded-xl p-2">
+                  <div className="flex items-center gap-2 bg-slate-900/90 border border-sky-500/30 rounded-xl p-2 min-w-0">
                     <UnitTypeIllustrationSvg
                       unitType="airDrone"
                       modeId={gameMode}
-                      className="w-9 h-9 shrink-0"
+                      className="w-8 h-8 shrink-0"
                     />
                     <div className="min-w-0">
-                      <div className="text-[10px] text-slate-400 truncate">
+                      <div className="text-[9px] text-sky-300/90 font-bold truncate">
+                        {activeArmyGen.airArtilleryClassLabel}
+                      </div>
+                      <div className="text-[10px] text-slate-300 truncate">
                         {activeArmyGen.airArtilleryShort}
                       </div>
                       <div className="font-mono-num text-xs font-bold text-sky-300">
@@ -290,11 +512,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                         : null;
                       const fiefCount = loyaltyInfo
                         ? loyaltyInfo.fiefCount
-                        : Object.values(territories).filter(
-                            (t) =>
-                              t.ownerId === playerNation.id &&
-                              t.fiefLordId === cmd.id
-                          ).length;
+                        : fiefCountByCommander.get(cmd.id) || 0;
                       const retinueSize = getLordRetinueTroops(
                         cmd.id,
                         territories
@@ -451,193 +669,99 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                     })}
                   </div>
                 </div>
-
-                {/* Owned Territories & Garrisons */}
-                <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-white">
-                      Eyalet Garnizonları ({playerEconomy.territoryCount} Bölge)
-                    </h3>
-                    <div className="text-[11px] text-slate-400 font-mono-num">
-                      {activeArmyGen.infantryShort}: {(playerEconomy.totalUnits.infantry / 1000).toFixed(0)}B ·{' '}
-                      {activeArmyGen.armorShort}: {(playerEconomy.totalUnits.armor / 1000).toFixed(0)}B ·{' '}
-                      {activeArmyGen.airArtilleryShort}: {(playerEconomy.totalUnits.airDrone / 1000).toFixed(0)}B
-                    </div>
-                  </div>
-                  <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
-                    {Object.values(territories)
-                      .filter((t) => t.ownerId === playerNation.id)
-                      .map((t) => (
-                        <div
-                          key={t.id}
-                          className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-3"
-                        >
-                          <div>
-                            <div className="text-xs font-bold text-white">
-                              {t.name}
-                            </div>
-                            <div className="text-[11px] text-slate-400">
-                              Garnizon:{' '}
-                              <strong className="font-mono-num text-rose-400">
-                                {t.garrison.toLocaleString('tr-TR')}
-                              </strong>{' '}
-                              · {activeArmyGen.armorShort}: {((t.units?.armor || 0) / 1000).toFixed(1)}B
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() =>
-                                onRecruitUnit(t.id, 'infantry', 5000, 250)
-                              }
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold"
-                            >
-                              +5B {activeArmyGen.infantryShort}
-                            </button>
-                            <button
-                              onClick={() => onSelectTerritory(t.id)}
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
-                            >
-                              Yönet
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
               </div>
 
               {/* Right 6 Cols: Filterable Global Superpower Leaderboard */}
               <div className="lg:col-span-6 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3">
-                {(() => {
-                  const rankedList = Object.values(nations)
-                    .filter((n) => !n.isEliminated)
-                    .map((n) => {
-                      const owned = Object.values(territories).filter(
-                        (t) => t.ownerId === n.id
-                      );
-                      const army = owned.reduce((s, t) => s + t.garrison, 0);
-                      const gdp = owned.reduce(
-                        (s, t) =>
-                          s + t.baseGdp * (1 + t.buildings.factory * 0.25),
-                        0
-                      );
-                      const score = Math.round(
-                        gdp * 2 + army / 250 + n.unlockedTechs.length * 80
-                      );
-                      return {
-                        nation: n,
-                        ownedCount: owned.length,
-                        army,
-                        gdp,
-                        score,
-                      };
-                    })
-                    .sort((a, b) => {
-                      if (rankingSortBy === 'GDP') return b.gdp - a.gdp;
-                      if (rankingSortBy === 'ARMY') return b.army - a.army;
-                      if (rankingSortBy === 'PROVINCES')
-                        return b.ownedCount - a.ownedCount || b.score - a.score;
-                      return b.score - a.score;
-                    });
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-amber-400" />
+                    {gameMode === 'EMPIRES_1440'
+                      ? '1440 İmparatorluk Güç Sıralaması'
+                      : '2026 Küresel Süper Güç Sıralaması'}
+                  </h3>
+                  {playerRankIndex >= 0 && (
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 font-mono-num text-xs font-bold text-amber-300">
+                      Dünya Sıranız: #{playerRankIndex + 1}
+                    </span>
+                  )}
+                </div>
 
-                  const playerRankIndex = rankedList.findIndex(
-                    (r) => r.nation.id === playerNation.id
-                  );
+                {/* 4-Way Sort Filter */}
+                <div className="grid grid-cols-4 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                  {(
+                    [
+                      { id: 'SCORE', label: 'Toplam Güç' },
+                      { id: 'GDP', label: 'Ekonomi' },
+                      { id: 'ARMY', label: 'Ordu' },
+                      { id: 'PROVINCES', label: 'Toprak' },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setRankingSortBy(tab.id)}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-colors ${
+                        rankingSortBy === tab.id
+                          ? 'bg-amber-500 text-slate-950'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
 
-                  return (
-                    <>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-amber-400" />
-                          {gameMode === 'EMPIRES_1440'
-                            ? '1440 İmparatorluk Güç Sıralaması'
-                            : '2026 Küresel Süper Güç Sıralaması'}
-                        </h3>
-                        {playerRankIndex >= 0 && (
-                          <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/40 font-mono-num text-xs font-bold text-amber-300">
-                            Dünya Sıranız: #{playerRankIndex + 1}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* 4-Way Sort Filter */}
-                      <div className="grid grid-cols-4 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
-                        {(
-                          [
-                            { id: 'SCORE', label: 'Toplam Güç' },
-                            { id: 'GDP', label: 'Ekonomi' },
-                            { id: 'ARMY', label: 'Ordu' },
-                            { id: 'PROVINCES', label: 'Toprak' },
-                          ] as const
-                        ).map((tab) => (
-                          <button
-                            key={tab.id}
-                            onClick={() => setRankingSortBy(tab.id)}
-                            className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-colors ${
-                              rankingSortBy === tab.id
-                                ? 'bg-amber-500 text-slate-950'
-                                : 'text-slate-400 hover:text-white'
-                            }`}
-                          >
-                            {tab.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
-                        {rankedList.slice(0, 35).map((entry, idx) => (
-                          <button
-                            key={entry.nation.id}
-                            onClick={() =>
-                              onSelectTerritory(entry.nation.capitalTerritoryId)
-                            }
-                            className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition-colors ${
-                              entry.nation.id === playerNation.id
-                                ? 'bg-amber-500/15 border-amber-500/60'
-                                : 'bg-slate-900/80 hover:bg-slate-800/80 border-slate-800'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="font-mono-num text-xs font-bold text-slate-400 w-6 shrink-0">
-                                #{idx + 1}
+                <div className="space-y-2 max-h-[540px] overflow-y-auto pr-1">
+                  {rankedList.slice(0, 35).map((entry, idx) => (
+                    <button
+                      key={entry.nation.id}
+                      onClick={() =>
+                        onSelectTerritory(entry.nation.capitalTerritoryId)
+                      }
+                      className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition-colors ${
+                        entry.nation.id === playerNation.id
+                          ? 'bg-amber-500/15 border-amber-500/60'
+                          : 'bg-slate-900/80 hover:bg-slate-800/80 border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="font-mono-num text-xs font-bold text-slate-400 w-6 shrink-0">
+                          #{idx + 1}
+                        </span>
+                        <NationFlagCanvasBadge
+                          nationId={entry.nation.id}
+                          flagCode={entry.nation.flagCode}
+                          color={entry.nation.color}
+                          width={34}
+                          height={24}
+                        />
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-white truncate">
+                            {cleanNationName(entry.nation.name)}
+                            {entry.nation.vassalOf && (
+                              <span className="ml-1.5 text-[10px] text-purple-400 font-normal">
+                                (Vasal)
                               </span>
-                              <span
-                                className="w-7 h-7 rounded-lg flex items-center justify-center font-display font-bold text-[11px] text-white shrink-0"
-                                style={{ backgroundColor: entry.nation.color }}
-                              >
-                                {entry.nation.flagCode}
-                              </span>
-                              <div className="min-w-0">
-                                <div className="text-xs font-bold text-white truncate">
-                                  {entry.nation.name}
-                                  {entry.nation.vassalOf && (
-                                    <span className="ml-1.5 text-[10px] text-purple-400 font-normal">
-                                      (Vasal)
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[11px] text-slate-400">
-                                  {entry.ownedCount} Eyalet ·{' '}
-                                  {(entry.army / 1000).toFixed(0)}B Ordu
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="text-right font-mono-num shrink-0">
-                              <div className="text-xs font-bold text-amber-400">
-                                {entry.score} Puan
-                              </div>
-                              <div className="text-[10px] text-emerald-400">
-                                {Math.round(entry.gdp)} GSYİH
-                              </div>
-                            </div>
-                          </button>
-                        ))}
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            {entry.ownedCount} Eyalet ·{' '}
+                            {(entry.army / 1000).toFixed(0)}B Ordu
+                          </div>
+                        </div>
                       </div>
-                    </>
-                  );
-                })()}
+
+                      <div className="text-right font-mono-num shrink-0">
+                        <div className="text-xs font-bold text-amber-400">
+                          {entry.score} Puan
+                        </div>
+                        <div className="text-[10px] text-emerald-400">
+                          {Math.round(entry.gdp)} GSYİH
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
   );

@@ -29,6 +29,7 @@ import {
   cancelResearchDomain,
   enactReformDomain,
   executeArmyMoveDomain,
+  executeBatchArmyMoveDomain,
   formEmpireDomain,
   resolveCrisisDomain,
   siegeBombardmentDomain,
@@ -43,6 +44,13 @@ import {
   getMapLabelThresholds,
 } from '../map/mapLabelsAndUnitsRenderer';
 import { RELIGIONS, CULTURES } from '../data/religionAndCultureData';
+import {
+  cleanNationName,
+  cleanProvinceName,
+  formatTroopsShort,
+  normalizeFlagCode,
+} from '../utils/formatters';
+import { EMPIRES_1440_DEFS } from './scenario1440Builder';
 import { useGameStore } from '../store/useGameStore';
 
 test('formatGameDate formats 1440 and 2026 dates and optional hours accurately', () => {
@@ -466,7 +474,7 @@ test('resolvePeaceDealDomain blocks Day-1 zero-warscore peace exploits and allow
     newsEvents: [],
   });
   assert.equal(blockedVassal.wars, undefined);
-  assert.ok(blockedVassal.toast?.includes('+%50'));
+  assert.ok(blockedVassal.toast?.includes('50'));
 
   const blockedAnnex = resolvePeaceDealDomain({
     warId: 'w_zero',
@@ -481,7 +489,7 @@ test('resolvePeaceDealDomain blocks Day-1 zero-warscore peace exploits and allow
     newsEvents: [],
   });
   assert.equal(blockedAnnex.wars, undefined);
-  assert.ok(blockedAnnex.toast?.includes('+%25'));
+  assert.ok(blockedAnnex.toast?.includes('+25'));
 
   // At +56% warscore, VASSALIZE succeeds
   const wonWar: ActiveWar = { ...warZeroScore, attackerWarScore: 56 };
@@ -2776,17 +2784,16 @@ test('buildNationDiplomacySummary categorizes all treaties, wars, truces, vassal
   assert.equal(walSummary?.overlord?.id, 'OSM');
 });
 
-test('formatProvinceMapLabel displays complete untruncated city names when zoomed in or selected', () => {
+test('formatProvinceMapLabel displays complete untruncated city names when zoomed in or selected and strips legacy title suffixes', () => {
   const longName = 'Kostantiniyye & Boğaz Sancağı';
   const zoomedDesktop = formatProvinceMapLabel(longName, true, false, 3.4, false);
   assert.equal(zoomedDesktop.isFull, true);
-  assert.equal(zoomedDesktop.lines.join(' '), `★ ${longName}`);
+  assert.equal(zoomedDesktop.lines.join(' '), '★ Kostantiniyye & Boğaz');
   assert.equal(zoomedDesktop.lines.join(' ').includes('…'), false);
 
   const zoomedMobile = formatProvinceMapLabel('Çanakkale & Gelibolu Boğazı', false, false, 3.2, true);
   assert.equal(zoomedMobile.isFull, true);
-  assert.equal(zoomedMobile.lines.join(' '), 'Çanakkale & Gelibolu Boğazı');
-  assert.equal(zoomedMobile.lines.length, 2, 'Long zoomed mobile label should wrap cleanly onto 2 lines');
+  assert.equal(zoomedMobile.lines.join(' '), 'Çanakkale & Gelibolu');
 
   const selectedOverview = formatProvinceMapLabel('Diyarbakır & Yukarı Dicle', false, true, 1.5, true);
   assert.equal(selectedOverview.isFull, true);
@@ -3568,7 +3575,13 @@ test('Faz 3.1 & 3.2: City Development Score darkens ECONOMIC map color and build
   assert.equal(resColor, '#34D399', 'RESOURCES map mode must color by resource palette');
 });
 
-import { investSpecialtyProductionDomain } from './empireAndArmyActions';
+import {
+  getSpecialtyTerritoryEligibility,
+  hireMercenaryDomain,
+  investSpecialtyProductionDomain,
+  SPECIALTY_PRODUCTION_OPTIONS,
+} from './empireAndArmyActions';
+import { ARMY_GENERATIONS_1440, ARMY_GENERATIONS_2026 } from '../data/techAndArmyTiers';
 import {
   applyConquestDiplomaticPenalty,
   calculateProvincePeaceScoreCost,
@@ -3581,6 +3594,7 @@ test('Faz 3.25: Specialty production investment, conquest diplomatic penalty, co
   const ottoman = mkFaz3Nation('792', {
     name: 'Osmanlı Devleti',
     treasury: 1500,
+    manpower: 10000,
     stateReligion: 'ISLAM_SUNNI',
     primaryCulture: 'TURKIC_OGHUZ',
   });
@@ -3620,7 +3634,7 @@ test('Faz 3.25: Specialty production investment, conquest diplomatic penalty, co
     ownerId: '792',
     coreOwnerId: '792',
     assimilation: 100,
-    resource: 'TAHIL',
+    resource: 'PAMUK',
     baseGdp: 45,
   });
   const istanbul = mkFaz3Territory('300_ist', {
@@ -3645,19 +3659,139 @@ test('Faz 3.25: Specialty production investment, conquest diplomatic penalty, co
     '300_ist': istanbul,
   };
 
-  // 1. Multi-city specialty production investment (Cotton Field on Edirne & Adana: 420 * 2 = 840 Gold)
-  const investRes = investSpecialtyProductionDomain({
+  // 1a. Non-existent natural resource in selected cities must be rejected
+  const invalidResourceRes = investSpecialtyProductionDomain({
+    territoryIds: ['792_edi', '792_ada'],
+    specialtyId: 'PETROL_REFINERY',
+    territories,
+    nations,
+    playerNationId: '792',
+  });
+  assert.equal(invalidResourceRes.territories, undefined, 'Non-existent natural resource must not be investable');
+
+  // 1b. Specific natural resource (PAMUK_FIELD) across mixed selection queues timed build only on Adana (PAMUK)
+  const pamukOpt = SPECIALTY_PRODUCTION_OPTIONS.find((o) => o.id === 'PAMUK_FIELD')!;
+  const pamukOnlyRes = investSpecialtyProductionDomain({
     territoryIds: ['792_edi', '792_ada'],
     specialtyId: 'PAMUK_FIELD',
     territories,
     nations,
     playerNationId: '792',
   });
-  assert.ok(investRes.territories, 'Specialty production should update territories');
-  assert.equal(investRes.territories!['792_edi'].resource, 'PAMUK');
+  assert.ok(pamukOnlyRes.territories, 'Matching natural resource should queue construction on matching territory');
+  assert.equal(pamukOnlyRes.territories!['792_edi'].resource, 'TAHIL');
+  assert.equal(pamukOnlyRes.territories!['792_edi'].constructionQueue?.length ?? 0, 0);
+  assert.equal(pamukOnlyRes.territories!['792_ada'].resource, 'PAMUK');
+  assert.equal(pamukOnlyRes.territories!['792_ada'].baseGdp, adana.baseGdp, 'Timed facility must not apply GDP instantly');
+  assert.equal(pamukOnlyRes.territories!['792_ada'].constructionQueue?.length, 1);
+  assert.equal(pamukOnlyRes.territories!['792_ada'].constructionQueue![0].totalDays, pamukOpt.buildDays);
+  assert.equal(pamukOnlyRes.territories!['792_ada'].constructionQueue![0].gdpBonus, pamukOpt.gdpBonus);
+
+  // 1b-2. Duplicate queued build for the same facility is blocked until completion
+  const duplicateQueueRes = investSpecialtyProductionDomain({
+    territoryIds: ['792_ada'],
+    specialtyId: 'PAMUK_FIELD',
+    territories: pamukOnlyRes.territories!,
+    nations: pamukOnlyRes.nations!,
+    playerNationId: '792',
+  });
+  assert.equal(duplicateQueueRes.territories, undefined, 'Concurrent duplicate specialty build on same province must be blocked');
+  assert.equal(
+    getSpecialtyTerritoryEligibility(pamukOnlyRes.territories!['792_ada'], pamukOpt).reason,
+    'IN_PROGRESS'
+  );
+
+  // 1b-3. Advancing computeGameTick completes the queued build, increments level and adds baseGdp
+  const initialBuildingLevel = adana.buildings[pamukOpt.buildingBoost] || 0;
+  let timedTick = computeGameTick({
+    tick: 1,
+    hour: 8,
+    hoursStep: 24,
+    speed: 1,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: pamukOnlyRes.nations!,
+    territories: pamukOnlyRes.territories!,
+    relations: {},
+    wars: [],
+    battles: [],
+    movements: [],
+    newsEvents: [],
+    settings: { ...DEFAULT_GAME_SETTINGS, fogOfWarEnabled: false, crisisFrequencyDays: 0 },
+  });
+  for (let d = 1; d < pamukOpt.buildDays; d++) {
+    timedTick = computeGameTick({
+      tick: timedTick.nextTick,
+      hour: timedTick.nextHour,
+      hoursStep: 24,
+      speed: 1,
+      gameMode: 'EMPIRES_1440',
+      playerNationId: '792',
+      nations: timedTick.nations,
+      territories: timedTick.territories,
+      relations: timedTick.relations,
+      wars: timedTick.wars,
+      battles: [],
+      movements: [],
+      newsEvents: [],
+      settings: { ...DEFAULT_GAME_SETTINGS, fogOfWarEnabled: false, crisisFrequencyDays: 0 },
+    });
+  }
+  assert.equal(timedTick.territories['792_ada'].constructionQueue?.length ?? 0, 0, 'Completed build should leave queue');
+  assert.equal(
+    timedTick.territories['792_ada'].buildings[pamukOpt.buildingBoost],
+    initialBuildingLevel + 1,
+    'Building level should increment by 1 on completion'
+  );
+  assert.ok(timedTick.territories['792_ada'].baseGdp > adana.baseGdp, 'Completed specialty build should boost baseGdp');
+
+  // 1b-4. Max level cap (5/5) blocks further specialty investment
+  const maxedAdanaTerritories: Record<string, Territory> = {
+    ...territories,
+    '792_ada': {
+      ...adana,
+      buildings: { ...adana.buildings, [pamukOpt.buildingBoost]: 5 },
+    },
+  };
+  assert.equal(
+    getSpecialtyTerritoryEligibility(maxedAdanaTerritories['792_ada'], pamukOpt).reason,
+    'MAXED'
+  );
+  const maxedRes = investSpecialtyProductionDomain({
+    territoryIds: ['792_ada'],
+    specialtyId: 'PAMUK_FIELD',
+    territories: maxedAdanaTerritories,
+    nations,
+    playerNationId: '792',
+  });
+  assert.equal(maxedRes.territories, undefined, 'Specialty build at maxLevel 5/5 must be rejected');
+
+  // 1c. Multi-city AUTO_NATURAL queues each city's own natural resource facility (TAHIL: 340 + PAMUK: 420 = 760 Gold)
+  const investRes = investSpecialtyProductionDomain({
+    territoryIds: ['792_edi', '792_ada'],
+    specialtyId: 'AUTO_NATURAL',
+    territories,
+    nations,
+    playerNationId: '792',
+  });
+  assert.ok(investRes.territories, 'AUTO_NATURAL specialty production should queue on all selected territories');
+  assert.equal(investRes.territories!['792_edi'].resource, 'TAHIL');
   assert.equal(investRes.territories!['792_ada'].resource, 'PAMUK');
-  assert.equal(investRes.nations!['792'].treasury, 1500 - 840);
-  assert.ok(investRes.territories!['792_edi'].baseGdp > edirne.baseGdp);
+  assert.equal(investRes.nations!['792'].treasury, 1500 - 760);
+  assert.equal(investRes.territories!['792_edi'].constructionQueue?.length, 1);
+
+  // 1d. Mercenary hiring consumes gold but 0 manpower
+  const mercRes = hireMercenaryDomain({
+    territoryId: '792_edi',
+    companyId: 'merc_vanguard',
+    territories: investRes.territories!,
+    nations: investRes.nations!,
+    playerNationId: '792',
+    gameMode: 'EMPIRES_1440',
+  });
+  assert.ok(mercRes.territories, 'Mercenary hiring should succeed');
+  assert.equal(mercRes.nations!['792'].manpower, 10000, 'Mercenary hiring must cost 0 manpower');
+  assert.ok(mercRes.territories!['792_edi'].garrison > edirne.garrison);
 
   // 2. Post-war assimilation on conquered non-core city (300_ist has coreOwnerId: '300', assimilation: 25)
   const assimRes = assimilateTerritoryDomain({
@@ -3917,5 +4051,231 @@ test('Faz 3.3: Unified War Table ally calling and point-budget Peace Conference 
   assert.equal(validPeaceRes.territories?.['300_mor']?.coreOwnerId, '300');
   assert.ok((validPeaceRes.nations?.['792']?.treasury ?? 0) > ottoman.treasury);
 });
+
+test('formatters clean nation/province names, format troop counts, and normalize Turkish flag codes safely', () => {
+  assert.equal(cleanNationName('Osmanlı İmparatorluğu (1440)'), 'Osmanlı İmparatorluğu');
+  assert.equal(cleanProvinceName('★ Konstantiniyye'), 'Konstantiniyye');
+  assert.equal(formatTroopsShort(15400), '15.4B');
+  assert.equal(formatTroopsShort(600), '600');
+  assert.equal(normalizeFlagCode('BİZ'), 'BIZ');
+  assert.equal(normalizeFlagCode('TİM'), 'TIM');
+  assert.equal(normalizeFlagCode('İNG'), 'ING');
+  assert.equal(normalizeFlagCode('ŞOG'), 'SOG');
+  assert.equal(normalizeFlagCode('MAĞ'), 'MAG');
+  assert.equal(normalizeFlagCode('osm'), 'OSM');
+});
+
+test('1440 Ottoman Empire uses authentic blackish-green map color and OSM flag code', () => {
+  const ottoman = EMPIRES_1440_DEFS.find((n) => n.id === '792');
+  assert.ok(ottoman, '1440 Ottoman Empire nation must exist');
+  assert.equal(ottoman.color, '#183222');
+  assert.equal(ottoman.flagCode, 'OSM');
+});
+
+test('executeBatchArmyMoveDomain coordinates multi-city dispatch, gates neutral wars, and preserves reserves/ratio', () => {
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Osmanlı',
+      treasury: 2000,
+      unlockedTechs: [],
+      enactedReforms: [],
+    } as unknown as Nation,
+    '300': {
+      id: '300',
+      name: 'Bizans',
+      treasury: 800,
+      unlockedTechs: [],
+      enactedReforms: [],
+    } as unknown as Nation,
+  };
+  const territories: Record<string, Territory> = {
+    edi: {
+      id: 'edi',
+      name: 'Edirne',
+      ownerId: '792',
+      garrison: 8500,
+      units: { infantry: 6000, armor: 2000, airDrone: 500 },
+      neighbors: ['kon'],
+      centroid: [26.5, 41.6],
+    } as unknown as Territory,
+    bur: {
+      id: 'bur',
+      name: 'Bursa',
+      ownerId: '792',
+      garrison: 6500,
+      units: { infantry: 5000, armor: 1500, airDrone: 0 },
+      neighbors: ['kon'],
+      centroid: [29.0, 40.2],
+    } as unknown as Territory,
+    low: {
+      id: 'low',
+      name: 'İzmit',
+      ownerId: '792',
+      garrison: 900,
+      units: { infantry: 900, armor: 0, airDrone: 0 },
+      neighbors: ['kon'],
+      centroid: [29.9, 40.7],
+    } as unknown as Territory,
+    kon: {
+      id: 'kon',
+      name: 'Konstantiniyye',
+      ownerId: '300',
+      garrison: 4000,
+      units: { infantry: 3500, armor: 500, airDrone: 0 },
+      neighbors: ['edi', 'bur', 'low'],
+      centroid: [28.9, 41.0],
+    } as unknown as Territory,
+  };
+
+  const blocked = executeBatchArmyMoveDomain({
+    sourceIds: ['edi', 'bur', 'low'],
+    toId: 'kon',
+    playerNationId: '792',
+    nations,
+    territories,
+    relations: {},
+    wars: [],
+    movements: [],
+    newsEvents: [],
+    moveRatio: 0.5,
+    tick: 1,
+    gameMode: 'EMPIRES_1440',
+    speed: 1,
+    forceDeclareWar: false,
+  });
+  assert.equal(blocked.movements, undefined);
+  assert.deepEqual(blocked.pendingWarMove, {
+    fromId: 'edi',
+    sourceTerritoryIds: ['edi', 'bur'],
+    moveRatio: 0.5,
+    toId: 'kon',
+    targetNationId: '300',
+  });
+
+  const confirmed = executeBatchArmyMoveDomain({
+    sourceIds: ['edi', 'bur', 'low'],
+    toId: 'kon',
+    playerNationId: '792',
+    nations,
+    territories,
+    relations: {},
+    wars: [],
+    movements: [],
+    newsEvents: [],
+    moveRatio: 0.5,
+    tick: 1,
+    gameMode: 'EMPIRES_1440',
+    speed: 1,
+    forceDeclareWar: true,
+  });
+  assert.equal(confirmed.wars?.length, 1);
+  assert.equal(confirmed.movements?.length, 2);
+  assert.equal(confirmed.territories?.edi.garrison, 4500);
+  assert.equal(confirmed.territories?.bur.garrison, 3500);
+  assert.equal(confirmed.territories?.low.garrison, 900);
+});
+
+test('evaluatePlayerAiCommander respects AGGRESSIVE vs DEFENSIVE front stances', async () => {
+  const { evaluatePlayerAiCommander } = await import('./playerAiCommander');
+
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Osmanlı',
+      isEliminated: false,
+      modernizedArmyTier: 0,
+      unlockedTechs: [],
+    } as unknown as Nation,
+    '300': {
+      id: '300',
+      name: 'Bizans',
+      isEliminated: false,
+      modernizedArmyTier: 0,
+      unlockedTechs: [],
+    } as unknown as Nation,
+  };
+
+  const territories: Record<string, Territory> = {
+    p1: {
+      id: 'p1',
+      name: 'Edirne',
+      ownerId: '792',
+      isCapital: false,
+      garrison: 4600,
+      units: { infantry: 4600, armor: 0, airDrone: 0 },
+      neighbors: ['e1'],
+      centroid: [26, 41],
+    } as unknown as Territory,
+    e1: {
+      id: 'e1',
+      name: 'Dimetoka',
+      ownerId: '300',
+      isCapital: false,
+      garrison: 3000,
+      units: { infantry: 3000, armor: 0, airDrone: 0 },
+      neighbors: ['p1'],
+      centroid: [26.5, 41.3],
+    } as unknown as Territory,
+  };
+
+  const wars: ActiveWar[] = [
+    {
+      id: 'w1',
+      name: 'Savaş',
+      attackerId: '792',
+      defenderId: '300',
+      attackers: ['792'],
+      defenders: ['300'],
+      startedTick: 1,
+      attackerWarScore: 0,
+      casualtiesAttacker: 0,
+      casualtiesDefender: 0,
+    },
+  ];
+
+  const defRes = evaluatePlayerAiCommander({
+    tick: 5,
+    playerNationId: '792',
+    nations,
+    territories,
+    relations: {},
+    wars,
+    battles: [],
+    movements: [],
+    stance: 'DEFENSIVE',
+  });
+  assert.equal(defRes, null, 'DEFENSIVE stance should not launch risky low-odds frontier push');
+
+  const aggRes = evaluatePlayerAiCommander({
+    tick: 5,
+    playerNationId: '792',
+    nations,
+    territories,
+    relations: {},
+    wars,
+    battles: [],
+    movements: [],
+    stance: 'AGGRESSIVE',
+  });
+  assert.ok(aggRes && aggRes.newMovements.length === 1, 'AGGRESSIVE stance should push into winnable border province');
+  assert.equal(aggRes!.newMovements[0].toTerritoryId, 'e1');
+
+  useGameStore.getState().setAiCommanderStance('AGGRESSIVE');
+  assert.equal(useGameStore.getState().aiCommanderStance, 'AGGRESSIVE');
+  useGameStore.getState().setAiCommanderStance('BALANCED');
+});
+
+test('ARMY_GENERATIONS expose explicit AoH3 troop class labels for every tier in 1440 and 2026', () => {
+  for (const gen of [...ARMY_GENERATIONS_1440, ...ARMY_GENERATIONS_2026]) {
+    assert.ok(gen.infantryClassLabel.trim().length >= 5, `Tier ${gen.tier} missing infantryClassLabel`);
+    assert.ok(gen.armorClassLabel.trim().length >= 5, `Tier ${gen.tier} missing armorClassLabel`);
+    assert.ok(gen.airArtilleryClassLabel.trim().length >= 5, `Tier ${gen.tier} missing airArtilleryClassLabel`);
+  }
+  assert.match(ARMY_GENERATIONS_1440[0].infantryClassLabel, /Piyade|Okçu/i);
+  assert.match(ARMY_GENERATIONS_1440[0].armorClassLabel, /Atlı Okçu|Süvari/i);
+  assert.match(ARMY_GENERATIONS_2026[0].armorClassLabel, /Tank|Zırhlı/i);
+});
+
 
 

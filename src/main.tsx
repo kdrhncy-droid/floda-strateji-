@@ -1,21 +1,20 @@
-import {createRoot} from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import App from './App.tsx';
 import './index.css';
 
-// Ensure installed Android/iOS PWA registers Service Worker immediately for 100% offline play
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker
-    .register('/sw.js', { scope: '/' })
-    .catch(() => {
-      // SW registration may be skipped in dev mode
-    });
-
-  const hadController = Boolean(navigator.serviceWorker.controller);
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController || refreshing || !navigator.onLine) return;
-    refreshing = true;
-    window.location.reload();
+// Register VitePWA Workbox Service Worker and broadcast offline-ready status for Vercel/iOS/Android play
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  const updateSW = registerSW({
+    immediate: true,
+    onOfflineReady() {
+      window.dispatchEvent(new CustomEvent('floda-pwa-offline-ready'));
+    },
+    onNeedRefresh() {
+      if (navigator.onLine) {
+        updateSW(true).catch(() => {});
+      }
+    },
   });
 
   document.addEventListener('visibilitychange', () => {

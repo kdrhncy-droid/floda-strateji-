@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, Maximize2, Minimize2, Smartphone, WifiOff, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  Download,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Smartphone,
+  WifiOff,
+  X,
+} from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useAccessibleDialog } from '../hooks/useAccessibleDialog';
 import { sound } from '../utils/soundEngine';
@@ -12,7 +21,14 @@ interface PWAInstallButtonProps {
 export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
   compact = false,
 }) => {
-  const { isInstallable, isInstalled, isIOS, isOnline, install } = usePWAInstall();
+  const {
+    isInstallable,
+    isInstalled,
+    isIOS,
+    isOnline,
+    offlineStatus,
+    install,
+  } = usePWAInstall();
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const guideDialogRef = useAccessibleDialog(showGuideModal, () =>
@@ -51,7 +67,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
 
   return (
     <div className="flex items-center gap-1 shrink-0">
-      {!isOnline && (
+      {!isOnline ? (
         <div
           title="Çevrimdışı Mod (Önbellek Aktif)"
           className="px-2 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap"
@@ -59,13 +75,34 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
           <WifiOff className="w-3.5 h-3.5" />
           <span className="hidden md:inline">Çevrimdışı</span>
         </div>
-      )}
+      ) : offlineStatus === 'READY' ? (
+        <div
+          title="Tüm harita ve oyun dosyaları cihaza önbelleklendi — internetsiz açılabilir"
+          className="px-2 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10.5px] font-semibold flex items-center gap-1 whitespace-nowrap"
+        >
+          <CheckCircle2 className="w-3 h-3 shrink-0" />
+          <span className={compact ? 'hidden xl:inline' : 'hidden sm:inline'}>
+            Çevrimdışı Hazır
+          </span>
+        </div>
+      ) : offlineStatus === 'CACHING' ? (
+        <div
+          title="Oyun dosyaları çevrimdışı kullanım için önbelleğe alınıyor"
+          className="px-2 py-1 rounded-lg bg-sky-950/70 border border-sky-500/40 text-sky-200 text-[10.5px] font-semibold flex items-center gap-1 whitespace-nowrap"
+        >
+          <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+          <span className={compact ? 'hidden xl:inline' : 'hidden sm:inline'}>
+            Önbellek...
+          </span>
+        </div>
+      ) : null}
 
       {/* Fullscreen Toggle Button for Android & Desktop */}
       <button
         type="button"
         onClick={toggleFullscreen}
         title={isFullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran Oynanış (Android/PC)'}
+        aria-label={isFullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran Oynanış'}
         className="min-w-[36px] min-h-[36px] px-2 rounded-lg bg-[#231f1a] hover:bg-[#2d2720] border border-[#3a3228] hover:border-[#c89d54]/50 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#cfc3ae] transition-colors shrink-0 cursor-pointer"
       >
         {isFullscreen ? (
@@ -109,7 +146,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
                 <div className="flex items-center gap-2.5">
                   <Smartphone className="w-5 h-5 text-[#c89d54]" />
                   <h3 id="pwa-guide-title" className="font-display text-base font-bold text-[#f0e6d2]">
-                    Mobil Uygulama Kurulumu
+                    Mobil Uygulama & Çevrimdışı Kurulum
                   </h3>
                 </div>
                 <button
@@ -126,14 +163,20 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
                 <p>
                   <strong>Floda Strateji Oyunu</strong>, telefonunuza tam ekran bir mobil oyun olarak kurulabilir ve internetsiz oynanabilir:
                 </p>
+                {offlineStatus === 'READY' && (
+                  <div className="rounded-lg bg-emerald-950/60 border border-emerald-500/40 px-3 py-2 text-emerald-200 font-semibold">
+                    ✓ Çevrimdışı önbellek hazır! Tüm harita, ses ve oyun dosyaları cihaza indirildi.
+                  </div>
+                )}
                 {isIOS ? (
                   <div className="bg-[#14110e] border border-[#3a3228] rounded-lg p-3 space-y-1.5">
-                    <div>1. Safari alt çubuğundaki <strong>Paylaş (Share)</strong> simgesine dokunun.</div>
-                    <div>2. Aşağı kaydırıp <strong>Ana Ekrana Ekle (Add to Home Screen)</strong> seçeneğine basın.</div>
+                    <div>1. Site açıldıktan sonra üstte <strong>Çevrimdışı Hazır</strong> işaretinin yanmasını bekleyin.</div>
+                    <div>2. Safari alt çubuğundaki <strong>Paylaş (Share)</strong> simgesine dokunun ve <strong>Ana Ekrana Ekle</strong> deyin.</div>
+                    <div>3. İnterneti kapatmadan önce ana ekrandaki simgeden oyunu <strong>1 kez açın</strong> (iOS önbelleği kilitler).</div>
                   </div>
                 ) : (
                   <div className="bg-[#14110e] border border-[#3a3228] rounded-lg p-3 space-y-1.5">
-                    <div>1. Oyunu doğrudan kendi sekmesinde açın.</div>
+                    <div>1. Oyunu doğrudan Chrome sekmesinde açın ve <strong>Çevrimdışı Hazır</strong> işaretini görün.</div>
                     <div>2. Android Chrome menüsünden (<strong>⋮</strong>) <strong>Uygulamayı Yükle</strong> veya <strong>Ana ekrana ekle</strong> seçeneğine dokunun.</div>
                   </div>
                 )}

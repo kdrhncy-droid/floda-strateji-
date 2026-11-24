@@ -16,7 +16,10 @@ import { TopHudBar } from './components/hud/TopHudBar';
 import { MapMacroMode, MapModePillBar } from './components/hud/MapModePillBar';
 import { SelectedProvinceBar } from './components/hud/SelectedProvinceBar';
 import { BottomNavBar, OfflineStatusBanner } from './components/hud/BottomNavBar';
-import { AoH3OutlinerWidget } from './components/hud/AoH3OutlinerWidget';
+import {
+  AoH3OutlinerWidget,
+  LiveWarHudBadges,
+} from './components/hud/AoH3OutlinerWidget';
 import { MehterhaneDock } from './components/hud/MehterhaneDock';
 import { QuickOnboardingOverlay } from './components/hud/QuickOnboardingOverlay';
 import { TitleMenuModal } from './components/TitleMenuModal';
@@ -24,7 +27,6 @@ import { WorldMapCanvas } from './components/WorldMapCanvas';
 import { CommandDrawers } from './components/CommandDrawers';
 import { CrisisAndNewsModal } from './components/CrisisAndNewsModal';
 import { SystemAndSaveModal } from './components/SystemAndSaveModal';
-import { TacticalBattleModal } from './components/TacticalBattleModal';
 import {
   AoH3BattleOverviewModal,
   UnifiedWarAndPeaceModal,
@@ -35,6 +37,8 @@ import { getClockSpeedProfile } from './engine/gameSettings';
 import { WorldEventToastStack } from './components/hud/WorldEventToastStack';
 import { FullTextTooltipOverlay } from './components/hud/FullTextTooltipOverlay';
 import { LoadingSplashScreen } from './components/LoadingSplashScreen';
+import { NationFlagCanvasBadge } from './map/nationFlagRenderer';
+import { cleanNationName, cleanProvinceName } from './utils/formatters';
 import { performanceTelemetry } from './utils/performanceTelemetry';
 import { useAccessibleDialog } from './hooks/useAccessibleDialog';
 
@@ -145,7 +149,6 @@ function GameAppInner() {
     settings,
     toastMessage,
     activeCrisis,
-    activeTacticalBattle,
     activeBattleOverviewTerritoryId,
     activeWarModalId,
     pendingWarMove,
@@ -165,6 +168,9 @@ function GameAppInner() {
   });
   const [macroMode, setMacroMode] = useState<MapMacroMode>('NONE');
   const [economySelectedIds, setEconomySelectedIds] = useState<string[]>([]);
+  const [batchMarchSourceIds, setBatchMarchSourceIds] = useState<string[]>([]);
+  const [batchMarchTargetPicking, setBatchMarchTargetPicking] = useState<boolean>(false);
+  const [batchMarchRatio, setBatchMarchRatio] = useState<number>(1);
   const [focusCapitalSignal, setFocusCapitalSignal] = useState<number>(0);
   const [inspectedNationId, setInspectedNationId] = useState<string | null>(
     null
@@ -180,6 +186,40 @@ function GameAppInner() {
         : [...prev, territoryId]
     );
   };
+
+  const toggleBatchCity = (territoryId: string) => {
+    setBatchMarchSourceIds((prev) =>
+      prev.includes(territoryId)
+        ? prev.filter((id) => id !== territoryId)
+        : [...prev, territoryId]
+    );
+  };
+
+  const selectReadyBatchCities = () => {
+    const ids = Object.values(territories)
+      .filter((t) => t.ownerId === playerNationId && t.garrison >= 1500)
+      .map((t) => t.id);
+    setBatchMarchSourceIds(ids);
+  };
+
+  const selectBorderBatchCities = () => {
+    const ids = Object.values(territories)
+      .filter((t) => {
+        if (t.ownerId !== playerNationId || t.garrison < 1500) return false;
+        return t.neighbors.some((nId) => {
+          const nb = territories[nId];
+          return Boolean(nb && nb.ownerId !== playerNationId);
+        });
+      })
+      .map((t) => t.id);
+    setBatchMarchSourceIds(ids);
+  };
+
+  const multiSelectedIds = useMemo(() => {
+    if (macroMode === 'BUILD_ECONOMY') return economySelectedIds;
+    if (macroMode === 'BATCH_MARCH') return batchMarchSourceIds;
+    return undefined;
+  }, [macroMode, economySelectedIds, batchMarchSourceIds]);
 
   // Warm up IndexedDB (idb-keyval) save payloads & migrate legacy localStorage slots once on boot
   useEffect(() => {
@@ -320,7 +360,6 @@ function GameAppInner() {
       screenState !== 'PLAYING' ||
       speed === 0 ||
       activeCrisis ||
-      activeTacticalBattle ||
       pendingWarMove
     ) {
       return;
@@ -335,7 +374,7 @@ function GameAppInner() {
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [screenState, speed, activeCrisis, activeTacticalBattle, pendingWarMove]);
+  }, [screenState, speed, activeCrisis, pendingWarMove]);
 
   const mostRecentSaveMeta = useMemo(() => {
     return getMostRecentSaveRecord()?.metadata ?? null;
@@ -392,16 +431,46 @@ function GameAppInner() {
       return;
     }
     if (macroMode !== 'NONE' && terr) {
-      store.selectTerritoryOnMap(terrId);
+      if (macroMode === 'BATCH_MARCH') {
+        if (batchMarchTargetPicking && batchMarchSourceIds.length > 0) {
+          const prevMovementsCount = useGameStore.getState().movements.length;
+          store.executeBatchArmyMove(
+            batchMarchSourceIds,
+            terrId,
+            batchMarchRatio
+          );
+          const nextState = useGameStore.getState();
+          if (
+            nextState.movements.length > prevMovementsCount ||
+            Boolean(nextState.pendingWarMove)
+          ) {
+            setBatchMarchTargetPicking(false);
+            setBatchMarchSourceIds([]);
+            setMacroMode('NONE');
+          }
+          return;
+        }
+        if (terr.ownerId !== playerNationId) {
+          store.showToast('Kaynak ordu olarak yalnızca kendi şehirlerinizi seçebilirsiniz.');
+          return;
+        }
+        store.selectTerritoryOnMap(null);
+        toggleBatchCity(terrId);
+        return;
+      }
+
       if (terr.ownerId !== playerNationId) {
         store.showToast('Makro işlem yalnızca kendi şehirlerimizde kullanılabilir.');
         return;
       }
       if (macroMode === 'RECRUIT_INFANTRY') {
+        store.selectTerritoryOnMap(null);
         store.recruitUnit(terrId, 'infantry', 1000, 150);
       } else if (macroMode === 'BUILD_ECONOMY') {
+        store.selectTerritoryOnMap(null);
         toggleEconomyCity(terrId);
       } else if (macroMode === 'BUILD_FORT') {
+        store.selectTerritoryOnMap(null);
         store.upgradeBuilding(terrId, 'fortress');
       }
       return;
@@ -482,8 +551,6 @@ function GameAppInner() {
           onUpdateSettings={store.updateSettings}
           soundEnabled={soundEnabled}
           onToggleSound={store.toggleSound}
-          newsCount={newsEvents.length}
-          onOpenNewsDrawer={() => store.setShowNewsDrawer(true)}
           onReturnToTitleMenu={() => {
             store.setSpeed(0);
             store.setScreenState('TITLE_MENU');
@@ -491,16 +558,6 @@ function GameAppInner() {
           onSaveToSlot={store.saveToSlot}
           onLoadRecord={store.loadRecord}
           onShowToast={store.showToast}
-        />
-      )}
-
-      {activeTacticalBattle && (
-        <TacticalBattleModal
-          battleState={activeTacticalBattle}
-          playerNationId={playerNationId}
-          nations={nations}
-          territories={territories}
-          onCloseAndApplyOutcome={store.applyBattleOutcome}
         />
       )}
 
@@ -517,6 +574,7 @@ function GameAppInner() {
           tick={tick}
           gameMode={gameMode}
           aiCommanderEnabled={store.aiCommanderEnabled}
+          aiCommanderStance={store.aiCommanderStance}
           isPlayerAtWar={wars.some(
             (w) =>
               w.attackerId === playerNationId ||
@@ -525,6 +583,7 @@ function GameAppInner() {
               w.defenders.includes(playerNationId)
           )}
           onToggleAiCommander={store.toggleAiCommander}
+          onSetAiCommanderStance={store.setAiCommanderStance}
           onClose={() => setInspectedNationId(null)}
           onSelectInspectedNation={(nId) => setInspectedNationId(nId)}
           onSelectTerritory={store.selectTerritory}
@@ -598,27 +657,45 @@ function GameAppInner() {
             <div className="p-4 space-y-3 text-xs">
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/90 border border-slate-800">
                 <div className="flex items-center gap-2.5">
-                  <span
-                    className="w-9 h-9 rounded-xl flex items-center justify-center font-display font-bold text-xs text-white"
-                    style={{ backgroundColor: pendingTargetNation.color }}
-                  >
-                    {pendingTargetNation.flagCode}
-                  </span>
+                  <NationFlagCanvasBadge
+                    nationId={pendingTargetNation.id}
+                    flagCode={pendingTargetNation.flagCode}
+                    color={pendingTargetNation.color}
+                    width={38}
+                    height={26}
+                  />
                   <div>
                     <div className="font-bold text-white text-sm">
-                      {pendingTargetNation.name}
+                      {cleanNationName(pendingTargetNation.name)}
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      Hedef Eyalet: <strong className="text-amber-300">{pendingToTerritory.name}</strong> ({(pendingToTerritory.garrison / 1000).toFixed(1)}B Garnizon)
+                      Hedef Eyalet: <strong className="text-amber-300">{cleanProvinceName(pendingToTerritory.name)}</strong> ({(pendingToTerritory.garrison / 1000).toFixed(1)}B Garnizon)
                     </div>
                   </div>
                 </div>
               </div>
 
               <p id="war-confirmation-description" className="text-slate-300 leading-relaxed">
-                <strong>{pendingFromTerritory.name}</strong> eyaletindeki ordunuzu{' '}
-                <strong>{pendingTargetNation.name}</strong> egemenliğindeki{' '}
-                <strong>{pendingToTerritory.name}</strong> toprağına yürütmek üzeresiniz. Aranızda resmi bir savaş veya askeri geçiş antlaşması bulunmuyor.
+                {pendingWarMove.sourceTerritoryIds &&
+                pendingWarMove.sourceTerritoryIds.length > 1 ? (
+                  <>
+                    <strong>{pendingWarMove.sourceTerritoryIds.length} eyaletinizdeki</strong> (
+                    {pendingWarMove.sourceTerritoryIds
+                      .slice(0, 3)
+                      .map((id) => cleanProvinceName(territories[id]?.name || id))
+                      .join(', ')}
+                    {pendingWarMove.sourceTerritoryIds.length > 3
+                      ? ` +${pendingWarMove.sourceTerritoryIds.length - 3}`
+                      : ''}
+                    ) ordularınızı{' '}
+                  </>
+                ) : (
+                  <>
+                    <strong>{cleanProvinceName(pendingFromTerritory.name)}</strong> eyaletindeki ordunuzu{' '}
+                  </>
+                )}
+                <strong>{cleanNationName(pendingTargetNation.name)}</strong> egemenliğindeki{' '}
+                <strong>{cleanProvinceName(pendingToTerritory.name)}</strong> toprağına yürütmek üzeresiniz. Aranızda resmi bir savaş veya askeri geçiş antlaşması bulunmuyor.
               </p>
 
               <div className="space-y-2 pt-1">
@@ -687,6 +764,7 @@ function GameAppInner() {
             movements={movements}
             playerNationId={playerNationId}
             selectedTerritoryId={selectedTerritoryId}
+            multiSelectedTerritoryIds={multiSelectedIds}
             armyOrderSourceId={armyOrderSourceId}
             mapMode={mapMode}
             mapLabelDensity={settings.mapLabelDensity}
@@ -699,55 +777,113 @@ function GameAppInner() {
           />
         )}
 
-        {screenState === 'PLAYING' && (
-          <WorldEventToastStack
-            newsEvents={newsEvents}
-            onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
-          />
-        )}
+        <WorldEventToastStack
+          newsEvents={newsEvents}
+          toastMessage={toastMessage}
+          onDismissToast={() => store.showToast(null)}
+          onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
+        />
 
         <MapModePillBar
           mapMode={mapMode}
           macroMode={macroMode}
           toastMessage={toastMessage}
           economySelectedIds={economySelectedIds}
+          batchMarchSourceIds={batchMarchSourceIds}
+          batchMarchTargetPicking={batchMarchTargetPicking}
+          batchMarchRatio={batchMarchRatio}
           territories={territories}
           playerTreasury={playerNation?.treasury ?? 0}
+          hasBottomCard={Boolean(
+            selectedTerritory && activeTab === 'NONE' && macroMode === 'NONE'
+          )}
+          outlinerSlot={
+            screenState === 'PLAYING' ? (
+              <AoH3OutlinerWidget
+                playerNationId={playerNationId}
+                nations={nations}
+                territories={territories}
+                wars={wars}
+                battles={battles}
+                movements={movements}
+                selectedTerritoryId={selectedTerritoryId}
+                aiCommanderEnabled={store.aiCommanderEnabled}
+                aiCommanderStance={store.aiCommanderStance}
+                onSelectTerritory={store.selectTerritoryOnMap}
+                onSetActiveTab={store.setActiveTab}
+                onStartArmyOrder={store.setArmyOrderSourceId}
+                onStartBatchMarch={() => {
+                  setMacroMode('BATCH_MARCH');
+                  setBatchMarchTargetPicking(false);
+                  if (
+                    batchMarchSourceIds.length === 0 &&
+                    selectedTerritory &&
+                    selectedTerritory.ownerId === playerNationId
+                  ) {
+                    setBatchMarchSourceIds([selectedTerritory.id]);
+                  }
+                  store.selectTerritoryOnMap(null);
+                }}
+                onToggleAiCommander={store.toggleAiCommander}
+                onSetAiCommanderStance={store.setAiCommanderStance}
+                onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
+              />
+            ) : null
+          }
+          belowTraySlot={
+            screenState === 'PLAYING' ? (
+              <LiveWarHudBadges
+                playerNationId={playerNationId}
+                nations={nations}
+                territories={territories}
+                wars={wars}
+                onSetActiveTab={store.setActiveTab}
+                onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
+              />
+            ) : null
+          }
           onSetMapMode={store.setMapMode}
           onSetMacroMode={(nextMode) => {
             setMacroMode(nextMode);
-            if (
-              nextMode === 'BUILD_ECONOMY' &&
-              economySelectedIds.length === 0 &&
-              selectedTerritory &&
-              selectedTerritory.ownerId === playerNationId
-            ) {
-              setEconomySelectedIds([selectedTerritory.id]);
+            if (nextMode !== 'BATCH_MARCH') {
+              setBatchMarchTargetPicking(false);
+            }
+            if (nextMode !== 'NONE') {
+              if (
+                nextMode === 'BUILD_ECONOMY' &&
+                economySelectedIds.length === 0 &&
+                selectedTerritory &&
+                selectedTerritory.ownerId === playerNationId
+              ) {
+                setEconomySelectedIds([selectedTerritory.id]);
+              }
+              if (
+                nextMode === 'BATCH_MARCH' &&
+                batchMarchSourceIds.length === 0 &&
+                selectedTerritory &&
+                selectedTerritory.ownerId === playerNationId
+              ) {
+                setBatchMarchSourceIds([selectedTerritory.id]);
+              }
+              store.selectTerritoryOnMap(null);
             }
           }}
           onToggleEconomyCity={toggleEconomyCity}
           onClearEconomyCities={() => setEconomySelectedIds([])}
+          onToggleBatchCity={toggleBatchCity}
+          onSelectReadyBatchCities={selectReadyBatchCities}
+          onSelectBorderBatchCities={selectBorderBatchCities}
+          onClearBatchCities={() => {
+            setBatchMarchSourceIds([]);
+            setBatchMarchTargetPicking(false);
+          }}
+          onSetBatchTargetPicking={setBatchMarchTargetPicking}
+          onSetBatchMarchRatio={setBatchMarchRatio}
           onInvestSpecialtyProduction={store.investSpecialtyProduction}
           onDismissToast={() => store.showToast(null)}
         />
 
-        {screenState === 'PLAYING' && (
-          <AoH3OutlinerWidget
-            playerNationId={playerNationId}
-            nations={nations}
-            territories={territories}
-            wars={wars}
-            battles={battles}
-            movements={movements}
-            selectedTerritoryId={selectedTerritoryId}
-            onSelectTerritory={store.selectTerritory}
-            onSetActiveTab={store.setActiveTab}
-            onStartArmyOrder={store.setArmyOrderSourceId}
-            onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
-          />
-        )}
-
-        {selectedTerritory && activeTab === 'NONE' && (
+        {selectedTerritory && activeTab === 'NONE' && macroMode === 'NONE' && (
           <SelectedProvinceBar
             territory={selectedTerritory}
             playerNationId={playerNationId}
@@ -756,6 +892,7 @@ function GameAppInner() {
             relations={relations}
             wars={wars}
             battles={battles}
+            gameMode={gameMode}
             fogOfWarEnabled={settings.fogOfWarEnabled}
             armyOrderSourceId={armyOrderSourceId}
             moveRatio={moveRatio}
@@ -769,7 +906,6 @@ function GameAppInner() {
             onDisbandArmy={store.disbandArmy}
             onSelectTerritory={store.selectTerritory}
             onOpenFullDrawer={() => store.setActiveTab('TERRITORY')}
-            onOpenDiplomacyDrawer={() => store.setActiveTab('DIPLOMACY')}
             onInspectNation={(nId) => setInspectedNationId(nId)}
             onOpenBattleOverview={() =>
               store.setActiveBattleOverviewTerritoryId(selectedTerritory.id)
@@ -812,6 +948,7 @@ function GameAppInner() {
             onStartArmyOrderMode={store.setArmyOrderSourceId}
             onExecuteArmyMove={store.executeArmyMove}
             onRecruitUnit={store.recruitUnit}
+            onHireMercenary={store.hireMercenary}
             onRecruitOrAssignGeneral={store.recruitOrAssignGeneral}
             onUpgradeBuilding={store.upgradeBuilding}
             onAssimilateTerritory={store.assimilateTerritory}
@@ -832,6 +969,7 @@ function GameAppInner() {
             onSelectTerritory={store.selectTerritory}
             onInspectNation={(nId) => setInspectedNationId(nId)}
             onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
+            onCallAllyToWar={store.callAllyToWar}
             fogOfWarEnabled={settings.fogOfWarEnabled}
             onModernizeNationalArmy={store.modernizeNationalArmy}
             onAssignFiefLord={store.assignFiefLord}
@@ -844,19 +982,30 @@ function GameAppInner() {
         )}
       </div>
 
-      <MehterhaneDock />
+      <MehterhaneDock
+        hideCompactOnMobile={Boolean(
+          (selectedTerritory && activeTab === 'NONE' && macroMode === 'NONE') ||
+            macroMode !== 'NONE'
+        )}
+      />
 
       <QuickOnboardingOverlay
         visible={
           screenState === 'PLAYING' &&
+          activeTab === 'NONE' &&
+          macroMode === 'NONE' &&
+          !selectedTerritory &&
           !showSystemModal &&
           !activeCrisis &&
-          !activeTacticalBattle &&
           !pendingWarMove
         }
       />
 
-      <OfflineStatusBanner />
+      <OfflineStatusBanner
+        liftAboveBottomCard={Boolean(
+          selectedTerritory && activeTab === 'NONE' && macroMode === 'NONE'
+        )}
+      />
 
       <BottomNavBar
         activeTab={activeTab}

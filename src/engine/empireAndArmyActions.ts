@@ -230,6 +230,118 @@ export function recruitUnitDomain(params: {
   };
 }
 
+export interface MercenaryCompanyDef {
+  id: string;
+  name: string;
+  historicalName: string;
+  modernName: string;
+  icon: string;
+  troops: number;
+  composition: {
+    infantry: number;
+    armor: number;
+    airDrone: number;
+  };
+  costGold: number;
+  tagline: string;
+}
+
+export const MERCENARY_COMPANIES: ReadonlyArray<MercenaryCompanyDef> = [
+  {
+    id: 'merc_vanguard',
+    name: 'Sınır Akıncı & Öncü Bölüğü',
+    historicalName: 'Rumeli Akıncı & Azeb Bölüğü',
+    modernName: 'Taktik Sınır Güvenlik Grubu',
+    icon: '⚔️',
+    troops: 2500,
+    composition: { infantry: 1900, armor: 600, airDrone: 0 },
+    costGold: 420,
+    tagline: 'İnsan gücü (İG) harcamadan anında cepheye katılan hızlı vurucu birlik.',
+  },
+  {
+    id: 'merc_pikemen',
+    name: 'Zırhlı Mızraklı & Tüfekçi Alayı',
+    historicalName: 'İsviçre Mızraklı & Ceneviz Arbalet Alayı',
+    modernName: 'Zırhlı Mekanize Paralı Tugay',
+    icon: '🛡️',
+    troops: 5000,
+    composition: { infantry: 3400, armor: 1200, airDrone: 400 },
+    costGold: 820,
+    tagline: 'Yüksek savunma ve cephe yarma gücüne sahip profesyonel kiralık alay.',
+  },
+  {
+    id: 'merc_siege_corps',
+    name: 'Büyük Kuşatma & Topçu Ordusu',
+    historicalName: 'Macar & Venedik Kuşatma Topçu Kolordusu',
+    modernName: 'Ağır Topçu & SİHA Destekli Özel Kolordu',
+    icon: '💣',
+    troops: 9000,
+    composition: { infantry: 5200, armor: 2200, airDrone: 1600 },
+    costGold: 1450,
+    tagline: 'Kaleleri ve ağır tahkimatları yıkmak için kiralanan tam teşekküllü paralı ordu.',
+  },
+];
+
+export function hireMercenaryDomain(params: {
+  territoryId: string;
+  companyId: string;
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  playerNationId: string;
+  gameMode?: GameModeId;
+}): EmpireActionPatch {
+  const {
+    territoryId,
+    companyId,
+    territories,
+    nations,
+    playerNationId,
+    gameMode = 'EMPIRES_1440',
+  } = params;
+  const t = territories[territoryId];
+  const p = nations[playerNationId];
+  const company = MERCENARY_COMPANIES.find((c) => c.id === companyId);
+  if (!t || !p || !company || t.ownerId !== playerNationId) return {};
+
+  if (p.treasury < company.costGold) {
+    return {
+      toastMessage: `Paralı asker kiralamak için yeterli altın yok! (${company.costGold.toLocaleString('tr-TR')} Altın gerekli)`,
+    };
+  }
+
+  sound.playWarHorn();
+  const currentUnits = t.units || {
+    infantry: t.garrison,
+    armor: 0,
+    airDrone: 0,
+  };
+  const displayName =
+    gameMode === 'EMPIRES_1440' ? company.historicalName : company.modernName;
+
+  return {
+    nations: {
+      ...nations,
+      [playerNationId]: {
+        ...p,
+        treasury: p.treasury - company.costGold,
+      },
+    },
+    territories: {
+      ...territories,
+      [territoryId]: {
+        ...t,
+        garrison: t.garrison + company.troops,
+        units: {
+          infantry: currentUnits.infantry + company.composition.infantry,
+          armor: currentUnits.armor + company.composition.armor,
+          airDrone: currentUnits.airDrone + company.composition.airDrone,
+        },
+      },
+    },
+    toastMessage: `🪙 ${t.name}: ${displayName} (+${company.troops.toLocaleString('tr-TR')} paralı asker) kiralandı!`,
+  };
+}
+
 export function recruitOrAssignGeneralDomain(params: {
   generalId: string;
   nations: Record<string, Nation>;
@@ -336,16 +448,22 @@ export function upgradeBuildingDomain(params: {
 }
 
 export type SpecialtyProductionId =
+  | 'AUTO_NATURAL'
   | 'SIGIR_FARM'
   | 'PAMUK_FIELD'
   | 'KERESTE_MILL'
   | 'TAHIL_GRANARY'
   | 'DEMIR_FOUNDRY'
   | 'ALTIN_MINT'
-  | 'PETROL_REFINERY';
+  | 'PETROL_REFINERY'
+  | 'DOGALGAZ_PLANT'
+  | 'TICARET_PORT'
+  | 'FINANS_EXCHANGE'
+  | 'YARI_ILETKEN_FAB'
+  | 'NADIR_TOPRAK_MINE';
 
 export interface SpecialtyProductionOption {
-  id: SpecialtyProductionId;
+  id: Exclude<SpecialtyProductionId, 'AUTO_NATURAL'>;
   name: string;
   shortName: string;
   icon: string;
@@ -353,6 +471,7 @@ export interface SpecialtyProductionOption {
   buildingBoost: BuildingType;
   costGold: number;
   gdpBonus: number;
+  buildDays: number;
   description: string;
 }
 
@@ -366,7 +485,8 @@ export const SPECIALTY_PRODUCTION_OPTIONS: ReadonlyArray<SpecialtyProductionOpti
     buildingBoost: 'supplyDepot',
     costGold: 350,
     gdpBonus: 14,
-    description: 'Şehre Sığır & Hayvancılık üretimi kurar, +1 İkmal/Mera seviyesi ve +%36 üretim değeri sağlar.',
+    buildDays: 10,
+    description: 'Sığır & Hayvancılık kaynağı olan şehirlerde +1 İkmal/Mera seviyesi ve +14 üretim değeri sağlar (10 gün).',
   },
   {
     id: 'PAMUK_FIELD',
@@ -377,7 +497,8 @@ export const SPECIALTY_PRODUCTION_OPTIONS: ReadonlyArray<SpecialtyProductionOpti
     buildingBoost: 'factory',
     costGold: 420,
     gdpBonus: 18,
-    description: 'Şehre Pamuk Tarlası ve Dokuma Atölyesi kurar, +1 Sanayi seviyesi ve +%38 üretim değeri sağlar.',
+    buildDays: 13,
+    description: 'Pamuk kaynağı olan şehirlerde +1 Sanayi/Dokuma seviyesi ve +18 üretim değeri sağlar (13 gün).',
   },
   {
     id: 'KERESTE_MILL',
@@ -388,7 +509,8 @@ export const SPECIALTY_PRODUCTION_OPTIONS: ReadonlyArray<SpecialtyProductionOpti
     buildingBoost: 'factory',
     costGold: 360,
     gdpBonus: 15,
-    description: 'Şehre Kereste & Odun İşletmesi kurar, +1 Sanayi/Atölye seviyesi ve +%36 üretim değeri sağlar.',
+    buildDays: 12,
+    description: 'Kereste kaynağı olan şehirlerde +1 Sanayi/Atölye seviyesi ve +15 üretim değeri sağlar (12 gün).',
   },
   {
     id: 'TAHIL_GRANARY',
@@ -399,18 +521,20 @@ export const SPECIALTY_PRODUCTION_OPTIONS: ReadonlyArray<SpecialtyProductionOpti
     buildingBoost: 'supplyDepot',
     costGold: 340,
     gdpBonus: 13,
-    description: 'Şehre sulamalı Tahıl & Buğday Tarlası kurar, +1 Erzak Ambarı seviyesi ve +%35 üretim değeri sağlar.',
+    buildDays: 10,
+    description: 'Tahıl kaynağı olan şehirlerde +1 Erzak Ambarı seviyesi ve +13 üretim değeri sağlar (10 gün).',
   },
   {
     id: 'DEMIR_FOUNDRY',
-    name: 'Demir & Maden Ocağı',
+    name: 'Demir & Çelik Dökümhanesi',
     shortName: 'Demir Ocağı',
     icon: '⛏',
     resource: 'DEMIR_CELIK',
     buildingBoost: 'factory',
     costGold: 450,
     gdpBonus: 20,
-    description: 'Şehre Demir & Çelik Dökümhanesi kurar, +1 Sanayi seviyesi ve +%38 üretim değeri sağlar.',
+    buildDays: 14,
+    description: 'Demir-Çelik kaynağı olan şehirlerde +1 Sanayi seviyesi ve +20 üretim değeri sağlar (14 gün).',
   },
   {
     id: 'ALTIN_MINT',
@@ -421,7 +545,8 @@ export const SPECIALTY_PRODUCTION_OPTIONS: ReadonlyArray<SpecialtyProductionOpti
     buildingBoost: 'tradeHub',
     costGold: 480,
     gdpBonus: 22,
-    description: 'Şehre Altın Madeni & Darphane kurar, +1 Ticaret Merkezi seviyesi ve +%40 üretim değeri sağlar.',
+    buildDays: 16,
+    description: 'Altın kaynağı olan şehirlerde +1 Ticaret Merkezi seviyesi ve +22 üretim değeri sağlar (16 gün).',
   },
   {
     id: 'PETROL_REFINERY',
@@ -432,9 +557,98 @@ export const SPECIALTY_PRODUCTION_OPTIONS: ReadonlyArray<SpecialtyProductionOpti
     buildingBoost: 'factory',
     costGold: 520,
     gdpBonus: 25,
-    description: 'Şehre Petrol & Enerji Tesisi kurar, +1 Sanayi seviyesi ve +%42 üretim değeri sağlar.',
+    buildDays: 18,
+    description: 'Petrol kaynağı olan şehirlerde +1 Sanayi seviyesi ve +25 üretim değeri sağlar (18 gün).',
+  },
+  {
+    id: 'DOGALGAZ_PLANT',
+    name: 'Doğalgaz & Enerji Santrali',
+    shortName: 'Doğalgaz Tesisi',
+    icon: '🔥',
+    resource: 'DOGALGAZ',
+    buildingBoost: 'factory',
+    costGold: 490,
+    gdpBonus: 23,
+    buildDays: 16,
+    description: 'Doğalgaz kaynağı olan şehirlerde +1 Sanayi seviyesi ve +23 üretim değeri sağlar (16 gün).',
+  },
+  {
+    id: 'TICARET_PORT',
+    name: 'Ticaret Limanı & Kervansaray',
+    shortName: 'Ticaret Limanı',
+    icon: '⚓',
+    resource: 'TICARET_BOGAZI',
+    buildingBoost: 'tradeHub',
+    costGold: 460,
+    gdpBonus: 21,
+    buildDays: 15,
+    description: 'Ticaret Boğazı/Limanı kaynağı olan şehirlerde +1 Ticaret Merkezi ve +21 üretim değeri sağlar (15 gün).',
+  },
+  {
+    id: 'FINANS_EXCHANGE',
+    name: 'Bedesten & Finans Merkezi',
+    shortName: 'Bedesten / Finans',
+    icon: '🏛️',
+    resource: 'FINANS_MERKEZI',
+    buildingBoost: 'tradeHub',
+    costGold: 470,
+    gdpBonus: 22,
+    buildDays: 15,
+    description: 'Finans/Bedesten kaynağı olan şehirlerde +1 Ticaret Merkezi ve +22 üretim değeri sağlar (15 gün).',
+  },
+  {
+    id: 'YARI_ILETKEN_FAB',
+    name: 'İleri Teknoloji & Zanaat Külliyesi',
+    shortName: 'Zanaat Külliyesi',
+    icon: '🔬',
+    resource: 'YARI_ILETKEN',
+    buildingBoost: 'university',
+    costGold: 500,
+    gdpBonus: 24,
+    buildDays: 18,
+    description: 'İleri Zanaat/Teknoloji kaynağı olan şehirlerde +1 Akademi/Ar-Ge ve +24 üretim değeri sağlar (18 gün).',
+  },
+  {
+    id: 'NADIR_TOPRAK_MINE',
+    name: 'Nadir Maden & Cevher İşletmesi',
+    shortName: 'Cevher Ocağı',
+    icon: '💎',
+    resource: 'NADIR_TOPRAK',
+    buildingBoost: 'factory',
+    costGold: 500,
+    gdpBonus: 23,
+    buildDays: 17,
+    description: 'Nadir Maden kaynağı olan şehirlerde +1 Sanayi seviyesi ve +23 üretim değeri sağlar (17 gün).',
   },
 ];
+
+export function getSpecialtyOptionForResource(
+  resource: Territory['resource']
+): SpecialtyProductionOption {
+  return (
+    SPECIALTY_PRODUCTION_OPTIONS.find((o) => o.resource === resource) ||
+    SPECIALTY_PRODUCTION_OPTIONS[3]
+  );
+}
+
+export function getSpecialtyTerritoryEligibility(
+  territory: Territory,
+  option: SpecialtyProductionOption
+): { eligible: boolean; reason: 'OK' | 'MAXED' | 'IN_PROGRESS'; currentLvl: number; maxLvl: number } {
+  const bDef = BUILDINGS.find((b) => b.id === option.buildingBoost);
+  const maxLvl = bDef?.maxLevel ?? 5;
+  const currentLvl = territory.buildings?.[option.buildingBoost] || 0;
+  const queue = territory.constructionQueue || [];
+  const hasQueuedSame = queue.some((q) => q.building === option.buildingBoost);
+
+  if (currentLvl >= maxLvl) {
+    return { eligible: false, reason: 'MAXED', currentLvl, maxLvl };
+  }
+  if (hasQueuedSame) {
+    return { eligible: false, reason: 'IN_PROGRESS', currentLvl, maxLvl };
+  }
+  return { eligible: true, reason: 'OK', currentLvl, maxLvl };
+}
 
 export function investSpecialtyProductionDomain(params: {
   territoryIds: string[];
@@ -445,8 +659,7 @@ export function investSpecialtyProductionDomain(params: {
 }): EmpireActionPatch {
   const { territoryIds, specialtyId, territories, nations, playerNationId } = params;
   const p = nations[playerNationId];
-  const opt = SPECIALTY_PRODUCTION_OPTIONS.find((o) => o.id === specialtyId);
-  if (!p || !opt) return {};
+  if (!p) return {};
 
   const validTerrs = Array.from(new Set(territoryIds))
     .map((id) => territories[id])
@@ -458,36 +671,114 @@ export function investSpecialtyProductionDomain(params: {
     };
   }
 
-  const totalCost = opt.costGold * validTerrs.length;
+  let candidateEntries: { territory: Territory; option: SpecialtyProductionOption }[] = [];
+
+  if (specialtyId === 'AUTO_NATURAL') {
+    candidateEntries = validTerrs.map((t) => ({
+      territory: t,
+      option: getSpecialtyOptionForResource(t.resource),
+    }));
+  } else {
+    const opt = SPECIALTY_PRODUCTION_OPTIONS.find((o) => o.id === specialtyId);
+    if (!opt) return {};
+    const matchingTerrs = validTerrs.filter((t) => t.resource === opt.resource);
+    if (matchingTerrs.length === 0) {
+      return {
+        toastMessage: `🛑 Seçili şehirlerde ${opt.shortName} doğal kaynağı bulunmuyor! Yalnızca şehirde var olan kaynaklara yatırım yapılabilir.`,
+      };
+    }
+    candidateEntries = matchingTerrs.map((t) => ({
+      territory: t,
+      option: opt,
+    }));
+  }
+
+  const targetEntries: {
+    territory: Territory;
+    option: SpecialtyProductionOption;
+    targetLevel: number;
+  }[] = [];
+  let maxedSkipCount = 0;
+  let queuedSkipCount = 0;
+
+  for (const entry of candidateEntries) {
+    const check = getSpecialtyTerritoryEligibility(entry.territory, entry.option);
+    if (!check.eligible) {
+      if (check.reason === 'MAXED') maxedSkipCount += 1;
+      else queuedSkipCount += 1;
+      continue;
+    }
+    targetEntries.push({
+      ...entry,
+      targetLevel: Math.min(check.maxLvl, check.currentLvl + 1),
+    });
+  }
+
+  if (targetEntries.length === 0) {
+    if (maxedSkipCount > 0 && queuedSkipCount === 0) {
+      return {
+        toastMessage: '🛑 Seçili şehirlerdeki bu tesis türü azami seviyeye (5/5) ulaştı! Daha fazla inşa edilemez.',
+      };
+    }
+    if (queuedSkipCount > 0 && maxedSkipCount === 0) {
+      return {
+        toastMessage: '⏳ Seçili şehirlerde bu tesisin inşaatı zaten devam ediyor!',
+      };
+    }
+    return {
+      toastMessage: '🛑 Seçili şehirler bu tesis için azami seviyede veya inşaatı sürüyor.',
+    };
+  }
+
+  const totalCost = targetEntries.reduce((sum, e) => sum + e.option.costGold, 0);
   if (p.treasury < totalCost) {
     return {
-      toastMessage: `Yetersiz hazine! ${validTerrs.length} şehirde ${opt.name} için ${totalCost.toLocaleString('tr-TR')} Altın gerekli (Mevcut: ${Math.floor(p.treasury).toLocaleString('tr-TR')}).`,
+      toastMessage: `Yetersiz hazine! ${targetEntries.length} şehirde kaynak yatırımı için ${totalCost.toLocaleString('tr-TR')} Altın gerekli (Mevcut: ${Math.floor(p.treasury).toLocaleString('tr-TR')}).`,
     };
   }
 
-  const bDef = BUILDINGS.find((b) => b.id === opt.buildingBoost);
-  const maxLvl = bDef?.maxLevel ?? 5;
   const nextTerritories = { ...territories };
+  const stamp = Date.now();
 
-  for (const t of validTerrs) {
-    const curLvl = t.buildings[opt.buildingBoost] || 0;
-    const nextLvl = Math.min(maxLvl, curLvl + 1);
+  targetEntries.forEach(({ territory: t, option: opt, targetLevel }, idx) => {
+    const existingQueue = t.constructionQueue || [];
     nextTerritories[t.id] = {
       ...t,
-      resource: opt.resource,
-      baseGdp: Math.round((t.baseGdp || 40) + opt.gdpBonus),
-      buildings: {
-        ...t.buildings,
-        [opt.buildingBoost]: nextLvl,
-      },
+      resource: t.resource,
+      constructionQueue: [
+        ...existingQueue,
+        {
+          id: `${t.id}-spec-${opt.id}-${stamp}-${idx}`,
+          building: opt.buildingBoost,
+          targetLevel,
+          progressDays: 0,
+          totalDays: opt.buildDays,
+          goldCost: opt.costGold,
+          gdpBonus: opt.gdpBonus,
+          specialtyName: opt.shortName,
+        },
+      ],
     };
-  }
+  });
 
   sound.playBuild();
   const cityNames =
-    validTerrs.length <= 2
-      ? validTerrs.map((t) => t.name).join(', ')
-      : `${validTerrs.slice(0, 2).map((t) => t.name).join(', ')} +${validTerrs.length - 2} şehir`;
+    targetEntries.length <= 2
+      ? targetEntries.map((e) => e.territory.name).join(', ')
+      : `${targetEntries.slice(0, 2).map((e) => e.territory.name).join(', ')} +${targetEntries.length - 2} şehir`;
+
+  const firstOpt = targetEntries[0].option;
+  const minDays = Math.min(...targetEntries.map((e) => e.option.buildDays));
+  const maxDays = Math.max(...targetEntries.map((e) => e.option.buildDays));
+  const daysText = minDays === maxDays ? `${minDays} gün` : `${minDays}–${maxDays} gün`;
+  const label =
+    specialtyId === 'AUTO_NATURAL' && targetEntries.length > 1
+      ? 'Doğal Kaynak Tesisleri'
+      : firstOpt.name;
+
+  const skippedTotal = maxedSkipCount + queuedSkipCount;
+  const skipSuffix =
+    skippedTotal > 0 ? ` (${skippedTotal} şehir sınır/inşaat nedeniyle atlandı)` : '';
 
   return {
     nations: {
@@ -498,7 +789,7 @@ export function investSpecialtyProductionDomain(params: {
       },
     },
     territories: nextTerritories,
-    toastMessage: `${opt.icon} ${cityNames}: ${opt.name} kuruldu (-${totalCost.toLocaleString('tr-TR')} Altın).`,
+    toastMessage: `⏳ ${cityNames}: ${label} inşaatı başlatıldı (${daysText} · -${totalCost.toLocaleString('tr-TR')} Altın).${skipSuffix}`,
   };
 }
 
@@ -997,6 +1288,327 @@ export function executeArmyMoveDomain(params: {
     armyOrderSourceId: null,
     ...(speed === 0 ? { speed: 1 as SpeedLevel } : {}),
     ...(toast ? { toastMessage: toast } : {}),
+  };
+}
+
+export function executeBatchArmyMoveDomain(params: {
+  sourceIds: string[];
+  toId: string;
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  relations: Record<string, DiplomaticRelation>;
+  wars: ActiveWar[];
+  movements: ArmyMovement[];
+  playerNationId: string;
+  moveRatio: number;
+  tick: number;
+  gameMode: GameModeId;
+  newsEvents: WorldNewsEvent[];
+  speed: SpeedLevel;
+  forceDeclareWar?: boolean;
+}): EmpireActionPatch {
+  const {
+    sourceIds,
+    toId,
+    territories,
+    nations,
+    relations,
+    wars,
+    movements,
+    playerNationId,
+    moveRatio,
+    tick,
+    gameMode,
+    newsEvents,
+    speed,
+    forceDeclareWar = false,
+  } = params;
+
+  const toT = territories[toId];
+  const playerNation = nations[playerNationId];
+  if (!toT || !playerNation) return {};
+
+  const normalizedMoveRatio = Number.isFinite(moveRatio)
+    ? Math.max(0, Math.min(1, moveRatio))
+    : 1;
+
+  const uniqueSourceIds = Array.from(new Set(sourceIds)).filter(
+    (id) => id && id !== toId
+  );
+  if (uniqueSourceIds.length === 0) {
+    return {
+      toastMessage: 'Toplu sevk için önce en az 1 kaynak şehir seçin.',
+    };
+  }
+
+  const eligibleSources: { terr: Territory; sendTroops: number }[] = [];
+  for (const sId of uniqueSourceIds) {
+    const t = territories[sId];
+    if (!t || t.ownerId !== playerNationId) continue;
+    const sendable = Math.max(0, Math.floor(t.garrison - 500));
+    const sendTroops = Math.min(
+      sendable,
+      Math.round(sendable * normalizedMoveRatio)
+    );
+    if (sendTroops >= 1000) {
+      eligibleSources.push({ terr: t, sendTroops });
+    }
+  }
+
+  if (eligibleSources.length === 0) {
+    return {
+      toastMessage:
+        'Seçili şehirlerde sevk edilebilir yeterli asker yok (en az 1.000 asker sevk edilmeli ve 500 garnizon kalmalıdır).',
+    };
+  }
+
+  const isForeign = toT.ownerId !== playerNationId;
+  const targetRelOwner = nations[toT.ownerId];
+  const relWithTarget = isForeign
+    ? getOrCreateRelation(relations, playerNationId, toT.ownerId)
+    : null;
+  const isAlliedOrVassalDest =
+    Boolean(relWithTarget?.isAllied) ||
+    Boolean(relWithTarget?.hasMilitaryAccess) ||
+    targetRelOwner?.vassalOf === playerNationId ||
+    playerNation.vassalOf === toT.ownerId;
+  const alreadyAtWarWithTarget = Boolean(
+    isForeign && isAtWar(wars, playerNationId, toT.ownerId)
+  );
+
+  const allowRouteWar = alreadyAtWarWithTarget || forceDeclareWar;
+
+  // Check routes for each eligible city before triggering war declaration
+  const routedSources = eligibleSources
+    .map((item) => {
+      const route = findArmyRouteAStar({
+        fromId: item.terr.id,
+        toId,
+        moverNationId: playerNationId,
+        territories,
+        nations,
+        relations,
+        wars,
+        allowTargetWarDeclaration:
+          allowRouteWar ||
+          (isForeign && !isAlliedOrVassalDest && !alreadyAtWarWithTarget),
+      });
+      return { ...item, route };
+    })
+    .filter((item) => item.route.reachable && item.route.hops.length > 0);
+
+  if (routedSources.length === 0) {
+    return {
+      toastMessage:
+        'Seçili şehirlerden hedef eyalete ulaşılabilir kara/boğaz rotası bulunamadı.',
+    };
+  }
+
+  // AoH3 Rule: Confirm war declaration before crossing into neutral foreign territory
+  if (
+    isForeign &&
+    !isAlliedOrVassalDest &&
+    !alreadyAtWarWithTarget &&
+    !forceDeclareWar
+  ) {
+    const validIds = routedSources.map((r) => r.terr.id);
+    return {
+      pendingWarMove: {
+        fromId: validIds[0],
+        sourceTerritoryIds: validIds,
+        moveRatio: normalizedMoveRatio,
+        toId,
+        targetNationId: toT.ownerId,
+      },
+      armyOrderSourceId: null,
+      toastMessage: `🛑 ${targetRelOwner?.name || 'Yabancı Devlet'} ile savaşta değilsiniz! ${validIds.length} orduluk toplu harekat için Savaş İlanını onaylayın.`,
+    };
+  }
+
+  let nextWars = wars;
+  let nextNews = newsEvents;
+  let warNotice = '';
+
+  if (
+    isForeign &&
+    !isAlliedOrVassalDest &&
+    !alreadyAtWarWithTarget &&
+    forceDeclareWar
+  ) {
+    const targetNation = nations[toT.ownerId];
+    const resolution = resolveWarParticipants(
+      playerNationId,
+      toT.ownerId,
+      relations,
+      nations
+    );
+    const defAllyNames = resolution.defensiveAlliesCalled
+      .map((id) => nations[id]?.name)
+      .filter(Boolean);
+    const attAllyNames = resolution.offensiveAlliesCalled
+      .map((id) => nations[id]?.name)
+      .filter(Boolean);
+
+    const newWar: ActiveWar = {
+      id: `war_${Date.now()}`,
+      name: `${playerNation.name} - ${targetNation?.name} Savaşı`,
+      attackerId: playerNationId,
+      defenderId: toT.ownerId,
+      attackers: resolution.attackers,
+      defenders: resolution.defenders,
+      startedTick: tick,
+      attackerWarScore: 0,
+      casualtiesAttacker: 0,
+      casualtiesDefender: 0,
+    };
+    nextWars = [...wars, newWar];
+
+    let warDesc = `${playerNation.name}, ${routedSources.length} eyaletlik toplu orduyu ${toT.name} hedefine sevk etti.`;
+    if (attAllyNames.length > 0) {
+      warDesc += ` Saldırı paktı ortağınız (${attAllyNames.join(', ')}) taarruza katıldı.`;
+    }
+    if (defAllyNames.length > 0) {
+      warDesc += ` Savunma paktı müttefikleri (${defAllyNames.join(', ')}) savaşa dahil oldu!`;
+    }
+
+    nextNews = [
+      {
+        id: `news_${Date.now()}_war`,
+        tick,
+        dateStr: formatGameDate(tick, gameMode),
+        title: newWar.name,
+        description: warDesc,
+        type: 'WAR',
+      },
+      ...newsEvents.slice(0, 39),
+    ];
+    sound.playWarHorn();
+    warNotice =
+      defAllyNames.length > 0
+        ? ` Savaş ilan edildi (Savunma Paktı: ${defAllyNames.join(', ')})!`
+        : ' Savaş ilan edildi!';
+  } else {
+    sound.playMarch();
+  }
+
+  const calledLords = isForeign ? playerNation.bannerCalledLordIds || [] : [];
+  const lordRetinueBonus = calledLords.reduce(
+    (sum, lId) => sum + getLordRetinueTroops(lId, territories),
+    0
+  );
+
+  let workingNations: Record<string, Nation> =
+    lordRetinueBonus > 0
+      ? {
+          ...nations,
+          [playerNationId]: {
+            ...playerNation,
+            bannerCalledLordIds: [],
+          },
+        }
+      : { ...nations };
+
+  let workingTerritories: Record<string, Territory> = { ...territories };
+  const addedMovements: ArmyMovement[] = [];
+  let totalTroopsSent = 0;
+
+  routedSources.forEach((item, idx) => {
+    const src = workingTerritories[item.terr.id];
+    if (!src) return;
+    const [firstHopId, ...remainingHops] = item.route.hops;
+    const firstHopTerr = workingTerritories[firstHopId];
+    const sourceUnits =
+      src.units || { infantry: src.garrison, armor: 0, airDrone: 0 };
+    const sentUnits = scaleUnits(
+      sourceUnits,
+      item.sendTroops / Math.max(1, src.garrison)
+    );
+    const remainingUnits = {
+      infantry: Math.max(0, sourceUnits.infantry - sentUnits.infantry),
+      armor: Math.max(0, sourceUnits.armor - sentUnits.armor),
+      airDrone: Math.max(0, sourceUnits.airDrone - sentUnits.airDrone),
+    };
+
+    let bonusTroops = 0;
+    if (idx === 0 && lordRetinueBonus > 0) {
+      bonusTroops = lordRetinueBonus;
+      sentUnits.infantry += Math.round(lordRetinueBonus * 0.75);
+      sentUnits.armor += Math.round(lordRetinueBonus * 0.25);
+    }
+
+    workingTerritories[src.id] = {
+      ...src,
+      garrison: Math.max(0, src.garrison - item.sendTroops),
+      units: remainingUnits,
+    };
+
+    const totalThisArmy = item.sendTroops + bonusTroops;
+    totalTroopsSent += totalThisArmy;
+
+    addedMovements.push({
+      id: `mv_batch_${Date.now()}_${idx}_${src.id}`,
+      ownerId: playerNationId,
+      fromTerritoryId: src.id,
+      toTerritoryId: firstHopId,
+      routeQueue: remainingHops,
+      finalDestinationId: toId,
+      troops: totalThisArmy,
+      units: sentUnits,
+      progress: 10,
+      isAttack: Boolean(
+        firstHopTerr &&
+          firstHopTerr.ownerId !== playerNationId &&
+          isAtWar(nextWars, playerNationId, firstHopTerr.ownerId)
+      ),
+    });
+  });
+
+  let workingMovements = [...movements, ...addedMovements];
+
+  const skippedCount = uniqueSourceIds.length - routedSources.length;
+  let toast = `⚔️ ${routedSources.length} şehirden ${(totalTroopsSent / 1000).toFixed(1)}B asker ${toT.name} hedefine sevk edildi!${warNotice}`;
+  if (skippedCount > 0) {
+    toast += ` (${skippedCount} şehirde yetersiz garnizon/rota atlandı)`;
+  }
+
+  if (
+    isForeign &&
+    !isAlliedOrVassalDest &&
+    !alreadyAtWarWithTarget &&
+    forceDeclareWar
+  ) {
+    const aiCounter = evaluateWartimeAiOperations({
+      nextTick: tick,
+      playerNationId,
+      nations: workingNations,
+      territories: workingTerritories,
+      relations,
+      wars: nextWars,
+      movements: workingMovements,
+      aiAggressiveness: 'AGGRESSIVE',
+      maxActionsPerPass: 2,
+    });
+    if (aiCounter) {
+      workingNations = aiCounter.updatedNations;
+      workingTerritories = aiCounter.updatedTerritories;
+      if (aiCounter.newMovements.length > 0) {
+        workingMovements = [...workingMovements, ...aiCounter.newMovements];
+      }
+      if (aiCounter.playerAlerts.length > 0) {
+        toast = `${toast} ${aiCounter.playerAlerts[0]}`.trim();
+      }
+    }
+  }
+
+  return {
+    nations: workingNations,
+    wars: nextWars,
+    newsEvents: nextNews,
+    territories: workingTerritories,
+    movements: workingMovements,
+    armyOrderSourceId: null,
+    ...(speed === 0 ? { speed: 1 as SpeedLevel } : {}),
+    toastMessage: toast,
   };
 }
 

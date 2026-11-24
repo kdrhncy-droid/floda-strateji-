@@ -31,7 +31,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
   };
 
   return (
-    <div className="hud-drawer-wrapper fixed inset-x-0 bottom-16 z-30 mx-auto max-w-6xl px-2 sm:px-4 pointer-events-none">
+    <div className="hud-drawer-wrapper fixed inset-x-0 bottom-16 z-40 mx-auto max-w-6xl px-2 sm:px-4 pointer-events-none">
       <div
         className={`hud-drawer-card pointer-events-auto bg-slate-900/98 border border-slate-700/90 rounded-t-3xl sm:rounded-2xl shadow-2xl ${
           drawerSizeMode === 'MINIMIZED'

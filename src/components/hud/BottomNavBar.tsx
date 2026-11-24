@@ -11,7 +11,9 @@ import { BottomDrawerTab } from '../../types/game';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { sound } from '../../utils/soundEngine';
 
-export const OfflineStatusBanner: React.FC = () => {
+export const OfflineStatusBanner: React.FC<{ liftAboveBottomCard?: boolean }> = ({
+  liftAboveBottomCard = false,
+}) => {
   const { isOnline } = usePWAInstall();
 
   if (isOnline) return null;
@@ -20,7 +22,9 @@ export const OfflineStatusBanner: React.FC = () => {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-[70px] sm:bottom-[80px] left-2.5 z-30 pointer-events-none"
+      className={`fixed left-2.5 z-25 pointer-events-none transition-all ${
+        liftAboveBottomCard ? 'bottom-[175px] sm:bottom-[150px]' : 'bottom-[70px] sm:bottom-[80px]'
+      }`}
     >
       <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/95 border border-amber-500/50 text-amber-200 text-[11px] font-semibold shadow-lg">
         <WifiOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
