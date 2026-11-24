@@ -4340,14 +4340,14 @@ test('initializeWorld2026 classifies coastal vs inland provinces and enforces sh
   assert.equal(rejected.nations, undefined);
 
   const accepted = upgradeBuildingDomain({
-    territoryId: '792_IST',
+    territoryId: '792_IZM',
     building: 'shipyard',
     territories: bundle.territories,
     nations,
     playerNationId: '792',
   });
   assert.equal(accepted.nations?.['792'].treasury, 5000 - 520);
-  assert.equal(accepted.territories?.['792_IST'].constructionQueue?.[0]?.building, 'shipyard');
+  assert.equal(accepted.territories?.['792_IZM'].constructionQueue?.[0]?.building, 'shipyard');
   assert.equal(isTerritoryCoastal({ id: 'custom_1', resource: 'TAHIL', isCoastal: false }), false);
   assert.equal(isTerritoryCoastal({ id: '792_IST', resource: 'TICARET_BOGAZI' }), true);
 });

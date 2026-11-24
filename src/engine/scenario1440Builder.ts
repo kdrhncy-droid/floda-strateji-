@@ -65,12 +65,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     flagCode: 'BİZ',
     color: '#78357A',
     ideology: 'MONARCHY',
-    capitalName: '★ Atina',
+    capitalName: '★ İstanbul',
+    capitalTerritoryId: '792_IST',
     treasury: 1950,
     manpower: 75000,
     absorbedCountryIds: ['300'],
     provinceRenames: {
-      '300': '★ Atina',
+      '300': 'Atina',
       '300_SKG': 'Selanik',
       '300_IOA': 'Yanya',
       '300_CRT': 'Girit',
@@ -1135,6 +1136,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
 
 // Province-level historical corrections for 1444 (applied over country-level absorption)
 const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
+  '792_IST': '300', // Constantinople stays Byzantine until 1453
   '792_ERZ': '031',
   '792_VAN': '031',
   '792_DYB': '031',
