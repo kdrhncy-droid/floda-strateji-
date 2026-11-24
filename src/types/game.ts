@@ -141,6 +141,31 @@ export interface FormableEmpireDefinition {
 
 export type AiCommanderStance = 'BALANCED' | 'AGGRESSIVE' | 'DEFENSIVE';
 
+export type AiPersonality =
+  | 'CONQUEROR'
+  | 'MERCHANT'
+  | 'DEFENDER'
+  | 'REVANCHIST';
+
+export type SeasonId = 'WINTER' | 'SPRING' | 'SUMMER' | 'AUTUMN';
+
+export type DiplomaticOfferKind =
+  | 'TRADE'
+  | 'NON_AGGRESSION'
+  | 'DEFENSIVE_PACT'
+  | 'MILITARY_ACCESS'
+  | 'TRIBUTE_GIFT';
+
+export interface IncomingDiplomaticOffer {
+  id: string;
+  fromNationId: string;
+  kind: DiplomaticOfferKind;
+  goldGift?: number;
+  createdTick: number;
+  expiresTick: number;
+  message: string;
+}
+
 export interface PendingWarMoveRequest {
   fromId: string;
   sourceTerritoryIds?: string[];
@@ -304,6 +329,7 @@ export interface Nation {
   bannerCalledLordIds?: string[]; // Lords currently summoned to the Ruler's Banner Army
   formedEmpireId?: string | null;
   vassalOf?: string | null;
+  aiPersonality?: AiPersonality;
   isEliminated: boolean;
 }
 

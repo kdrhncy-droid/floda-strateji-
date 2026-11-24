@@ -10,6 +10,7 @@ import {
   BuildingType,
   DiplomaticRelation,
   GameModeId,
+  IncomingDiplomaticOffer,
   Nation,
   Territory,
   UnitComposition,
@@ -20,10 +21,19 @@ import { findArmyRouteAStar } from './pathfindingEngine';
 import { STRATEGIC_STRAITS } from './straitsAndTradeEngine';
 import {
   adjustOccupiedUnrestDrift,
+  calculateProvinceDevelopment,
+  getEmbargoingNationIds,
   getOrCreateRelation,
   isAtWar,
   resolveWarParticipants,
 } from './simulationEngine';
+import {
+  AI_PERSONALITY_META,
+  calculateProvinceSupplyLimit,
+  getGameSeason,
+  resolveNationAiPersonality,
+} from './seasonSupplyAndAiProfile';
+import { applyConquestDiplomaticPenalty } from './diplomacyAndWarActions';
 import { isTerritoryCoastal, relationKey } from './worldBuilder';
 
 function scaleUnitComp(units: UnitComposition, ratio: number): UnitComposition {
@@ -60,6 +70,7 @@ export interface AiTurnResult {
   updatedRelations?: Record<string, DiplomaticRelation>;
   newMovement?: ArmyMovement;
   newWar?: ActiveWar;
+  incomingOffer?: IncomingDiplomaticOffer;
   newsItem?: {
     title: string;
     description: string;
@@ -188,48 +199,90 @@ export function evaluateWartimeAiOperations(params: {
       (a, b) => getProvinceThreatScore(b) - getProvinceThreatScore(a)
     );
 
-    // Step 1: Smart Emergency Wartime Mobilization on most threatened frontline/capital or strongest staging point
+    // Step 1: Proportional Multi-Front Wartime Mobilization scaled by empire size, treasury & AI personality
     if (
       frontlineProvs.length > 0 &&
       actorNation.treasury >= 200 &&
       actorNation.manpower >= 2200
     ) {
-      const mostThreatened = threatenedProvs[0];
-      const bolsterTarget =
-        mostThreatened && getProvinceThreatScore(mostThreatened) > 3500
-          ? mostThreatened
-          : [...frontlineProvs].sort((a, b) => b.garrison - a.garrison)[0];
+      const personality = resolveNationAiPersonality(actorNation, nextTerritories);
+      const scaleBonus = Math.min(8500, Math.max(0, ownedProvs.length - 1) * 1250);
+      const personalityLevyMult =
+        personality === 'CONQUEROR' || personality === 'REVANCHIST'
+          ? 1.18
+          : personality === 'DEFENDER'
+          ? 1.05
+          : 0.92;
+      const baseLevyCap = Math.round(
+        ((aiAggressiveness === 'CHAOS' || aiAggressiveness === 'AGGRESSIVE'
+          ? 7000
+          : 5200) +
+          scaleBonus) *
+          personalityLevyMult
+      );
 
-      if (bolsterTarget && bolsterTarget.garrison < 34000) {
+      // Large wealthy empires can reinforce up to 2 distinct frontlines per wartime pass
+      const maxLevyFronts =
+        ownedProvs.length >= 4 &&
+        actorNation.treasury >= 950 &&
+        actorNation.manpower >= 12000
+          ? 2
+          : 1;
+
+      const levyTargets: Territory[] = [];
+      const primaryTarget =
+        threatenedProvs[0] && getProvinceThreatScore(threatenedProvs[0]) > 3000
+          ? threatenedProvs[0]
+          : [...frontlineProvs].sort((a, b) => b.garrison - a.garrison)[0];
+      if (primaryTarget) levyTargets.push(primaryTarget);
+      if (maxLevyFronts > 1) {
+        const secondaryTarget = threatenedProvs.find(
+          (p) => p.id !== primaryTarget?.id && p.garrison < 38000
+        );
+        if (secondaryTarget) levyTargets.push(secondaryTarget);
+      }
+
+      for (const bolsterTarget of levyTargets) {
+        const liveTarget = nextTerritories[bolsterTarget.id] || bolsterTarget;
+        const maxGarrisonCap = Math.min(54000, 32000 + ownedProvs.length * 2200);
+        if (
+          liveTarget.garrison >= maxGarrisonCap ||
+          actorNation.treasury < 200 ||
+          actorNation.manpower < 2200
+        ) {
+          continue;
+        }
         const levyTroops = Math.min(
           actorNation.manpower,
-          aiAggressiveness === 'CHAOS' || aiAggressiveness === 'AGGRESSIVE'
-            ? 7500
-            : 5500
+          Math.max(2000, Math.round(baseLevyCap / levyTargets.length))
         );
-        if (levyTroops >= 1500) {
+        const goldCost = Math.min(
+          actorNation.treasury,
+          Math.max(160, Math.round(levyTroops * 0.036))
+        );
+        if (levyTroops >= 1500 && actorNation.treasury >= goldCost) {
           actorNation = {
             ...actorNation,
-            treasury: Math.max(0, actorNation.treasury - 190),
+            treasury: Math.max(0, actorNation.treasury - goldCost),
             manpower: Math.max(0, actorNation.manpower - levyTroops),
           };
           nextNations[actorId] = actorNation;
           const updatedTarget: Territory = {
-            ...bolsterTarget,
-            garrison: bolsterTarget.garrison + levyTroops,
+            ...liveTarget,
+            garrison: liveTarget.garrison + levyTroops,
             units: {
               infantry:
-                (bolsterTarget.units?.infantry || bolsterTarget.garrison) +
-                Math.round(levyTroops * 0.64),
+                (liveTarget.units?.infantry || liveTarget.garrison) +
+                Math.round(levyTroops * 0.62),
               armor:
-                (bolsterTarget.units?.armor || 0) +
-                Math.round(levyTroops * 0.24),
+                (liveTarget.units?.armor || 0) +
+                Math.round(levyTroops * 0.25),
               airDrone:
-                (bolsterTarget.units?.airDrone || 0) +
-                Math.round(levyTroops * 0.12),
+                (liveTarget.units?.airDrone || 0) +
+                Math.round(levyTroops * 0.13),
             },
           };
-          nextTerritories[bolsterTarget.id] = updatedTarget;
+          nextTerritories[liveTarget.id] = updatedTarget;
         }
       }
     }
@@ -537,6 +590,7 @@ export function evaluateMultiProvinceAiTurn(params: {
   relations: Record<string, DiplomaticRelation>;
   wars: ActiveWar[];
   movements?: ArmyMovement[];
+  hasActiveIncomingOffer?: boolean;
   aiAggressiveness: AiAggressivenessLevel;
 }): AiTurnResult | null {
   const {
@@ -548,6 +602,7 @@ export function evaluateMultiProvinceAiTurn(params: {
     relations,
     wars,
     movements = [],
+    hasActiveIncomingOffer = false,
     aiAggressiveness,
   } = params;
 
@@ -697,11 +752,24 @@ export function evaluateMultiProvinceAiTurn(params: {
           },
         };
 
+        let finalRelations = nextRelations;
+        if (annexedProvName) {
+          const penalty = applyConquestDiplomaticPenalty({
+            conquerorId: winner.id,
+            victimId: loser.id,
+            provincesTakenCount: 1,
+            isFullAnnexation: false,
+            nations: nextNats,
+            relations: nextRelations,
+          });
+          finalRelations = penalty.updatedRelations;
+        }
+
         return {
           updatedNations: nextNats,
           updatedTerritories: peaceTerritories,
           updatedWars: nextWars,
-          updatedRelations: nextRelations,
+          updatedRelations: finalRelations,
           newsItem: {
             title: `📜 Barış Antlaşması: ${winner.name} Zaferi`,
             description: annexedProvName
@@ -726,7 +794,11 @@ export function evaluateMultiProvinceAiTurn(params: {
     }
   }
 
-  // 1. Era-Accurate AI Technology Progression & National Army Modernization
+  // Resolve dynamic AI Personality Profile (CONQUEROR / MERCHANT / DEFENDER / REVANCHIST)
+  const actorPersonality = resolveNationAiPersonality(actorNation, territories);
+  const personalityMeta = AI_PERSONALITY_META[actorPersonality];
+
+  // 1. Personality-Specialized AI Technology Progression & National Army Modernization
   const activeTechTree = getTechTreeForMode(gameMode);
   const availableTechs = activeTechTree.filter(
     (tech) =>
@@ -736,11 +808,12 @@ export function evaluateMultiProvinceAiTurn(params: {
       actorNation.researchPoints >= tech.cost
   );
 
-  // Prioritize military & economic techs when affordable
   const nextAiTech = availableTechs.sort((a, b) => {
-    const prio = (branch: string) =>
-      branch === 'MILITARY' ? 0 : branch === 'ECONOMY' ? 1 : 2;
-    return prio(a.branch) - prio(b.branch) || a.cost - b.cost;
+    const aIdx = personalityMeta.techPriority.indexOf(a.branch);
+    const bIdx = personalityMeta.techPriority.indexOf(b.branch);
+    const prioA = aIdx === -1 ? 4 : aIdx;
+    const prioB = bIdx === -1 ? 4 : bIdx;
+    return prioA - prioB || a.cost - b.cost;
   })[0];
 
   if (nextAiTech) {
@@ -817,64 +890,117 @@ export function evaluateMultiProvinceAiTurn(params: {
         })
     );
 
-    // Balance army buildup vs. peacetime economy: invest in buildings on alternating turns when border is reasonably safe
+    // Personality-calibrated balance between peacetime economy/development and military buildup
+    const preferEconByPersonality =
+      actorPersonality === 'MERCHANT'
+        ? stepIndex % 3 !== 2
+        : actorPersonality === 'DEFENDER'
+        ? stepIndex % 2 === 0
+        : stepIndex % 3 === 0;
     const preferEconTurn =
       !actorInAnyWar &&
-      actorNation.treasury >= 800 &&
+      actorNation.treasury >= 760 &&
       (!weakestBorder ||
-        weakestBorder.garrison >= 9000 ||
+        weakestBorder.garrison >= 8500 ||
         actorNation.manpower < 14000) &&
-      (stepIndex % 2 === 0 || !hasThreatenedBorder);
+      (preferEconByPersonality || !hasThreatenedBorder);
 
     if (preferEconTurn) {
-      // Deficit-Driven Economic, Fortification, Manpower & Scientific Infrastructure Upgrade!
+      // Personality & Development-Driven Infrastructure, Supply, Coastal Harbor & Resource Investment!
       const straitShoreSet = new Set(
         STRATEGIC_STRAITS.flatMap((s) => s.shoreIds)
       );
+      const currentSeason = getGameSeason(nextTick, gameMode);
+      const overSupplyProv = ownedProvinces.find(
+        (p) =>
+          p.garrison >=
+            calculateProvinceSupplyLimit(p, actorNation, currentSeason) * 0.9 &&
+          (p.buildings.supplyDepot || 0) < 4
+      );
       const lowManpower = actorNation.manpower < 18000;
       const behindInTech = actorNation.unlockedTechs.length < 3;
+      const highInflation = (actorNation.inflation || 0) >= 6;
 
       let chosenBuilding: BuildingType | undefined;
       let econTarget: Territory | undefined;
-      const highInflation = (actorNation.inflation || 0) >= 6;
 
-      if (hasThreatenedBorder && weakestBorder && (weakestBorder.buildings.fortress || 0) < 4) {
+      if (overSupplyProv) {
+        econTarget = overSupplyProv;
+        chosenBuilding =
+          (overSupplyProv.buildings.supplyDepot || 0) <=
+          (overSupplyProv.buildings.granary || 0)
+            ? 'supplyDepot'
+            : 'granary';
+      } else if (
+        (hasThreatenedBorder || actorPersonality === 'DEFENDER') &&
+        weakestBorder &&
+        (weakestBorder.buildings.fortress || 0) < 4
+      ) {
         econTarget = weakestBorder;
         chosenBuilding = 'fortress';
       } else if (lowManpower) {
         econTarget =
           ownedProvinces.find(
-            (p) => (p.buildings.barracks || 0) < 4 || (p.buildings.granary || 0) < 3
+            (p) =>
+              (p.buildings.barracks || 0) < 4 || (p.buildings.granary || 0) < 3
           ) || ownedProvinces[0];
         chosenBuilding =
-          econTarget && (econTarget.buildings.granary || 0) < (econTarget.buildings.barracks || 0)
+          econTarget &&
+          (econTarget.buildings.granary || 0) <
+            (econTarget.buildings.barracks || 0)
             ? 'granary'
             : 'barracks';
       } else if (highInflation) {
         econTarget =
-          ownedProvinces.find((p) => p.isCapital && (p.buildings.mint || 0) < 4) ||
-          [...ownedProvinces].sort((a, b) => b.baseGdp - a.baseGdp)[0];
+          ownedProvinces.find(
+            (p) => p.isCapital && (p.buildings.mint || 0) < 4
+          ) || [...ownedProvinces].sort((a, b) => b.baseGdp - a.baseGdp)[0];
         chosenBuilding = 'mint';
       } else {
+        // Prioritize highest-development or highest-resource-value provinces (and coastal hubs for MERCHANT)
+        const rankedByDev = [...ownedProvinces].sort((a, b) => {
+          const devA = calculateProvinceDevelopment(a, actorNation);
+          const devB = calculateProvinceDevelopment(b, actorNation);
+          return (
+            devB.effectiveResourceValue +
+            devB.developmentScore -
+            (devA.effectiveResourceValue + devA.developmentScore)
+          );
+        });
         econTarget =
+          (actorPersonality === 'MERCHANT'
+            ? ownedProvinces.find(
+                (p) =>
+                  isTerritoryCoastal(p) &&
+                  ((p.buildings.shipyard || 0) < 4 ||
+                    (p.buildings.tradeHub || 0) < 4)
+              )
+            : undefined) ||
           ownedProvinces.find(
             (p) =>
               straitShoreSet.has(p.id) &&
-              ((p.buildings.tradeHub || 0) < 4 || (p.buildings.shipyard || 0) < 3)
+              ((p.buildings.tradeHub || 0) < 4 ||
+                (p.buildings.shipyard || 0) < 3)
           ) ||
-          ownedProvinces.find((p) => p.isCapital) ||
-          [...ownedProvinces].sort((a, b) => b.baseGdp - a.baseGdp)[0];
+          rankedByDev[0];
 
         if (econTarget) {
           const isStraitProv = straitShoreSet.has(econTarget.id);
           const isCoastalProv = isTerritoryCoastal(econTarget);
-          const candidateBuildings: BuildingType[] = isStraitProv
-            ? ['shipyard', 'tradeHub', 'fortress', 'factory', 'mint', 'university']
-            : isCoastalProv
-            ? ['factory', 'shipyard', 'tradeHub', 'mint', 'granary', 'university']
-            : behindInTech
-            ? ['university', 'factory', 'mint', 'tradeHub', 'granary', 'barracks', 'fortress']
-            : ['factory', 'tradeHub', 'mint', 'granary', 'university', 'barracks', 'fortress'];
+          const candidateBuildings: BuildingType[] =
+            actorPersonality === 'MERCHANT'
+              ? isCoastalProv
+                ? ['shipyard', 'tradeHub', 'mint', 'factory', 'university', 'granary']
+                : ['tradeHub', 'factory', 'mint', 'university', 'granary', 'supplyDepot']
+              : actorPersonality === 'CONQUEROR' || actorPersonality === 'REVANCHIST'
+              ? ['barracks', 'supplyDepot', 'factory', 'fortress', 'granary', 'shipyard', 'mint']
+              : actorPersonality === 'DEFENDER'
+              ? ['fortress', 'granary', 'supplyDepot', 'factory', 'mint', 'university', 'shipyard']
+              : isStraitProv
+              ? ['shipyard', 'tradeHub', 'fortress', 'factory', 'mint', 'university']
+              : behindInTech
+              ? ['university', 'factory', 'mint', 'tradeHub', 'granary', 'barracks']
+              : ['factory', 'tradeHub', 'mint', 'granary', 'university', 'barracks', 'fortress'];
           chosenBuilding = candidateBuildings.find(
             (bKey) =>
               (econTarget!.buildings[bKey] || 0) < 5 &&
@@ -904,7 +1030,9 @@ export function evaluateMultiProvinceAiTurn(params: {
             [econTarget.id]: {
               ...econTarget,
               baseGdp:
-                chosenBuilding === 'factory' || chosenBuilding === 'tradeHub'
+                chosenBuilding === 'factory' ||
+                chosenBuilding === 'tradeHub' ||
+                chosenBuilding === 'shipyard'
                   ? econTarget.baseGdp + 6
                   : econTarget.baseGdp,
               buildings: {
@@ -916,23 +1044,34 @@ export function evaluateMultiProvinceAiTurn(params: {
         }
       }
     } else {
+      const targetBorderGarrison =
+        actorPersonality === 'CONQUEROR' || actorPersonality === 'REVANCHIST'
+          ? 28000
+          : actorPersonality === 'DEFENDER'
+          ? 24000
+          : 19000;
       const needsGarrison =
         actorInAnyWar ||
         hasThreatenedBorder ||
         !weakestBorder ||
-        weakestBorder.garrison < 24000;
+        weakestBorder.garrison < targetBorderGarrison;
 
       if (
         needsGarrison &&
-        actorNation.treasury >= 850 &&
+        actorNation.treasury >= 780 &&
         actorNation.manpower >= 5500
       ) {
         const targetProv = weakestBorder || ownedProvinces[0];
         if (targetProv) {
-          const addTroops = aiAggressiveness === 'CHAOS' ? 9000 : 6000;
+          const empireScale = Math.min(5500, Math.max(0, ownedProvinces.length - 1) * 850);
+          const addTroops = Math.min(
+            actorNation.manpower,
+            (aiAggressiveness === 'CHAOS' ? 9000 : 6000) + empireScale
+          );
+          const levyCost = Math.min(actorNation.treasury, Math.max(380, Math.round(addTroops * 0.065)));
           actorNation = {
             ...actorNation,
-            treasury: actorNation.treasury - 450,
+            treasury: Math.max(0, actorNation.treasury - levyCost),
             manpower: Math.max(0, actorNation.manpower - addTroops),
           };
           updatedNations = {
@@ -947,11 +1086,11 @@ export function evaluateMultiProvinceAiTurn(params: {
               units: {
                 infantry:
                   (targetProv.units?.infantry || targetProv.garrison) +
-                  Math.round(addTroops * 0.68),
+                  Math.round(addTroops * 0.66),
                 armor:
-                  (targetProv.units?.armor || 0) + Math.round(addTroops * 0.22),
+                  (targetProv.units?.armor || 0) + Math.round(addTroops * 0.23),
                 airDrone:
-                  (targetProv.units?.airDrone || 0) + Math.round(addTroops * 0.1),
+                  (targetProv.units?.airDrone || 0) + Math.round(addTroops * 0.11),
               },
             },
           };
@@ -1018,13 +1157,33 @@ export function evaluateMultiProvinceAiTurn(params: {
     }
   }
 
-  // 4. Multi-Province A* Reserve Redeployment from safe interior provinces to frontline borders
+  // 4. Multi-Province A* Reserve Redeployment & Pre-War Border Buildup (Threat Feel!)
   if (ownedProvinces.length > 1) {
+    const minInteriorThreshold =
+      actorPersonality === 'CONQUEROR' || actorPersonality === 'REVANCHIST'
+        ? 14000
+        : 19000;
     const interiorRichProv = ownedProvinces.find(
       (p) =>
-        (activeTerrs[p.id]?.garrison || 0) >= 20000 &&
+        (activeTerrs[p.id]?.garrison || 0) >= minInteriorThreshold &&
         p.neighbors.every((nId) => activeTerrs[nId]?.ownerId === actorId)
     );
+
+    // Prioritize hostile/rival borders (or player border if hostile/Revanchist/Conqueror) for visible pre-war staging
+    const scoreBorderUrgency = (p: Territory): number => {
+      let urgency = -p.garrison;
+      for (const nId of p.neighbors) {
+        const nb = activeTerrs[nId];
+        if (!nb || nb.ownerId === actorId) continue;
+        const nbRel = getOrCreateRelation(relations, actorId, nb.ownerId);
+        if (actorInAnyWar && isAtWar(wars, actorId, nb.ownerId)) urgency += 22000;
+        if (nb.coreOwnerId === actorId) urgency += 14000; // Revanchist homeland staging!
+        if (nbRel.score <= -20) urgency += 9000;
+        if (nations[nb.ownerId]?.aggressiveExpansion >= 45) urgency += 7500;
+      }
+      return urgency;
+    };
+
     const frontlineTargets = ownedProvinces
       .filter((p) =>
         p.neighbors.some((nId) => {
@@ -1035,7 +1194,7 @@ export function evaluateMultiProvinceAiTurn(params: {
             : true;
         })
       )
-      .sort((a, b) => a.garrison - b.garrison);
+      .sort((a, b) => scoreBorderUrgency(b) - scoreBorderUrgency(a));
 
     if (interiorRichProv && frontlineTargets.length > 0) {
       const destFront = frontlineTargets[0];
@@ -1052,6 +1211,25 @@ export function evaluateMultiProvinceAiTurn(params: {
       if (route.reachable && route.hops.length >= 1) {
         const srcCurr = activeTerrs[interiorRichProv.id];
         const moveTroops = Math.round(srcCurr.garrison * 0.48);
+        const bordersPlayerHostilely =
+          !actorInAnyWar &&
+          destFront.neighbors.some((nId) => {
+            const nb = activeTerrs[nId];
+            if (!nb || nb.ownerId !== playerNationId) return false;
+            const relToPlayer = getOrCreateRelation(
+              relations,
+              actorId,
+              playerNationId
+            );
+            return (
+              !relToPlayer.isAllied &&
+              !relToPlayer.hasNonAggression &&
+              (relToPlayer.score <= -15 ||
+                actorPersonality === 'REVANCHIST' ||
+                (nations[playerNationId]?.aggressiveExpansion ?? 0) >= 45)
+            );
+          });
+
         return {
           updatedNations,
           updatedTerritories: {
@@ -1063,7 +1241,7 @@ export function evaluateMultiProvinceAiTurn(params: {
             },
           },
           newMovement: {
-            id: `ai_redeploy_${nextTick}_${srcCurr.id}`,
+            id: `ai_buildup_${nextTick}_${srcCurr.id}`,
             ownerId: actorId,
             fromTerritoryId: interiorRichProv.id,
             toTerritoryId: route.hops[0],
@@ -1074,47 +1252,74 @@ export function evaluateMultiProvinceAiTurn(params: {
             progress: 20,
             isAttack: false,
           },
+          ...(bordersPlayerHostilely
+            ? {
+                playerAlert: `⚠️ SINIR YIĞINAĞI: ${actorNation.name} (${personalityMeta.shortLabel}), ${destFront.name} sınırımıza ${moveTroops.toLocaleString('tr-TR')} asker kaydırıyor!`,
+                newsItem: {
+                  title: `⚠️ Sınır Yığınağı: ${actorNation.name}`,
+                  description: `${actorNation.name} orduları sınırımızdaki ${destFront.name} hattına takviye yığıyor. Diplomasi veya sınır savunması hazırlayın.`,
+                  type: 'COALITION' as const,
+                },
+              }
+            : {}),
         };
       }
     }
   }
 
-  // 4B. Proactive AI-to-AI Diplomacy (Trade Agreements, Defensive Pacts vs. Stronger/High-AE Rivals, Non-Aggression)
+  // 4B. Proactive AI-to-AI & Regional Enemy-of-My-Enemy Diplomacy + AI-to-Player Live Offers
   let updatedRelations: Record<string, DiplomaticRelation> | undefined;
   let diploNewsItem: AiTurnResult['newsItem'] | undefined;
+  let incomingOffer: IncomingDiplomaticOffer | undefined;
 
   if (!actorInAnyWar) {
     const neighborIds = new Set<string>();
+    const regionalIds = new Set<string>();
     for (const p of ownedProvinces) {
       for (const nId of p.neighbors) {
-        const nbOwner = activeTerrs[nId]?.ownerId;
+        const nbTerr = activeTerrs[nId];
+        const nbOwner = nbTerr?.ownerId;
         if (nbOwner && nbOwner !== actorId) {
           neighborIds.add(nbOwner);
+          // 2-hop regional peers (enemy-of-my-enemy coalition building!)
+          for (const hop2Id of nbTerr.neighbors) {
+            const hop2Owner = activeTerrs[hop2Id]?.ownerId;
+            if (hop2Owner && hop2Owner !== actorId && !neighborIds.has(hop2Owner)) {
+              regionalIds.add(hop2Owner);
+            }
+          }
         }
       }
     }
 
     const actorTotalTroops = computeRealmTotalTroops(actorId, activeTerrs, movements);
-    const hasStrongerOrHighAeNeighbor = Array.from(neighborIds).some((nId) => {
+    const threatNeighborIds = Array.from(neighborIds).filter((nId) => {
       const nbNat = nations[nId];
       if (!nbNat || nbNat.isEliminated) return false;
       const nbTroops = computeRealmTotalTroops(nId, activeTerrs, movements);
       const nbRel = getOrCreateRelation(relations, actorId, nId);
       return (
         !nbRel.isAllied &&
-        (nbNat.aggressiveExpansion >= 30 || nbTroops >= actorTotalTroops * 1.25)
+        (nbNat.aggressiveExpansion >= 30 ||
+          nbTroops >= actorTotalTroops * 1.25 ||
+          nbRel.score <= -25)
       );
     });
+    const hasStrongerOrHighAeNeighbor = threatNeighborIds.length > 0;
 
     const countExistingAlliances = (nId: string) =>
       Object.values(relations).filter(
-        (r) => (r.nationA === nId || r.nationB === nId) && (r.isAllied || Boolean(r.allianceType))
+        (r) =>
+          (r.nationA === nId || r.nationB === nId) &&
+          (r.isAllied || Boolean(r.allianceType))
       ).length;
 
     const actorAllianceCount = countExistingAlliances(actorId);
 
-    // Evaluate non-player neighbors first, then regional non-player peers
-    const aiPeers = Array.from(neighborIds).filter(
+    // 4B-1: Evaluate Direct Neighbors + Regional Peers (Enemy-of-My-Enemy Coalitions & Pacts)
+    const aiPeers = Array.from(
+      new Set([...Array.from(neighborIds), ...Array.from(regionalIds)])
+    ).filter(
       (id) => id !== playerNationId && nations[id] && !nations[id].isEliminated
     );
 
@@ -1124,13 +1329,20 @@ export function evaluateMultiProvinceAiTurn(params: {
 
       const rel = getOrCreateRelation(relations, actorId, peerId);
       const rKey = relationKey(actorId, peerId);
+      const sharesCommonThreat = threatNeighborIds.some((threatId) => {
+        const peerRelToThreat = getOrCreateRelation(relations, peerId, threatId);
+        return (
+          peerRelToThreat.score <= -15 ||
+          (nations[threatId]?.aggressiveExpansion ?? 0) >= 35
+        );
+      });
 
-      // 1) Form Defensive Pact when threatened by a stronger / high-AE neighbor (cap 2 alliances per AI to avoid hugbox)
+      // 1) Form Defensive Pact when threatened or sharing a common enemy (cap 2 alliances per AI)
       if (
-        hasStrongerOrHighAeNeighbor &&
+        (hasStrongerOrHighAeNeighbor || sharesCommonThreat) &&
         !rel.isAllied &&
         !rel.allianceType &&
-        rel.score >= 18 &&
+        rel.score >= (sharesCommonThreat ? 5 : 18) &&
         actorAllianceCount < 2 &&
         countExistingAlliances(peerId) < 2
       ) {
@@ -1146,15 +1358,21 @@ export function evaluateMultiProvinceAiTurn(params: {
           },
         };
         diploNewsItem = {
-          title: `🛡️ Savunma Paktı: ${actorNation.name} & ${peer.name}`,
-          description: `${actorNation.name} ve ${peer.name}, bölgesel güç dengesini korumak amacıyla ortak savunma paktı imzaladı.`,
+          title: `🛡️ Bölgesel Savunma Paktı: ${actorNation.name} & ${peer.name}`,
+          description: sharesCommonThreat
+            ? `${actorNation.name} ve ${peer.name}, ortak bölgesel tehditlere karşı savunma paktı kurdu.`
+            : `${actorNation.name} ve ${peer.name}, bölgesel güç dengesini korumak amacıyla ortak savunma paktı imzaladı.`,
           type: 'COALITION',
         };
         break;
       }
 
-      // 2) Sign Trade Agreement between peaceful non-hostile neighbors
-      if (!rel.hasTradeAgreement && !rel.hasEmbargo && rel.score >= 0) {
+      // 2) Sign Trade Agreement between peaceful non-hostile peers (especially MERCHANT)
+      if (
+        !rel.hasTradeAgreement &&
+        !rel.hasEmbargo &&
+        rel.score >= (actorPersonality === 'MERCHANT' ? -5 : 2)
+      ) {
         updatedRelations = {
           ...relations,
           [rKey]: {
@@ -1167,9 +1385,17 @@ export function evaluateMultiProvinceAiTurn(params: {
       }
 
       // 3) Sign Non-Aggression Pact between peaceful neighbors of comparable strength
-      if (!rel.hasNonAggression && !rel.isAllied && rel.score >= 10) {
+      if (
+        neighborIds.has(peerId) &&
+        !rel.hasNonAggression &&
+        !rel.isAllied &&
+        rel.score >= 10
+      ) {
         const peerTroops = computeRealmTotalTroops(peerId, activeTerrs, movements);
-        if (peerTroops >= actorTotalTroops * 0.7 && peerTroops <= actorTotalTroops * 1.45) {
+        if (
+          peerTroops >= actorTotalTroops * 0.7 &&
+          peerTroops <= actorTotalTroops * 1.45
+        ) {
           updatedRelations = {
             ...relations,
             [rKey]: {
@@ -1180,6 +1406,136 @@ export function evaluateMultiProvinceAiTurn(params: {
           };
           break;
         }
+      }
+    }
+
+    // 4B-2: AI-to-AI / AI-to-Player Embargo against High-AE / Deeply Hostile Rivals
+    if (!updatedRelations && stepIndex % 4 === 0) {
+      const embargoTargetId = threatNeighborIds.find((nId) => {
+        const nbNat = nations[nId];
+        if (!nbNat || nbNat.isEliminated) return false;
+        const rel = getOrCreateRelation(relations, actorId, nId);
+        const alreadyEmbargoedByActor = getEmbargoingNationIds(rel).includes(actorId);
+        return (
+          !alreadyEmbargoedByActor &&
+          !rel.isAllied &&
+          (nbNat.aggressiveExpansion >= 45 || rel.score <= -40)
+        );
+      });
+
+      if (embargoTargetId) {
+        const targetNat = nations[embargoTargetId];
+        const rel = getOrCreateRelation(relations, actorId, embargoTargetId);
+        const rKey = relationKey(actorId, embargoTargetId);
+        const nextEmbargoers = Array.from(
+          new Set([...getEmbargoingNationIds(rel), actorId])
+        );
+        updatedRelations = {
+          ...relations,
+          [rKey]: {
+            ...rel,
+            hasEmbargo: true,
+            embargoingNationIds: nextEmbargoers,
+            hasTradeAgreement: false,
+            score: Math.max(-100, rel.score - 12),
+          },
+        };
+        if (embargoTargetId === playerNationId) {
+          diploNewsItem = {
+            title: `🚫 Ticaret Ambargosu: ${actorNation.name}`,
+            description: `${actorNation.name}, yükselen gerilim ve agresif genişleme nedeniyle devletimize ticaret ambargosu başlattı.`,
+            type: 'COALITION',
+          };
+        } else if (targetNat) {
+          diploNewsItem = {
+            title: `🚫 Ambargo: ${actorNation.name} → ${targetNat.name}`,
+            description: `${actorNation.name}, ${targetNat.name} devletine ekonomik yaptırım ve ticaret ambargosu uyguladı.`,
+            type: 'ECONOMY',
+          };
+        }
+      }
+    }
+
+    // 4B-3: Proactive AI-to-Player Live Diplomatic Offers (Trade, Non-Aggression, Defensive Pact, Tribute Gift)
+    if (
+      !hasActiveIncomingOffer &&
+      nextTick >= 9 &&
+      nextTick % 12 === 0 &&
+      (neighborIds.has(playerNationId) || regionalIds.has(playerNationId)) &&
+      !isAtWar(wars, actorId, playerNationId)
+    ) {
+      const relWithPlayer = getOrCreateRelation(
+        updatedRelations || relations,
+        actorId,
+        playerNationId
+      );
+      const playerTotalTroops = computeRealmTotalTroops(
+        playerNationId,
+        activeTerrs,
+        movements
+      );
+
+      if (
+        !relWithPlayer.isAllied &&
+        !relWithPlayer.allianceType &&
+        relWithPlayer.score >= 22 &&
+        hasStrongerOrHighAeNeighbor &&
+        actorAllianceCount < 2
+      ) {
+        incomingOffer = {
+          id: `offer_${nextTick}_${actorId}`,
+          fromNationId: actorId,
+          kind: 'DEFENSIVE_PACT',
+          createdTick: nextTick,
+          expiresTick: nextTick + 21,
+          message: `${actorNation.name} elçisi, bölgesel tehditlere karşı Karşılıklı Savunma Paktı teklif ediyor.`,
+        };
+      } else if (
+        !relWithPlayer.hasTradeAgreement &&
+        !relWithPlayer.hasEmbargo &&
+        relWithPlayer.score >= (actorPersonality === 'MERCHANT' ? 0 : 8)
+      ) {
+        incomingOffer = {
+          id: `offer_${nextTick}_${actorId}`,
+          fromNationId: actorId,
+          kind: 'TRADE',
+          createdTick: nextTick,
+          expiresTick: nextTick + 21,
+          message: `${actorNation.name} (${personalityMeta.shortLabel}), karşılıklı ticaret gelirini artıracak Serbest Ticaret Anlaşması öneriyor.`,
+        };
+      } else if (
+        neighborIds.has(playerNationId) &&
+        !relWithPlayer.hasNonAggression &&
+        !relWithPlayer.isAllied &&
+        relWithPlayer.score >= 6
+      ) {
+        incomingOffer = {
+          id: `offer_${nextTick}_${actorId}`,
+          fromNationId: actorId,
+          kind: 'NON_AGGRESSION',
+          createdTick: nextTick,
+          expiresTick: nextTick + 21,
+          message: `${actorNation.name}, ortak sınır güvenliği için Saldırmazlık Paktı imzalamak istiyor.`,
+        };
+      } else if (
+        neighborIds.has(playerNationId) &&
+        playerTotalTroops >= actorTotalTroops * 2.1 &&
+        relWithPlayer.score >= -30 &&
+        actorNation.treasury >= 450
+      ) {
+        const giftGold = Math.min(
+          360,
+          Math.max(160, Math.round(actorNation.treasury * 0.22))
+        );
+        incomingOffer = {
+          id: `offer_${nextTick}_${actorId}`,
+          fromNationId: actorId,
+          kind: 'TRIBUTE_GIFT',
+          goldGift: giftGold,
+          createdTick: nextTick,
+          expiresTick: nextTick + 21,
+          message: `${actorNation.name}, askeri gücünüze hürmeten barışı korumak için ${giftGold} Altın iyi niyet hediyesi sunuyor.`,
+        };
       }
     }
   }
@@ -1277,14 +1633,23 @@ export function evaluateMultiProvinceAiTurn(params: {
           1 - targetDistractedWars * 0.16
         );
 
+        const isRevanchistCoreClaim =
+          actorPersonality === 'REVANCHIST' && nTerr.coreOwnerId === actorId;
+        const pWarMod = isRevanchistCoreClaim
+          ? 0.75
+          : personalityMeta.warReadinessMod;
+
         const isHighAeCoalition =
           targetOwner.aggressiveExpansion >= 55 &&
           attackerCoalitionTroops >= defenderCoalitionTroops * 0.75;
         const hasEmpireAdvantage =
           attackerCoalitionTroops >=
-          defenderCoalitionTroops * coalitionRatioThreshold * distractionDiscount;
+          defenderCoalitionTroops *
+            coalitionRatioThreshold *
+            distractionDiscount *
+            pWarMod;
         const hasBorderAdvantage =
-          currProv.garrison >= nTerr.garrison * localRatioThreshold;
+          currProv.garrison >= nTerr.garrison * localRatioThreshold * pWarMod;
 
         return isHighAeCoalition || (hasEmpireAdvantage && hasBorderAdvantage);
       });
@@ -1361,11 +1726,12 @@ export function evaluateMultiProvinceAiTurn(params: {
     }
   }
 
-  if (updatedNations || updatedTerritories || updatedRelations) {
+  if (updatedNations || updatedTerritories || updatedRelations || incomingOffer) {
     return {
       updatedNations,
       updatedTerritories,
       updatedRelations,
+      incomingOffer,
       newsItem: diploNewsItem,
     };
   }

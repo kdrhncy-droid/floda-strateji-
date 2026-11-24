@@ -10,6 +10,10 @@ import {
   getNationNotableLords,
   getNationRulerName,
 } from "../../engine/pashaAndFiefEngine";
+import {
+  AI_PERSONALITY_META,
+  resolveNationAiPersonality,
+} from "../../engine/seasonSupplyAndAiProfile";
 import { NationFlagCanvasBadge } from "../../map/nationFlagRenderer";
 import { cleanNationName } from "../../utils/formatters";
 import { Nation, Territory } from "../../types/game";
@@ -398,6 +402,9 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
             );
             const totalArmy = totalGarrison + (marchingByNation.get(realm.id) || 0);
             const notableLords = getNationNotableLords(realm, ownedProvs, gameMode);
+            const realmPersonality = !isPlayer
+              ? AI_PERSONALITY_META[resolveNationAiPersonality(realm, territories)]
+              : null;
 
             const rel = isPlayer
               ? null
@@ -456,8 +463,16 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="text-xs font-semibold text-amber-300 truncate">
-                        👑 {rulerTitle}
+                      <div className="text-xs font-semibold text-amber-300 truncate flex items-center gap-1.5">
+                        <span className="truncate">👑 {rulerTitle}</span>
+                        {realmPersonality && (
+                          <span
+                            className="text-[10px] font-medium text-sky-300/90 shrink-0"
+                            title={realmPersonality.description}
+                          >
+                            · {realmPersonality.shortLabel}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

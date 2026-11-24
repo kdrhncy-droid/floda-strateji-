@@ -25,6 +25,10 @@ import {
   getOrCreateRelation,
   isAtWar,
 } from '../../engine/simulationEngine';
+import {
+  calculateProvinceSupplyLimit,
+  getGameSeason,
+} from '../../engine/seasonSupplyAndAiProfile';
 import { getProvinceStraitBadge } from '../../engine/straitsAndTradeEngine';
 import {
   ActiveBattle,
@@ -51,6 +55,7 @@ interface SelectedProvinceBarProps {
   relations: Record<string, DiplomaticRelation>;
   wars: ActiveWar[];
   battles?: ActiveBattle[];
+  tick?: number;
   gameMode: GameModeId;
   fogOfWarEnabled: boolean;
   armyOrderSourceId: string | null;
@@ -76,6 +81,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   relations,
   wars,
   battles = [],
+  tick = 0,
   gameMode,
   fogOfWarEnabled,
   armyOrderSourceId,
@@ -176,6 +182,9 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
     gameMode,
     getNationModernizedTier(owner)
   );
+  const seasonInfo = getGameSeason(tick, gameMode);
+  const supplyLimit = calculateProvinceSupplyLimit(territory, owner, seasonInfo);
+  const isOverSupply = hasIntel && territory.garrison > supplyLimit;
 
   return (
     <div className="hud-province-quickbar absolute bottom-2.5 left-2.5 right-2.5 sm:right-auto sm:w-[560px] sm:max-w-[calc(100vw-8rem)] z-20 rounded-2xl bg-[#090e1a]/96 border border-amber-500/50 shadow-2xl px-2.5 sm:px-3 py-2 flex flex-col gap-2">
@@ -395,6 +404,22 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                 <span className="hidden md:inline text-slate-300 truncate max-w-[85px] font-sans">
                   {terrainMeta.name}
                 </span>
+                {hasIntel && (
+                  <>
+                    <span className="hidden sm:inline text-slate-600">·</span>
+                    <span
+                      className={`hidden sm:inline shrink-0 ${
+                        isOverSupply
+                          ? 'text-rose-400 font-bold'
+                          : 'text-slate-400'
+                      }`}
+                      title={`${seasonInfo.name} İkmal Limiti: ${supplyLimit.toLocaleString('tr-TR')} asker (${isOverSupply ? 'Limit aşıldı — haftalık yıpranma riski!' : 'Güvenli ikmal'})`}
+                      data-testid="province-supply-status"
+                    >
+                      İkmal {Math.round(territory.garrison / 1000)}B/{Math.round(supplyLimit / 1000)}B
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </button>

@@ -6,6 +6,7 @@ import {
   CrisisEventDefinition,
   DiplomaticRelation,
   GameModeId,
+  IncomingDiplomaticOffer,
   Nation,
   QueuedBuildingConstruction,
   SpeedLevel,
@@ -33,6 +34,12 @@ import {
   evaluateWartimeAiOperations,
   evaluateWeeklyUnrestAndRebellions,
 } from './aiAndRebellionEngine';
+import {
+  evaluateAutomaticCapitulations,
+  evaluateWeeklySupplyAndSeasonAttrition,
+  getGameSeason,
+  pruneDeadAlliances,
+} from './seasonSupplyAndAiProfile';
 import {
   evaluateWeeklyLordLoyaltyAndRebellions,
   processWeeklyBannerlordUpdates,
@@ -98,6 +105,7 @@ export interface GameTickInput {
   settings: GameSettings;
   aiCommanderEnabled?: boolean;
   aiCommanderStance?: import('../types/game').AiCommanderStance;
+  activeIncomingOffer?: IncomingDiplomaticOffer | null;
 }
 
 export interface GameTickOutput {
@@ -113,6 +121,8 @@ export interface GameTickOutput {
   newsEvents: WorldNewsEvent[];
   triggeredTacticalBattle: TacticalBattleState | null;
   triggeredCrisis: CrisisEventDefinition | null;
+  incomingDiplomaticOffer?: IncomingDiplomaticOffer | null;
+  clearIncomingOffer?: boolean;
   shouldPause: boolean;
   toasts: string[];
   sounds: TickSoundCue[];
@@ -192,6 +202,8 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
   const sounds: TickSoundCue[] = [];
   const triggeredTacticalBattle: TacticalBattleState | null = null;
   let triggeredCrisis: CrisisEventDefinition | null = null;
+  let incomingDiplomaticOffer: IncomingDiplomaticOffer | null | undefined = undefined;
+  let clearIncomingOffer = false;
   let shouldPause = false;
 
   const appendNews = (
@@ -1363,6 +1375,47 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
           );
         }
       });
+      // 2D. Weekly Supply Limit & Harsh-Season/Terrain Attrition
+      const seasonInfo = getGameSeason(nextTick, gameMode);
+      const attritionRes = evaluateWeeklySupplyAndSeasonAttrition({
+        territories: nextTerritories,
+        nations: nextNations,
+        season: seasonInfo,
+        playerNationId,
+      });
+      if (attritionRes.changed) {
+        nextTerritories = attritionRes.updatedTerritories;
+        territoriesCloned = true;
+      }
+      if (attritionRes.playerTotalLoss > 0) {
+        const provLabel = attritionRes.worstPlayerProvinceName
+          ? `${attritionRes.worstPlayerProvinceName} başta olmak üzere `
+          : '';
+        toasts.push(
+          `❄️ ${seasonInfo.name} İkmal Yıpranması: ${provLabel}-${attritionRes.playerTotalLoss.toLocaleString('tr-TR')} asker kaybı (İkmal Deposu/Ambar kurun veya birlikleri dağıtın).`
+        );
+      }
+
+      // 2E. Bi-Weekly Dead Alliance Pruning (Every 14 Days)
+      if (nextTick % 14 === 0) {
+        const pruneRes = pruneDeadAlliances({
+          nations: nextNations,
+          territories: nextTerritories,
+          relations: nextRelations,
+          wars: nextWars,
+        });
+        if (pruneRes.prunedCount > 0) {
+          nextRelations = pruneRes.updatedRelations;
+        }
+      }
+    }
+
+    // Expire stale incoming diplomatic offer if player ignored it past expiry
+    if (
+      input.activeIncomingOffer &&
+      nextTick >= input.activeIncomingOffer.expiresTick
+    ) {
+      clearIncomingOffer = true;
     }
 
     // 3. Multi-Province Strategic AI Decisions (Every 3 days)
@@ -1377,6 +1430,9 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         wars: nextWars,
         movements: nextMovements,
         aiAggressiveness: settings.aiAggressiveness,
+        hasActiveIncomingOffer: Boolean(
+          input.activeIncomingOffer && !clearIncomingOffer
+        ),
       });
 
       if (aiRes) {
@@ -1410,6 +1466,39 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         if (aiRes.playerAlert) {
           sounds.push('WAR_HORN');
           toasts.push(aiRes.playerAlert);
+        }
+        if (aiRes.incomingOffer) {
+          incomingDiplomaticOffer = aiRes.incomingOffer;
+          clearIncomingOffer = false;
+          sounds.push('TREATY');
+        }
+      }
+    }
+
+    // 3A. Daily Automatic Capitulation Check (>= 75% occupied & >= 50 warscore)
+    if (nextWars.length > 0) {
+      const capRes = evaluateAutomaticCapitulations({
+        nextTick,
+        playerNationId,
+        nations: nextNations,
+        territories: nextTerritories,
+        relations: nextRelations,
+        wars: nextWars,
+        thresholdPct: 75,
+      });
+      if (capRes.capitulatedCount > 0) {
+        nextNations = capRes.updatedNations;
+        nationsCloned = true;
+        nextTerritories = capRes.updatedTerritories;
+        territoriesCloned = true;
+        nextRelations = capRes.updatedRelations;
+        nextWars = capRes.updatedWars;
+        for (const item of capRes.newsItems) {
+          appendNews(item.title, item.description, item.type);
+        }
+        if (capRes.playerToasts.length > 0) {
+          sounds.push('TREATY');
+          toasts.push(...capRes.playerToasts);
         }
       }
     }
@@ -1487,6 +1576,10 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
     newsEvents: nextNewsEvents,
     triggeredTacticalBattle,
     triggeredCrisis,
+    ...(incomingDiplomaticOffer !== undefined
+      ? { incomingDiplomaticOffer }
+      : {}),
+    ...(clearIncomingOffer ? { clearIncomingOffer } : {}),
     shouldPause,
     toasts,
     sounds,

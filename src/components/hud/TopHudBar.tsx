@@ -22,6 +22,7 @@ import {
   formatGameDate,
   NationEconomyBreakdown,
 } from '../../engine/simulationEngine';
+import { getGameSeason } from '../../engine/seasonSupplyAndAiProfile';
 import { getClockSpeedProfile } from '../../engine/gameSettings';
 import { music } from '../../engine/musicEngine';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
@@ -74,6 +75,15 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
 }) => {
   const nationTitle = cleanNationName(playerNation.name);
   const dateLabel = formatGameDate(tick, gameMode);
+  const seasonInfo = getGameSeason(tick, gameMode);
+  const seasonColorClass =
+    seasonInfo.id === 'WINTER'
+      ? 'text-sky-300'
+      : seasonInfo.id === 'SPRING'
+      ? 'text-emerald-300'
+      : seasonInfo.id === 'SUMMER'
+      ? 'text-amber-300'
+      : 'text-orange-300';
   const hourLabel = `${String(hour % 24).padStart(2, '0')}:00`;
   const hourlyRateLabel = getClockSpeedProfile(speed).rateLabel;
 
@@ -326,6 +336,13 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
         <div className="text-right mr-0.5">
           <div className="font-mono-num text-[11px] sm:text-xs font-bold text-amber-400 leading-tight whitespace-nowrap flex items-center justify-end gap-1">
             <span>{dateLabel}</span>
+            <span
+              className={`hidden md:inline font-sans text-[10px] font-semibold ${seasonColorClass}`}
+              title={`${seasonInfo.name}: ${seasonInfo.summary}`}
+              data-testid="hud-season-label"
+            >
+              · {seasonInfo.name}
+            </span>
             <span className="hud-landscape-hide px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-200 border border-amber-500/40 text-[10px]">
               🕒 {hourLabel}
             </span>

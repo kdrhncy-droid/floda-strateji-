@@ -13,6 +13,7 @@ import {
 } from './engine/saveManager';
 import { music } from './engine/musicEngine';
 import { TopHudBar } from './components/hud/TopHudBar';
+import { DiplomaticOfferBanner } from './components/hud/DiplomaticOfferBanner';
 import { MapMacroMode, MapModePillBar } from './components/hud/MapModePillBar';
 import { SelectedProvinceBar } from './components/hud/SelectedProvinceBar';
 import { BottomNavBar, OfflineStatusBanner } from './components/hud/BottomNavBar';
@@ -149,6 +150,7 @@ function GameAppInner() {
     settings,
     toastMessage,
     activeCrisis,
+    incomingDiplomaticOffer,
     activeBattleOverviewTerritoryId,
     activeWarModalId,
     pendingWarMove,
@@ -785,6 +787,23 @@ function GameAppInner() {
           onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
         />
 
+        <DiplomaticOfferBanner
+          offer={incomingDiplomaticOffer}
+          nations={nations}
+          territories={territories}
+          tick={tick}
+          hidden={Boolean(
+            screenState !== 'PLAYING' ||
+              activeTab !== 'NONE' ||
+              activeCrisis ||
+              showSystemModal ||
+              activeWarModalId ||
+              inspectedNationId ||
+              pendingWarMove
+          )}
+          onRespond={store.respondToDiplomaticOffer}
+        />
+
         <MapModePillBar
           mapMode={mapMode}
           macroMode={macroMode}
@@ -895,6 +914,7 @@ function GameAppInner() {
             relations={relations}
             wars={wars}
             battles={battles}
+            tick={tick}
             gameMode={gameMode}
             fogOfWarEnabled={settings.fogOfWarEnabled}
             armyOrderSourceId={armyOrderSourceId}
@@ -972,6 +992,8 @@ function GameAppInner() {
             onUnlockTech={store.unlockTech}
             onEnactReform={store.enactReform}
             onDiplomaticAction={store.diplomaticAction}
+            onOfferLandPurchase={store.offerLandPurchase}
+            onIssueProvinceUltimatum={store.issueProvinceUltimatum}
             onPeaceDeal={store.peaceDeal}
             onSelectTerritory={store.selectTerritory}
             onInspectNation={(nId) => setInspectedNationId(nId)}
@@ -984,6 +1006,7 @@ function GameAppInner() {
             onToggleCallLordToBanner={store.toggleCallLordToBanner}
             onRaidEnemyTradeRoutes={store.raidEnemyTradeRoutes}
             onSiegeBombardment={store.siegeBombardment}
+            tick={tick}
             gameMode={gameMode}
           />
         )}

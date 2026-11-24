@@ -80,6 +80,8 @@ export interface CommandDrawersProps {
     targetNationId: string,
     action: DiplomaticActionType
   ) => void;
+  onOfferLandPurchase?: (territoryId: string) => void;
+  onIssueProvinceUltimatum?: (territoryId: string) => void;
   onPeaceDeal: (warId: string, dealType: PeaceDealType) => void;
   onSelectTerritory: (territoryId: string) => void;
   onInspectNation?: (nationId: string) => void;
@@ -94,6 +96,7 @@ export interface CommandDrawersProps {
     territoryId: string,
     method: 'ARTILLERY' | 'DRONE_RAID'
   ) => void;
+  tick?: number;
   gameMode?: GameModeId;
   fogOfWarEnabled?: boolean;
 }

@@ -31,6 +31,11 @@ import {
   DiplomacyPeerEntry,
 } from '../../engine/nationDiplomacySummary';
 import { getOrCreateRelation, isAtWar } from '../../engine/simulationEngine';
+import {
+  AI_PERSONALITY_META,
+  resolveNationAiPersonality,
+} from '../../engine/seasonSupplyAndAiProfile';
+import { calculateVassalAnnexCost } from '../../engine/diplomacyAndWarActions';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
 import { useAccessibleDialog } from '../../hooks/useAccessibleDialog';
 import { sound } from '../../utils/soundEngine';
@@ -217,6 +222,12 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
   const activePlayerWar = !isPlayerNation
     ? isAtWar(wars, playerNationId, summary.nation.id)
     : undefined;
+  const inspectedPersonalityMeta = !isPlayerNation
+    ? AI_PERSONALITY_META[resolveNationAiPersonality(summary.nation, territories)]
+    : null;
+  const vassalAnnexCost = !isPlayerNation
+    ? calculateVassalAnnexCost(summary.nation.id, territories)
+    : 0;
 
   let warBlockReason: string | null = null;
   if (!isPlayerNation && !activePlayerWar && playerRel) {
@@ -303,6 +314,18 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 <span className="text-amber-300 font-semibold">👑 {summary.rulerName}</span>
                 <span className="text-slate-600">·</span>
                 <span>{IDEOLOGIES[summary.nation.ideology]?.name ?? 'Monarşi'}</span>
+                {inspectedPersonalityMeta && (
+                  <>
+                    <span className="text-slate-600">·</span>
+                    <span
+                      className="text-sky-300 font-semibold"
+                      title={inspectedPersonalityMeta.description}
+                      data-testid="modal-ai-personality"
+                    >
+                      {inspectedPersonalityMeta.name}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -789,6 +812,31 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                   >
                     {playerRel?.hasMilitaryAccess ? '🧭 Geçiş Aktif' : '🧭 Askeri Geçiş'}
                   </button>
+                  {summary.nation.vassalOf === playerNationId ? (
+                    <button
+                      type="button"
+                      data-testid="modal-annex-vassal-btn"
+                      onClick={() =>
+                        onDiplomaticAction(summary.nation.id, 'ANNEX_VASSAL')
+                      }
+                      title="Vasal devleti barışçıl olarak imparatorluğa ilhak et (+20 İlişki gerekir)"
+                      className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/50 text-amber-200 text-[11px] font-bold"
+                    >
+                      👑 Vasal İlhak ({vassalAnnexCost}A)
+                    </button>
+                  ) : !activePlayerWar ? (
+                    <button
+                      type="button"
+                      data-testid="modal-ultimatum-vassal-btn"
+                      onClick={() =>
+                        onDiplomaticAction(summary.nation.id, 'ULTIMATUM_VASSAL')
+                      }
+                      title="20 DP · Güçlü orduyla vasallık ültimatomu gönder"
+                      className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/45 text-purple-200 text-[11px] font-bold"
+                    >
+                      👑 Vasallık Ültimatomu
+                    </button>
+                  ) : null}
                   {activePlayerWar ? (
                     <button
                       type="button"

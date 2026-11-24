@@ -12,6 +12,7 @@ import {
   GameModeId,
   GameScreenState,
   IdeologyId,
+  IncomingDiplomaticOffer,
   MapMode,
   Nation,
   PendingWarMoveRequest,
@@ -91,11 +92,14 @@ import {
 import { evaluatePlayerAiCommander } from '../engine/playerAiCommander';
 import {
   callAllyToWarDomain,
+  evaluateLandPurchaseDomain,
   executeDiplomaticActionDomain,
+  issueProvinceUltimatumDomain,
   PeaceConferenceRequest,
   resolvePeaceConferenceDomain,
   resolvePeaceDealDomain,
   resolveTacticalBattleOutcomeDomain,
+  respondToDiplomaticOfferDomain,
 } from '../engine/diplomacyAndWarActions';
 import { music } from '../engine/musicEngine';
 import { sound } from '../utils/soundEngine';
@@ -128,6 +132,7 @@ export interface GameStoreState {
   settings: GameSettings;
   toastMessage: string | null;
   activeCrisis: CrisisEventDefinition | null;
+  incomingDiplomaticOffer: IncomingDiplomaticOffer | null;
   activeTacticalBattle: TacticalBattleState | null;
   activeBattleOverviewTerritoryId: string | null;
   activeWarModalId: string | null;
@@ -227,6 +232,9 @@ export interface GameStoreState {
     targetNationId: string,
     action: DiplomaticActionType
   ) => void;
+  respondToDiplomaticOffer: (accept: boolean) => void;
+  offerLandPurchase: (territoryId: string) => void;
+  issueProvinceUltimatum: (territoryId: string) => void;
   applyBattleOutcome: (finalBattle: TacticalBattleState) => void;
   peaceDeal: (warId: string, dealType: PeaceDealType) => void;
   callAllyToWar: (warId: string, allyNationId: string) => void;
@@ -281,6 +289,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   settings: loadGameSettings(),
   toastMessage: null,
   activeCrisis: null,
+  incomingDiplomaticOffer: null,
   activeTacticalBattle: null,
   activeBattleOverviewTerritoryId: null,
   activeWarModalId: null,
@@ -758,6 +767,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       aiCommanderEnabled: false,
       activeTab: 'NONE',
       activeCrisis: null,
+      incomingDiplomaticOffer: null,
       activeTacticalBattle: null,
       campaignOutcome: null,
       dismissedVictoryBanner: false,
@@ -822,6 +832,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       moveRatio: 1,
       aiCommanderEnabled: false,
       activeTab: 'NONE',
+      incomingDiplomaticOffer: null,
       speed: 0,
       campaignOutcome: null,
       dismissedVictoryBanner: false,
@@ -871,6 +882,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       settings: s.settings,
       aiCommanderEnabled: s.aiCommanderEnabled,
       aiCommanderStance: s.aiCommanderStance,
+      activeIncomingOffer: s.incomingDiplomaticOffer,
     });
 
     for (const cue of out.sounds) {
@@ -907,6 +919,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         ? { activeTacticalBattle: out.triggeredTacticalBattle }
         : {}),
       ...(out.triggeredCrisis ? { activeCrisis: out.triggeredCrisis } : {}),
+      ...(out.incomingDiplomaticOffer !== undefined
+        ? { incomingDiplomaticOffer: out.incomingDiplomaticOffer }
+        : out.clearIncomingOffer
+        ? { incomingDiplomaticOffer: null }
+        : {}),
       ...(out.toasts.length > 0
         ? { toastMessage: out.toasts[out.toasts.length - 1] }
         : {}),
@@ -1463,6 +1480,99 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ...(patch.movements ? { movements: patch.movements } : {}),
       ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
       ...(patch.toast ? { toastMessage: patch.toast } : {}),
+    });
+  },
+
+  respondToDiplomaticOffer: (accept) => {
+    const s = get();
+    if (!s.incomingDiplomaticOffer) return;
+    const patch = respondToDiplomaticOfferDomain({
+      offer: s.incomingDiplomaticOffer,
+      accept,
+      playerNationId: s.playerNationId,
+      tick: s.tick,
+      gameMode: s.gameMode,
+      nations: s.nations,
+      relations: s.relations,
+      wars: s.wars,
+      newsEvents: s.newsEvents,
+    });
+    set({
+      incomingDiplomaticOffer: null,
+      ...(patch.nations ? { nations: patch.nations } : {}),
+      ...(patch.relations ? { relations: patch.relations } : {}),
+      ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.toast ? { toastMessage: patch.toast } : {}),
+    });
+  },
+
+  offerLandPurchase: (territoryId) => {
+    const s = get();
+    const patch = evaluateLandPurchaseDomain({
+      territoryId,
+      playerNationId: s.playerNationId,
+      tick: s.tick,
+      gameMode: s.gameMode,
+      nations: s.nations,
+      territories: s.territories,
+      relations: s.relations,
+      wars: s.wars,
+      newsEvents: s.newsEvents,
+    });
+    const nextTerritories = patch.territories || s.territories;
+    const outcome = evaluateCampaignOutcome(
+      nextTerritories,
+      s.playerNationId,
+      s.dismissedVictoryBanner
+    );
+    set({
+      ...(patch.nations ? { nations: patch.nations } : {}),
+      ...(patch.territories ? { territories: patch.territories } : {}),
+      ...(patch.relations ? { relations: patch.relations } : {}),
+      ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.toast ? { toastMessage: patch.toast } : {}),
+      ...(outcome
+        ? {
+            campaignOutcome: outcome,
+            screenState: 'VICTORY_SUMMARY' as GameScreenState,
+            speed: 0 as SpeedLevel,
+          }
+        : {}),
+    });
+  },
+
+  issueProvinceUltimatum: (territoryId) => {
+    const s = get();
+    const patch = issueProvinceUltimatumDomain({
+      territoryId,
+      playerNationId: s.playerNationId,
+      tick: s.tick,
+      gameMode: s.gameMode,
+      nations: s.nations,
+      territories: s.territories,
+      relations: s.relations,
+      wars: s.wars,
+      newsEvents: s.newsEvents,
+    });
+    const nextTerritories = patch.territories || s.territories;
+    const outcome = evaluateCampaignOutcome(
+      nextTerritories,
+      s.playerNationId,
+      s.dismissedVictoryBanner
+    );
+    set({
+      ...(patch.nations ? { nations: patch.nations } : {}),
+      ...(patch.territories ? { territories: patch.territories } : {}),
+      ...(patch.relations ? { relations: patch.relations } : {}),
+      ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.toast ? { toastMessage: patch.toast } : {}),
+      ...(outcome
+        ? {
+            campaignOutcome: outcome,
+            screenState: 'VICTORY_SUMMARY' as GameScreenState,
+            speed: 0 as SpeedLevel,
+          }
+        : {}),
     });
   },
 

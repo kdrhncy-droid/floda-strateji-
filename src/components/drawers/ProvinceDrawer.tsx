@@ -21,6 +21,10 @@ import {
   calculateProvinceDevelopment,
   isAtWar,
 } from "../../engine/simulationEngine";
+import {
+  calculateProvinceSupplyLimit,
+  getGameSeason,
+} from "../../engine/seasonSupplyAndAiProfile";
 import { computeVisibleTerritoryIds } from "../../engine/fogOfWarEngine";
 import { TERRAIN_INFO } from "../../engine/pashaAndFiefEngine";
 import {
@@ -53,6 +57,8 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   onAssimilateTerritory,
   onStartMissionary,
   onDiplomaticAction,
+  onOfferLandPurchase,
+  onIssueProvinceUltimatum,
   onPeaceDeal,
   onSelectTerritory,
   onInspectNation,
@@ -60,6 +66,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   onAssignFiefLord,
   onBestowFavorOnLord,
   onSiegeBombardment,
+  tick = 0,
   gameMode = "EMPIRES_1440",
   fogOfWarEnabled = true,
 }) => {
@@ -106,6 +113,13 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
     selectedTerritory,
     selectedOwner
   );
+  const seasonInfo = getGameSeason(tick, gameMode);
+  const supplyLimit = calculateProvinceSupplyLimit(
+    selectedTerritory,
+    selectedOwner,
+    seasonInfo
+  );
+  const isOverSupply = hasSelectedIntel && selectedTerritory.garrison > supplyLimit;
 
   return (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -297,13 +311,28 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                             ♜ Kale Suru: %{wallHp}
                           </div>
                         </div>
-                        <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                        <div className="text-[11px] text-slate-400 flex items-center justify-between gap-2">
                           <span>{tMeta.summary}</span>
                           {fiefLord && (
-                            <span className="text-purple-300 font-semibold">
+                            <span className="text-purple-300 font-semibold shrink-0">
                               ⚜ Tımar: {fiefLord.name}
                             </span>
                           )}
+                        </div>
+                        <div className="pt-1.5 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px]">
+                          <span className="text-slate-400">
+                            İkmal Limiti ({seasonInfo.name}):
+                          </span>
+                          <span
+                            className={`font-mono-num font-bold ${
+                              isOverSupply ? 'text-rose-400' : 'text-emerald-300'
+                            }`}
+                            title={seasonInfo.summary}
+                          >
+                            {hasSelectedIntel
+                              ? `${selectedTerritory.garrison.toLocaleString('tr-TR')} / ${supplyLimit.toLocaleString('tr-TR')}${isOverSupply ? ' (Aşıldı!)' : ''}`
+                              : `${supplyLimit.toLocaleString('tr-TR')} Asker`}
+                          </span>
                         </div>
                         {(() => {
                           const stBadge = getProvinceStraitBadge(
@@ -747,6 +776,8 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     wars={wars}
                     gameMode={gameMode}
                     onDiplomaticAction={onDiplomaticAction}
+                    onOfferLandPurchase={onOfferLandPurchase}
+                    onIssueProvinceUltimatum={onIssueProvinceUltimatum}
                     onPeaceDeal={onPeaceDeal}
                     onSelectTerritory={onSelectTerritory}
                     onInspectNation={onInspectNation}

@@ -1,5 +1,5 @@
 import React from "react";
-import { Swords, Handshake, Crown, Ban, AlertTriangle, Coins, Shield, ArrowRight } from "lucide-react";
+import { Swords, Handshake, Crown, Ban, AlertTriangle, Coins, Shield, ArrowRight, Landmark, ScrollText } from "lucide-react";
 import { ActiveWar, DiplomaticRelation, Nation, Territory } from "../../types/game";
 import { DiplomaticActionType, PeaceDealType } from "./drawerTypes";
 import {
@@ -8,6 +8,15 @@ import {
   isAtWar,
   isNationEmbargoing,
 } from "../../engine/simulationEngine";
+import {
+  AI_PERSONALITY_META,
+  resolveNationAiPersonality,
+} from "../../engine/seasonSupplyAndAiProfile";
+import {
+  calculateProvincePurchasePrice,
+  calculateVassalAnnexCost,
+  canAcceptLandPurchase,
+} from "../../engine/diplomacyAndWarActions";
 import { sound } from "../../utils/soundEngine";
 
 interface ProvinceForeignDiplomacyPanelProps {
@@ -20,6 +29,8 @@ interface ProvinceForeignDiplomacyPanelProps {
   wars: ActiveWar[];
   gameMode: string;
   onDiplomaticAction: (targetNationId: string, action: DiplomaticActionType) => void;
+  onOfferLandPurchase?: (territoryId: string) => void;
+  onIssueProvinceUltimatum?: (territoryId: string) => void;
   onPeaceDeal: (warId: string, dealType: PeaceDealType) => void;
   onSelectTerritory: (territoryId: string) => void;
   onInspectNation?: (nationId: string) => void;
@@ -38,6 +49,8 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
   wars,
   gameMode,
   onDiplomaticAction,
+  onOfferLandPurchase,
+  onIssueProvinceUltimatum,
   onPeaceDeal,
   onSelectTerritory,
   onInspectNation,
@@ -69,6 +82,33 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                       const playerWarScore = activeWar
                         ? getWarScoreForNation(activeWar, playerNation.id)
                         : null;
+                      const ownerPersonality = resolveNationAiPersonality(
+                        selectedOwner,
+                        territories
+                      );
+                      const personalityMeta = AI_PERSONALITY_META[ownerPersonality];
+                      const ownerProvCount = Object.values(territories).filter(
+                        (t) => t && t.ownerId === selectedOwner.id
+                      ).length;
+                      const bordersPlayer = selectedTerritory.neighbors.some(
+                        (nId) => territories[nId]?.ownerId === playerNation.id
+                      );
+                      const purchasePrice = calculateProvincePurchasePrice(
+                        selectedTerritory,
+                        selectedOwner,
+                        rel.score
+                      );
+                      const purchaseCheck = canAcceptLandPurchase({
+                        territory: selectedTerritory,
+                        sellerNation: selectedOwner,
+                        sellerPersonality: ownerPersonality,
+                        relationScore: rel.score,
+                        sellerProvCount: ownerProvCount,
+                      });
+                      const vassalAnnexCost = calculateVassalAnnexCost(
+                        selectedOwner.id,
+                        territories
+                      );
 
                       return (
                         <>
@@ -158,6 +198,14 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                                     'tr-TR'
                                   )}{' '}
                                   Altın
+                                </span>
+                                <span aria-hidden="true">·</span>
+                                <span
+                                  className="text-sky-300 font-semibold"
+                                  title={personalityMeta.description}
+                                  data-testid="foreign-ai-personality"
+                                >
+                                  {personalityMeta.name}
                                 </span>
                               </div>
                             </div>
@@ -421,10 +469,10 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                               >
                                 <div>
                                   <div className="text-xs font-bold text-amber-200">
-                                    Vasal Devleti Tamamen İlhak Et
+                                    Vasal Devleti Barışçıl İlhak Et
                                   </div>
                                   <div className="text-[11px] text-amber-400">
-                                    600 Altın · Tüm eyaletler doğrudan bağlanır
+                                    {vassalAnnexCost} Altın · +20 İlişki gerekir
                                   </div>
                                 </div>
                                 <Crown className="w-4 h-4 text-amber-400 shrink-0" />
@@ -444,10 +492,62 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                                     Vasallık Ültimatomu Gönder
                                   </div>
                                   <div className="text-[11px] text-purple-300">
-                                    Ordunuz 1.8 kat güçlü ise boyun eğer
+                                    20 DP · {Number((1.85 * personalityMeta.ultimatumResistance).toFixed(1))}x ordu üstünlüğü ({personalityMeta.shortLabel})
                                   </div>
                                 </div>
                                 <Crown className="w-4 h-4 text-purple-400 shrink-0" />
+                              </button>
+                            )}
+
+                            {/* Territorial Purchase & Territorial Ultimatum for Bordering Non-War Provinces */}
+                            {!activeWar && bordersPlayer && onOfferLandPurchase && (
+                              <button
+                                type="button"
+                                data-testid="btn-land-purchase"
+                                onClick={() => onOfferLandPurchase(selectedTerritory.id)}
+                                title={purchaseCheck.reason}
+                                className="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-amber-950/35 hover:bg-amber-900/45 border border-amber-500/45 text-left flex items-center justify-between transition-colors"
+                              >
+                                <div className="min-w-0 pr-2">
+                                  <div className="text-xs font-bold text-amber-100 truncate">
+                                    Toprak Satın Al ({selectedTerritory.name})
+                                  </div>
+                                  <div className="text-[11px] flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-mono-num text-amber-300">
+                                      {purchasePrice.toLocaleString('tr-TR')} Altın · 15 DP
+                                    </span>
+                                    <span className="text-slate-600">·</span>
+                                    <span
+                                      className={
+                                        purchaseCheck.willAccept
+                                          ? 'text-emerald-400 font-semibold'
+                                          : 'text-rose-400 font-semibold'
+                                      }
+                                    >
+                                      {purchaseCheck.willAccept ? 'Kabul Eder' : 'Reddeder'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <Landmark className="w-4 h-4 text-amber-400 shrink-0" />
+                              </button>
+                            )}
+
+                            {!activeWar && bordersPlayer && onIssueProvinceUltimatum && (
+                              <button
+                                type="button"
+                                data-testid="btn-province-ultimatum"
+                                onClick={() => onIssueProvinceUltimatum(selectedTerritory.id)}
+                                className="min-h-[44px] px-3.5 py-2.5 rounded-xl bg-rose-950/35 hover:bg-rose-900/45 border border-rose-500/45 text-left flex items-center justify-between transition-colors"
+                              >
+                                <div className="min-w-0 pr-2">
+                                  <div className="text-xs font-bold text-rose-100 truncate">
+                                    Toprak Ültimatomu ({selectedTerritory.name})
+                                  </div>
+                                  <div className="text-[11px] text-rose-300">
+                                    25 DP · Ezici orduyla savaşmadan ilhak talep et
+                                  </div>
+                                </div>
+                                <ScrollText className="w-4 h-4 text-rose-400 shrink-0" />
                               </button>
                             )}
 

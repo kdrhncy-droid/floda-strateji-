@@ -60,6 +60,22 @@ import {
 } from '../utils/formatters';
 import { EMPIRES_1440_DEFS } from './scenario1440Builder';
 import { useGameStore } from '../store/useGameStore';
+import {
+  calculateProvinceSupplyLimit,
+  evaluateAutomaticCapitulations,
+  evaluateWeeklySupplyAndSeasonAttrition,
+  getGameSeason,
+  pruneDeadAlliances,
+  resolveNationAiPersonality,
+} from './seasonSupplyAndAiProfile';
+import {
+  calculateProvincePurchasePrice,
+  calculateVassalAnnexCost,
+  canAcceptLandPurchase,
+  evaluateLandPurchaseDomain,
+  issueProvinceUltimatumDomain,
+  respondToDiplomaticOfferDomain,
+} from './diplomacyAndWarActions';
 
 test('formatGameDate formats 1440 and 2026 dates and optional hours accurately', () => {
   assert.equal(formatGameDate(0, 'EMPIRES_1440'), '1 Oca 1440');
@@ -4626,6 +4642,412 @@ test('batch empire management domains process assimilation, festivals, coastal-s
   assert.equal(mobRes.territories?.inland.garrison, 3000);
   assert.equal(mobRes.nations?.['792'].manpower, 4000);
 });
+
+test('Faz 4.1: resolveNationAiPersonality respects presets and shifts to REVANCHIST when losing a homeland core', () => {
+  const ottoman = { id: '792', name: 'Osmanlı', ideology: 'MONARCHY' } as unknown as Nation;
+  const venice = { id: '380', name: 'Venedik', ideology: 'DEMOCRACY' } as unknown as Nation;
+  const poland = { id: '616', name: 'Polonya', ideology: 'MONARCHY' } as unknown as Nation;
+
+  const intactTerrs: Record<string, Territory> = {
+    p1: { id: 'p1', ownerId: '792', coreOwnerId: '792' } as unknown as Territory,
+    p2: { id: 'p2', ownerId: '380', coreOwnerId: '380' } as unknown as Territory,
+    p3: { id: 'p3', ownerId: '616', coreOwnerId: '616' } as unknown as Territory,
+  };
+
+  assert.equal(resolveNationAiPersonality(ottoman, intactTerrs), 'CONQUEROR');
+  assert.equal(resolveNationAiPersonality(venice, intactTerrs), 'MERCHANT');
+  assert.equal(resolveNationAiPersonality(poland, intactTerrs), 'DEFENDER');
+
+  const lostCoreTerrs: Record<string, Territory> = {
+    ...intactTerrs,
+    p2: { id: 'p2', ownerId: '792', coreOwnerId: '380' } as unknown as Territory,
+  };
+  assert.equal(resolveNationAiPersonality(venice, lostCoreTerrs), 'REVANCHIST');
+});
+
+test('Faz 4.4: seasonal supply limits respond to winter/terrain/logistics and weekly attrition trims oversized garrisons', () => {
+  const winter = getGameSeason(10, 'EMPIRES_1440');
+  const summer = getGameSeason(180, 'EMPIRES_1440');
+  assert.equal(winter.id, 'WINTER');
+  assert.equal(summer.id, 'SUMMER');
+
+  const owner = { id: '792', unlockedTechs: [] } as unknown as Nation;
+  const mountainProv = {
+    id: 'm1',
+    name: 'Erzurum',
+    ownerId: '792',
+    terrain: 'DAGLIK',
+    population: 180_000,
+    garrison: 60_000,
+    units: { infantry: 42_000, armor: 12_000, airDrone: 6_000 },
+    buildings: {
+      factory: 0,
+      barracks: 1,
+      fortress: 1,
+      university: 0,
+      tradeHub: 0,
+      supplyDepot: 0,
+      shipyard: 0,
+      mint: 0,
+      granary: 0,
+    },
+    isCoastal: false,
+  } as unknown as Territory;
+
+  const boostedProv = {
+    ...mountainProv,
+    buildings: {
+      ...mountainProv.buildings,
+      supplyDepot: 2,
+      granary: 2,
+    },
+  } as unknown as Territory;
+
+  const winterMountainLimit = calculateProvinceSupplyLimit(mountainProv, owner, winter);
+  const summerMountainLimit = calculateProvinceSupplyLimit(mountainProv, owner, summer);
+  const boostedWinterLimit = calculateProvinceSupplyLimit(boostedProv, owner, winter);
+
+  assert.ok(winterMountainLimit < summerMountainLimit);
+  assert.ok(boostedWinterLimit > winterMountainLimit * 1.8);
+
+  const attritionRes = evaluateWeeklySupplyAndSeasonAttrition({
+    territories: { m1: mountainProv },
+    nations: { '792': owner },
+    season: winter,
+    playerNationId: '792',
+  });
+  assert.equal(attritionRes.changed, true);
+  assert.equal(attritionRes.playerAffectedCount, 1);
+  assert.ok(attritionRes.playerTotalLoss > 0);
+  assert.ok(attritionRes.updatedTerritories.m1.garrison < 60_000);
+  assert.ok(attritionRes.updatedTerritories.m1.garrison >= Math.round(winterMountainLimit * 0.92));
+});
+
+test('Faz 4.4: evaluateAutomaticCapitulations forces AI collapse at >=75% occupied & >=50 warscore but never auto-capitulates human player', () => {
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Osmanlı',
+      treasury: 1000,
+      stability: 70,
+      aggressiveExpansion: 10,
+      isEliminated: false,
+    } as unknown as Nation,
+    '300': {
+      id: '300',
+      name: 'Bizans',
+      treasury: 800,
+      stability: 50,
+      aggressiveExpansion: 0,
+      isEliminated: false,
+    } as unknown as Nation,
+  };
+
+  const territories: Record<string, Territory> = {
+    p1: { id: 'p1', name: 'Edirne', ownerId: '792', coreOwnerId: '300', isOccupied: true, unrest: 20, assimilation: 25 } as unknown as Territory,
+    p2: { id: 'p2', name: 'Selanik', ownerId: '792', coreOwnerId: '300', isOccupied: true, unrest: 20, assimilation: 25 } as unknown as Territory,
+    p3: { id: 'p3', name: 'Mora', ownerId: '792', coreOwnerId: '300', isOccupied: true, unrest: 20, assimilation: 25 } as unknown as Territory,
+    p4: { id: 'p4', name: 'Atina', ownerId: '300', coreOwnerId: '300', isOccupied: false, unrest: 5, assimilation: 100 } as unknown as Territory,
+  };
+
+  const war: ActiveWar = {
+    id: 'w1',
+    name: 'Osmanlı - Bizans Savaşı',
+    attackerId: '792',
+    defenderId: '300',
+    attackers: ['792'],
+    defenders: ['300'],
+    attackerWarScore: 62,
+    startedTick: 10,
+    casualtiesAttacker: 2000,
+    casualtiesDefender: 9000,
+  };
+
+  // Player winning -> AI (300) capitulates (3/4 = 75% occupied, warscore 62 >= 50)
+  const aiCapRes = evaluateAutomaticCapitulations({
+    nextTick: 40,
+    playerNationId: '792',
+    nations,
+    territories,
+    relations: {},
+    wars: [war],
+  });
+  assert.equal(aiCapRes.capitulatedCount, 1);
+  assert.equal(aiCapRes.updatedWars.length, 0);
+  assert.equal(aiCapRes.updatedTerritories.p1.isOccupied, false);
+  assert.ok(aiCapRes.updatedNations['792'].treasury > 1000);
+  assert.ok(aiCapRes.updatedRelations['300_792'].truceUntilTick === 160);
+
+  // If human player is '300', must NOT auto-capitulate
+  const humanSafeRes = evaluateAutomaticCapitulations({
+    nextTick: 40,
+    playerNationId: '300',
+    nations,
+    territories,
+    relations: {},
+    wars: [war],
+  });
+  assert.equal(humanSafeRes.capitulatedCount, 0);
+  assert.equal(humanSafeRes.updatedWars.length, 1);
+});
+
+test('Faz 4.4: pruneDeadAlliances clears alliances of eliminated states, warring pairs, and hostile relations while preserving healthy pacts', () => {
+  const nations: Record<string, Nation> = {
+    A: { id: 'A', isEliminated: false } as unknown as Nation,
+    B: { id: 'B', isEliminated: false } as unknown as Nation,
+    C: { id: 'C', isEliminated: true } as unknown as Nation,
+    D: { id: 'D', isEliminated: false } as unknown as Nation,
+  };
+  const territories: Record<string, Territory> = {
+    tA: { id: 'tA', ownerId: 'A' } as unknown as Territory,
+    tB: { id: 'tB', ownerId: 'B' } as unknown as Territory,
+    tD: { id: 'tD', ownerId: 'D' } as unknown as Territory,
+  };
+  const relations: Record<string, DiplomaticRelation> = {
+    A_B: { nationA: 'A', nationB: 'B', score: 60, isAllied: true, allianceType: 'DEFENSIVE' } as unknown as DiplomaticRelation,
+    A_C: { nationA: 'A', nationB: 'C', score: 40, isAllied: true, allianceType: 'FULL' } as unknown as DiplomaticRelation,
+    A_D: { nationA: 'A', nationB: 'D', score: -45, isAllied: true, allianceType: 'DEFENSIVE' } as unknown as DiplomaticRelation,
+    B_D: { nationA: 'B', nationB: 'D', score: 25, isAllied: true, allianceType: 'DEFENSIVE', hasTradeAgreement: true } as unknown as DiplomaticRelation,
+  };
+  const wars: ActiveWar[] = [
+    {
+      id: 'wBD',
+      name: 'B-D War',
+      attackerId: 'B',
+      defenderId: 'D',
+      attackers: ['B'],
+      defenders: ['D'],
+      attackerWarScore: 0,
+      startedTick: 1,
+      casualtiesAttacker: 0,
+      casualtiesDefender: 0,
+    },
+  ];
+
+  const res = pruneDeadAlliances({ nations, territories, relations, wars });
+  assert.equal(res.prunedCount, 3);
+  assert.equal(res.updatedRelations.A_B.isAllied, true);
+  assert.equal(res.updatedRelations.A_C.isAllied, false);
+  assert.equal(res.updatedRelations.A_D.isAllied, false);
+  assert.equal(res.updatedRelations.B_D.isAllied, false);
+  assert.equal(res.updatedRelations.B_D.hasTradeAgreement, false);
+});
+
+test('Faz 4.3: land purchase transfers friendly non-capital border province and blocks capitals or hostile owners', () => {
+  const nations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Osmanlı',
+      treasury: 5000,
+      diplomacyPoints: 50,
+      isEliminated: false,
+    } as unknown as Nation,
+    '380': {
+      id: '380',
+      name: 'Venedik',
+      treasury: 500,
+      aiPersonality: 'MERCHANT',
+      capitalTerritoryId: 'vCap',
+      isEliminated: false,
+    } as unknown as Nation,
+  };
+  const territories: Record<string, Territory> = {
+    o1: { id: 'o1', name: 'Edirne', ownerId: '792', coreOwnerId: '792', neighbors: ['vBorder', 'vCap'] } as unknown as Territory,
+    vCap: { id: 'vCap', name: 'Venedik', ownerId: '380', coreOwnerId: '380', isCapital: true, baseGdp: 100, garrison: 4000, neighbors: ['o1', 'vBorder'] } as unknown as Territory,
+    vBorder: {
+      id: 'vBorder',
+      name: 'Dalmaçya',
+      ownerId: '380',
+      coreOwnerId: '191',
+      isCapital: false,
+      baseGdp: 60,
+      garrison: 2000,
+      units: { infantry: 2000, armor: 0, airDrone: 0 },
+      neighbors: ['o1', 'vCap'],
+    } as unknown as Territory,
+  };
+  const relations: Record<string, DiplomaticRelation> = {
+    '380_792': { nationA: '380', nationB: '792', score: 45, truceUntilTick: 0 } as unknown as DiplomaticRelation,
+  };
+
+  assert.equal(calculateVassalAnnexCost('380', territories), 650);
+  const price = calculateProvincePurchasePrice(territories.vBorder, nations['380'], 45);
+  assert.ok(price >= 450);
+
+  const capCheck = canAcceptLandPurchase({
+    territory: territories.vCap,
+    sellerNation: nations['380'],
+    sellerPersonality: 'MERCHANT',
+    relationScore: 45,
+    sellerProvCount: 2,
+  });
+  assert.equal(capCheck.willAccept, false);
+
+  const buyRes = evaluateLandPurchaseDomain({
+    territoryId: 'vBorder',
+    playerNationId: '792',
+    tick: 25,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    territories,
+    relations,
+    wars: [],
+    newsEvents: [],
+  });
+  assert.equal(buyRes.territories?.vBorder.ownerId, '792');
+  assert.equal(buyRes.territories?.vCap.garrison, 6000);
+  assert.equal(buyRes.nations?.['792'].treasury, 5000 - price);
+  assert.equal(buyRes.nations?.['380'].treasury, 500 + price);
+  assert.equal(buyRes.relations?.['380_792'].score, 55);
+});
+
+test('Faz 4.3: territorial ultimatum forces bloodless cession when player has overwhelming army and fails with relation penalty when weak', () => {
+  const baseNations: Record<string, Nation> = {
+    '792': {
+      id: '792',
+      name: 'Osmanlı',
+      diplomacyPoints: 60,
+      aggressiveExpansion: 5,
+      enactedReforms: [],
+      isEliminated: false,
+    } as unknown as Nation,
+    '300': {
+      id: '300',
+      name: 'Bizans',
+      aiPersonality: 'DEFENDER',
+      capitalTerritoryId: 'bCap',
+      isEliminated: false,
+    } as unknown as Nation,
+  };
+  const baseTerrs: Record<string, Territory> = {
+    o1: { id: 'o1', name: 'Edirne', ownerId: '792', coreOwnerId: '792', garrison: 30_000, neighbors: ['bBorder'] } as unknown as Territory,
+    bBorder: {
+      id: 'bBorder',
+      name: 'Selanik',
+      ownerId: '300',
+      coreOwnerId: '300',
+      isCapital: false,
+      garrison: 3_000,
+      units: { infantry: 3_000, armor: 0, airDrone: 0 },
+      neighbors: ['o1', 'bCap'],
+    } as unknown as Territory,
+    bCap: {
+      id: 'bCap',
+      name: 'Konstantinopolis',
+      ownerId: '300',
+      coreOwnerId: '300',
+      isCapital: true,
+      garrison: 4_000,
+      units: { infantry: 4_000, armor: 0, airDrone: 0 },
+      neighbors: ['bBorder'],
+    } as unknown as Territory,
+  };
+
+  const strongRes = issueProvinceUltimatumDomain({
+    territoryId: 'bBorder',
+    playerNationId: '792',
+    tick: 30,
+    gameMode: 'EMPIRES_1440',
+    nations: baseNations,
+    territories: baseTerrs,
+    relations: {},
+    wars: [],
+    newsEvents: [],
+  });
+  assert.equal(strongRes.territories?.bBorder.ownerId, '792');
+  assert.equal(strongRes.territories?.bCap.garrison, 7_000);
+  assert.ok((strongRes.nations?.['792'].aggressiveExpansion || 0) > 5);
+  assert.equal(strongRes.relations?.['300_792'].truceUntilTick, 90);
+
+  const weakTerrs = {
+    ...baseTerrs,
+    o1: { ...baseTerrs.o1, garrison: 4_000 },
+  };
+  const weakRes = issueProvinceUltimatumDomain({
+    territoryId: 'bBorder',
+    playerNationId: '792',
+    tick: 30,
+    gameMode: 'EMPIRES_1440',
+    nations: baseNations,
+    territories: weakTerrs,
+    relations: {},
+    wars: [],
+    newsEvents: [],
+  });
+  assert.equal(weakRes.territories, undefined);
+  assert.equal(weakRes.relations?.['300_792'].score, -35);
+});
+
+test('Faz 4.2: respondToDiplomaticOfferDomain activates TRADE pact, transfers TRIBUTE_GIFT gold, and applies -5 relation on decline', () => {
+  const nations: Record<string, Nation> = {
+    '792': { id: '792', name: 'Osmanlı', treasury: 1000, isEliminated: false } as unknown as Nation,
+    '380': { id: '380', name: 'Venedik', treasury: 900, isEliminated: false } as unknown as Nation,
+  };
+
+  const tradeAccept = respondToDiplomaticOfferDomain({
+    offer: {
+      id: 'off1',
+      fromNationId: '380',
+      kind: 'TRADE',
+      message: 'Ticaret anlaşması öneriyor.',
+      createdTick: 20,
+      expiresTick: 32,
+    },
+    accept: true,
+    playerNationId: '792',
+    tick: 22,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    relations: {},
+    wars: [],
+    newsEvents: [],
+  });
+  assert.equal(tradeAccept.relations?.['380_792'].hasTradeAgreement, true);
+  assert.equal(tradeAccept.relations?.['380_792'].score, 10);
+
+  const giftAccept = respondToDiplomaticOfferDomain({
+    offer: {
+      id: 'off2',
+      fromNationId: '380',
+      kind: 'TRIBUTE_GIFT',
+      message: 'Altın hediye ediyor.',
+      goldGift: 300,
+      createdTick: 20,
+      expiresTick: 32,
+    },
+    accept: true,
+    playerNationId: '792',
+    tick: 22,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    relations: {},
+    wars: [],
+    newsEvents: [],
+  });
+  assert.equal(giftAccept.nations?.['792'].treasury, 1300);
+  assert.equal(giftAccept.nations?.['380'].treasury, 600);
+
+  const declined = respondToDiplomaticOfferDomain({
+    offer: {
+      id: 'off3',
+      fromNationId: '380',
+      kind: 'NON_AGGRESSION',
+      message: 'Saldırmazlık öneriyor.',
+      createdTick: 20,
+      expiresTick: 32,
+    },
+    accept: false,
+    playerNationId: '792',
+    tick: 22,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    relations: {},
+    wars: [],
+    newsEvents: [],
+  });
+  assert.equal(declined.relations?.['380_792'].score, -5);
+});
+
 
 
 
