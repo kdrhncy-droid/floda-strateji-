@@ -6671,6 +6671,693 @@ test('scenario-based technology level (2026 vs 1440) and tech-gated educational 
   );
 });
 
+test('mid-march hostile army interception (Meydan Muharebesi) clashes opposing armies crossing paths or passing side-by-side before reaching cities', () => {
+  const nationA = mkFaz3Nation('792', {
+    name: 'Osmanlı',
+    capitalTerritoryId: 'A',
+  });
+  const nationB = mkFaz3Nation('300', {
+    name: 'Bizans',
+    capitalTerritoryId: 'B',
+  });
 
+  const territories: Record<string, Territory> = {
+    A: {
+      id: 'A',
+      name: 'Edirne',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCapital: true,
+      population: 100000,
+      baseGdp: 150,
+      resource: 'TAHIL',
+      garrison: 2000,
+      units: { infantry: 2000, armor: 0, airDrone: 0 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: false,
+      buildings: {
+        factory: 1,
+        barracks: 1,
+        fortress: 1,
+        university: 0,
+        tradeHub: 0,
+        supplyDepot: 0,
+      },
+      neighbors: ['B', 'C'],
+      centroid: [26.5, 41.6],
+    } as unknown as Territory,
+    B: {
+      id: 'B',
+      name: 'Selanik',
+      ownerId: '300',
+      coreOwnerId: '300',
+      isCapital: true,
+      population: 90000,
+      baseGdp: 130,
+      resource: 'DEMIR',
+      garrison: 2000,
+      units: { infantry: 2000, armor: 0, airDrone: 0 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: false,
+      buildings: {
+        factory: 1,
+        barracks: 1,
+        fortress: 1,
+        university: 0,
+        tradeHub: 0,
+        supplyDepot: 0,
+      },
+      neighbors: ['A', 'D'],
+      centroid: [23.0, 40.6],
+    } as unknown as Territory,
+    C: {
+      id: 'C',
+      name: 'Filibe',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCapital: false,
+      population: 80000,
+      baseGdp: 110,
+      resource: 'TAHIL',
+      garrison: 1500,
+      units: { infantry: 1500, armor: 0, airDrone: 0 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: false,
+      buildings: {
+        factory: 0,
+        barracks: 1,
+        fortress: 0,
+        university: 0,
+        tradeHub: 0,
+        supplyDepot: 0,
+      },
+      neighbors: ['A', 'D'],
+      centroid: [24.7, 42.1],
+    } as unknown as Territory,
+    D: {
+      id: 'D',
+      name: 'Serez',
+      ownerId: '300',
+      coreOwnerId: '300',
+      isCapital: false,
+      population: 75000,
+      baseGdp: 100,
+      resource: 'TAHIL',
+      garrison: 1500,
+      units: { infantry: 1500, armor: 0, airDrone: 0 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: false,
+      buildings: {
+        factory: 0,
+        barracks: 1,
+        fortress: 0,
+        university: 0,
+        tradeHub: 0,
+        supplyDepot: 0,
+      },
+      neighbors: ['B', 'C'],
+      centroid: [23.5, 41.1],
+    } as unknown as Territory,
+  };
 
+  const war: ActiveWar = {
+    id: 'war_intercept_test',
+    name: 'Osmanlı-Bizans Savaşı',
+    attackerId: '792',
+    defenderId: '300',
+    attackers: ['792'],
+    defenders: ['300'],
+    startedTick: 1,
+    attackerWarScore: 0,
+    casualtiesAttacker: 0,
+    casualtiesDefender: 0,
+  };
+
+  // Case 1: Opposite march A -> B (12,000 troops) vs B -> A (5,000 troops)
+  const tickOut = computeGameTick({
+    tick: 5,
+    hour: 10,
+    hoursStep: 4,
+    speed: 1,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: { '792': nationA, '300': nationB },
+    territories,
+    relations: {},
+    wars: [war],
+    battles: [],
+    movements: [
+      {
+        id: 'mv_ott',
+        ownerId: '792',
+        fromTerritoryId: 'A',
+        toTerritoryId: 'B',
+        fromCoords: [26.5, 41.6],
+        toCoords: [23.0, 40.6],
+        troops: 12000,
+        units: { infantry: 7000, armor: 3500, airDrone: 1500 },
+        progress: 40,
+        isAttack: true,
+      },
+      {
+        id: 'mv_byz',
+        ownerId: '300',
+        fromTerritoryId: 'B',
+        toTerritoryId: 'A',
+        fromCoords: [23.0, 40.6],
+        toCoords: [26.5, 41.6],
+        troops: 5000,
+        units: { infantry: 4500, armor: 500, airDrone: 0 },
+        progress: 38,
+        isAttack: true,
+      },
+    ],
+    seaArmies: [],
+    newsEvents: [],
+    settings: { ...DEFAULT_GAME_SETTINGS, crisisFrequencyDays: 0 },
+  });
+
+  // The weaker Byzantine army must be intercepted and eliminated from active movements
+  const activeTestMovements1 = tickOut.movements.filter(
+    (m) => m.id === 'mv_ott' || m.id === 'mv_byz'
+  );
+  assert.equal(
+    activeTestMovements1.length,
+    1,
+    'Opposing armies crossing paths must intercept mid-march, leaving only the victorious army marching'
+  );
+  assert.equal(
+    activeTestMovements1[0].ownerId,
+    '792',
+    'Stronger Ottoman army must win the field battle and continue marching'
+  );
+  assert.ok(
+    activeTestMovements1[0].troops < 12000 && activeTestMovements1[0].troops > 6000,
+    'Winning army must take realistic field battle casualties'
+  );
+  assert.ok(
+    tickOut.wars[0].casualtiesDefender > 0 && tickOut.wars[0].attackerWarScore > 0,
+    'Mid-march field battle must record war casualties and warScore'
+  );
+
+  // Case 2: Side-by-side passing on adjacent roads (A -> D vs C -> B) within 2.65 degrees proximity
+  const sideBySideOut = computeGameTick({
+    tick: 6,
+    hour: 14,
+    hoursStep: 4,
+    speed: 1,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: { '792': nationA, '300': nationB },
+    territories,
+    relations: {},
+    wars: [war],
+    battles: [],
+    movements: [
+      {
+        id: 'mv_side_a',
+        ownerId: '792',
+        fromTerritoryId: 'C',
+        toTerritoryId: 'D',
+        fromCoords: [24.7, 42.1],
+        toCoords: [23.5, 41.1],
+        troops: 9000,
+        units: { infantry: 5000, armor: 3000, airDrone: 1000 },
+        progress: 45,
+        isAttack: true,
+      },
+      {
+        id: 'mv_side_b',
+        ownerId: '300',
+        fromTerritoryId: 'B',
+        toTerritoryId: 'A',
+        fromCoords: [23.0, 40.6],
+        toCoords: [26.5, 41.6],
+        troops: 4000,
+        units: { infantry: 4000, armor: 0, airDrone: 0 },
+        progress: 35,
+        isAttack: true,
+      },
+    ],
+    seaArmies: [],
+    newsEvents: [],
+    settings: { ...DEFAULT_GAME_SETTINGS, crisisFrequencyDays: 0 },
+  });
+
+  const activeTestMovements2 = sideBySideOut.movements.filter(
+    (m) => m.id === 'mv_side_a' || m.id === 'mv_side_b'
+  );
+  assert.equal(
+    activeTestMovements2.length,
+    1,
+    'Hostile armies passing side-by-side within field proximity must engage in a mid-march battle'
+  );
+  assert.equal(activeTestMovements2[0].ownerId, '792');
+});
+
+test('batchRecruitUnitsDomain supports recruiting infantry, armor, airDrone, and MIXED armies across SINGLE_MAX, BORDER, and ALL provinces', async () => {
+  const { batchRecruitUnitsDomain } = await import('./empireAndArmyActions');
+
+  const nation = mkFaz3Nation('792', {
+    treasury: 12000,
+    manpower: 45000,
+    capitalTerritoryId: 'P1',
+  });
+
+  const makeTerritories = (): Record<string, Territory> => ({
+    P1: {
+      id: 'P1',
+      name: 'İstanbul',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCapital: true,
+      population: 120000,
+      baseGdp: 200,
+      resource: 'TICARET_BOGAZI',
+      garrison: 5000,
+      units: { infantry: 4000, armor: 1000, airDrone: 0 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: true,
+      buildings: {
+        factory: 1,
+        barracks: 2,
+        fortress: 2,
+        university: 1,
+        tradeHub: 1,
+        supplyDepot: 1,
+      },
+      neighbors: ['P2', 'ENEMY_1'],
+      centroid: [28.9, 41.0],
+    } as unknown as Territory,
+    P2: {
+      id: 'P2',
+      name: 'Bursa',
+      ownerId: '792',
+      coreOwnerId: '792',
+      isCapital: false,
+      population: 95000,
+      baseGdp: 150,
+      resource: 'IPEK_TEKSTIL',
+      garrison: 3000,
+      units: { infantry: 3000, armor: 0, airDrone: 0 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: false,
+      buildings: {
+        factory: 1,
+        barracks: 1,
+        fortress: 1,
+        university: 0,
+        tradeHub: 1,
+        supplyDepot: 0,
+      },
+      neighbors: ['P1'],
+      centroid: [29.0, 40.2],
+    } as unknown as Territory,
+    ENEMY_1: {
+      id: 'ENEMY_1',
+      name: 'Selanik',
+      ownerId: '300',
+      coreOwnerId: '300',
+      isCapital: true,
+      population: 80000,
+      baseGdp: 120,
+      resource: 'DEMIR',
+      garrison: 4000,
+      units: { infantry: 4000, armor: 0, airDrone: 0 },
+      unrest: 0,
+      assimilation: 100,
+      isOccupied: false,
+      isCoastal: true,
+      buildings: {
+        factory: 0,
+        barracks: 1,
+        fortress: 1,
+        university: 0,
+        tradeHub: 0,
+        supplyDepot: 0,
+      },
+      neighbors: ['P1'],
+      centroid: [23.0, 40.6],
+    } as unknown as Territory,
+  });
+
+  // 1. Recruit armor (Cavalry / Tanks) in SINGLE_MAX mode
+  const armorMax = batchRecruitUnitsDomain({
+    territories: makeTerritories(),
+    nations: { '792': nation },
+    playerNationId: '792',
+    scope: 'SINGLE_MAX',
+    unitMode: 'armor',
+    territoryId: 'P2',
+    gameMode: 'EMPIRES_1440',
+  });
+  assert.ok(
+    (armorMax.territories?.['P2']?.units?.armor ?? 0) >= 6000,
+    'SINGLE_MAX armor must recruit multiple cavalry/armor regiments in target city'
+  );
+
+  // 2. Recruit airDrone (Artillery / Air-Drone) across BORDER provinces
+  const airBorder = batchRecruitUnitsDomain({
+    territories: makeTerritories(),
+    nations: { '792': nation },
+    playerNationId: '792',
+    scope: 'BORDER',
+    unitMode: 'airDrone',
+    roundsPerCity: 2,
+    gameMode: 'EMPIRES_1440',
+  });
+  assert.equal(
+    airBorder.territories?.['P1']?.units?.airDrone,
+    2000,
+    'BORDER airDrone batch recruit must add artillery/air units to border province P1'
+  );
+  assert.equal(
+    airBorder.territories?.['P2']?.units?.airDrone,
+    0,
+    'Non-border province P2 must not be recruited during BORDER scope'
+  );
+
+  // 3. Recruit MIXED army across ALL provinces
+  const mixedAll = batchRecruitUnitsDomain({
+    territories: makeTerritories(),
+    nations: { '792': nation },
+    playerNationId: '792',
+    scope: 'ALL',
+    unitMode: 'MIXED',
+    roundsPerCity: 1,
+    gameMode: 'EMPIRES_1440',
+  });
+  assert.ok(
+    (mixedAll.territories?.['P1']?.units?.infantry ?? 0) > 4000 &&
+      (mixedAll.territories?.['P1']?.units?.armor ?? 0) > 1000 &&
+      (mixedAll.territories?.['P1']?.units?.airDrone ?? 0) > 0,
+    'MIXED batch recruitment across ALL must add infantry, armor, and airDrone to P1'
+  );
+  assert.ok(
+    (mixedAll.territories?.['P2']?.units?.infantry ?? 0) > 3000 &&
+      (mixedAll.territories?.['P2']?.units?.armor ?? 0) > 0 &&
+      (mixedAll.territories?.['P2']?.units?.airDrone ?? 0) > 0,
+    'MIXED batch recruitment across ALL must add all 3 unit classes to P2'
+  );
+});
+
+test('opposing naval fleets passing at sea and moving fleets passing anchored SeaArmies clash mid-voyage', () => {
+  const world = initializeWorld2026('EMPIRES_1440');
+  const war: ActiveWar = {
+    id: 'war_naval_clash',
+    name: 'Ege Deniz Savaşı',
+    attackerId: '792',
+    defenderId: '300',
+    attackers: ['792'],
+    defenders: ['300'],
+    startedTick: 1,
+    attackerWarScore: 0,
+    casualtiesAttacker: 0,
+    casualtiesDefender: 0,
+  };
+
+  // Case A: Two moving naval fleets crossing paths in the Aegean Sea
+  const fleetOtt: ArmyMovement = {
+    id: 'fleet_ott_1',
+    ownerId: '792',
+    fromTerritoryId: '792_3',
+    toTerritoryId: '300_1',
+    fromCoords: [26.5, 39.0],
+    toCoords: [24.0, 38.0],
+    troops: 11000,
+    units: { infantry: 8000, armor: 2000, airDrone: 1000 },
+    progress: 40,
+    isAttack: true,
+    isNaval: true,
+  };
+  const fleetByz: ArmyMovement = {
+    id: 'fleet_byz_1',
+    ownerId: '300',
+    fromTerritoryId: '300_1',
+    toTerritoryId: '792_3',
+    fromCoords: [24.0, 38.0],
+    toCoords: [26.5, 39.0],
+    troops: 4500,
+    units: { infantry: 4000, armor: 500, airDrone: 0 },
+    progress: 40,
+    isAttack: true,
+    isNaval: true,
+  };
+
+  const outA = computeGameTick({
+    tick: 12,
+    hour: 12,
+    hoursStep: 4,
+    speed: 2,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: world.nations,
+    territories: world.territories,
+    relations: world.relations,
+    wars: [war],
+    battles: [],
+    movements: [fleetOtt, fleetByz],
+    seaArmies: [],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+
+  const survivingMovingFleets = outA.movements.filter(
+    (m) => m.id === 'fleet_ott_1' || m.id === 'fleet_byz_1'
+  );
+  assert.equal(
+    survivingMovingFleets.length,
+    1,
+    'Passing hostile naval fleets must intercept each other mid-voyage so only the victor continues'
+  );
+  assert.equal(survivingMovingFleets[0].ownerId, '792');
+  assert.ok(
+    survivingMovingFleets[0].troops < 11000,
+    'Winning fleet must take combat casualties during open-sea clash'
+  );
+  assert.ok(
+    outA.newsEvents.some((ev) => ev.title.includes('Deniz Muharebesi')),
+    'Open-sea clash must log a Deniz Muharebesi news event'
+  );
+
+  // Case B: An amphibious invasion / moving fleet passing within 5.0° of an anchored hostile SeaArmy
+  const movingInvasion: ArmyMovement = {
+    id: 'amph_ott_1',
+    ownerId: '792',
+    fromTerritoryId: '792_3',
+    toTerritoryId: '300_1',
+    fromCoords: [27.0, 39.0],
+    toCoords: [23.5, 38.0],
+    troops: 12000,
+    units: { infantry: 9000, armor: 2000, airDrone: 1000 },
+    progress: 35,
+    isAttack: true,
+    isNaval: true,
+  };
+  const anchoredBlockade = {
+    id: 'sea_byz_guard',
+    ownerId: '300',
+    name: 'Bizans Ege Filosu',
+    coords: [25.2, 38.5] as [number, number],
+    troops: 4000,
+    units: { infantry: 3500, armor: 500, airDrone: 0 },
+  };
+
+  const outB = computeGameTick({
+    tick: 14,
+    hour: 8,
+    hoursStep: 4,
+    speed: 2,
+    gameMode: 'EMPIRES_1440',
+    playerNationId: '792',
+    nations: world.nations,
+    territories: world.territories,
+    relations: world.relations,
+    wars: [war],
+    battles: [],
+    movements: [movingInvasion],
+    seaArmies: [anchoredBlockade],
+    newsEvents: [],
+    settings: DEFAULT_GAME_SETTINGS,
+  });
+
+  assert.equal(
+    outB.seaArmies?.some((s) => s.id === 'sea_byz_guard'),
+    false,
+    'Weaker anchored hostile SeaArmy in the path of a stronger fleet must be intercepted and sunk mid-voyage'
+  );
+  const survInvasion = outB.movements.find((m) => m.id === 'amph_ott_1');
+  assert.ok(
+    survInvasion && survInvasion.troops < 12000,
+    'Victorious moving fleet must continue its voyage after defeating the anchored blockade fleet'
+  );
+});
+
+test('evaluatePlayerAiCommander finishes off last enemy pockets via coordinated pincer attack and amphibious landing without stalling', async () => {
+  const { evaluatePlayerAiCommander } = await import('./playerAiCommander');
+
+  const mkNation = (id: string, capId: string): Nation =>
+    ({
+      id,
+      name: id,
+      flagCode: id,
+      color: '#112233',
+      capitalTerritoryId: capId,
+      ideology: 'MONARCHY',
+      treasury: 2000,
+      manpower: 30000,
+      stability: 80,
+      inflation: 1,
+      researchPoints: 50,
+      taxRate: 25,
+      budget: { military: 35, economy: 30, research: 15, welfare: 20 },
+      aggressiveExpansion: 0,
+      unlockedTechs: [],
+      enactedReforms: [],
+      recruitedGeneralIds: [],
+      activeGeneralId: null,
+      isEliminated: false,
+    }) as unknown as Nation;
+
+  const mkProv = (
+    id: string,
+    ownerId: string,
+    garrison: number,
+    neighbors: string[],
+    coords: [number, number] = [29, 41],
+    isCoastal = false
+  ): Territory =>
+    ({
+      id,
+      name: id,
+      ownerId,
+      coreOwnerId: ownerId,
+      isCapital: false,
+      population: 100000,
+      baseGdp: 100,
+      resource: 'TAHIL',
+      terrain: 'OVA',
+      isCoastal,
+      buildings: {
+        factory: 0,
+        barracks: 1,
+        fortress: 0,
+        university: 0,
+        tradeHub: 0,
+        supplyDepot: 0,
+      },
+      garrison,
+      units: { infantry: garrison, armor: 0, airDrone: 0 },
+      unrest: 0,
+      isOccupied: false,
+      centroid: coords,
+      neighbors,
+    }) as unknown as Territory;
+
+  const nations = {
+    PLR: mkNation('PLR', 'P1'),
+    ENM: mkNation('ENM', 'E_LAST'),
+  };
+  const war: ActiveWar = {
+    id: 'war_mopup',
+    name: 'Mop-Up War',
+    attackerId: 'PLR',
+    defenderId: 'ENM',
+    attackers: ['PLR'],
+    defenders: ['ENM'],
+    startedTick: 1,
+    attackerWarScore: 80,
+    casualtiesAttacker: 0,
+    casualtiesDefender: 0,
+  };
+
+  // Scenario 1: Enemy has 1 last province (E_LAST with 3,400 troops).
+  // Player has three adjacent provinces with 2,200 troops each (previously stalled below 3,200 single-province threshold).
+  const pincerTerrs: Record<string, Territory> = {
+    P1: { ...mkProv('P1', 'PLR', 2200, ['E_LAST', 'P2']), isCapital: true },
+    P2: mkProv('P2', 'PLR', 2200, ['E_LAST', 'P1', 'P3']),
+    P3: mkProv('P3', 'PLR', 2200, ['E_LAST', 'P2']),
+    E_LAST: { ...mkProv('E_LAST', 'ENM', 3400, ['P1', 'P2', 'P3']), isCapital: true },
+  };
+
+  const pincerRes = evaluatePlayerAiCommander({
+    tick: 30,
+    playerNationId: 'PLR',
+    stance: 'BALANCED',
+    nations,
+    territories: pincerTerrs,
+    relations: {},
+    wars: [war],
+    movements: [],
+  });
+
+  assert.ok(pincerRes, 'AI Commander must act during mop-up phase instead of stalling');
+  const attacksOnLast = pincerRes.newMovements.filter(
+    (m) => m.ownerId === 'PLR' && m.toTerritoryId === 'E_LAST' && m.isAttack
+  );
+  assert.ok(
+    attacksOnLast.length >= 2,
+    `AI Commander must launch a coordinated multi-province pincer assault against the last enemy holdout (got ${attacksOnLast.length} movements)`
+  );
+  const totalAttackingTroops = attacksOnLast.reduce((s, m) => s + m.troops, 0);
+  assert.ok(
+    totalAttackingTroops > 3400,
+    `Coordinated pincer troops (${totalAttackingTroops}) must exceed the last enemy holdout garrison (3400)`
+  );
+
+  // Scenario 2: Enemy's last remaining province is an island/coastal holdout with no land connection,
+  // and player has an anchored SeaArmy nearby.
+  const islandTerrs: Record<string, Territory> = {
+    P_MAIN: { ...mkProv('P_MAIN', 'PLR', 5000, [], [27.1, 38.4], true), isCapital: true },
+    E_ISLAND: { ...mkProv('E_ISLAND', 'ENM', 1800, [], [25.1, 35.3], true), isCapital: true },
+  };
+  const seaRes = evaluatePlayerAiCommander({
+    tick: 35,
+    playerNationId: 'PLR',
+    stance: 'BALANCED',
+    nations: {
+      PLR: mkNation('PLR', 'P_MAIN'),
+      ENM: mkNation('ENM', 'E_ISLAND'),
+    },
+    territories: islandTerrs,
+    relations: {},
+    wars: [war],
+    movements: [],
+    seaArmies: [
+      {
+        id: 'plr_fleet_1',
+        ownerId: 'PLR',
+        name: 'Oyuncu Çıkarma Filosu',
+        coords: [25.5, 36.2],
+        troops: 4500,
+        units: { infantry: 4500, armor: 0, airDrone: 0 },
+      },
+    ],
+  });
+
+  assert.ok(seaRes, 'AI Commander must launch amphibious landing onto remaining enemy island holdout');
+  assert.ok(
+    seaRes.newMovements.some(
+      (m) => m.ownerId === 'PLR' && m.toTerritoryId === 'E_ISLAND' && m.isNaval && m.isAttack
+    ),
+    'Anchored player SeaArmy must disembark to conquer the remaining enemy island province'
+  );
+  assert.equal(
+    seaRes.updatedSeaArmies?.length,
+    0,
+    'Disembarked SeaArmy must be consumed into the amphibious landing movement'
+  );
+});
 

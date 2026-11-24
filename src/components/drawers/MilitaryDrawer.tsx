@@ -8,7 +8,10 @@ import {
   getCommandersForMode,
   getNationModernizedTier,
 } from "../../data/world2026Data";
-import { MERCENARY_COMPANIES } from "../../engine/empireAndArmyActions";
+import {
+  BatchRecruitUnitMode,
+  MERCENARY_COMPANIES,
+} from "../../engine/empireAndArmyActions";
 import {
   BESTOW_FAVOR_GOLD_COST,
   getLordLoyaltySummary,
@@ -29,6 +32,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   territories,
   nations,
   onRecruitUnit,
+  onBatchRecruitUnits,
   onHireMercenary,
   onRecruitOrAssignGeneral,
   onBestowFavorOnLord,
@@ -41,6 +45,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
     "SCORE" | "GDP" | "ARMY" | "TECH" | "PRESTIGE" | "CAPITAL"
   >("SCORE");
   const [recruitmentTab, setRecruitmentTab] = useState<"REGULAR" | "MERCENARY">("REGULAR");
+  const [batchUnitMode, setBatchUnitMode] = useState<BatchRecruitUnitMode>("MIXED");
 
   const ownedProvinces = useMemo(
     () =>
@@ -325,7 +330,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                               {row.regiments.map((reg) => {
                                 const affordable =
                                   playerNation.treasury >= reg.gold &&
@@ -358,9 +363,148 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                                   </button>
                                 );
                               })}
+                              {onBatchRecruitUnits && (
+                                <button
+                                  type="button"
+                                  data-testid={`military-max-${row.unitType}`}
+                                  onClick={() =>
+                                    onBatchRecruitUnits(
+                                      "SINGLE_MAX",
+                                      row.unitType,
+                                      activeRecruitCity.id
+                                    )
+                                  }
+                                  title={`Bu şehirde hazine ve insan gücünün yettiği kadar maksimum ${row.shortName} bas`}
+                                  className="px-2.5 py-1.5 rounded-lg border border-amber-400/70 bg-amber-500/25 hover:bg-amber-500 hover:text-slate-950 text-amber-200 text-center transition-all cursor-pointer"
+                                >
+                                  <div className="text-[11px] font-extrabold">
+                                    ⚡ Maks
+                                  </div>
+                                  <div className="text-[9px] font-mono-num opacity-90">
+                                    {row.shortName}
+                                  </div>
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
+
+                        {/* AoH3 Toplu Asker Bas & Ulusal Seferberlik Panel */}
+                        {onBatchRecruitUnits && (
+                          <div
+                            data-testid="military-batch-recruit-panel"
+                            className="p-3 rounded-xl bg-black/55 border border-amber-500/45 space-y-2.5"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-xs font-display font-bold text-amber-200 flex items-center gap-1.5">
+                                <Swords className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <span>Toplu Asker Bas &amp; Ulusal Seferberlik</span>
+                              </span>
+                              <span className="text-[10px] text-[#c5b79e]">
+                                Birlik sınıfı seçip tek tıkla tüm ülkeye basın
+                              </span>
+                            </div>
+
+                            {/* Unit Class Selector for Batch Recruitment */}
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {[
+                                {
+                                  id: "MIXED" as const,
+                                  label: "⚔️ Karma Ordu",
+                                  sub: "Piyade+Süvari+Topçu",
+                                  active: "bg-purple-500 text-white border-purple-300",
+                                  idle: "bg-slate-900/90 text-purple-200 border-purple-500/40",
+                                },
+                                {
+                                  id: "infantry" as const,
+                                  label: `🛡 ${activeArmyGen.infantryShort}`,
+                                  sub: "1. Hat Piyade",
+                                  active: "bg-emerald-500 text-slate-950 border-emerald-300",
+                                  idle: "bg-slate-900/90 text-emerald-200 border-emerald-500/40",
+                                },
+                                {
+                                  id: "armor" as const,
+                                  label: `🐎 ${activeArmyGen.armorShort}`,
+                                  sub: "Kanat Süvari/Zırhlı",
+                                  active: "bg-amber-500 text-slate-950 border-amber-300",
+                                  idle: "bg-slate-900/90 text-amber-200 border-amber-500/40",
+                                },
+                                {
+                                  id: "airDrone" as const,
+                                  label: `💣 ${activeArmyGen.airArtilleryShort}`,
+                                  sub: "2. Hat Topçu/Hava",
+                                  active: "bg-sky-400 text-slate-950 border-sky-200",
+                                  idle: "bg-slate-900/90 text-sky-200 border-sky-500/40",
+                                },
+                              ].map((u) => (
+                                <button
+                                  key={u.id}
+                                  type="button"
+                                  data-testid={`military-batch-mode-${u.id}`}
+                                  onClick={() => setBatchUnitMode(u.id)}
+                                  className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                                    batchUnitMode === u.id ? u.active : u.idle
+                                  }`}
+                                >
+                                  <div className="text-[10.5px] font-extrabold truncate">
+                                    {u.label}
+                                  </div>
+                                  <div className="text-[9px] opacity-85 truncate">
+                                    {u.sub}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Batch Scope Action Buttons */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                              <button
+                                type="button"
+                                data-testid="military-batch-border-btn"
+                                onClick={() =>
+                                  onBatchRecruitUnits(
+                                    "BORDER",
+                                    batchUnitMode,
+                                    activeRecruitCity.id,
+                                    1
+                                  )
+                                }
+                                className="py-2 px-2.5 rounded-xl bg-emerald-600/85 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <span>🛡 Sınır Şehirlerine Toplu Bas</span>
+                              </button>
+                              <button
+                                type="button"
+                                data-testid="military-batch-all-btn"
+                                onClick={() =>
+                                  onBatchRecruitUnits(
+                                    "ALL",
+                                    batchUnitMode,
+                                    activeRecruitCity.id,
+                                    1
+                                  )
+                                }
+                                className="py-2 px-2.5 rounded-xl bg-sky-600/85 hover:bg-sky-500 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <span>🌍 Tüm Eyaletlere Toplu Bas</span>
+                              </button>
+                              <button
+                                type="button"
+                                data-testid="military-batch-single-max-btn"
+                                onClick={() =>
+                                  onBatchRecruitUnits(
+                                    "SINGLE_MAX",
+                                    batchUnitMode,
+                                    activeRecruitCity.id
+                                  )
+                                }
+                                className="py-2 px-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <span>⚡ Seçili Şehirde Maks Bas</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       /* AoH3 Mercenary Hiring (Kiralık Ordu / Paralı Askerler — Instant Deployment, 0 Manpower Cost) */

@@ -400,19 +400,441 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
     ];
   };
 
-  // 1. Advance Army Movements (including multi-hop A* routeQueue) & Start / Reinforce On-Map Battles (AoH3 Style)
+  // 1. Advance Army Movements (including multi-hop A* routeQueue), Intercept Hostile Armies Passing Side-by-Side (Meydan Muharebesi), & Start / Reinforce On-Map Battles
   if (input.movements.length > 0) {
     const arrived: ArmyMovement[] = [];
     const progressStep = isSubDayMode
       ? Math.max(4, Math.round((48 * hoursStep) / 24))
       : 25;
 
-    for (const mv of input.movements) {
-      const nextProg = mv.progress + progressStep;
-      if (nextProg >= 100) {
+    const steppedMovements = input.movements.map((mv) => ({
+      ...mv,
+      units: mv.units || { infantry: mv.troops, armor: 0, airDrone: 0 },
+      progress: mv.progress + progressStep,
+    }));
+    const prevProgressMap = new Map<string, number>();
+    input.movements.forEach((mv) => prevProgressMap.set(mv.id, mv.progress));
+
+    const getMovementEndpoints = (
+      mv: ArmyMovement
+    ): { start: [number, number]; end: [number, number] } | null => {
+      const start =
+        mv.fromCoords || nextTerritories[mv.fromTerritoryId]?.centroid || null;
+      const end =
+        mv.toCoords || nextTerritories[mv.toTerritoryId]?.centroid || null;
+      if (!start || !end) return null;
+      return { start, end };
+    };
+
+    // 1.0 Mid-March Hostile Army Interception (Meydan Muharebesi):
+    // When two warring armies cross the same road in opposite directions, converge on the same node, or pass side-by-side on the map, they clash immediately in the field!
+    for (let i = 0; i < steppedMovements.length; i++) {
+      const mvA = steppedMovements[i];
+      if (!mvA || mvA.troops <= 0) continue;
+
+      for (let j = i + 1; j < steppedMovements.length; j++) {
+        const mvB = steppedMovements[j];
+        if (!mvB || mvB.troops <= 0) continue;
+        if (mvA.ownerId === mvB.ownerId) continue;
+        if (!isAtWar(nextWars, mvA.ownerId, mvB.ownerId)) continue;
+
+        const anyNaval = Boolean(
+          mvA.isNaval || mvB.isNaval || mvA.toCoords || mvB.toCoords
+        );
+        const bothLand = !anyNaval && Boolean(mvA.toTerritoryId && mvB.toTerritoryId);
+        const isOppositeSameEdge =
+          Boolean(mvA.fromTerritoryId && mvA.toTerritoryId) &&
+          mvA.fromTerritoryId === mvB.toTerritoryId &&
+          mvA.toTerritoryId === mvB.fromTerritoryId &&
+          mvA.progress + mvB.progress >= (anyNaval ? 50 : 65);
+
+        const isSameDestinationConvergence =
+          Boolean(mvA.toTerritoryId) &&
+          mvA.toTerritoryId === mvB.toTerritoryId &&
+          mvA.progress >= (anyNaval ? 42 : 50) &&
+          mvB.progress >= (anyNaval ? 42 : 50);
+
+        const isOriginIntercept =
+          ((mvA.fromTerritoryId === mvB.toTerritoryId &&
+            mvA.progress <= 48 &&
+            mvB.progress >= 58) ||
+            (mvB.fromTerritoryId === mvA.toTerritoryId &&
+              mvB.progress <= 48 &&
+              mvA.progress >= 58) ||
+            (Boolean(mvA.fromTerritoryId) &&
+              mvA.fromTerritoryId === mvB.fromTerritoryId &&
+              Math.abs(mvA.progress - mvB.progress) <= 40));
+
+        let isSideBySideProximity = false;
+        const epA = getMovementEndpoints(mvA);
+        const epB = getMovementEndpoints(mvB);
+        if (epA && epB) {
+          const pA0 = Math.max(0, Math.min(1, (prevProgressMap.get(mvA.id) ?? mvA.progress) / 100));
+          const pA1 = Math.max(0, Math.min(1, mvA.progress / 100));
+          const pB0 = Math.max(0, Math.min(1, (prevProgressMap.get(mvB.id) ?? mvB.progress) / 100));
+          const pB1 = Math.max(0, Math.min(1, mvB.progress / 100));
+          const proximityThreshold = anyNaval ? 5.5 : 2.65;
+
+          for (const s of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+            const tA = pA0 + (pA1 - pA0) * s;
+            const tB = pB0 + (pB1 - pB0) * s;
+            const lonA = epA.start[0] + (epA.end[0] - epA.start[0]) * tA;
+            const latA = epA.start[1] + (epA.end[1] - epA.start[1]) * tA;
+            const lonB = epB.start[0] + (epB.end[0] - epB.start[0]) * tB;
+            const latB = epB.start[1] + (epB.end[1] - epB.start[1]) * tB;
+            if (Math.hypot(lonA - lonB, latA - latB) <= proximityThreshold) {
+              isSideBySideProximity = true;
+              break;
+            }
+          }
+        }
+
+        if (
+          !isOppositeSameEdge &&
+          !isSameDestinationConvergence &&
+          !isOriginIntercept &&
+          !isSideBySideProximity
+        ) {
+          continue;
+        }
+
+        // Resolve Field / Open-Sea Interception Battle (Meydan veya Deniz Muharebesi) between mvA and mvB!
+        const natA = nextNations[mvA.ownerId];
+        const natB = nextNations[mvB.ownerId];
+        const cmdA = natA?.activeGeneralId
+          ? COMMANDERS.find((c) => c.id === natA.activeGeneralId)
+          : null;
+        const cmdB = natB?.activeGeneralId
+          ? COMMANDERS.find((c) => c.id === natB.activeGeneralId)
+          : null;
+        const navalMultA = anyNaval
+          ? computeNationNavalBonus(mvA.ownerId, nextTerritories, natA)
+          : 1;
+        const navalMultB = anyNaval
+          ? computeNationNavalBonus(mvB.ownerId, nextTerritories, natB)
+          : 1;
+        const multA =
+          (1 +
+            ((cmdA?.attackBonus || 0) +
+              (natA?.unlockedTechs.includes('mil_6') ? 15 : 0)) /
+              100) *
+          navalMultA;
+        const multB =
+          (1 +
+            ((cmdB?.attackBonus || 0) +
+              (natB?.unlockedTechs.includes('mil_6') ? 15 : 0)) /
+              100) *
+          navalMultB;
+
+        const powA =
+          computeUnitWeightedPower(mvA.units, mvA.troops, natA) * multA;
+        const powB =
+          computeUnitWeightedPower(mvB.units, mvB.troops, natB) * multB;
+
+        const aWins = powA >= powB;
+        const winner = aWins ? mvA : mvB;
+        const loser = aWins ? mvB : mvA;
+        const winPow = aWins ? powA : powB;
+        const losePow = aWins ? powB : powA;
+
+        const winLossRatio = Math.min(
+          0.66,
+          (losePow / Math.max(1, winPow)) * 0.54
+        );
+        const winSurvivors = Math.max(
+          400,
+          Math.round(winner.troops * (1 - winLossRatio))
+        );
+        const winLosses = Math.max(0, winner.troops - winSurvivors);
+
+        // Shattered loser retreats a small surviving fraction (~20%) back to its origin province if owned (land only)
+        const retreatRatio = Math.min(
+          0.22,
+          (losePow / Math.max(1, winPow)) * 0.2
+        );
+        const loserOriginTerr =
+          !anyNaval && !loser.fromCoords && loser.fromTerritoryId
+            ? nextTerritories[loser.fromTerritoryId]
+            : undefined;
+        const canRetreatToOrigin = Boolean(
+          loserOriginTerr && loserOriginTerr.ownerId === loser.ownerId
+        );
+        const loserRetreatSurvivors =
+          canRetreatToOrigin && loser.troops >= 1200
+            ? Math.round(loser.troops * retreatRatio)
+            : 0;
+        const loserLosses = Math.max(0, loser.troops - loserRetreatSurvivors);
+
+        if (canRetreatToOrigin && loserOriginTerr && loserRetreatSurvivors > 0) {
+          const retUnits = scaleUnits(
+            loser.units,
+            loserRetreatSurvivors / Math.max(1, loser.troops)
+          );
+          writeTerritory(loserOriginTerr.id, {
+            ...loserOriginTerr,
+            garrison: loserOriginTerr.garrison + loserRetreatSurvivors,
+            units: {
+              infantry:
+                (loserOriginTerr.units?.infantry || 0) +
+                (retUnits.infantry || 0),
+              armor:
+                (loserOriginTerr.units?.armor || 0) + (retUnits.armor || 0),
+              airDrone:
+                (loserOriginTerr.units?.airDrone || 0) +
+                (retUnits.airDrone || 0),
+            },
+          });
+        }
+
+        const prevWinnerTroops = winner.troops;
+        const prevLoserTroops = loser.troops;
+        winner.troops = winSurvivors;
+        winner.units = scaleUnits(
+          winner.units,
+          winSurvivors / Math.max(1, prevWinnerTroops)
+        );
+        loser.troops = 0;
+        loser.units = { infantry: 0, armor: 0, airDrone: 0 };
+
+        const locA =
+          winner.targetSeaName ||
+          nextTerritories[winner.fromTerritoryId]?.name ||
+          nextTerritories[winner.toTerritoryId]?.name ||
+          (anyNaval ? 'Açık Deniz' : 'Cephe');
+        const locB =
+          loser.targetSeaName ||
+          nextTerritories[winner.toTerritoryId]?.name ||
+          nextTerritories[loser.fromTerritoryId]?.name ||
+          (anyNaval ? 'Deniz Hattı' : 'Sınır');
+        const fieldLabel = locA !== locB ? `${locA} - ${locB} Hattı` : locA;
+        const winNationName = nextNations[winner.ownerId]?.name || winner.ownerId;
+        const loseNationName = nextNations[loser.ownerId]?.name || loser.ownerId;
+        const battleKindLabel = anyNaval ? '⚓ Deniz Muharebesi' : '⚔️ Meydan Muharebesi';
+
+        if (winner.ownerId === playerNationId) {
+          sounds.push('SELECT_TERRITORY');
+          toasts.push(
+            `${battleKindLabel} (${fieldLabel}): ${anyNaval ? 'Donanmamız' : 'Ordumuz'} yolda karşılaştığı ${loseNationName} ${anyNaval ? 'filosunu' : 'ordusunu'} (${prevLoserTroops.toLocaleString('tr-TR')} asker) ${anyNaval ? 'batırdı' : 'bozguna uğrattı'} ve ilerlemeye devam ediyor!`
+          );
+          appendNews(
+            `${anyNaval ? '⚓ Deniz Muharebesi Zaferi' : '⚔️ Meydan Zaferi'}: ${fieldLabel}`,
+            `${winNationName} ${anyNaval ? 'donanması' : 'ordusu'} seyir halinde karşılaştığı ${loseNationName} kuvvetlerini (${prevLoserTroops.toLocaleString('tr-TR')} asker) imha etti.`,
+            'WAR'
+          );
+        } else if (loser.ownerId === playerNationId) {
+          sounds.push('WAR_HORN');
+          toasts.push(
+            `⚠️ ${battleKindLabel} (${fieldLabel}): Seyir halindeki ${anyNaval ? 'donanmamız' : 'ordumuz'} (${prevLoserTroops.toLocaleString('tr-TR')} asker) ${winNationName} kuvvetleriyle çarpışarak durduruldu!`
+          );
+          appendNews(
+            `⚠️ ${battleKindLabel} Kaybı: ${fieldLabel}`,
+            `Hareket halindeki kuvvetlerimiz ${fieldLabel} üzerinde ${winNationName} ${anyNaval ? 'donanmasıyla' : 'ordusuyla'} çarpışarak durduruldu.`,
+            'WAR'
+          );
+        }
+
+        // Update active war casualties and war score (+/- 12)
+        const fieldScoreShift = 12;
+        nextWars = nextWars.map((w) => {
+          const winIsWarAtt =
+            w.attackers.includes(winner.ownerId) &&
+            w.defenders.includes(loser.ownerId);
+          const winIsWarDef =
+            w.defenders.includes(winner.ownerId) &&
+            w.attackers.includes(loser.ownerId);
+          if (!winIsWarAtt && !winIsWarDef) return w;
+          return {
+            ...w,
+            attackerWarScore: Math.max(
+              -100,
+              Math.min(
+                100,
+                w.attackerWarScore +
+                  (winIsWarAtt ? fieldScoreShift : -fieldScoreShift)
+              )
+            ),
+            casualtiesAttacker:
+              w.casualtiesAttacker + (winIsWarAtt ? winLosses : loserLosses),
+            casualtiesDefender:
+              w.casualtiesDefender + (winIsWarAtt ? loserLosses : winLosses),
+          };
+        });
+
+        if (mvA.troops <= 0) break;
+      }
+    }
+
+    // 1.0B Mid-Voyage Naval Movement vs Anchored Hostile SeaArmy Interception:
+    // If a naval movement (embarking fleet, sailing fleet, or amphibious invasion) passes within 5.0° of an anchored hostile SeaArmy mid-voyage, they clash immediately at sea!
+    if (nextSeaArmies.length > 0) {
+      for (let i = 0; i < steppedMovements.length; i++) {
+        const mv = steppedMovements[i];
+        if (!mv || mv.troops <= 0) continue;
+        // Movements reaching an open-sea coordinate destination on this step are resolved in the arrival block below (which stations/merges the fleet)
+        if (mv.progress >= 100 && mv.toCoords) continue;
+        const isNavalMove = Boolean(mv.isNaval || mv.toCoords || mv.fromCoords);
+        if (!isNavalMove) continue;
+
+        const ep = getMovementEndpoints(mv);
+        if (!ep) continue;
+        const p0 = Math.max(0, Math.min(1, (prevProgressMap.get(mv.id) ?? mv.progress) / 100));
+        const p1 = Math.max(0, Math.min(1, mv.progress / 100));
+
+        let interceptedFleetIdx = -1;
+        for (let fIdx = 0; fIdx < nextSeaArmies.length; fIdx++) {
+          const fleet = nextSeaArmies[fIdx];
+          if (!fleet || fleet.troops <= 0 || fleet.ownerId === mv.ownerId) continue;
+          if (!isAtWar(nextWars, mv.ownerId, fleet.ownerId)) continue;
+
+          for (const s of [0, 0.25, 0.5, 0.75, 1]) {
+            const t = p0 + (p1 - p0) * s;
+            const lon = ep.start[0] + (ep.end[0] - ep.start[0]) * t;
+            const lat = ep.start[1] + (ep.end[1] - ep.start[1]) * t;
+            if (Math.hypot(lon - fleet.coords[0], lat - fleet.coords[1]) <= 5.0) {
+              interceptedFleetIdx = fIdx;
+              break;
+            }
+          }
+          if (interceptedFleetIdx !== -1) break;
+        }
+
+        if (interceptedFleetIdx === -1) continue;
+
+        const enemyFleet = nextSeaArmies[interceptedFleetIdx];
+        const attNationName = nextNations[mv.ownerId]?.name || mv.ownerId;
+        const defNationName = nextNations[enemyFleet.ownerId]?.name || enemyFleet.ownerId;
+        const attNavalMult = computeNationNavalBonus(
+          mv.ownerId,
+          nextTerritories,
+          nextNations[mv.ownerId]
+        );
+        const defNavalMult = computeNationNavalBonus(
+          enemyFleet.ownerId,
+          nextTerritories,
+          nextNations[enemyFleet.ownerId]
+        );
+        const attPow =
+          computeUnitWeightedPower(mv.units, mv.troops, nextNations[mv.ownerId]) *
+          attNavalMult;
+        const defPow =
+          computeUnitWeightedPower(
+            enemyFleet.units,
+            enemyFleet.troops,
+            nextNations[enemyFleet.ownerId]
+          ) * defNavalMult;
+
+        const attWon = attPow >= defPow;
+        let attLosses = 0;
+        let defLosses = 0;
+        const seaZoneName =
+          enemyFleet.name || mv.targetSeaName || resolveSeaRegionName(enemyFleet.coords);
+
+        if (attWon) {
+          const lossRatio = Math.min(0.65, (defPow / Math.max(1, attPow)) * 0.52);
+          const survivors = Math.max(400, Math.round(mv.troops * (1 - lossRatio)));
+          attLosses = Math.max(0, mv.troops - survivors);
+          defLosses = enemyFleet.troops;
+          const prevMvTroops = mv.troops;
+          mv.troops = survivors;
+          mv.units = scaleUnits(mv.units, survivors / Math.max(1, prevMvTroops));
+          nextSeaArmies.splice(interceptedFleetIdx, 1);
+
+          if (mv.ownerId === playerNationId) {
+            sounds.push('SELECT_TERRITORY');
+            toasts.push(
+              `⚓ Deniz Muharebesi (${seaZoneName}): Seyir halindeki donanmamız yolunu kesen ${defNationName} filosunu batırdı ve rotasına devam ediyor!`
+            );
+            appendNews(
+              `⚓ Açık Deniz Zaferi: ${seaZoneName}`,
+              `${attNationName} donanması seyir halindeyken karşılaştığı ${defNationName} filosunu (${enemyFleet.troops.toLocaleString('tr-TR')} asker) batırdı.`,
+              'WAR'
+            );
+          } else if (enemyFleet.ownerId === playerNationId) {
+            sounds.push('WAR_HORN');
+            toasts.push(
+              `⚠️ Deniz Yenilgisi: ${enemyFleet.name} yanından geçen ${attNationName} donanmasıyla girdiği çatışmada batırıldı!`
+            );
+            appendNews(
+              `⚠️ Donanma Kaybı: ${enemyFleet.name}`,
+              `${attNationName} filosu açık denizde ${enemyFleet.name} donanmamızı imha etti.`,
+              'WAR'
+            );
+          }
+        } else {
+          const lossRatio = Math.min(0.65, (attPow / Math.max(1, defPow)) * 0.52);
+          const defSurvivors = Math.max(
+            400,
+            Math.round(enemyFleet.troops * (1 - lossRatio))
+          );
+          attLosses = mv.troops;
+          defLosses = Math.max(0, enemyFleet.troops - defSurvivors);
+          nextSeaArmies[interceptedFleetIdx] = {
+            ...enemyFleet,
+            troops: defSurvivors,
+            units: scaleUnits(
+              enemyFleet.units,
+              defSurvivors / Math.max(1, enemyFleet.troops)
+            ),
+          };
+          mv.troops = 0;
+          mv.units = { infantry: 0, armor: 0, airDrone: 0 };
+
+          if (mv.ownerId === playerNationId) {
+            sounds.push('WAR_HORN');
+            toasts.push(
+              `⚠️ Deniz Muharebesi (${seaZoneName}): Donanmamız yol üzerindeki ${defNationName} (${enemyFleet.name}) filosu tarafından durduruldu ve batırıldı!`
+            );
+            appendNews(
+              `⚠️ Deniz Harekatı Durduruldu: ${seaZoneName}`,
+              `${defNationName} donanması, seyir halindeki ${attNationName} filosunu açık denizde imha etti.`,
+              'WAR'
+            );
+          } else if (enemyFleet.ownerId === playerNationId) {
+            sounds.push('SELECT_TERRITORY');
+            toasts.push(
+              `⚓ Deniz Savunma Zaferi: ${enemyFleet.name}, yanından geçen ${attNationName} çıkarma filosunu batırdı!`
+            );
+            appendNews(
+              `⚓ Deniz Savunma Zaferi: ${enemyFleet.name}`,
+              `${enemyFleet.name}, yakınından geçen ${attNationName} filosunu (${attLosses.toLocaleString('tr-TR')} asker) açık denizde imha etti.`,
+              'WAR'
+            );
+          }
+        }
+
+        const scoreShift = attWon ? 10 : -10;
+        nextWars = nextWars.map((w) => {
+          const attIsWarAtt =
+            w.attackers.includes(mv.ownerId) &&
+            w.defenders.includes(enemyFleet.ownerId);
+          const attIsWarDef =
+            w.defenders.includes(mv.ownerId) &&
+            w.attackers.includes(enemyFleet.ownerId);
+          if (!attIsWarAtt && !attIsWarDef) return w;
+          return {
+            ...w,
+            attackerWarScore: Math.max(
+              -100,
+              Math.min(
+                100,
+                w.attackerWarScore + (attIsWarAtt ? scoreShift : -scoreShift)
+              )
+            ),
+            casualtiesAttacker:
+              w.casualtiesAttacker + (attIsWarAtt ? attLosses : defLosses),
+            casualtiesDefender:
+              w.casualtiesDefender + (attIsWarAtt ? defLosses : attLosses),
+          };
+        });
+      }
+    }
+
+    for (const mv of steppedMovements) {
+      if (!mv || mv.troops <= 0) continue;
+      if (mv.progress >= 100) {
         arrived.push({ ...mv, progress: 100 });
       } else {
-        nextMovements.push({ ...mv, progress: nextProg });
+        nextMovements.push(mv);
       }
     }
 
@@ -1335,8 +1757,8 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
       }
     }
 
-    // Run Player AI Commander strictly once per full day transition (zero sub-day FPS overhead)
-    if (dayWrapped && input.aiCommanderEnabled) {
+    // Run Player AI Commander on both full day transition and mid-day (14:00) so wars finish without pauses
+    if ((dayWrapped || crossedMidDay) && input.aiCommanderEnabled) {
       const playerAiRes = evaluatePlayerAiCommander({
         tick: nextTick,
         playerNationId,
@@ -1346,11 +1768,15 @@ export function computeGameTick(input: GameTickInput): GameTickOutput {
         wars: nextWars,
         battles: nextBattles,
         movements: nextMovements,
+        seaArmies: nextSeaArmies,
         stance: input.aiCommanderStance || 'BALANCED',
       });
       if (playerAiRes && playerAiRes.newMovements.length > 0) {
         nextTerritories = playerAiRes.updatedTerritories;
         territoriesCloned = true;
+        if (playerAiRes.updatedSeaArmies) {
+          nextSeaArmies = playerAiRes.updatedSeaArmies;
+        }
         nextMovements = [...nextMovements, ...playerAiRes.newMovements];
       }
     }

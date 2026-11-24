@@ -53,6 +53,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   onStartArmyOrderMode,
   onExecuteArmyMove,
   onRecruitUnit,
+  onBatchRecruitUnits,
   onUpgradeBuilding,
   onAssimilateTerritory,
   onStartMissionary,
@@ -617,70 +618,235 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
-                        <button
-                          onClick={() =>
-                            onRecruitUnit(
-                              selectedTerritory.id,
-                              'infantry',
-                              5000,
-                              250
-                            )
-                          }
-                          className="min-h-[68px] p-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold flex flex-col items-center justify-center gap-1 text-center transition-colors"
-                        >
-                          <UnitTypeIllustrationSvg
-                            unitType="infantry"
-                            modeId={gameMode}
-                            className="w-8 h-8"
-                          />
-                          <span>+5B {activeArmyGen.infantryShort}</span>
-                          <span className="font-mono-num text-[10px] text-emerald-400/90">
-                            250 Altın
-                          </span>
-                        </button>
-                        <button
-                          onClick={() =>
-                            onRecruitUnit(
-                              selectedTerritory.id,
-                              'armor',
-                              2500,
-                              420
-                            )
-                          }
-                          className="min-h-[68px] p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-xs font-semibold flex flex-col items-center justify-center gap-1 text-center transition-colors"
-                        >
-                          <UnitTypeIllustrationSvg
-                            unitType="armor"
-                            modeId={gameMode}
-                            className="w-8 h-8"
-                          />
-                          <span>+2.5B {activeArmyGen.armorShort}</span>
-                          <span className="font-mono-num text-[10px] text-amber-400">
-                            420 Altın
-                          </span>
-                        </button>
-                        <button
-                          onClick={() =>
-                            onRecruitUnit(
-                              selectedTerritory.id,
-                              'airDrone',
-                              1000,
-                              500
-                            )
-                          }
-                          className="min-h-[68px] p-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 text-xs font-semibold flex flex-col items-center justify-center gap-1 text-center transition-colors"
-                        >
-                          <UnitTypeIllustrationSvg
-                            unitType="airDrone"
-                            modeId={gameMode}
-                            className="w-8 h-8"
-                          />
-                          <span>+1B {activeArmyGen.airArtilleryShort}</span>
-                          <span className="font-mono-num text-[10px] text-sky-400">
-                            500 Altın
-                          </span>
-                        </button>
+                        {/* Infantry Card */}
+                        <div className="p-2 rounded-xl bg-emerald-600/15 border border-emerald-500/40 flex flex-col items-center justify-between gap-1.5 text-center">
+                          <div className="flex flex-col items-center gap-0.5">
+                            <UnitTypeIllustrationSvg
+                              unitType="infantry"
+                              modeId={gameMode}
+                              className="w-7 h-7"
+                            />
+                            <span className="text-[11px] font-bold text-emerald-200 truncate">
+                              {activeArmyGen.infantryShort}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1 w-full">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRecruitUnit(
+                                  selectedTerritory.id,
+                                  'infantry',
+                                  1000,
+                                  120
+                                )
+                              }
+                              className="px-1 py-1 rounded-lg bg-emerald-600/35 hover:bg-emerald-500/50 border border-emerald-400/40 text-emerald-100 text-[10px] font-bold cursor-pointer"
+                            >
+                              +1B (120A)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRecruitUnit(
+                                  selectedTerritory.id,
+                                  'infantry',
+                                  5000,
+                                  250
+                                )
+                              }
+                              className="px-1 py-1 rounded-lg bg-emerald-600/35 hover:bg-emerald-500/50 border border-emerald-400/40 text-emerald-100 text-[10px] font-bold cursor-pointer"
+                            >
+                              +5B (250A)
+                            </button>
+                          </div>
+                          {onBatchRecruitUnits && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onBatchRecruitUnits(
+                                  'SINGLE_MAX',
+                                  'infantry',
+                                  selectedTerritory.id
+                                )
+                              }
+                              className="w-full py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-extrabold cursor-pointer"
+                            >
+                              ⚡ Maks {activeArmyGen.infantryShort}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Armor / Cavalry Card */}
+                        <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/40 flex flex-col items-center justify-between gap-1.5 text-center">
+                          <div className="flex flex-col items-center gap-0.5">
+                            <UnitTypeIllustrationSvg
+                              unitType="armor"
+                              modeId={gameMode}
+                              className="w-7 h-7"
+                            />
+                            <span className="text-[11px] font-bold text-amber-200 truncate">
+                              {activeArmyGen.armorShort}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1 w-full">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRecruitUnit(
+                                  selectedTerritory.id,
+                                  'armor',
+                                  1000,
+                                  180
+                                )
+                              }
+                              className="px-1 py-1 rounded-lg bg-amber-500/35 hover:bg-amber-400/50 border border-amber-400/40 text-amber-100 text-[10px] font-bold cursor-pointer"
+                            >
+                              +1B (180A)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRecruitUnit(
+                                  selectedTerritory.id,
+                                  'armor',
+                                  2500,
+                                  420
+                                )
+                              }
+                              className="px-1 py-1 rounded-lg bg-amber-500/35 hover:bg-amber-400/50 border border-amber-400/40 text-amber-100 text-[10px] font-bold cursor-pointer"
+                            >
+                              +2.5B (420A)
+                            </button>
+                          </div>
+                          {onBatchRecruitUnits && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onBatchRecruitUnits(
+                                  'SINGLE_MAX',
+                                  'armor',
+                                  selectedTerritory.id
+                                )
+                              }
+                              className="w-full py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-extrabold cursor-pointer"
+                            >
+                              ⚡ Maks {activeArmyGen.armorShort}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Air / Artillery Card */}
+                        <div className="p-2 rounded-xl bg-sky-500/15 border border-sky-500/40 flex flex-col items-center justify-between gap-1.5 text-center">
+                          <div className="flex flex-col items-center gap-0.5">
+                            <UnitTypeIllustrationSvg
+                              unitType="airDrone"
+                              modeId={gameMode}
+                              className="w-7 h-7"
+                            />
+                            <span className="text-[11px] font-bold text-sky-200 truncate">
+                              {activeArmyGen.airArtilleryShort}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1 w-full">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRecruitUnit(
+                                  selectedTerritory.id,
+                                  'airDrone',
+                                  1000,
+                                  500
+                                )
+                              }
+                              className="px-1 py-1 rounded-lg bg-sky-500/35 hover:bg-sky-400/50 border border-sky-400/40 text-sky-100 text-[10px] font-bold cursor-pointer"
+                            >
+                              +1B (500A)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onRecruitUnit(
+                                  selectedTerritory.id,
+                                  'airDrone',
+                                  2500,
+                                  1100
+                                )
+                              }
+                              className="px-1 py-1 rounded-lg bg-sky-500/35 hover:bg-sky-400/50 border border-sky-400/40 text-sky-100 text-[10px] font-bold cursor-pointer"
+                            >
+                              +2.5B (1100A)
+                            </button>
+                          </div>
+                          {onBatchRecruitUnits && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onBatchRecruitUnits(
+                                  'SINGLE_MAX',
+                                  'airDrone',
+                                  selectedTerritory.id
+                                )
+                              }
+                              className="w-full py-1 rounded-lg bg-sky-400 hover:bg-sky-300 text-slate-950 text-[10px] font-extrabold cursor-pointer"
+                            >
+                              ⚡ Maks {activeArmyGen.airArtilleryShort}
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Batch Recruitment Bar in Province Drawer */}
+                      {onBatchRecruitUnits && (
+                        <div className="p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/35 space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-amber-200">
+                              ⚡ Toplu Asker Bas (Sınırlara &amp; Tüm Ülkeye):
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              Tek tıkla ulusal seferberlik
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onBatchRecruitUnits('BORDER', 'MIXED', selectedTerritory.id, 1)
+                              }
+                              className="px-2 py-1.5 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/45 text-emerald-200 text-[10px] font-extrabold text-center cursor-pointer"
+                            >
+                              🛡 Sınırlara Karma Ordu
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onBatchRecruitUnits('BORDER', 'infantry', selectedTerritory.id, 1)
+                              }
+                              className="px-2 py-1.5 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/45 text-emerald-200 text-[10px] font-extrabold text-center cursor-pointer"
+                            >
+                              🛡 Sınırlara {activeArmyGen.infantryShort}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onBatchRecruitUnits('BORDER', 'armor', selectedTerritory.id, 1)
+                              }
+                              className="px-2 py-1.5 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 border border-amber-500/45 text-amber-200 text-[10px] font-extrabold text-center cursor-pointer"
+                            >
+                              🐎 Sınırlara {activeArmyGen.armorShort}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onBatchRecruitUnits('ALL', 'MIXED', selectedTerritory.id, 1)
+                              }
+                              className="px-2 py-1.5 rounded-lg bg-sky-500/25 hover:bg-sky-500/40 border border-sky-500/45 text-sky-200 text-[10px] font-extrabold text-center cursor-pointer"
+                            >
+                              🌍 Tüm Ülkeye Karma
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Army Dispatch Controls */}
                       <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2.5">

@@ -10,6 +10,7 @@ import {
   calculateNationEconomy,
   computeNationManpowerCap,
 } from './engine/simulationEngine';
+import { BatchRecruitUnitMode } from './engine/empireAndArmyActions';
 import {
   getMostRecentSaveRecord,
   initSaveStorage,
@@ -177,6 +178,8 @@ function GameAppInner() {
     return params.get('autostart') !== '1';
   });
   const [macroMode, setMacroMode] = useState<MapMacroMode>('NONE');
+  const [macroRecruitUnitMode, setMacroRecruitUnitMode] =
+    useState<BatchRecruitUnitMode>('infantry');
   const [economySelectedIds, setEconomySelectedIds] = useState<string[]>([]);
   const [batchMarchSourceIds, setBatchMarchSourceIds] = useState<string[]>([]);
   const [batchMarchTargetPicking, setBatchMarchTargetPicking] = useState<boolean>(false);
@@ -690,7 +693,15 @@ function GameAppInner() {
       }
       if (macroMode === 'RECRUIT_INFANTRY') {
         store.selectTerritoryOnMap(null);
-        store.recruitUnit(terrId, 'infantry', 1000, 150);
+        if (macroRecruitUnitMode === 'MIXED') {
+          store.batchRecruitUnits('SINGLE_MAX', 'MIXED', terrId, 1);
+        } else if (macroRecruitUnitMode === 'armor') {
+          store.recruitUnit(terrId, 'armor', 1000, 180);
+        } else if (macroRecruitUnitMode === 'airDrone') {
+          store.recruitUnit(terrId, 'airDrone', 1000, 500);
+        } else {
+          store.recruitUnit(terrId, 'infantry', 1000, 120);
+        }
       } else if (macroMode === 'BUILD_ECONOMY') {
         store.selectTerritoryOnMap(null);
         toggleEconomyCity(terrId);
@@ -1052,6 +1063,7 @@ function GameAppInner() {
         <MapModePillBar
           mapMode={mapMode}
           macroMode={macroMode}
+          macroRecruitUnitMode={macroRecruitUnitMode}
           toastMessage={toastMessage}
           economySelectedIds={economySelectedIds}
           batchMarchSourceIds={batchMarchSourceIds}
@@ -1159,6 +1171,8 @@ function GameAppInner() {
               store.selectTerritoryOnMap(null);
             }
           }}
+          onSetMacroRecruitUnitMode={setMacroRecruitUnitMode}
+          onBatchRecruitUnits={store.batchRecruitUnits}
           onToggleEconomyCity={toggleEconomyCity}
           onClearEconomyCities={() => setEconomySelectedIds([])}
           onToggleBatchCity={toggleBatchCity}
@@ -1192,8 +1206,10 @@ function GameAppInner() {
             onSetMoveRatio={store.setMoveRatio}
             onStartArmyOrder={store.setArmyOrderSourceId}
             onQuickRecruitInfantry={(tId) =>
-              store.recruitUnit(tId, 'infantry', 1000, 150)
+              store.recruitUnit(tId, 'infantry', 1000, 120)
             }
+            onRecruitUnit={store.recruitUnit}
+            onBatchRecruitUnits={store.batchRecruitUnits}
             onAssimilateTerritory={store.assimilateTerritory}
             onMergeArmies={store.mergeNeighborArmies}
             onDisbandArmy={store.disbandArmy}
@@ -1259,6 +1275,7 @@ function GameAppInner() {
             onStartArmyOrderMode={store.setArmyOrderSourceId}
             onExecuteArmyMove={store.executeArmyMove}
             onRecruitUnit={store.recruitUnit}
+            onBatchRecruitUnits={store.batchRecruitUnits}
             onHireMercenary={store.hireMercenary}
             onRecruitOrAssignGeneral={store.recruitOrAssignGeneral}
             onUpgradeBuilding={store.upgradeBuilding}

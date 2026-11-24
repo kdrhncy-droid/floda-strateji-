@@ -11,6 +11,10 @@ import {
   UnitType,
 } from '../../types/game';
 import { NationEconomyBreakdown } from '../../engine/simulationEngine';
+import {
+  BatchRecruitScope,
+  BatchRecruitUnitMode,
+} from '../../engine/empireAndArmyActions';
 
 export type DiplomaticActionType =
   | 'IMPROVE'
@@ -52,6 +56,12 @@ export interface CommandDrawersProps {
     unitType: UnitType,
     amount: number,
     goldCost: number
+  ) => void;
+  onBatchRecruitUnits?: (
+    scope: BatchRecruitScope,
+    unitMode?: BatchRecruitUnitMode,
+    territoryId?: string,
+    roundsPerCity?: number
   ) => void;
   onHireMercenary?: (territoryId: string, companyId: string) => void;
   onRecruitOrAssignGeneral: (generalId: string) => void;

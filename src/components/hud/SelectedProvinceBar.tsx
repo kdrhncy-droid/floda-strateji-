@@ -37,7 +37,12 @@ import {
   GameModeId,
   Nation,
   Territory,
+  UnitType,
 } from '../../types/game';
+import {
+  BatchRecruitScope,
+  BatchRecruitUnitMode,
+} from '../../engine/empireAndArmyActions';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
 import {
   cleanNationName,
@@ -63,6 +68,18 @@ interface SelectedProvinceBarProps {
   onSetMoveRatio: (ratio: number) => void;
   onStartArmyOrder: (territoryId: string | null) => void;
   onQuickRecruitInfantry: (territoryId: string) => void;
+  onRecruitUnit?: (
+    territoryId: string,
+    unitType: UnitType,
+    amount: number,
+    goldCost: number
+  ) => void;
+  onBatchRecruitUnits?: (
+    scope: BatchRecruitScope,
+    unitMode?: BatchRecruitUnitMode,
+    territoryId?: string,
+    roundsPerCity?: number
+  ) => void;
   onAssimilateTerritory?: (territoryId: string) => void;
   onMergeArmies?: (territoryId: string) => void;
   onDisbandArmy?: (territoryId: string, ratio: 0.5 | 1) => void;
@@ -89,6 +106,8 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   onSetMoveRatio,
   onStartArmyOrder,
   onQuickRecruitInfantry,
+  onRecruitUnit,
+  onBatchRecruitUnits,
   onAssimilateTerritory,
   onMergeArmies,
   onDisbandArmy,
@@ -100,6 +119,8 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
 }) => {
   const [splitOpen, setSplitOpen] = useState(false);
   const [disbandOpen, setDisbandOpen] = useState(false);
+  const [recruitOpen, setRecruitOpen] = useState(false);
+  const [quickUnitType, setQuickUnitType] = useState<UnitType>('infantry');
 
   useEffect(() => {
     setSplitOpen(false);
@@ -280,6 +301,144 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             >
               Vazgeç
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* AoH3 Multi-Unit & Batch Recruitment Strip ("+Asker Bas") */}
+      {recruitOpen && isPlayerOwned && (
+        <div
+          data-testid="province-bar-recruit-strip"
+          className="flex flex-col gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-950/95 border border-emerald-500/50 text-[11px]"
+        >
+          <div className="flex items-center justify-between gap-1.5 flex-wrap">
+            <span className="font-bold text-emerald-200 text-[10px]">
+              ⚔️ Birlik Sınıfı Seç &amp; Bas:
+            </span>
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+              {[
+                {
+                  id: 'infantry' as const,
+                  label: `🛡 ${armyGen.infantryShort}`,
+                  activeTone: 'bg-emerald-500 text-slate-950 border-emerald-300',
+                  idleTone: 'bg-slate-900 text-emerald-200 border-emerald-500/40',
+                },
+                {
+                  id: 'armor' as const,
+                  label: `🐎 ${armyGen.armorShort}`,
+                  activeTone: 'bg-amber-500 text-slate-950 border-amber-300',
+                  idleTone: 'bg-slate-900 text-amber-200 border-amber-500/40',
+                },
+                {
+                  id: 'airDrone' as const,
+                  label: `💣 ${armyGen.airArtilleryShort}`,
+                  activeTone: 'bg-sky-400 text-slate-950 border-sky-200',
+                  idleTone: 'bg-slate-900 text-sky-200 border-sky-500/40',
+                },
+              ].map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  data-testid={`province-unit-select-${u.id}`}
+                  onClick={() => {
+                    sound.playClick();
+                    setQuickUnitType(u.id);
+                  }}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                    quickUnitType === u.id ? u.activeTone : u.idleTone
+                  }`}
+                >
+                  {u.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setRecruitOpen(false)}
+                className="px-1.5 py-0.5 rounded-lg bg-slate-900 text-slate-300 text-[10px] font-bold border border-slate-700 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              data-testid="province-recruit-1k-btn"
+              onClick={() => {
+                const baseGold =
+                  quickUnitType === 'infantry'
+                    ? 120
+                    : quickUnitType === 'armor'
+                    ? 180
+                    : 500;
+                if (onRecruitUnit) {
+                  onRecruitUnit(territory.id, quickUnitType, 1000, baseGold);
+                } else {
+                  onQuickRecruitInfantry(territory.id);
+                }
+              }}
+              className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              +1.000 Bas ({quickUnitType === 'infantry' ? '120A' : quickUnitType === 'armor' ? '180A' : '500A'})
+            </button>
+
+            <button
+              type="button"
+              data-testid="province-recruit-25k-btn"
+              onClick={() => {
+                const amt = quickUnitType === 'infantry' ? 5000 : 2500;
+                const baseGold =
+                  quickUnitType === 'infantry'
+                    ? 250
+                    : quickUnitType === 'armor'
+                    ? 420
+                    : 1100;
+                if (onRecruitUnit) {
+                  onRecruitUnit(territory.id, quickUnitType, amt, baseGold);
+                } else {
+                  onQuickRecruitInfantry(territory.id);
+                }
+              }}
+              className="px-2 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              +{quickUnitType === 'infantry' ? '5.000 (250A)' : quickUnitType === 'armor' ? '2.500 (420A)' : '2.500 (1100A)'}
+            </button>
+
+            {onBatchRecruitUnits && (
+              <>
+                <button
+                  type="button"
+                  data-testid="province-recruit-max-btn"
+                  onClick={() =>
+                    onBatchRecruitUnits('SINGLE_MAX', quickUnitType, territory.id)
+                  }
+                  className="px-2 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  ⚡ Bu Şehirde Maks Bas
+                </button>
+                <button
+                  type="button"
+                  data-testid="province-recruit-border-btn"
+                  onClick={() =>
+                    onBatchRecruitUnits('BORDER', quickUnitType, territory.id, 1)
+                  }
+                  className="px-2 py-1 rounded-lg bg-sky-600/85 hover:bg-sky-500 text-white text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  🛡 Sınırlara Toplu Bas
+                </button>
+                <button
+                  type="button"
+                  data-testid="province-recruit-all-btn"
+                  onClick={() =>
+                    onBatchRecruitUnits('ALL', quickUnitType, territory.id, 1)
+                  }
+                  className="px-2 py-1 rounded-lg bg-purple-600/85 hover:bg-purple-500 text-white text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  🌍 Tüm Ülkeye Toplu Bas
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -575,15 +734,26 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
           {isPlayerOwned && (
             <button
               type="button"
+              data-testid="province-bar-recruit-toggle-btn"
               onClick={() => {
                 sound.playClick();
-                onQuickRecruitInfantry(territory.id);
+                setSplitOpen(false);
+                setDisbandOpen(false);
+                if (onRecruitUnit || onBatchRecruitUnits) {
+                  setRecruitOpen((prev) => !prev);
+                } else {
+                  onQuickRecruitInfantry(territory.id);
+                }
               }}
-              title="Hızlı Asker Topla: +1.000 Piyade (150 Altın)"
-              className="min-h-[36px] px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
+              title="Asker Bas: Piyade, Süvari/Zırhlı, Topçu/SİHA ve Toplu Asker Basma"
+              className={`min-h-[36px] px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                recruitOpen
+                  ? 'bg-emerald-400 text-slate-950 shadow'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+              }`}
             >
               <UserPlus className="w-3.5 h-3.5 shrink-0" />
-              <span>+1B Asker</span>
+              <span>+Asker Bas</span>
             </button>
           )}
 

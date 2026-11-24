@@ -2528,73 +2528,222 @@ export function batchUpgradeBuildingDomain(params: {
   };
 }
 
-export function batchBorderMobilizationDomain(params: {
+export type BatchRecruitScope = 'BORDER' | 'ALL' | 'BARRACKS' | 'SINGLE_MAX';
+export type BatchRecruitUnitMode = UnitType | 'MIXED';
+
+export function batchRecruitUnitsDomain(params: {
+  scope: BatchRecruitScope;
+  unitMode?: BatchRecruitUnitMode;
+  territoryId?: string;
+  roundsPerCity?: number;
   territories: Record<string, Territory>;
   nations: Record<string, Nation>;
   playerNationId: string;
+  gameMode?: GameModeId;
 }): EmpireActionPatch {
-  const { territories, nations, playerNationId } = params;
+  const {
+    scope,
+    unitMode = 'infantry',
+    territoryId,
+    roundsPerCity = 1,
+    territories,
+    nations,
+    playerNationId,
+  } = params;
   const p = nations[playerNationId];
   if (!p) return {};
 
-  const borderCities = Object.values(territories)
-    .filter(
-      (t) =>
-        t &&
-        t.ownerId === playerNationId &&
-        t.neighbors.some((nbId) => {
-          const nb = territories[nbId];
-          return Boolean(nb && nb.ownerId !== playerNationId);
-        })
-    )
-    .sort((a, b) => (a.garrison || 0) - (b.garrison || 0));
-
-  if (borderCities.length === 0) {
-    return {
-      toastMessage: '🛡️ Yabancı devletle kara/boğaz sınırı paylaşan şehir bulunamadı.',
-    };
-  }
-
-  const discount = p.enactedReforms.includes('ref_national_defense_industry')
+  let discount = p.enactedReforms.includes('ref_national_defense_industry')
     ? 0.8
     : 1.0;
-  const goldCostPerCity = Math.round(150 * discount);
-  const troopStep = 1000;
+  if (p.unlockedTechs?.includes('mil_4b')) {
+    discount *= 0.9;
+  }
 
-  if (p.treasury < goldCostPerCity) {
+  // Unit package definitions per step
+  const stepSpec: Record<
+    BatchRecruitUnitMode,
+    {
+      troops: number;
+      baseGold: number;
+      label: string;
+      addUnits: { infantry: number; armor: number; airDrone: number };
+    }
+  > = {
+    infantry: {
+      troops: 1000,
+      baseGold: 120,
+      label: 'Piyade',
+      addUnits: { infantry: 1000, armor: 0, airDrone: 0 },
+    },
+    armor: {
+      troops: 1000,
+      baseGold: 180,
+      label: 'Süvari / Zırhlı',
+      addUnits: { infantry: 0, armor: 1000, airDrone: 0 },
+    },
+    airDrone: {
+      troops: 1000,
+      baseGold: 360,
+      label: 'Topçu / Hava & SİHA',
+      addUnits: { infantry: 0, armor: 0, airDrone: 1000 },
+    },
+    MIXED: {
+      troops: 2000,
+      baseGold: 320,
+      label: 'Karma Ordu (Piyade + Süvari + Topçu)',
+      addUnits: { infantry: 1200, armor: 500, airDrone: 300 },
+    },
+  };
+
+  const pkg = stepSpec[unitMode] || stepSpec.infantry;
+  const goldCostPerStep = Math.max(40, Math.round(pkg.baseGold * discount));
+  const troopStep = pkg.troops;
+
+  if (p.treasury < goldCostPerStep) {
     return {
-      toastMessage: `🛡️ Sınır Seferberliği için en az ${goldCostPerCity} Altın gerekli.`,
+      toastMessage: `🛡️ Toplu ${pkg.label} basımı için en az ${goldCostPerStep} Altın gerekli.`,
     };
   }
   if (p.manpower < troopStep) {
     return {
-      toastMessage: `🛡️ Sınır Seferberliği için en az ${troopStep.toLocaleString('tr-TR')} İnsan Gücü gerekli.`,
+      toastMessage: `🛡️ Toplu ${pkg.label} basımı için en az ${troopStep.toLocaleString('tr-TR')} İnsan Gücü gerekli.`,
     };
+  }
+
+  // SINGLE_MAX: Recruit maximum affordable regiments into a single target province
+  if (scope === 'SINGLE_MAX') {
+    const targetId = territoryId || p.capitalTerritoryId;
+    const t = territories[targetId];
+    if (!t || t.ownerId !== playerNationId) {
+      return { toastMessage: 'Toplu asker basımı için kendi eyaletinizi seçin.' };
+    }
+    const maxByGold = Math.floor(p.treasury / goldCostPerStep);
+    const maxByManpower = Math.floor(p.manpower / troopStep);
+    const steps = Math.max(0, Math.min(25, maxByGold, maxByManpower));
+    if (steps <= 0) {
+      return {
+        toastMessage: `Yetersiz kaynak! (${goldCostPerStep} Altın ve ${troopStep.toLocaleString('tr-TR')} İG gerekli)`,
+      };
+    }
+
+    const totalGold = steps * goldCostPerStep;
+    const totalTroops = steps * troopStep;
+    const curUnits = t.units || { infantry: t.garrison, armor: 0, airDrone: 0 };
+    sound.playBuild();
+
+    return {
+      nations: {
+        ...nations,
+        [playerNationId]: {
+          ...p,
+          treasury: p.treasury - totalGold,
+          manpower: p.manpower - totalTroops,
+        },
+      },
+      territories: {
+        ...territories,
+        [t.id]: {
+          ...t,
+          garrison: t.garrison + totalTroops,
+          units: {
+            infantry: curUnits.infantry + pkg.addUnits.infantry * steps,
+            armor: curUnits.armor + pkg.addUnits.armor * steps,
+            airDrone: curUnits.airDrone + pkg.addUnits.airDrone * steps,
+          },
+        },
+      },
+      toastMessage: `⚔️ ${t.name}: +${totalTroops.toLocaleString('tr-TR')} ${pkg.label} toplu olarak orduya katıldı (-${totalGold.toLocaleString('tr-TR')} Altın).`,
+    };
+  }
+
+  const ownedCities = Object.values(territories).filter(
+    (t) => t && t.ownerId === playerNationId
+  );
+  let targetCities: Territory[] = [];
+
+  if (scope === 'BORDER') {
+    targetCities = ownedCities
+      .filter((t) =>
+        t.neighbors.some((nbId) => {
+          const nb = territories[nbId];
+          return Boolean(nb && nb.ownerId !== playerNationId);
+        })
+      )
+      .sort((a, b) => (a.garrison || 0) - (b.garrison || 0));
+    if (targetCities.length === 0) {
+      targetCities = [...ownedCities].sort(
+        (a, b) => (a.garrison || 0) - (b.garrison || 0)
+      );
+    }
+  } else if (scope === 'BARRACKS') {
+    targetCities = ownedCities
+      .filter((t) => Boolean(t.isCapital) || (t.buildings?.barracks || 0) > 0)
+      .sort(
+        (a, b) =>
+          Number(b.isCapital) - Number(a.isCapital) ||
+          (b.buildings?.barracks || 0) - (a.buildings?.barracks || 0)
+      );
+    if (targetCities.length === 0) {
+      targetCities = [...ownedCities].sort(
+        (a, b) => Number(b.isCapital) - Number(a.isCapital)
+      );
+    }
+  } else {
+    targetCities = [...ownedCities].sort(
+      (a, b) =>
+        Number(b.isCapital) - Number(a.isCapital) ||
+        (a.garrison || 0) - (b.garrison || 0)
+    );
+  }
+
+  if (targetCities.length === 0) {
+    return { toastMessage: '🛡️ Asker toplanacak uygun şehir bulunamadı.' };
   }
 
   let remainingGold = p.treasury;
   let remainingManpower = p.manpower;
-  let reinforcedCount = 0;
+  let totalSteps = 0;
+  const touchedCityIds = new Set<string>();
   const nextTerritories = { ...territories };
+  const passes = Math.max(1, Math.min(5, roundsPerCity));
 
-  for (const t of borderCities) {
-    if (remainingGold < goldCostPerCity || remainingManpower < troopStep) break;
-    remainingGold -= goldCostPerCity;
-    remainingManpower -= troopStep;
-    reinforcedCount++;
-    const curUnits = t.units || { infantry: t.garrison, armor: 0, airDrone: 0 };
-    nextTerritories[t.id] = {
-      ...t,
-      garrison: t.garrison + troopStep,
-      units: {
-        ...curUnits,
-        infantry: curUnits.infantry + troopStep,
-      },
-    };
+  for (let pass = 0; pass < passes; pass++) {
+    let anyAddedInPass = false;
+    for (const baseCity of targetCities) {
+      if (remainingGold < goldCostPerStep || remainingManpower < troopStep) {
+        break;
+      }
+      const t = nextTerritories[baseCity.id];
+      if (!t) continue;
+      remainingGold -= goldCostPerStep;
+      remainingManpower -= troopStep;
+      totalSteps++;
+      anyAddedInPass = true;
+      touchedCityIds.add(t.id);
+      const curUnits = t.units || { infantry: t.garrison, armor: 0, airDrone: 0 };
+      nextTerritories[t.id] = {
+        ...t,
+        garrison: t.garrison + troopStep,
+        units: {
+          infantry: curUnits.infantry + pkg.addUnits.infantry,
+          armor: curUnits.armor + pkg.addUnits.armor,
+          airDrone: curUnits.airDrone + pkg.addUnits.airDrone,
+        },
+      };
+    }
+    if (!anyAddedInPass) break;
   }
 
-  const totalTroops = reinforcedCount * troopStep;
-  const totalGold = reinforcedCount * goldCostPerCity;
+  const totalTroops = totalSteps * troopStep;
+  const totalGold = totalSteps * goldCostPerStep;
+  const scopeLabel =
+    scope === 'BORDER'
+      ? 'Sınır Seferberliği'
+      : scope === 'BARRACKS'
+      ? 'Kışla & Başkent Seferberliği'
+      : 'Ulusal Toplu Seferberlik';
+
   sound.playBuild();
   return {
     nations: {
@@ -2606,8 +2755,24 @@ export function batchBorderMobilizationDomain(params: {
       },
     },
     territories: nextTerritories,
-    toastMessage: `🛡️ Sınır Seferberliği: ${reinforcedCount} sınır şehrine +${totalTroops.toLocaleString('tr-TR')} Piyade konuşlandırıldı (-${totalGold.toLocaleString('tr-TR')} Altın).`,
+    toastMessage: `🛡️ ${scopeLabel}: ${touchedCityIds.size} şehre +${totalTroops.toLocaleString('tr-TR')} ${pkg.label} konuşlandırıldı (-${totalGold.toLocaleString('tr-TR')} Altın).`,
   };
+}
+
+export function batchBorderMobilizationDomain(params: {
+  territories: Record<string, Territory>;
+  nations: Record<string, Nation>;
+  playerNationId: string;
+  unitMode?: BatchRecruitUnitMode;
+  scope?: BatchRecruitScope;
+}): EmpireActionPatch {
+  return batchRecruitUnitsDomain({
+    scope: params.scope ?? 'BORDER',
+    unitMode: params.unitMode ?? 'infantry',
+    territories: params.territories,
+    nations: params.nations,
+    playerNationId: params.playerNationId,
+  });
 }
 
 /**

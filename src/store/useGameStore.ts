@@ -66,6 +66,9 @@ import {
   assimilateTerritoryDomain,
   batchAssimilateDomain,
   batchBorderMobilizationDomain,
+  batchRecruitUnitsDomain,
+  BatchRecruitScope,
+  BatchRecruitUnitMode,
   batchStabilityFestivalDomain,
   batchUpgradeBuildingDomain,
   boostResearchDomain,
@@ -212,6 +215,12 @@ export interface GameStoreState {
     territoryIds?: string[]
   ) => void;
   batchBorderMobilization: () => void;
+  batchRecruitUnits: (
+    scope: BatchRecruitScope,
+    unitMode?: BatchRecruitUnitMode,
+    territoryId?: string,
+    roundsPerCity?: number
+  ) => void;
   startMissionary: (territoryId: string) => void;
   formEmpire: (empireId: string) => void;
   executeArmyMove: (fromId: string, toId: string) => void;
@@ -1176,6 +1185,20 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         territories: s.territories,
         nations: s.nations,
         playerNationId: s.playerNationId,
+      })
+    ),
+
+  batchRecruitUnits: (scope, unitMode = 'MIXED', territoryId, roundsPerCity = 1) =>
+    set((s) =>
+      batchRecruitUnitsDomain({
+        territories: s.territories,
+        nations: s.nations,
+        playerNationId: s.playerNationId,
+        scope,
+        unitMode,
+        territoryId: territoryId || s.selectedTerritoryId || undefined,
+        roundsPerCity,
+        gameMode: s.gameMode,
       })
     ),
 

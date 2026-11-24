@@ -571,9 +571,27 @@ export function evaluateWartimeAiOperations(params: {
       return priority;
     };
 
+    const allEnemyWarProvs = Object.values(nextTerritories).filter(
+      (t) => t && t.ownerId !== actorId && isAtWar(wars, actorId, t.ownerId)
+    );
+    const actorTotalGarrison = refreshedOwned.reduce(
+      (sum, p) => sum + (p?.garrison || 0),
+      0
+    );
+    const enemyTotalGarrison = allEnemyWarProvs.reduce(
+      (sum, p) => sum + (p?.garrison || 0),
+      0
+    );
+    const isEnemyMopUp =
+      allEnemyWarProvs.length > 0 &&
+      allEnemyWarProvs.length <= 3 &&
+      refreshedOwned.length > allEnemyWarProvs.length &&
+      actorTotalGarrison >= Math.max(6000, enemyTotalGarrison * 2.2);
+
     let launchedSortie = false;
+    const minCandidateGarrison = isEnemyMopUp ? 1800 : 6500;
     const sortieCandidates = refreshedOwned
-      .filter((p) => p && p.garrison >= 6500 && !p.siege)
+      .filter((p) => p && p.garrison >= minCandidateGarrison && !p.siege)
       .sort((a, b) => b.garrison - a.garrison);
 
     for (const srcProv of sortieCandidates) {
@@ -601,13 +619,18 @@ export function evaluateWartimeAiOperations(params: {
       // Never strip our capital bare if multiple strong enemies border it
       const isSrcCapital =
         srcProv.isCapital || srcProv.id === actorNation.capitalTerritoryId;
-      const sendRatio = isSrcCapital
+      const sendRatio = isEnemyMopUp
+        ? isSrcCapital
+          ? 0.65
+          : 0.76
+        : isSrcCapital
         ? 0.52
         : srcProv.garrison >= 18000
         ? 0.64
         : 0.56;
       const dispatchable = Math.round(srcProv.garrison * sendRatio);
-      if (dispatchable < 3500) continue;
+      const minDispatchFloor = isEnemyMopUp ? 900 : 3500;
+      if (dispatchable < minDispatchFloor) continue;
 
       const viableTarget = enemyNeighbors.find((enemyTerr) => {
         const alreadyTargetedByUs =
@@ -617,7 +640,7 @@ export function evaluateWartimeAiOperations(params: {
           newMovements.some(
             (m) => m.ownerId === actorId && m.toTerritoryId === enemyTerr.id
           );
-        if (alreadyTargetedByUs) return false;
+        if (alreadyTargetedByUs && !isEnemyMopUp) return false;
 
         const baseMinRatio =
           aiAggressiveness === 'PASSIVE'
@@ -633,8 +656,8 @@ export function evaluateWartimeAiOperations(params: {
           (enemyTerr.terrain === 'DAGLIK' ? 0.18 : enemyTerr.terrain === 'METROPOL' ? 0.1 : 0) +
           (enemyTerr.buildings?.fortress || 0) * 0.08;
         const requiredTroops = Math.max(
-          2600,
-          enemyTerr.garrison * baseMinRatio * terrainFortFactor
+          isEnemyMopUp ? 800 : 2600,
+          enemyTerr.garrison * (isEnemyMopUp ? baseMinRatio * 0.85 : baseMinRatio) * terrainFortFactor
         );
 
         return (
@@ -646,7 +669,7 @@ export function evaluateWartimeAiOperations(params: {
       if (viableTarget) {
         const sendUnits = scaleUnitComp(srcProv.units, sendRatio);
         const remainingGarrison = Math.max(
-          srcProv.garrison >= 5000 ? 2500 : 1200,
+          isEnemyMopUp ? 600 : srcProv.garrison >= 5000 ? 2500 : 1200,
           srcProv.garrison - dispatchable
         );
         nextTerritories[srcProv.id] = {
@@ -687,13 +710,69 @@ export function evaluateWartimeAiOperations(params: {
       }
     }
 
+    // Step 2B: Multi-Province Coordinated Pincer on Remaining Enemy Holdouts
+    if (!launchedSortie && isEnemyMopUp && allEnemyWarProvs.length > 0) {
+      const sortedHoldouts = [...allEnemyWarProvs].sort(
+        (a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a)
+      );
+      for (const enemyHoldout of sortedHoldouts) {
+        const adjDonors = enemyHoldout.neighbors
+          .map((nId) => nextTerritories[nId])
+          .filter(
+            (p): p is Territory =>
+              Boolean(p) &&
+              p.ownerId === actorId &&
+              !p.siege &&
+              p.garrison >= 1600 &&
+              !movements.some(
+                (m) => m.ownerId === actorId && m.fromTerritoryId === p.id
+              ) &&
+              !newMovements.some(
+                (m) => m.ownerId === actorId && m.fromTerritoryId === p.id
+              )
+          );
+        if (adjDonors.length < 2) continue;
+        const pooledSendable = adjDonors.reduce(
+          (sum, d) => sum + Math.max(0, d.garrison - 750),
+          0
+        );
+        if (pooledSendable >= Math.max(1800, enemyHoldout.garrison * 1.05)) {
+          for (const donor of adjDonors.slice(0, 3)) {
+            const sendAmt = Math.max(0, donor.garrison - 750);
+            if (sendAmt < 600) continue;
+            const ratio = sendAmt / Math.max(1, donor.garrison);
+            nextTerritories[donor.id] = {
+              ...donor,
+              garrison: 750,
+              units: scaleUnitComp(donor.units, 1 - ratio),
+            };
+            newMovements.push({
+              id: `ai_pincer_mv_${nextTick}_${donor.id}_${enemyHoldout.id}`,
+              ownerId: actorId,
+              fromTerritoryId: donor.id,
+              toTerritoryId: enemyHoldout.id,
+              finalDestinationId: enemyHoldout.id,
+              troops: sendAmt,
+              units: scaleUnitComp(donor.units, ratio),
+              progress: 18,
+              isAttack: true,
+            });
+          }
+          actionsCount++;
+          launchedSortie = true;
+          break;
+        }
+      }
+    }
+
     if (launchedSortie) continue;
 
-    // Step 3: Multi-Hop Frontline Concentration (send rear reserves to threatened borders OR staging frontline so AI concentrates force before attacking)
+    // Step 3: Multi-Hop Frontline Concentration & Direct Enemy Pocket March
+    const rearMinGarrison = isEnemyMopUp ? 2200 : 6000;
     const rearStrongProvs = refreshedOwned
       .filter(
         (p) =>
-          p.garrison >= 7500 &&
+          p.garrison >= rearMinGarrison &&
           !p.neighbors.some((nbId) => {
             const nb = nextTerritories[nbId];
             return Boolean(nb && nb.ownerId !== actorId && isAtWar(wars, actorId, nb.ownerId));
@@ -703,11 +782,12 @@ export function evaluateWartimeAiOperations(params: {
 
     if (rearStrongProvs.length > 0) {
       const srcRear = rearStrongProvs[0];
-      const enemyTerritories = Object.values(nextTerritories)
-        .filter((t) => t && t.ownerId !== actorId && isAtWar(wars, actorId, t.ownerId))
-        .sort((a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a));
+      const enemyTerritories = [...allEnemyWarProvs].sort(
+        (a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a)
+      );
       const targetDest =
         threatenedProvs[0] ||
+        (isEnemyMopUp && enemyTerritories[0] ? enemyTerritories[0] : null) ||
         frontlineProvs.sort((a, b) => a.garrison - b.garrison)[0] ||
         enemyTerritories[0];
 
@@ -726,19 +806,24 @@ export function evaluateWartimeAiOperations(params: {
         if (route.reachable && route.hops.length > 0) {
           const firstHopId = route.hops[0];
           const firstHopTerr = nextTerritories[firstHopId];
-          const moveRatio = 0.65;
+          const moveRatio = isEnemyMopUp ? 0.74 : 0.65;
           const moveTroops = Math.round(srcRear.garrison * moveRatio);
 
           nextTerritories[srcRear.id] = {
             ...srcRear,
-            garrison: Math.max(1200, srcRear.garrison - moveTroops),
+            garrison: Math.max(isEnemyMopUp ? 700 : 1200, srcRear.garrison - moveTroops),
             units: scaleUnitComp(srcRear.units, 1 - moveRatio),
           };
 
+          const isFinalEnemy = Boolean(
+            targetDest.ownerId !== actorId &&
+              isAtWar(wars, actorId, targetDest.ownerId)
+          );
           const isFirstHopAttack = Boolean(
-            firstHopTerr &&
-              firstHopTerr.ownerId !== actorId &&
-              isAtWar(wars, actorId, firstHopTerr.ownerId)
+            isFinalEnemy ||
+              (firstHopTerr &&
+                firstHopTerr.ownerId !== actorId &&
+                isAtWar(wars, actorId, firstHopTerr.ownerId))
           );
 
           newMovements.push({

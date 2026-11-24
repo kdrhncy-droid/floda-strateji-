@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { BuildingType, MapMode, Territory } from '../../types/game';
 import {
+  BatchRecruitScope,
+  BatchRecruitUnitMode,
   SPECIALTY_PRODUCTION_OPTIONS,
   SpecialtyProductionId,
   getSpecialtyOptionForResource,
@@ -34,6 +36,7 @@ export type MapMacroMode =
 interface MapModePillBarProps {
   mapMode: MapMode;
   macroMode?: MapMacroMode;
+  macroRecruitUnitMode?: BatchRecruitUnitMode;
   toastMessage: string | null;
   economySelectedIds?: string[];
   batchMarchSourceIds?: string[];
@@ -47,6 +50,13 @@ interface MapModePillBarProps {
   belowTraySlot?: React.ReactNode;
   onSetMapMode: (mode: MapMode) => void;
   onSetMacroMode?: (mode: MapMacroMode) => void;
+  onSetMacroRecruitUnitMode?: (unitMode: BatchRecruitUnitMode) => void;
+  onBatchRecruitUnits?: (
+    scope: BatchRecruitScope,
+    unitMode?: BatchRecruitUnitMode,
+    territoryId?: string,
+    roundsPerCity?: number
+  ) => void;
   onToggleEconomyCity?: (territoryId: string) => void;
   onClearEconomyCities?: () => void;
   onToggleBatchCity?: (territoryId: string) => void;
@@ -82,6 +92,7 @@ const MAP_MODES: ReadonlyArray<{ id: MapMode; label: string; glyph: string; tone
 export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   mapMode,
   macroMode = 'NONE',
+  macroRecruitUnitMode = 'infantry',
   economySelectedIds = [],
   batchMarchSourceIds = [],
   batchMarchTargetPicking = false,
@@ -94,6 +105,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   belowTraySlot,
   onSetMapMode,
   onSetMacroMode,
+  onSetMacroRecruitUnitMode,
+  onBatchRecruitUnits,
   onToggleEconomyCity,
   onClearEconomyCities,
   onToggleBatchCity,
@@ -255,7 +268,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                       macroMode === 'RECRUIT_INFANTRY' ? 'NONE' : 'RECRUIT_INFANTRY'
                     );
                   }}
-                  title="AoH3 Hızlı Askerlik: Haritada kendi eyaletinize dokunarak +1.000 Piyade (150 Altın) toplayın"
+                  title="AoH3 Asker Bas & Toplu Seferberlik: Birlik sınıfı seçip haritadan şehirlerinize dokunun veya sınırlara/tüm ülkeye toplu asker basın"
                   className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                     macroMode === 'RECRUIT_INFANTRY'
                       ? 'bg-emerald-500 text-slate-950 shadow'
@@ -264,8 +277,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 >
                   <UserPlus className="w-3 h-3 shrink-0" />
                   <span>
-                    <span className="lg:hidden">+1B</span>
-                    <span className="hidden lg:inline">+1B Asker</span>
+                    <span className="lg:hidden">+Asker</span>
+                    <span className="hidden lg:inline">+Asker Bas</span>
                   </span>
                 </button>
 
@@ -338,6 +351,117 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* AoH3 Multi-Unit & Batch Recruitment Panel when "+Asker Bas" is active */}
+            {macroMode === 'RECRUIT_INFANTRY' && !macroBodyCollapsed && (
+              <div
+                data-testid="recruit-macro-panel"
+                className="rounded-lg bg-[#14110e]/95 border border-emerald-500/50 p-1.5 flex flex-col gap-1.5 shadow-xl"
+              >
+                <div className="flex items-center justify-between gap-1 text-[10px]">
+                  <span className="text-emerald-200 font-bold truncate">
+                    ⚔️ Haritadan şehrinize dokunarak asker basın:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      setMacroBodyCollapsed(true);
+                    }}
+                    className="px-1.5 py-0.5 rounded bg-slate-900/90 hover:bg-slate-800 border border-emerald-500/40 text-emerald-200 font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
+                  >
+                    <span>Haritayı Gör</span>
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                </div>
+
+                {/* Unit Class Selector */}
+                <div className="grid grid-cols-4 gap-1">
+                  {[
+                    {
+                      id: 'infantry' as const,
+                      label: '🛡 Piyade',
+                      sub: '120A / 1B',
+                      active: 'bg-emerald-500 text-slate-950 border-emerald-300',
+                      idle: 'bg-slate-900 text-emerald-200 border-emerald-500/40',
+                    },
+                    {
+                      id: 'armor' as const,
+                      label: '🐎 Süvari',
+                      sub: '180A / 1B',
+                      active: 'bg-amber-500 text-slate-950 border-amber-300',
+                      idle: 'bg-slate-900 text-amber-200 border-amber-500/40',
+                    },
+                    {
+                      id: 'airDrone' as const,
+                      label: '💣 Topçu',
+                      sub: '500A / 1B',
+                      active: 'bg-sky-400 text-slate-950 border-sky-200',
+                      idle: 'bg-slate-900 text-sky-200 border-sky-500/40',
+                    },
+                    {
+                      id: 'MIXED' as const,
+                      label: '⚔️ Karma',
+                      sub: '3 Sınıf',
+                      active: 'bg-purple-500 text-white border-purple-300',
+                      idle: 'bg-slate-900 text-purple-200 border-purple-500/40',
+                    },
+                  ].map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      data-testid={`macro-unit-mode-${u.id}`}
+                      onClick={() => {
+                        sound.playClick();
+                        onSetMacroRecruitUnitMode?.(u.id);
+                      }}
+                      className={`px-1.5 py-1 rounded-lg border text-center transition-colors cursor-pointer ${
+                        macroRecruitUnitMode === u.id ? u.active : u.idle
+                      }`}
+                    >
+                      <div className="text-[10px] font-extrabold truncate">{u.label}</div>
+                      <div className="text-[8.5px] font-mono-num opacity-85">{u.sub}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* One-Click Batch Recruitment Buttons */}
+                {onBatchRecruitUnits && (
+                  <div className="grid grid-cols-3 gap-1 pt-0.5 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      data-testid="macro-batch-recruit-border"
+                      onClick={() =>
+                        onBatchRecruitUnits('BORDER', macroRecruitUnitMode, undefined, 1)
+                      }
+                      className="px-1.5 py-1 rounded-lg bg-emerald-600/85 hover:bg-emerald-500 text-white text-[9.5px] font-extrabold text-center cursor-pointer"
+                    >
+                      🛡 Sınırlara Toplu Bas
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="macro-batch-recruit-barracks"
+                      onClick={() =>
+                        onBatchRecruitUnits('BARRACKS', macroRecruitUnitMode, undefined, 1)
+                      }
+                      className="px-1.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[9.5px] font-extrabold text-center cursor-pointer"
+                    >
+                      🏰 Kışlalara Toplu Bas
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="macro-batch-recruit-all"
+                      onClick={() =>
+                        onBatchRecruitUnits('ALL', macroRecruitUnitMode, undefined, 1)
+                      }
+                      className="px-1.5 py-1 rounded-lg bg-sky-600/85 hover:bg-sky-500 text-white text-[9.5px] font-extrabold text-center cursor-pointer"
+                    >
+                      🌍 Tüm Ülkeye Toplu Bas
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Collapsed Mini Status Strip (keeps 85%+ of map open for tapping cities!) */}
             {macroBodyCollapsed && (macroMode === 'BUILD_ECONOMY' || macroMode === 'BATCH_MARCH') && (
