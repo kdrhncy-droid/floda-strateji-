@@ -7647,13 +7647,53 @@ test('1444 scenario distributes historical city counts, borders, and capitals ac
   assert.equal(countByOwner('348').length, 12, 'Kingdom of Hungary should have 12 provinces');
   assert.equal(world1440.territories['642_CLJ'].ownerId, '348', 'Transylvania should belong to Hungary');
   assert.equal(countByOwner('392').length, 14, 'Ashikaga Japan should have 14 provinces');
-  assert.equal(countByOwner('826').length, 13, 'Kingdom of England should have 13 provinces');
-  assert.equal(countByOwner('905').length, 2, 'Kingdom of Scotland should have 2 cities');
+  assert.equal(countByOwner('826').length, 12, 'Kingdom of England should have 12 provinces');
+  assert.equal(countByOwner('905').length, 3, 'Kingdom of Scotland should have 3 cities');
   assert.equal(world1440.territories['826_EDI'].ownerId, '905', 'Edinburgh should belong to Scotland');
+  assert.equal(world1440.territories['826_INV'].ownerId, '905', 'Inverness should belong to Scotland');
   assert.equal(countByOwner('616').length, 12, 'Kingdom of Poland should have 12 provinces');
   assert.equal(world1440.territories['616_GDN'].ownerId, '428', 'Marienburg/Danzig should belong to Teutonic Order');
-  assert.equal(countByOwner('440').length, 10, 'Grand Duchy of Lithuania should have 10 provinces');
+  assert.equal(countByOwner('440').length, 11, 'Grand Duchy of Lithuania should have 11 provinces');
   assert.equal(world1440.territories['804'].ownerId, '440', 'Kiev should belong to Lithuania');
+  assert.equal(world1440.territories['643_KRS'].ownerId, '440', 'Kursk should belong to Lithuania');
+
+  // Muscovy must not swallow the steppe or Siberia: the Horde and Sibir realms
+  // own contiguous land instead of a handful of islands inside Russia.
+  assert.equal(countByOwner('643').length, 13, 'Muscovy & Novgorod should hold 13 provinces');
+  assert.equal(countByOwner('902').length, 10, 'Great Horde & Kazan should hold 10 provinces');
+  assert.equal(countByOwner('903').length, 19, 'Sibir should hold 19 provinces');
+  for (const id of ['643_VOG', '643_ASF', '643_KZN', '643_KUF', '643_SRT', '643_VRN', '643_PNZ', '643_UFA', '643_CHL', '643_SVX']) {
+    assert.equal(world1440.territories[id].ownerId, '902', `${id} should belong to the Great Horde & Kazan`);
+  }
+  for (const id of ['643_OMS', '643_OVB', '643_KJA', '643_IKT', '643_TOM', '643_TYU', '643_YAK', '643_KHT', '643_SLH', '643_MNG']) {
+    assert.equal(world1440.territories[id].ownerId, '903', `${id} should belong to Sibir`);
+  }
+  // Every land realm must be reachable from its capital by land (no stranded islands).
+  const landmassCheck = (ownerId: string) => {
+    const owned = Object.values(world1440.territories).filter((t) => t.ownerId === ownerId);
+    const set = new Set(owned.map((t) => t.id));
+    const start = owned[0].id;
+    const seen = new Set([start]);
+    const stack = [start];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      for (const nb of world1440.territories[cur].neighbors) {
+        if (set.has(nb) && !seen.has(nb)) { seen.add(nb); stack.push(nb); }
+      }
+    }
+    return seen.size;
+  };
+  // (Nations that legitimately hold islands — England with Belfast, Norway with
+  // Iceland, Venice with Crete — are excluded: province neighbours do not span
+  // water, so a single landmass is the right expectation only for the
+  // continental realms the 1444 borders are built from.)
+  for (const ownerId of ['643', '902', '903', '440']) {
+    assert.equal(
+      landmassCheck(ownerId),
+      countByOwner(ownerId).length,
+      `${world1440.nations[ownerId].name} territory must be one contiguous landmass`
+    );
+  }
   assert.equal(countByOwner('642').length, 6, 'Wallachia should have 6 provinces');
   assert.equal(countByOwner('498').length, 4, 'Moldavia should have 4 provinces');
   assert.equal(world1440.territories['642_IAS'].ownerId, '498', 'Iasi should belong to Moldavia');

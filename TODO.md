@@ -2,7 +2,7 @@
 
 ## Tamamlanmış çıktılar
 
-- [x] Dünya haritası 448 → 916 eyalete genişletildi (880–920 hedef bandı; 21 tundra/çöl sancağı sonradan eklendi); eski 448 eyalet kimliği, başkent yuvaları ve kayıt uyumu korunuyor. Ayrıntılar: `GENISLETILMIS_DUNYA_HARITASI.md`.
+- [x] Dünya haritası 448 → 918 eyalete genişletildi (880–920 hedef bandı; 21 tundra/çöl + 2 Kuzey Ural sancağı sonradan eklendi); eski 448 eyalet kimliği, başkent yuvaları ve kayıt uyumu korunuyor. Ayrıntılar: `GENISLETILMIS_DUNYA_HARITASI.md`.
 - [x] 3 kademeli etiket LOD'u: uzakta devlet adları, orta zoom'da başkent + ana şehirler, ≥2.4x (mobil ≥2.8x) ilçe/sancak adları; seçili eyalet her zoom'da görünür.
 - [x] 1444 senaryosunda yeni ilçeler dönem adlarıyla (Saruhan, Ruha, Ayıntab, Pskov, Echigo, Flandre) ve tarihî sahiplerle gösteriliyor; 2026 modern adları koruyor.
 - [x] Nüfus/GSYİH/ordu payları ülke başına 1.00'a normalleştirildi; ilçeler bina kapasitesi ve manpower tavanını şişirmiyor.
@@ -54,6 +54,7 @@
 - [x] Kaynak/build yapılandırmasında kullanılmayan `@google/genai`, `dotenv`, `express`, `@types/express`, `motion` ve `autoprefixer` bağımlılıkları kaldırıldı; taramada referans kalmadı ve `bun.lock` eşitlendi.
 - [x] AoH3 referans ekran görüntülerindeki HUD dili uygulandı: pirinç kaynak hücreleri, bayrak kalkanı + ★ şeridi, tarih plakası ve −/+ zoom, seçim bayrak çipleri, bordo-altın ordu paneli, AoH3 eyalet kartı çerçevesi ve yeni **dünya mini haritası** (görüntü alanı dikdörtgeni + tıkla-odakla). Ayrıntı: `AOH3_HUD_UYGULAMASI.md`.
 - [x] Harita sınırları AoH3 diline çekildi: sınıflandırıcı her halkayı tek bağlı polyline olarak üretiyor (kopukluk yok), komşu iki il aynı paylaşılan kenarı iki taraftan da çiziyor, birleşim noktaları `round`; kıyı çizgisi mürekkep halesi + keskin kenar, kara sınırı üç geçişli gravür (hale + çekirdek + iç ışık), oyuncu sınırı altın vurgu. Keşfedilmiş kara opak, sadece sis yarı saydam; her dolgu kendi rengiyle 1 px dikiş kapatma yapıyor. Sınır yolları sahiplik imzasıyla önbellekleniyor, simülasyon tick'lerinde yeniden hesaplanmıyor. Ayrıntı/ölçüm: `src/map/borderClassifier.ts`.
+- [x] 1444 senaryosunda Büyük Orda ve Sibir toprakları Rusya'nın içinde ada gibi durmuyor: bozkır ve Sibirya provinces'leri açıkça 902/903'e devredildi, Kursk Litvanya'ya, Inverness İskoçya'ya, Batı ABD klanlara geçti; üç realm için bitişiklik testi eklendi. Ayrıntı: `GENISLETILMIS_DUNYA_HARITASI.md` §6.1.
 
 ## Kapsam dışı bırakılmış varsayımlar
 
