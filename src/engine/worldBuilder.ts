@@ -828,10 +828,36 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
       countryToProvinces[cf.id] = [cf.id];
       provinceFeatures.push(cf);
 
-      const centroid = geoCentroid(cf) as [number, number];
-      const validCentroid: [number, number] = Number.isFinite(centroid[0])
-        ? centroid
-        : [0, 0];
+      let validCentroid: [number, number] = geoCentroid(cf) as [number, number];
+      if (
+        !Number.isFinite(validCentroid[0]) ||
+        !Number.isFinite(validCentroid[1]) ||
+        !isPointInGeometry(cf.geometry, validCentroid[0], validCentroid[1])
+      ) {
+        if (cf.geometry.type === 'MultiPolygon' && cf.geometry.coordinates.length > 0) {
+          let bestArea = -1;
+          let bestC: [number, number] | null = null;
+          for (const polyCoords of cf.geometry.coordinates) {
+            if (!polyCoords[0]) continue;
+            const subFeat: GeoCountryFeature = {
+              type: 'Feature',
+              id: cf.id,
+              properties: cf.properties,
+              geometry: { type: 'Polygon', coordinates: polyCoords },
+            };
+            const area = geoArea(subFeat);
+            const c = geoCentroid(subFeat) as [number, number];
+            if (area > bestArea && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+              bestArea = area;
+              bestC = c;
+            }
+          }
+          if (bestC) validCentroid = bestC;
+        }
+      }
+      if (!Number.isFinite(validCentroid[0]) || !Number.isFinite(validCentroid[1])) {
+        validCentroid = [0, 0];
+      }
       const armorCount = Math.round(
         totalCountryGarrison * (isMajorPower ? 0.22 : 0.15)
       );

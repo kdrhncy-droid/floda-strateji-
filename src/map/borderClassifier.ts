@@ -73,12 +73,11 @@ function projectFeatureRings(
       for (const coord of outer) {
         const pt = projection([coord[0], coord[1]]);
         if (!pt || !Number.isFinite(pt[0]) || !Number.isFinite(pt[1])) continue;
-        // Drop only true sub-pixel duplicates. The old 0.35 threshold simplified
-        // adjacent rings differently, which made shared borders drift apart and
-        // produced broken/gapped frontier lines.
+        // Drop only true identical/sub-thousandth-pixel duplicates so adjacent
+        // subdivided rings always share identical border vertices.
         if (
           Number.isFinite(lastX) &&
-          Math.hypot(pt[0] - lastX, pt[1] - lastY) < 0.1
+          Math.hypot(pt[0] - lastX, pt[1] - lastY) < 0.005
         ) {
           continue;
         }
@@ -132,11 +131,11 @@ export function buildClassifiedBorderPaths(params: {
   const projectedMap = projectFeatureRings(features, projection);
   const projectedList = Array.from(projectedMap.values());
 
-  // Probes are evaluated in projected (pre-zoom) units. Keeping them tiny means
-  // a coastal segment is never mistaken for a land frontier just because a
-  // far-away neighbour happens to sit within a generous sampling radius.
-  const probeDistances = [0.32, 0.85];
-  const bboxPad = 1.5;
+  // Probes are evaluated in projected (pre-zoom) units. Keeping them ultra-tight
+  // (0.06–0.22 px) catches 100% of shared TopoJSON/Voronoi land borders while never
+  // jumping across narrow sea straits (Gibraltar, Øresund, Puget Sound, Aqaba).
+  const probeDistances = [0.06, 0.22];
+  const bboxPad = 0.6;
 
   // Pre-compute candidate neighbour lists once (bbox pre-filter, O(n^2) but only
   // during cache builds) so the per-segment loop stays lean.
@@ -233,27 +232,52 @@ export function buildClassifiedBorderPaths(params: {
         const ux = -dy / segLen;
         const uy = dx / segLen;
 
-        // Determine the outward normal with a tight inner probe (0.2 units keeps
-        // the test inside very narrow slivers as well).
-        const plusInside = pointInProjectedFeature(
-          mx + ux * 0.2,
-          my + uy * 0.2,
-          pf
-        );
-        const outUx = plusInside ? -ux : ux;
-        const outUy = plusInside ? -uy : uy;
+        // Probe both normals with ultra-tight inner offsets so narrow coastal slivers
+        // and sharp corners still resolve their true outward direction reliably.
+        const plusInside =
+          pointInProjectedFeature(mx + ux * 0.025, my + uy * 0.025, pf) ||
+          pointInProjectedFeature(mx + ux * 0.12, my + uy * 0.12, pf);
+        const minusInside =
+          pointInProjectedFeature(mx - ux * 0.025, my - uy * 0.025, pf) ||
+          pointInProjectedFeature(mx - ux * 0.12, my - uy * 0.12, pf);
 
         let otherOwnerId: string | null = null;
-        for (const dist of probeDistances) {
-          const px = mx + outUx * dist;
-          const py = my + outUy * dist;
-          for (const cand of candidates) {
-            if (pointInProjectedFeature(px, py, cand)) {
-              otherOwnerId = territories[cand.id]?.ownerId ?? null;
-              break;
+        if (plusInside !== minusInside) {
+          const outUx = plusInside ? -ux : ux;
+          const outUy = plusInside ? -uy : uy;
+          for (const dist of probeDistances) {
+            const px = mx + outUx * dist;
+            const py = my + outUy * dist;
+            for (const cand of candidates) {
+              if (pointInProjectedFeature(px, py, cand)) {
+                otherOwnerId = territories[cand.id]?.ownerId ?? null;
+                break;
+              }
             }
+            if (otherOwnerId !== null) break;
           }
-          if (otherOwnerId !== null) break;
+        } else {
+          // Ultra-thin sliver (<0.05 px wide): check both sides against candidate neighbors.
+          for (const dist of probeDistances) {
+            for (const sign of [1, -1]) {
+              const px = mx + ux * sign * dist;
+              const py = my + uy * sign * dist;
+              for (const cand of candidates) {
+                if (pointInProjectedFeature(px, py, cand)) {
+                  const foundOwner = territories[cand.id]?.ownerId ?? null;
+                  if (foundOwner && foundOwner !== ownerId) {
+                    otherOwnerId = foundOwner;
+                    break;
+                  }
+                  if (otherOwnerId === null && foundOwner) {
+                    otherOwnerId = foundOwner;
+                  }
+                }
+              }
+              if (otherOwnerId !== null && otherOwnerId !== ownerId) break;
+            }
+            if (otherOwnerId !== null && otherOwnerId !== ownerId) break;
+          }
         }
 
         // Fallback: polygons that barely overlap at the midpoint.

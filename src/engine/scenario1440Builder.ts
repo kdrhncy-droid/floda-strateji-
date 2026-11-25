@@ -210,8 +210,12 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '364_SYZ': 'Şiraz',
       '364_KER': 'Kirman',
       '364_MHD': 'Meşhed',
-      '795': 'Merv',
+      '795': 'Nisa',
+      '795_MRV': 'Merv',
       '795_KRW': 'Türkmenbaşı',
+      '860_BHK': 'Buhara',
+      '860_UGC': 'Hive',
+      '860_NKS': 'Harezmi',
       '004': 'Kabil',
       '004_HEA': 'Herat',
       '004_KDH': 'Kandahar',
@@ -229,8 +233,8 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     absorbedCountryIds: ['860', '417', '762'],
     provinceRenames: {
       '860': '★ Taşkent',
-      '860_UGC': 'Hive',
-      '156_URC': 'Kaşgar',
+      '156_KHG': 'Kaşgar',
+      '156_URC': 'Beşbalık',
     },
   },
   {
@@ -266,7 +270,12 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '643_ASF': 'Astrahan',
       '643_KZN': 'Kazan',
       '643_KUF': 'Samara',
-      '643_SVX': 'Perm',
+      '643_SVX': 'Tura',
+      '643_SRT': 'Saratov',
+      '643_PNZ': 'Penza',
+      '643_UFA': 'Başkurdistan',
+      '643_PRM': 'Perm',
+      '643_CHL': 'İset',
     },
   },
   {
@@ -282,7 +291,8 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     absorbedCountryIds: [],
     provinceRenames: {
       '643_OMS': '★ Sibir',
-      '643_OVB': 'Tümen',
+      '643_OVB': 'Baraba',
+      '643_TYU': 'Tümen',
       '643_KJA': 'Yenisey',
       '643_IKT': 'İrkutsk',
       '643_KHV': 'Amur',
@@ -601,6 +611,8 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '428': '★ Riga',
       '233': 'Reval',
       '616_GDN': 'Marienburg',
+      '643_KGD': 'Königsberg',
+      '440_KLP': 'Memel',
     },
   },
   {
@@ -683,11 +695,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#D4A024',
     ideology: 'MONARCHY',
     capitalName: '★ Toledo',
+    capitalTerritoryId: '724_TOL',
     treasury: 2750,
     manpower: 128000,
     absorbedCountryIds: ['724'],
     provinceRenames: {
-      '724': '★ Toledo',
+      '724': 'Madrid',
+      '724_TOL': '★ Toledo',
       '724_BCN': 'Barselona',
       '724_VLC': 'Valensiya',
       '724_SEV': 'Sevilla',
@@ -696,6 +710,9 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '724_ZAZ': 'Zaragoza',
       '724_VLL': 'Valladolid',
       '724_MJV': 'Murcia',
+      '380_PMO': 'Palermo',
+      '380_CTA': 'Katanya',
+      '380_CAG': 'Cagliari',
     },
   },
   {
@@ -779,7 +796,8 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '752': '★ Stokholm',
       '752_GOT': 'Göteborg',
       '752_KIR': 'Kiruna',
-      '246': 'Turku',
+      '246': 'Uusimaa',
+      '246_TKU': 'Turku',
       '246_OUL': 'Oulu',
     },
   },
@@ -822,13 +840,16 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#A67628',
     ideology: 'MONARCHY',
     capitalName: '★ Gondar',
+    capitalTerritoryId: '231_GDQ',
     treasury: 1750,
     manpower: 82000,
     absorbedCountryIds: ['231', '404', '800', '728'],
     provinceRenames: {
-      '231': '★ Gondar',
+      '231': 'Şeva',
+      '231_GDQ': '★ Gondar',
       '231_DIR': 'Harar',
-      '404': 'Mombasa',
+      '404': 'Kikuyu',
+      '404_MBA': 'Mombasa',
     },
   },
   {
@@ -852,13 +873,17 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#8C5A2B',
     ideology: 'MONARCHY',
     capitalName: '★ Kano',
+    capitalTerritoryId: '566_KAN',
     treasury: 2050,
     manpower: 92000,
     absorbedCountryIds: ['566', '562', '148', '120', '204', '768'],
     provinceRenames: {
-      '566': '★ Kano',
-      '566_LOS': 'Benin',
-      '562': 'Gao',
+      '566': 'Zazzau',
+      '566_KAN': '★ Kano',
+      '566_LOS': 'Eko',
+      '566_BNI': 'Benin',
+      '204': 'Dahomey',
+      '562': 'Agadez',
       '148': 'Bornu',
     },
   },
@@ -954,8 +979,8 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '356_JAI': 'Jaipur',
       '356_LKO': 'Luknov',
       '356_AMD': 'Ahmedabad',
-      '356_PAT': 'Patna',
-      '586': 'Lahor',
+      '586': 'Pothohar',
+      '586_LHE': 'Lahor',
       '586_KHI': 'Karaçi',
       '586_PEW': 'Peşaver',
     },
@@ -976,6 +1001,10 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '356_HYD': 'Haydarabad',
       '356_BOM': 'Mumbai',
       '356_MAA': 'Madras',
+      '356_PNQ': 'Pune',
+      '356_COK': 'Koçin',
+      '356_CJB': 'Kovai',
+      '356_VTZ': 'Vizagapatam',
     },
   },
   {
@@ -992,6 +1021,8 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '050': '★ Dakka',
       '050_CGP': 'Çittagong',
       '356_CCU': 'Kalküta',
+      '356_PAT': 'Patna',
+      '356_GAU': 'Kamarupa',
     },
   },
   {
@@ -1081,11 +1112,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#386890',
     ideology: 'MONARCHY',
     capitalName: '★ Ayutthaya',
+    capitalTerritoryId: '764_AYU',
     treasury: 1850,
     manpower: 76000,
     absorbedCountryIds: ['764'],
     provinceRenames: {
-      '764': '★ Ayutthaya',
+      '764': 'Thonburi',
+      '764_AYU': '★ Ayutthaya',
       '764_CNX': 'Lanna',
       '764_HDY': 'Ligor',
     },
@@ -1390,29 +1423,58 @@ const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
   '642_CND': '792', // Dobruca / Silistre held by Ottomans
   '642_CLJ': '348', // Transylvania (Kolozsvar) held by Hungary
   '642_TSR': '348', // Banat (Temesvar) held by Hungary
+  '642_ORA': '348', // Oradea / Bihar held by Hungary
+  '642_SBI': '348', // Sibiu / Hermannstadt held by Hungary
   '642_IAS': '498', // Moldavia (Iasi)
-  // Poland, Lithuania, Teutonic Order & Crimea
+  '642_BCM': '498', // Western Moldavia (Bacau)
+  // Poland, Lithuania, Teutonic Order, HRE & Crimea
   '804_LVV': '616', // Red Ruthenia / Lviv held by Poland
-  '616_GDN': '428', // Prussia / Danzig held by Teutonic Order in 1444
+  '804_UZH': '348', // Carpathian Ruthenia (Ungvar) held by Hungary
+  '804_CEJ': '440', // Chernihiv held by Lithuania
+  '616_GDN': '428', // Prussia / Marienburg held by Teutonic Order in 1444
+  '643_KGD': '428', // Königsberg / Samland held by Teutonic Order in 1444
+  '440_KLP': '428', // Memel / Klaipeda linking Courland and Prussia under Teutonic Order
+  '616_SZZ': '276', // Pomerania / Stettin within Holy Roman Empire
+  '616_BIA': '440', // Podlachia / Bialystok held by Lithuania
   '804': '440',     // Kiev held by Lithuania
   '643_SMO': '440', // Smolensk held by Lithuania
   '643_KRR': '804', // Crimea / Kuban held by Crimean Khanate
   '643_ROV': '804', // Azov steppe held by Crimean Khanate
-  // Muscovy vs Great Horde & Sibir
+  // Muscovy vs Great Horde & Kazan vs Sibir
   '643_VOG': '902', // Sarai
   '643_ASF': '902', // Astrakhan
+  '643_SRT': '902', // Saratov / Lower Volga
+  '643_PNZ': '902', // Penza / Burtas
   '643_KZN': '902', // Kazan
   '643_KUF': '902', // Samara
-  '643_SVX': '902', // Perm / Ural
+  '643_UFA': '902', // Bashkiria
+  '643_PRM': '902', // Great Perm (Kazan/Volga sphere)
+  '643_SVX': '902', // Tura / Middle Urals
+  '643_CHL': '902', // South Urals / Iset
   '643_OMS': '903', // Sibir Khanate
-  '643_OVB': '903',
-  '643_KJA': '903',
-  '643_IKT': '903',
-  '643_KHV': '903',
-  '643_VVO': '903',
-  // Britain
+  '643_TYU': '903', // Tyumen
+  '643_OVB': '903', // Baraba
+  '643_TOM': '903', // Tomsk
+  '643_KJA': '903', // Yenisey
+  '643_IKT': '903', // Irkutsk
+  '643_KHV': '903', // Amur
+  '643_VVO': '903', // Jurchen / Primorye
+  '643_YAK': '903', // Yakutia
+  '643_MGD': '903', // Magadan
+  '643_KAM': '903', // Kamchatka
+  '643_SLH': '903', // Yugra / Ob
+  '643_MNG': '903', // Mangazeya
+  '643_NRK': '903', // Pyasina
+  '643_KHT': '903', // Taymyr
+  '643_TUR': '903', // Evenkia
+  '643_VKH': '903', // Verkhoyansk
+  '643_CKD': '903', // Indigirka
+  '643_AND': '903', // Chukotka
+  // Britain & Ireland
   '826_EDI': '905', // Scotland
   '826_GLA': '905', // Scotland
+  '826_INV': '905', // Scottish Highlands
+  '826_BFS': '372', // Ulster / Irish clans
   // Anatolia, Persia, Central Asia & Levant
   '792_ERZ': '031', // Karakoyunlu / Akkoyunlu
   '792_VAN': '031',
@@ -1428,32 +1490,55 @@ const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
   '792_KAR': '031', // Kars under Karakoyunlu sphere
   '792_URF': '031', // Ruha (Şanlıurfa) under Akkoyunlu
   '792_ELZ': '031', // Harput under Akkoyunlu
-  // Flandre under Burgundy, Sardinia/Sicily under Aragon, Trieste under Habsburgs
+  // Flandre under Burgundy, Sardinia/Sicily under Aragon, Trieste under Habsburgs, Guiana in S. America
   '250_LIL': '528',
+  '250_CAY': '170', // Guiana belongs to South America in 1444
   '380_CAG': '724',
   '380_CTA': '724',
+  '380_PMO': '724', // Unified Sicily under Aragon
   '380_TRS': '040',
   '682_JED': '818', // Hejaz under Mamluk protectorate
   '682_MED': '818',
   '364_TBZ': '031', // Tabriz: Karakoyunlu capital in 1444
   '860_SKD': '364', // Samarkand: Timurid capital in 1444
-  '156_URC': '860', // Kashgar / Moghulistan
+  '860_BHK': '364', // Bukhara under Timurids
+  '860_UGC': '364', // Khwarazm / Khiva under Timurids
+  '860_NKS': '364', // Lower Oxus / Harezm under Timurids
+  '156_URC': '860', // Beshbalik / Moghulistan
+  '156_KHG': '860', // Kashgar / Chagatai
   // India
   '356_BLR': '904', // Vijayanagara
   '356_HYD': '904', // Bahmani / Golconda
   '356_BOM': '904', // Konkan / Bahmani coast
+  '356_PNQ': '904', // Deccan / Pune
   '356_MAA': '904', // Coromandel / Vijayanagara
+  '356_COK': '904', // Malabar / Cochin
+  '356_CJB': '904', // Kongu / Coimbatore
+  '356_VTZ': '904', // Kalinga coast / Vizagapatam
   '356_CCU': '050', // Bengal delta
-  // North America Plains split
+  '356_GAU': '050', // Assam / Kamarupa
+  '356_PAT': '050', // Bihar / Patna linking Nepal & Bengal
+  // North America Plains, West & Alaska split
   '840_CHI': '906',
   '840_MSP': '906',
+  '840_OMA': '906',
+  '840_KSC': '906',
   '840_HOU': '906',
   '840_DAL': '906',
   '840_DEN': '906',
   '840_PHX': '906',
+  '840_SLC': '906',
+  '840_LAS': '906',
+  '840_SDG': '906',
   '840_LAX': '906',
   '840_SFO': '906',
+  '840_PDX': '906',
+  '840_BOI': '906',
   '840_SEA': '906',
+  '840_HNL': '906',
+  '840_ANC': '124',
+  '840_OME': '124',
+  '840_BTT': '124',
 };
 const COUNTRY_OWNER_OVERRIDES_1440: Record<string, string> = {};
 

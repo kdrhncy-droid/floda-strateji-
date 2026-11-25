@@ -259,20 +259,33 @@ export function renderOceanAndPolygons(params: {
     Math.min(1.85, 1.0 + Math.log2(Math.max(1, transform.k)) * 0.3) *
     borderThicknessMultiplier;
 
+  // Precompute active war enemies once per render instead of O(W) scan per province
+  const warEnemySet = new Set<string>();
+  for (const w of wars) {
+    if (w.attackers.includes(playerNationId)) {
+      for (const id of w.defenders) warEnemySet.add(id);
+    } else if (w.defenders.includes(playerNationId)) {
+      for (const id of w.attackers) warEnemySet.add(id);
+    }
+  }
+
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  const seamLineW = 1 / transform.k;
+
   // 2. Render RBush-culled visible province polygons (Streamlined single-pass border for 60 FPS)
-  visibleFeatures.forEach((feat) => {
+  for (const feat of visibleFeatures) {
     const t = territories[feat.id];
     const path2d = cache.paths[feat.id];
-    if (!t || !path2d) return;
+    if (!t || !path2d) continue;
 
     const isSelected = selectedTerritoryId === t.id;
     const isPlayerOwned = t.ownerId === playerNationId;
     const hasIntel = !fogOfWarEnabled || visibleTerritoryIds.has(t.id);
     const isEnemyTerritory =
-      t.ownerId !== playerNationId &&
-      Boolean(isAtWar(wars, playerNationId, t.ownerId));
+      t.ownerId !== playerNationId && warEnemySet.has(t.ownerId);
 
-    ctx.fillStyle = resolveTerritoryFillColor({
+    const fillColor = resolveTerritoryFillColor({
       territory: t,
       mapMode,
       nations,
@@ -282,23 +295,18 @@ export function renderOceanAndPolygons(params: {
       playerNationId,
       selectedTerritoryId,
     });
-    const fillColor = ctx.fillStyle as string;
+    ctx.fillStyle = fillColor;
     // AoH3 land is opaque: letting the ocean tint through turned every country
     // muddy and made the hairline cracks between subdivided provinces obvious.
     ctx.globalAlpha = hasIntel ? 1 : 0.55;
     ctx.fill(path2d);
 
     // Seal the sub-pixel seams between adjacent provinces by dilating each fill
-    // by half a screen pixel in its own colour before any border is drawn. Only
-    // opaque (explored) fills get the seal: over a translucent fogged fill a
-    // second pass would brighten the outline instead of hiding the crack.
+    // by half a screen pixel in its own colour before any border is drawn.
     if (hasIntel) {
-      ctx.save();
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 1 / transform.k;
+      ctx.lineWidth = seamLineW;
       ctx.strokeStyle = fillColor;
       ctx.stroke(path2d);
-      ctx.restore();
     }
 
     // AoH3 Diagonal Occupation Stripes across occupied territories
@@ -331,8 +339,6 @@ export function renderOceanAndPolygons(params: {
     }
 
     ctx.globalAlpha = 1;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
 
     if (classifiedBorders) {
       // Only accent active enemy-war highlight polygons here;
@@ -368,7 +374,7 @@ export function renderOceanAndPolygons(params: {
         : 'rgba(15, 23, 42, 0.55)';
       ctx.stroke(path2d);
     }
-  });
+  }
 
   // 2A. Cartographic Multi-Layer Borders (RBush Viewport-Culled for instant 60 FPS even at 28x zoom)
   if (classifiedBorders) {
@@ -378,24 +384,24 @@ export function renderOceanAndPolygons(params: {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
-    // Layer 1: Hairline internal province/sancak boundaries (AoH3 keeps these
-    // barely visible so the country colour stays dominant).
-    // Shared edges are emitted by both neighbours, so each alpha is roughly
-    // halved to keep the composited line at the intended weight.
-    ctx.lineWidth = (0.5 * zoomBorderScale) / transform.k;
-    ctx.strokeStyle = 'rgba(7, 13, 24, 0.15)';
-    for (const feat of visibleFeatures) {
-      const b = classifiedBorders.get(feat.id);
-      if (b?.internal) ctx.stroke(b.internal);
+    // Layer 1: Hairline internal province/sancak boundaries (skipped below 1.35x where sub-pixel)
+    if (transform.k >= 1.35) {
+      ctx.lineWidth = (0.5 * zoomBorderScale) / transform.k;
+      ctx.strokeStyle = 'rgba(7, 13, 24, 0.15)';
+      for (const feat of visibleFeatures) {
+        const b = classifiedBorders.get(feat.id);
+        if (b?.internal) ctx.stroke(b.internal);
+      }
     }
 
-    // Layer 2: Shoreline — a soft ink halo in the water plus a crisp dark rim,
-    // the way Age of History 3 separates land from sea.
-    ctx.lineWidth = (3 * zoomBorderScale) / transform.k;
-    ctx.strokeStyle = 'rgba(6, 22, 42, 0.22)';
-    for (const feat of visibleFeatures) {
-      const b = classifiedBorders.get(feat.id);
-      if (b?.coastline) ctx.stroke(b.coastline);
+    // Layer 2: Shoreline — soft halo (when >=1.15x) + crisp dark rim
+    if (transform.k >= 1.15) {
+      ctx.lineWidth = (3 * zoomBorderScale) / transform.k;
+      ctx.strokeStyle = 'rgba(6, 22, 42, 0.22)';
+      for (const feat of visibleFeatures) {
+        const b = classifiedBorders.get(feat.id);
+        if (b?.coastline) ctx.stroke(b.coastline);
+      }
     }
 
     ctx.lineWidth = (1.15 * zoomBorderScale) / transform.k;
@@ -406,12 +412,13 @@ export function renderOceanAndPolygons(params: {
     }
 
     // Layer 3: Sovereign frontiers — soft dark halo, crisp core, faint inner light.
-    // This three-pass engraving is what gives AoH3 borders their stamped look.
-    ctx.lineWidth = (4.2 * zoomBorderScale) / transform.k;
-    ctx.strokeStyle = 'rgba(3, 7, 16, 0.13)';
-    for (const feat of visibleFeatures) {
-      const b = classifiedBorders.get(feat.id);
-      if (b?.international) ctx.stroke(b.international);
+    if (transform.k >= 1.15) {
+      ctx.lineWidth = (4.2 * zoomBorderScale) / transform.k;
+      ctx.strokeStyle = 'rgba(3, 7, 16, 0.13)';
+      for (const feat of visibleFeatures) {
+        const b = classifiedBorders.get(feat.id);
+        if (b?.international) ctx.stroke(b.international);
+      }
     }
 
     ctx.lineWidth = (2.15 * zoomBorderScale) / transform.k;
@@ -421,11 +428,13 @@ export function renderOceanAndPolygons(params: {
       if (b?.international) ctx.stroke(b.international);
     }
 
-    ctx.lineWidth = (0.6 * zoomBorderScale) / transform.k;
-    ctx.strokeStyle = 'rgba(250, 240, 216, 0.08)';
-    for (const feat of visibleFeatures) {
-      const b = classifiedBorders.get(feat.id);
-      if (b?.international) ctx.stroke(b.international);
+    if (transform.k >= 1.45) {
+      ctx.lineWidth = (0.6 * zoomBorderScale) / transform.k;
+      ctx.strokeStyle = 'rgba(250, 240, 216, 0.08)';
+      for (const feat of visibleFeatures) {
+        const b = classifiedBorders.get(feat.id);
+        if (b?.international) ctx.stroke(b.international);
+      }
     }
 
     // Layer 4: Royal golden frontier accent around the player's empire

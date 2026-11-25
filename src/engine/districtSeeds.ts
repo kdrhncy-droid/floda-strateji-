@@ -34,8 +34,8 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   // ── Türkiye / Osmanlı coğrafyası: 20 → 38 ────────────────────────────────
   '792': [
     d('KAY', 'Kayseri', 35.48, 38.72, 0.03, 'Kayseriye'),
-    d('MAN', 'Manisa', 27.43, 38.61, 0.028, 'Saruhan'),
-    d('BAL', 'Balıkesir', 27.89, 39.65, 0.026, 'Karesi'),
+    d('MAN', 'Manisa', 28.00, 38.80, 0.028, 'Saruhan'),
+    d('BAL', 'Balıkesir', 27.89, 39.48, 0.026, 'Karesi'),
     d('KOC', 'Kocaeli', 29.92, 40.77, 0.03, 'İznikmid'),
     d('HTY', 'Hatay', 36.16, 36.2, 0.024, 'Antakya'),
     d('URF', 'Şanlıurfa', 38.79, 37.17, 0.022, 'Ruha'),
@@ -83,6 +83,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('VKH', 'Verkhoyansk', 133.39, 67.55, 0.004, 'Yakut'),
     d('CKD', 'Chokurdakh', 147.9, 70.62, 0.004, 'Indigir'),
     d('AND', 'Anadyr', 177.51, 64.73, 0.004, 'Çukçi'),
+    d('KGD', 'Kaliningrad', 20.50, 54.71, 0.016, 'Königsberg'),
   ],
 
   // ── ABD: 16 → 34 ────────────────────────────────────────────────────────
@@ -105,8 +106,8 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('OMA', 'Omaha', -95.94, 41.26, 0.022, 'Omaha'),
     d('ANC', 'Anchorage', -149.9, 61.22, 0.018, 'Anchorage'),
     d('HNL', 'Honolulu', -157.86, 21.31, 0.022, 'Honolulu'),
-    d('OME', 'Nome', -165.41, 64.5, 0.008, 'Inupiat'),
-    d('BTT', 'Utqiagvik', -156.79, 71.29, 0.004, 'Inupiaq'),
+    d('OME', 'Nome', -164.8, 65.1, 0.008, 'Unalakleet'),
+    d('BTT', 'Utqiagvik', -156.79, 71.29, 0.004, 'Barrow'),
   ],
 
   // ── Çin: 15 → 34 ────────────────────────────────────────────────────────
@@ -128,7 +129,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('NGB', 'Ningbo', 121.55, 29.87, 0.028, 'Ningbo'),
     d('HET', 'Hohhot', 111.75, 40.84, 0.018, 'Kuku Khoto'),
     d('XNN', 'Xining', 101.78, 36.62, 0.016, 'Xining'),
-    d('KHG', 'Kashgar', 75.99, 39.47, 0.016, 'Kashgar'),
+    d('KHG', 'Kashgar', 75.99, 39.47, 0.016, 'Kaşgar'),
     d('BAV', 'Baotou', 109.84, 40.66, 0.018, 'Baotou'),
   ],
 
@@ -162,7 +163,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('TRI', 'Trier', 6.64, 49.75, 0.04, 'Trier'),
     d('KAS', 'Kassel', 9.5, 51.31, 0.042, 'Kassel'),
     d('REG', 'Regensburg', 12.1, 49.02, 0.042, 'Regensburg'),
-    d('FBG', 'Freiburg', 7.85, 47.99, 0.044, 'Freiburg'),
+    d('FBG', 'Freiburg', 7.92, 47.90, 0.044, 'Freiburg'),
   ],
 
   // ── Fransa: 10 → 19 ─────────────────────────────────────────────────────
@@ -176,6 +177,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('LIG', 'Limoges', 1.26, 45.83, 0.04, 'Limoges'),
     d('MPL', 'Montpellier', 3.88, 43.61, 0.046, 'Languedoc'),
     d('AVN', 'Avignon', 4.81, 43.95, 0.042, 'Avignon'),
+    d('CAY', 'Cayenne', -52.33, 4.93, 0.018, 'Guiana'),
   ],
 
   // ── İtalya: 9 → 18 ──────────────────────────────────────────────────────
@@ -194,12 +196,12 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   // ── İspanya: 9 → 18 ─────────────────────────────────────────────────────
   '724': [
     d('TOL', 'Toledo', -4.02, 39.86, 0.05, 'Toledo'),
-    d('SCQ', 'Santiago', -8.54, 42.88, 0.044, 'Santiago'),
+    d('SCQ', 'Santiago', -8.54, 42.88, 0.044, 'Compostela'),
     d('OVD', 'Oviedo', -5.84, 43.36, 0.042, 'Oviedo'),
     d('SLM', 'Salamanca', -5.66, 40.97, 0.044, 'Salamanca'),
     d('ODB', 'Córdoba', -4.78, 37.89, 0.05, 'Córdoba'),
     d('AGP', 'Málaga', -4.42, 36.72, 0.048, 'Málaga'),
-    d('PMI', 'Palma', -2.65, 39.57, 0.046, 'Mallorca'),
+    d('PNA', 'Pamplona', -1.64, 42.82, 0.046, 'Navarra'),
     d('ALC', 'Alicante', -0.48, 38.35, 0.046, 'Alacant'),
     d('BJZ', 'Badajoz', -6.97, 38.88, 0.04, 'Badajoz'),
   ],
@@ -231,8 +233,8 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   '826': [
     d('BHX', 'Birmingham', -1.9, 52.48, 0.06, 'Birmingham'),
     d('LPL', 'Liverpool', -2.99, 53.41, 0.058, 'Liverpool'),
-    d('LBA', 'Leeds', -1.55, 53.8, 0.054, 'Leeds'),
-    d('SHE', 'Sheffield', -1.47, 53.38, 0.052, 'Sheffield'),
+    d('LBA', 'Leeds', -1.10, 53.96, 0.054, 'Yorkshire'),
+    d('SHE', 'Sheffield', -1.25, 53.05, 0.052, 'Nottingham'),
     d('PLH', 'Plymouth', -4.14, 50.38, 0.05, 'Plymouth'),
     d('INV', 'Inverness', -4.22, 57.48, 0.044, 'Inverness'),
     d('BFS', 'Belfast', -5.93, 54.6, 0.05, 'Belfast'),
@@ -245,7 +247,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('KSH', 'Kirmanşah', 47.06, 34.31, 0.042, 'Kirmanşah'),
     d('HDN', 'Hemedan', 48.51, 34.8, 0.042, 'Hemedan'),
     d('YZD', 'Yezd', 54.37, 31.9, 0.04, 'Yezd'),
-    d('BND', 'Bandar Abbas', 56.27, 27.18, 0.046, 'Hürmüz'),
+    d('BND', 'Bandar Abbas', 56.27, 27.18, 0.046, 'Bender Abbas'),
     d('ZAH', 'Zahedan', 60.86, 29.5, 0.036, 'Zahedan'),
     d('ARD', 'Erdebil', 48.29, 38.25, 0.04, 'Erdebil'),
   ],
@@ -286,7 +288,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('OAX', 'Oaxaca', -96.73, 17.07, 0.042, 'Oaxaca'),
     d('TIJ', 'Tijuana', -117.04, 32.51, 0.05, 'Tijuana'),
     d('CUU', 'Chihuahua', -106.08, 28.63, 0.044, 'Chihuahua'),
-    d('BJX', 'León', -101.68, 21.12, 0.046, 'León'),
+    d('BJX', 'León', -101.68, 21.12, 0.046, 'Guanajuato'),
     d('MLM', 'Morelia', -101.19, 19.7, 0.042, 'Morelia'),
   ],
 
@@ -308,7 +310,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
 
   // ── Güney Kore: 3 → 12 ──────────────────────────────────────────────────
   '410': [
-    d('ICN', 'Incheon', 126.71, 37.46, 0.06, 'Incheon'),
+    d('YEO', 'Yeosu', 127.66, 34.76, 0.05, 'Yeosu'),
     d('TAE', 'Daegu', 128.6, 35.87, 0.056, 'Daegu'),
     d('CJJ', 'Daejeon', 127.38, 36.35, 0.054, 'Daejeon'),
     d('GYE', 'Gyeongju', 129.22, 35.86, 0.05, 'Gyeongju'),
@@ -316,7 +318,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('CUC', 'Chuncheon', 127.73, 37.88, 0.044, 'Chuncheon'),
     d('KAG', 'Gangneung', 128.88, 37.75, 0.044, 'Gangneung'),
     d('MWX', 'Mokpo', 126.39, 34.81, 0.042, 'Mokpo'),
-    d('SWU', 'Suwon', 127.03, 37.26, 0.05, 'Suwon'),
+    d('AND', 'Andong', 128.73, 36.57, 0.05, 'Andong'),
   ],
 
   // ── Avrupa: orta ölçekli ülkeler (+2 … +4) ─────────────────────────────
@@ -328,11 +330,11 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   '300': [
     d('LRS', 'Larisa', 22.42, 39.64, 0.15, 'Larisa'),
     d('PTR', 'Patras', 21.73, 38.25, 0.16, 'Patras'),
-    d('VOL', 'Volos', 22.94, 39.36, 0.14, 'Volos'),
+    d('VOL', 'Volos', 22.78, 39.20, 0.14, 'Volos'),
   ],
   '528': [
-    d('HAG', 'Lahey', 4.3, 52.07, 0.22, 'Den Haag'),
-    d('UTR', 'Utrecht', 5.12, 52.09, 0.22, 'Utrecht'),
+    d('GRQ', 'Groningen', 6.57, 53.22, 0.22, 'Groningen'),
+    d('EIN', 'Eindhoven', 5.47, 51.44, 0.22, 'Brabant'),
   ],
   '040': [
     d('SZG', 'Salzburg', 13.04, 47.81, 0.2, 'Salzburg'),
@@ -348,7 +350,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   '703': [
     d('ZIL', 'Žilina', 18.74, 49.22, 0.22, 'Žilina'),
-    d('POS', 'Prešov', 21.24, 48.99, 0.2, 'Prešov'),
+    d('BBY', 'Banská Bystrica', 19.15, 48.74, 0.2, 'Besztercebánya'),
   ],
   '752': [
     d('MMA', 'Malmö', 13.0, 55.6, 0.2, 'Malmö'),
@@ -363,7 +365,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('RVN', 'Rovaniemi', 25.73, 66.5, 0.16, 'Rovaniemi'),
   ],
   '208': [
-    d('ODE', 'Odense', 10.39, 55.4, 0.2, 'Odense'),
+    d('ODE', 'Odense', 9.45, 55.48, 0.2, 'Odense'),
     d('AAL', 'Aalborg', 9.92, 57.05, 0.18, 'Aalborg'),
   ],
   '372': [d('GWY', 'Galway', -9.05, 53.27, 0.24, 'Galway')],
@@ -413,7 +415,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   '051': [
     { suffixId: 'EVN', name: 'Erivan', lon: 44.51, lat: 40.18, gdpShare: 0.42, historicName: 'Erivan', isCapital: true },
     d('GYM', 'Gümrü', 43.85, 40.79, 0.3, 'Gümrü'),
-    d('VGH', 'Eçmiyazin', 44.29, 40.16, 0.28, 'Eçmiyazin'),
+    d('KPN', 'Kapan', 46.15, 39.25, 0.28, 'Sünik'),
   ],
   '031': [
     d('LNK', 'Lankaran', 48.85, 38.75, 0.18, 'Lankaran'),
@@ -437,7 +439,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   '400': [
     { suffixId: 'AMM', name: 'Amman', lon: 35.93, lat: 31.95, gdpShare: 0.42, historicName: 'Amman', isCapital: true },
-    d('ZRQ', 'Zerka', 36.09, 32.07, 0.3, 'Zerka'),
+    d('ZRQ', 'Zerka', 36.95, 32.20, 0.3, 'Zerka'),
     d('AQJ', 'Akabe', 35.0, 29.53, 0.28, 'Akabe'),
   ],
   '376': [
@@ -702,7 +704,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   '320': [
     { suffixId: 'GUA', name: 'Guatemala', lon: -90.51, lat: 14.63, gdpShare: 0.42, historicName: 'Guatemala', isCapital: true },
     d('XLA', 'Quetzaltenango', -91.52, 14.83, 0.3, 'Xelajú'),
-    d('ANT', 'Antigua', -90.73, 14.56, 0.28, 'Antigua'),
+    d('FRS', 'Flores', -89.89, 16.92, 0.28, 'Petén'),
   ],
   '340': [
     { suffixId: 'TGU', name: 'Tegucigalpa', lon: -87.19, lat: 14.07, gdpShare: 0.56, historicName: 'Tegucigalpa', isCapital: true },
@@ -718,7 +720,7 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   '188': [
     { suffixId: 'SJO', name: 'San José', lon: -84.09, lat: 9.93, gdpShare: 0.56, historicName: 'San José', isCapital: true },
-    d('ALA', 'Alajuela', -84.21, 10.02, 0.44, 'Alajuela'),
+    d('LIO', 'Limón', -83.03, 9.99, 0.44, 'Limón'),
   ],
   '591': [
     { suffixId: 'PTY', name: 'Panama', lon: -79.52, lat: 8.98, gdpShare: 0.58, historicName: 'Panama', isCapital: true },

@@ -27,8 +27,8 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'ADA', name: 'Adana', lon: 35.32, lat: 37.00, gdpShare: 0.04, historicName: 'Adana', resource: 'PAMUK' },
     { suffixId: 'GZP', name: 'Gaziantep', lon: 37.38, lat: 37.35, gdpShare: 0.04, historicName: 'Ayıntab', resource: 'PAMUK' },
     { suffixId: 'MLT', name: 'Malatya', lon: 38.55, lat: 38.65, gdpShare: 0.03, historicName: 'Malatya', resource: 'ALTIN' },
-    { suffixId: 'TRB', name: 'Trabzon', lon: 39.71, lat: 41.00, gdpShare: 0.04, historicName: 'Trabzon', resource: 'KERESTE' },
-    { suffixId: 'ERZ', name: 'Erzurum', lon: 41.60, lat: 40.10, gdpShare: 0.03, historicName: 'Erzurum', resource: 'SIGIR' },
+    { suffixId: 'TRB', name: 'Trabzon', lon: 40.35, lat: 40.95, gdpShare: 0.04, historicName: 'Trabzon', resource: 'KERESTE' },
+    { suffixId: 'ERZ', name: 'Erzurum', lon: 41.27, lat: 39.85, gdpShare: 0.03, historicName: 'Erzurum', resource: 'SIGIR' },
     { suffixId: 'DYB', name: 'Diyarbakır', lon: 40.23, lat: 37.91, gdpShare: 0.03, historicName: 'Amid', resource: 'PETROL' },
     { suffixId: 'VAN', name: 'Van', lon: 43.15, lat: 38.50, gdpShare: 0.02, historicName: 'Van', resource: 'SIGIR' },
   ],
@@ -143,7 +143,7 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'MRS', name: 'Marsilya', lon: 5.36, lat: 43.29, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
     { suffixId: 'TLS', name: 'Toulouse', lon: 1.44, lat: 43.60, gdpShare: 0.09, resource: 'TAHIL' },
     { suffixId: 'BDX', name: 'Bordeaux', lon: -0.57, lat: 44.83, gdpShare: 0.10, resource: 'TAHIL' },
-    { suffixId: 'NTE', name: 'Nantes', lon: -1.55, lat: 47.90, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'NTE', name: 'Nantes', lon: -1.55, lat: 47.22, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
     { suffixId: 'URO', name: 'Rouen', lon: 1.09, lat: 49.44, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
     { suffixId: 'DIJ', name: 'Dijon', lon: 5.04, lat: 47.32, gdpShare: 0.08, resource: 'TAHIL' },
     { suffixId: 'RNS', name: 'Reims', lon: 4.03, lat: 49.26, gdpShare: 0.08, resource: 'TAHIL' },
@@ -154,11 +154,11 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'LON', name: 'Londra', lon: -0.12, lat: 51.50, isCapital: true, gdpShare: 0.25, resource: 'FINANS_MERKEZI' },
     { suffixId: 'MAN', name: 'Manchester', lon: -2.24, lat: 53.48, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
     { suffixId: 'CWL', name: 'Cardiff', lon: -3.18, lat: 51.48, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
-    { suffixId: 'EDI', name: 'Edinburgh', lon: -3.18, lat: 56.10, gdpShare: 0.12, resource: 'PETROL' },
+    { suffixId: 'EDI', name: 'Edinburgh', lon: -3.18, lat: 55.95, gdpShare: 0.12, resource: 'PETROL' },
     { suffixId: 'BRS', name: 'Bristol', lon: -2.59, lat: 51.15, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
     { suffixId: 'NWI', name: 'Norwich', lon: 1.10, lat: 52.63, gdpShare: 0.10, resource: 'TAHIL' },
     { suffixId: 'NCL', name: 'Newcastle', lon: -1.61, lat: 54.97, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
-    { suffixId: 'GLA', name: 'Glasgow', lon: -4.50, lat: 57.30, gdpShare: 0.10, resource: 'KERESTE' },
+    { suffixId: 'GLA', name: 'Glasgow', lon: -4.25, lat: 55.86, gdpShare: 0.10, resource: 'KERESTE' },
   ],
   // İtalya (9 Şehir)
   '380': [
@@ -167,7 +167,7 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'MIL', name: 'Milano', lon: 9.19, lat: 45.46, gdpShare: 0.16, resource: 'YARI_ILETKEN' },
     { suffixId: 'VCE', name: 'Venedik', lon: 12.31, lat: 45.44, gdpShare: 0.12, resource: 'TICARET_BOGAZI' },
     { suffixId: 'NAP', name: 'Napoli', lon: 14.26, lat: 40.85, gdpShare: 0.11, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'PMO', name: 'Palermo', lon: 13.80, lat: 37.55, gdpShare: 0.08, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'PMO', name: 'Palermo', lon: 13.36, lat: 38.05, gdpShare: 0.08, resource: 'TICARET_BOGAZI' },
     { suffixId: 'GOA', name: 'Cenova', lon: 8.93, lat: 44.41, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
     { suffixId: 'TRN', name: 'Torino', lon: 7.50, lat: 45.10, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
     { suffixId: 'BRI', name: 'Bari', lon: 16.87, lat: 41.12, gdpShare: 0.07, resource: 'TAHIL' },
@@ -179,7 +179,7 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'VLC', name: 'Valensiya', lon: -0.38, lat: 39.47, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
     { suffixId: 'SEV', name: 'Sevilla', lon: -5.98, lat: 37.38, gdpShare: 0.11, resource: 'TAHIL' },
     { suffixId: 'GRX', name: 'Granada', lon: -3.60, lat: 37.18, gdpShare: 0.08, resource: 'TAHIL' },
-    { suffixId: 'BIO', name: 'Bilbao', lon: -5.80, lat: 43.00, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BIO', name: 'Bilbao', lon: -2.93, lat: 43.26, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
     { suffixId: 'ZAZ', name: 'Zaragoza', lon: -0.89, lat: 41.65, gdpShare: 0.10, resource: 'TAHIL' },
     { suffixId: 'VLL', name: 'Valladolid', lon: -4.72, lat: 41.90, gdpShare: 0.10, resource: 'TAHIL' },
     { suffixId: 'MJV', name: 'Murcia', lon: -1.40, lat: 37.99, gdpShare: 0.08, resource: 'PAMUK' },
@@ -301,7 +301,7 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   '124': [
     { suffixId: 'YOW', name: 'Ottawa', lon: -75.69, lat: 45.42, isCapital: true, gdpShare: 0.22, historicName: 'Odawa', resource: 'FINANS_MERKEZI' },
     { suffixId: 'YYZ', name: 'Toronto', lon: -79.38, lat: 43.65, gdpShare: 0.20, historicName: 'Taronto', resource: 'DEMIR_CELIK' },
-    { suffixId: 'YUL', name: 'Montreal', lon: -71.20, lat: 46.81, gdpShare: 0.16, historicName: 'Hochelaga', resource: 'KERESTE' },
+    { suffixId: 'YUL', name: 'Montreal', lon: -73.57, lat: 45.50, gdpShare: 0.16, historicName: 'Hochelaga', resource: 'KERESTE' },
     { suffixId: 'YWG', name: 'Winnipeg', lon: -97.13, lat: 49.89, gdpShare: 0.12, resource: 'TAHIL' },
     { suffixId: 'YYC', name: 'Calgary', lon: -114.07, lat: 51.04, gdpShare: 0.15, resource: 'PETROL' },
     { suffixId: 'YVR', name: 'Vancouver', lon: -123.12, lat: 49.28, gdpShare: 0.15, resource: 'TICARET_BOGAZI' },
@@ -316,7 +316,7 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   '156': [
     { suffixId: 'BJS', name: 'Pekin', lon: 116.40, lat: 39.90, isCapital: true, gdpShare: 0.11, resource: 'DEMIR_CELIK' },
     { suffixId: 'SHA', name: 'Şanghay', lon: 121.47, lat: 31.23, gdpShare: 0.12, historicName: 'Songjiang', resource: 'YARI_ILETKEN' },
-    { suffixId: 'CAN', name: 'Kanton', lon: 113.26, lat: 23.12, gdpShare: 0.10, historicName: 'Guangzhou', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'CAN', name: 'Kanton', lon: 113.45, lat: 23.22, gdpShare: 0.10, historicName: 'Guangzhou', resource: 'TICARET_BOGAZI' },
     { suffixId: 'FOC', name: 'Fuzhou', lon: 119.30, lat: 26.07, gdpShare: 0.06, resource: 'YARI_ILETKEN' },
     { suffixId: 'TAO', name: 'Çingdao', lon: 120.38, lat: 36.06, gdpShare: 0.06, historicName: 'Jiaozhou', resource: 'TICARET_BOGAZI' },
     { suffixId: 'WUH', name: 'Vuhan', lon: 114.30, lat: 30.59, gdpShare: 0.07, historicName: 'Wuchang', resource: 'DEMIR_CELIK' },
@@ -388,7 +388,7 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Güney Afrika (2 Şehir)
   '710': [
-    { suffixId: 'JNB', name: 'Pretoria', lon: 28.04, lat: -26.20, isCapital: true, gdpShare: 0.58, historicName: 'Tshwane', resource: 'NADIR_TOPRAK' },
+    { suffixId: 'JNB', name: 'Pretoria', lon: 28.50, lat: -25.10, isCapital: true, gdpShare: 0.58, historicName: 'Tshwane', resource: 'NADIR_TOPRAK' },
     { suffixId: 'CPT', name: 'Cape Town', lon: 18.42, lat: -33.92, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
   ],
   // Pakistan (3 Şehir)
@@ -426,7 +426,7 @@ const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   '392': [
     { suffixId: 'TYO', name: 'Tokyo', lon: 139.69, lat: 35.68, isCapital: true, gdpShare: 0.26, historicName: 'Edo', resource: 'YARI_ILETKEN' },
     { suffixId: 'OSA', name: 'Osaka', lon: 135.50, lat: 34.69, gdpShare: 0.20, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'SPK', name: 'Sapporo', lon: 141.35, lat: 42.00, gdpShare: 0.12, historicName: 'Ishikari', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SPK', name: 'Sapporo', lon: 141.35, lat: 42.85, gdpShare: 0.12, historicName: 'Ishikari', resource: 'TICARET_BOGAZI' },
     { suffixId: 'FUK', name: 'Fukuoka', lon: 130.60, lat: 33.20, gdpShare: 0.12, historicName: 'Hakata', resource: 'TICARET_BOGAZI' },
     { suffixId: 'HIJ', name: 'Hiroşima', lon: 132.45, lat: 34.45, gdpShare: 0.10, historicName: 'Aki', resource: 'DEMIR_CELIK' },
     { suffixId: 'NGO', name: 'Nagoya', lon: 137.10, lat: 35.60, gdpShare: 0.11, historicName: 'Nagoya', resource: 'DEMIR_CELIK' },
@@ -745,10 +745,11 @@ export function getHistoricProvinceNames(
   return map;
 }
 
-// Clamps ±180° antimeridian wrap vertices (such as Russia's Chukotka tip at -175° lon or Fiji)
-// into the ring's primary hemisphere so the ring is NEVER dropped and NEVER streaks across the globe!
-function clampAntimeridianRing(ring: Position[]): Position[] {
-  if (ring.length < 4) return ring;
+// Unwraps ±180° antimeridian wrap vertices (such as Russia's Chukotka tip at -175° lon or Fiji)
+// into continuous coordinates and clips cleanly at ±179.92° so rings never invert and never
+// collapse into vertical collinear accordions along the dateline.
+function clipAntimeridianRing(ring: Position[]): Position[][] {
+  if (ring.length < 4) return [];
 
   let hasJump = false;
   let eastCount = 0;
@@ -763,34 +764,28 @@ function clampAntimeridianRing(ring: Position[]): Position[] {
     }
   }
 
-  if (!hasJump) return ring;
+  if (!hasJump) return [ring];
 
   const isMostlyEast = eastCount >= westCount;
-  return ring.map((pt) => {
-    const lon = pt[0];
-    const lat = pt[1];
-    if (isMostlyEast && lon < -90) {
-      return [179.92, lat];
-    }
-    if (!isMostlyEast && lon > 90) {
-      return [-179.92, lat];
-    }
-    return [lon, lat];
-  });
+  if (isMostlyEast) {
+    const unwrapped = ring.map((pt) =>
+      pt[0] < -90 ? [pt[0] + 360, pt[1]] : [pt[0], pt[1]]
+    );
+    return clipRingWithHalfPlaneSplit(unwrapped, 1, 0, 179.92);
+  }
+  const unwrapped = ring.map((pt) =>
+    pt[0] > 90 ? [pt[0] - 360, pt[1]] : [pt[0], pt[1]]
+  );
+  return clipRingWithHalfPlaneSplit(unwrapped, -1, 0, 179.92);
 }
 
-// Ensures a closed GeoJSON ring has valid spherical winding order for d3-geo
-// so that d3-geo NEVER interprets the interior of a country/province as the exterior ocean,
-// while preserving 100% of countries (including Russia, USA, and Fiji)!
-function normalizeSphericalRing(rawRing: Position[]): Position[] | null {
+function normalizeSingleRing(rawRing: Position[]): Position[] | null {
   if (rawRing.length < 4) return null;
-
-  const clamped = clampAntimeridianRing(rawRing);
 
   // Deduplicate consecutive identical points
   const candidate: Position[] = [];
-  for (let i = 0; i < clamped.length; i++) {
-    const pt = clamped[i];
+  for (let i = 0; i < rawRing.length; i++) {
+    const pt = rawRing[i];
     const prev = candidate[candidate.length - 1];
     if (
       !prev ||
@@ -798,6 +793,36 @@ function normalizeSphericalRing(rawRing: Position[]): Position[] | null {
       Math.abs(pt[1] - prev[1]) > 1e-6
     ) {
       candidate.push([pt[0], pt[1]]);
+    }
+  }
+
+  // Prune raw world-atlas zero-width hairpin spikes (e.g. Sudan border 180° foldbacks)
+  let pruned = true;
+  while (pruned && candidate.length >= 4) {
+    pruned = false;
+    const len = candidate.length;
+    for (let i = 0; i < len; i++) {
+      const prev = candidate[(i - 1 + len) % len];
+      const curr = candidate[i];
+      const next = candidate[(i + 1) % len];
+      const v1x = curr[0] - prev[0];
+      const v1y = curr[1] - prev[1];
+      const v2x = next[0] - curr[0];
+      const v2y = next[1] - curr[1];
+      const l1 = Math.hypot(v1x, v1y);
+      const l2 = Math.hypot(v2x, v2y);
+      if (l1 < 1e-6 || l2 < 1e-6) continue;
+      const dot = (v1x * v2x + v1y * v2y) / (l1 * l2);
+      if (dot < -0.996) {
+        // Compute perpendicular distance of the shorter leg's endpoint onto the longer leg
+        const cross = Math.abs(v1x * v2y - v1y * v2x);
+        const perp = cross / Math.max(l1, l2);
+        if (perp < 0.04) {
+          candidate.splice(i, 1);
+          pruned = true;
+          break;
+        }
+      }
     }
   }
 
@@ -839,14 +864,46 @@ function normalizeSphericalRing(rawRing: Position[]): Position[] | null {
   return candidate;
 }
 
+function normalizeSphericalRing(rawRing: Position[]): Position[] | null {
+  const split = clipAntimeridianRing(rawRing);
+  let best: Position[] | null = null;
+  let bestArea = 0;
+  for (const r of split) {
+    const norm = normalizeSingleRing(r);
+    if (!norm) continue;
+    const area = geoArea({
+      type: 'Feature',
+      properties: {},
+      geometry: { type: 'Polygon', coordinates: [norm] },
+    });
+    if (area > bestArea) {
+      bestArea = area;
+      best = norm;
+    }
+  }
+  return best;
+}
+
+function normalizeSphericalRings(rawRing: Position[]): Position[][] {
+  const out: Position[][] = [];
+  for (const r of clipAntimeridianRing(rawRing)) {
+    const norm = normalizeSingleRing(r);
+    if (norm) out.push(norm);
+  }
+  return out;
+}
+
 // Sanitize any Polygon or MultiPolygon so no ring can ever invert to fill the ocean
 export function sanitizeGeoGeometry(geometry: Geometry): Geometry {
   if (geometry.type === 'Polygon') {
-    const outer = geometry.coordinates[0]
-      ? normalizeSphericalRing(geometry.coordinates[0])
-      : null;
-    if (outer) {
-      return { type: 'Polygon', coordinates: [outer] };
+    const outers = geometry.coordinates[0]
+      ? normalizeSphericalRings(geometry.coordinates[0])
+      : [];
+    if (outers.length === 1) {
+      return { type: 'Polygon', coordinates: [outers[0]] };
+    }
+    if (outers.length > 1) {
+      return { type: 'MultiPolygon', coordinates: outers.map((r) => [r]) };
     }
     return geometry;
   }
@@ -855,8 +912,7 @@ export function sanitizeGeoGeometry(geometry: Geometry): Geometry {
     const validPolygons: Position[][][] = [];
     geometry.coordinates.forEach((poly) => {
       if (!poly[0]) return;
-      const outer = normalizeSphericalRing(poly[0]);
-      if (outer) {
+      for (const outer of normalizeSphericalRings(poly[0])) {
         validPolygons.push([outer]);
       }
     });
@@ -871,47 +927,212 @@ export function sanitizeGeoGeometry(geometry: Geometry): Geometry {
   return geometry;
 }
 
-// Sutherland-Hodgman Half-Plane Clipping for a closed GeoJSON ring:
-// Keeps points where a * lon + b * lat <= c
-function clipRingWithHalfPlane(
+// Deduplicate consecutive coincident vertices on a ring
+function dedupeRingPoints(pts: Position[]): Position[] {
+  const clean: Position[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const prev = clean[clean.length - 1];
+    if (
+      !prev ||
+      Math.abs(p[0] - prev[0]) > 1e-9 ||
+      Math.abs(p[1] - prev[1]) > 1e-9
+    ) {
+      clean.push(p);
+    }
+  }
+  if (
+    clean.length > 1 &&
+    Math.abs(clean[0][0] - clean[clean.length - 1][0]) <= 1e-9 &&
+    Math.abs(clean[0][1] - clean[clean.length - 1][1]) <= 1e-9
+  ) {
+    clean.pop();
+  }
+  return clean;
+}
+
+// Exact Concave Half-Plane Splitting for a closed GeoJSON ring:
+// Keeps regions where a * lon + b * lat <= c, splitting into disjoint closed
+// rings whenever the plane cuts across a bay, gulf, or concave boundary
+// instead of leaving zero-width collinear bridge edges.
+function clipRingWithHalfPlaneSplit(
   ring: Position[],
   a: number,
   b: number,
   c: number
-): Position[] {
+): Position[][] {
   if (ring.length < 3) return [];
   const pts =
     ring[0][0] === ring[ring.length - 1][0] &&
     ring[0][1] === ring[ring.length - 1][1]
       ? ring.slice(0, -1)
       : ring;
-
-  const out: Position[] = [];
   const n = pts.length;
+  if (n < 3) return [];
+
+  // Symbolic tie-breaker when a vertex sits exactly on a*x + b*y = c so adjacent
+  // Voronoi cells stay watertight without zero-length crossings.
+  const tieVal = a > 0 || (a === 0 && b >= 0) ? -1e-11 : 1e-11;
+  const vals = new Float64Array(n);
+  const inV = new Uint8Array(n);
+  let insideCount = 0;
+
   for (let i = 0; i < n; i++) {
-    const P = pts[i];
-    const Q = pts[(i + 1) % n];
-    const valP = a * P[0] + b * P[1] - c;
-    const valQ = a * Q[0] + b * Q[1] - c;
-
-    const inP = valP <= 1e-9;
-    const inQ = valQ <= 1e-9;
-
-    if (inQ) {
-      if (!inP) {
-        const t = -valP / (valQ - valP);
-        out.push([P[0] + (Q[0] - P[0]) * t, P[1] + (Q[1] - P[1]) * t]);
-      }
-      out.push(Q);
-    } else if (inP) {
-      const t = -valP / (valQ - valP);
-      out.push([P[0] + (Q[0] - P[0]) * t, P[1] + (Q[1] - P[1]) * t]);
+    let v = a * pts[i][0] + b * pts[i][1] - c;
+    if (v === 0) v = tieVal;
+    vals[i] = v;
+    if (v < 0) {
+      inV[i] = 1;
+      insideCount++;
     }
   }
 
-  if (out.length < 3) return [];
-  out.push([out[0][0], out[0][1]]);
-  return out;
+  if (insideCount === n) return [ring];
+  if (insideCount === 0) return [];
+
+  // Start on an ENTRY edge (outside -> inside) so every inside arc is closed cleanly
+  let startEdge = -1;
+  for (let i = 0; i < n; i++) {
+    if (!inV[i] && inV[(i + 1) % n]) {
+      startEdge = i;
+      break;
+    }
+  }
+  if (startEdge === -1) return [];
+
+  interface InsideArc {
+    entryPt: Position;
+    pts: Position[];
+    exitPt: Position;
+  }
+  const arcs: InsideArc[] = [];
+  let current: InsideArc | null = null;
+
+  for (let k = 0; k < n; k++) {
+    const i = (startEdge + k) % n;
+    const j = (i + 1) % n;
+    const P = pts[i];
+    const Q = pts[j];
+    const pIn = inV[i] === 1;
+    const qIn = inV[j] === 1;
+
+    if (!pIn && qIn) {
+      const denom = vals[j] - vals[i];
+      const t =
+        Math.abs(denom) > 1e-18
+          ? Math.max(0, Math.min(1, -vals[i] / denom))
+          : 0.5;
+      const entryPt: Position = [
+        P[0] + (Q[0] - P[0]) * t,
+        P[1] + (Q[1] - P[1]) * t,
+      ];
+      current = { entryPt, pts: [Q], exitPt: entryPt };
+    } else if (pIn && qIn) {
+      current!.pts.push(Q);
+    } else if (pIn && !qIn) {
+      const denom = vals[j] - vals[i];
+      const t =
+        Math.abs(denom) > 1e-18
+          ? Math.max(0, Math.min(1, -vals[i] / denom))
+          : 0.5;
+      const exitPt: Position = [
+        P[0] + (Q[0] - P[0]) * t,
+        P[1] + (Q[1] - P[1]) * t,
+      ];
+      current!.exitPt = exitPt;
+      arcs.push(current!);
+      current = null;
+    }
+  }
+
+  const m = arcs.length;
+  if (m === 0) return [];
+
+  if (m === 1) {
+    const clean = dedupeRingPoints([
+      arcs[0].entryPt,
+      ...arcs[0].pts,
+      arcs[0].exitPt,
+    ]);
+    if (clean.length < 3) return [];
+    clean.push([clean[0][0], clean[0][1]]);
+    return [clean];
+  }
+
+  interface CrossingNode {
+    kind: 'entry' | 'exit';
+    arcIdx: number;
+    s: number;
+  }
+  const nodes: CrossingNode[] = [];
+  for (let idx = 0; idx < m; idx++) {
+    const ep = arcs[idx].entryPt;
+    const xp = arcs[idx].exitPt;
+    nodes.push({ kind: 'entry', arcIdx: idx, s: -b * ep[0] + a * ep[1] });
+    nodes.push({ kind: 'exit', arcIdx: idx, s: -b * xp[0] + a * xp[1] });
+  }
+  nodes.sort((u, v) => u.s - v.s);
+
+  const nextArc = new Int32Array(m).fill(-1);
+  let pairsClean = true;
+  for (let k = 0; k < m; k++) {
+    const u = nodes[2 * k];
+    const v = nodes[2 * k + 1];
+    if (u.kind === 'exit' && v.kind === 'entry') {
+      nextArc[u.arcIdx] = v.arcIdx;
+    } else if (u.kind === 'entry' && v.kind === 'exit') {
+      nextArc[v.arcIdx] = u.arcIdx;
+    } else {
+      pairsClean = false;
+      break;
+    }
+  }
+
+  // Fallback for rare self-intersecting raw world-atlas rings
+  if (!pairsClean) {
+    nextArc.fill(-1);
+    const usedEntry = new Uint8Array(m);
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].kind !== 'exit') continue;
+      let bestEntryIdx = -1;
+      let bestDist = Infinity;
+      for (let j = 0; j < nodes.length; j++) {
+        if (nodes[j].kind !== 'entry' || usedEntry[nodes[j].arcIdx]) continue;
+        const d = Math.abs(nodes[j].s - nodes[i].s);
+        if (d < bestDist) {
+          bestDist = d;
+          bestEntryIdx = nodes[j].arcIdx;
+        }
+      }
+      if (bestEntryIdx !== -1) {
+        nextArc[nodes[i].arcIdx] = bestEntryIdx;
+        usedEntry[bestEntryIdx] = 1;
+      }
+    }
+  }
+
+  const visited = new Uint8Array(m);
+  const resultRings: Position[][] = [];
+
+  for (let start = 0; start < m; start++) {
+    if (visited[start]) continue;
+    const combined: Position[] = [];
+    let cur = start;
+    let guard = 0;
+    while (cur !== -1 && !visited[cur] && guard < m + 1) {
+      visited[cur] = 1;
+      combined.push(arcs[cur].entryPt, ...arcs[cur].pts, arcs[cur].exitPt);
+      cur = nextArc[cur];
+      guard++;
+    }
+    const clean = dedupeRingPoints(combined);
+    if (clean.length >= 3) {
+      clean.push([clean[0][0], clean[0][1]]);
+      resultRings.push(clean);
+    }
+  }
+
+  return resultRings;
 }
 
 function extractOuterRings(geometry: Geometry): Position[][] {
@@ -950,6 +1171,8 @@ interface NearestRingPoint {
   lat: number;
   dist: number;
   ring: Position[];
+  nx: number;
+  ny: number;
 }
 
 function nearestPointOnRings(
@@ -976,7 +1199,8 @@ function nearestPointOnRings(
       const py = ay + dy * t;
       const dist = Math.hypot(px - lon, py - lat);
       if (!best || dist < best.dist) {
-        best = { lon: px, lat: py, dist, ring };
+        const edgeLen = Math.sqrt(lenSq) || 1;
+        best = { lon: px, lat: py, dist, ring, nx: -dy / edgeLen, ny: dx / edgeLen };
       }
     }
   }
@@ -1004,17 +1228,37 @@ export function snapSeedsIntoGeometry(
     if (!inside) {
       const nearest = nearestPointOnRings(lon, lat, rings);
       if (nearest) {
-        // Nudge 0.12° towards the ring's interior; direction is approximated
-        // with the ring centroid, which is always on the landward side here.
         const centerLon =
           nearest.ring.reduce((sum, p) => sum + p[0], 0) / nearest.ring.length;
         const centerLat =
           nearest.ring.reduce((sum, p) => sum + p[1], 0) / nearest.ring.length;
-        const dLon = centerLon - nearest.lon;
-        const dLat = centerLat - nearest.lat;
-        const len = Math.hypot(dLon, dLat) || 1;
-        lon = nearest.lon + (dLon / len) * 0.12;
-        lat = nearest.lat + (dLat / len) * 0.12;
+        const cDx = centerLon - nearest.lon;
+        const cDy = centerLat - nearest.lat;
+        const cLen = Math.hypot(cDx, cDy) || 1;
+
+        const dirs: [number, number][] = [
+          [nearest.nx, nearest.ny],
+          [-nearest.nx, -nearest.ny],
+          [cDx / cLen, cDy / cLen],
+        ];
+        let placed = false;
+        for (const step of [0.12, 0.04, 0.25]) {
+          for (const [ux, uy] of dirs) {
+            const candLon = nearest.lon + ux * step;
+            const candLat = nearest.lat + uy * step;
+            if (pointInRing(candLon, candLat, nearest.ring)) {
+              lon = candLon;
+              lat = candLat;
+              placed = true;
+              break;
+            }
+          }
+          if (placed) break;
+        }
+        if (!placed) {
+          lon = nearest.lon + (cDx / cLen) * 0.12;
+          lat = nearest.lat + (cDy / cLen) * 0.12;
+        }
       }
     }
 
@@ -1038,8 +1282,8 @@ function clipRingWithBox(
   lon: number,
   lat: number,
   radius: number
-): Position[] {
-  let current = ring;
+): Position[][] {
+  let current = [ring];
   const planes: [number, number, number][] = [
     [-1, 0, -(lon - radius)], // x >= lon - radius
     [1, 0, lon + radius], // x <= lon + radius
@@ -1047,8 +1291,12 @@ function clipRingWithBox(
     [0, 1, lat + radius], // y <= lat + radius
   ];
   for (const [a, b, c] of planes) {
-    current = clipRingWithHalfPlane(current, a, b, c);
-    if (current.length < 4) return [];
+    const next: Position[][] = [];
+    for (const r of current) {
+      next.push(...clipRingWithHalfPlaneSplit(r, a, b, c));
+    }
+    current = next;
+    if (current.length === 0) return [];
   }
   return current;
 }
@@ -1061,9 +1309,11 @@ function buildFallbackCell(
   for (const radius of [0.75, 1.5, 3]) {
     const rings: Position[][] = [];
     outerRings.forEach((ring) => {
-      const clipped = clipRingWithBox(ring, seed.lon, seed.lat, radius);
-      const normalized = clipped.length >= 4 ? normalizeSphericalRing(clipped) : null;
-      if (normalized) rings.push(normalized);
+      const clippedList = clipRingWithBox(ring, seed.lon, seed.lat, radius);
+      for (const clipped of clippedList) {
+        const normalized = clipped.length >= 4 ? normalizeSphericalRing(clipped) : null;
+        if (normalized) rings.push(normalized);
+      }
     });
     if (rings.length === 1) {
       return { type: 'Polygon', coordinates: [rings[0]] };
@@ -1130,9 +1380,11 @@ export function subdivideCountryGeometry(
 
       const nextRings: Position[][] = [];
       currentRings.forEach((ring) => {
-        const clipped = clipRingWithHalfPlane(ring, a, b, c);
-        if (clipped.length >= 4) {
-          nextRings.push(clipped);
+        const clippedList = clipRingWithHalfPlaneSplit(ring, a, b, c);
+        for (const clipped of clippedList) {
+          if (clipped.length >= 4) {
+            nextRings.push(clipped);
+          }
         }
       });
       currentRings = nextRings;

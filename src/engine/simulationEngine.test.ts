@@ -7640,23 +7640,30 @@ test('1444 scenario distributes historical city counts, borders, and capitals ac
   assert.equal(world1440.territories['300_CRT'].ownerId, '380', 'Crete must belong to Venice');
 
   assert.equal(countByOwner('818').length, 31, 'Mamluk Sultanate should have 31 provinces');
-  assert.equal(countByOwner('156').length, 36, 'Ming Dynasty should have 36 provinces');
-  assert.equal(countByOwner('276').length, 20, 'Holy Roman Empire should have 20 provinces');
-  assert.equal(countByOwner('250').length, 18, 'Kingdom of France should have 18 provinces');
-  assert.equal(countByOwner('724').length, 20, 'Castile & Aragon should have 20 provinces');
-  assert.equal(countByOwner('348').length, 12, 'Kingdom of Hungary should have 12 provinces');
+  assert.equal(countByOwner('156').length, 35, 'Ming Dynasty should have 35 provinces (Tarim belongs to Chagatai)');
+  assert.equal(countByOwner('276').length, 21, 'Holy Roman Empire should have 21 provinces (including Pomerania/Stettin)');
+  assert.equal(countByOwner('250').length, 18, 'Kingdom of France should have 18 metropolitan provinces');
+  assert.equal(world1440.territories['250_CAY'].ownerId, '170', 'Guiana should belong to South America in 1444');
+  assert.equal(countByOwner('724').length, 21, 'Castile & Aragon should have 21 provinces (including unified Sicily & Sardinia)');
+  assert.equal(countByOwner('348').length, 15, 'Kingdom of Hungary should have 15 provinces (including Transylvania & Ungvar)');
   assert.equal(world1440.territories['642_CLJ'].ownerId, '348', 'Transylvania should belong to Hungary');
   assert.equal(countByOwner('392').length, 14, 'Ashikaga Japan should have 14 provinces');
-  assert.equal(countByOwner('826').length, 13, 'Kingdom of England should have 13 provinces');
-  assert.equal(countByOwner('905').length, 2, 'Kingdom of Scotland should have 2 cities');
+  assert.equal(countByOwner('826').length, 11, 'Kingdom of England should have 11 provinces');
+  assert.equal(countByOwner('905').length, 3, 'Kingdom of Scotland should have 3 cities');
   assert.equal(world1440.territories['826_EDI'].ownerId, '905', 'Edinburgh should belong to Scotland');
-  assert.equal(countByOwner('616').length, 12, 'Kingdom of Poland should have 12 provinces');
+  assert.equal(world1440.territories['826_INV'].ownerId, '905', 'Inverness should belong to Scotland');
+  assert.equal(countByOwner('616').length, 10, 'Kingdom of Poland should have 10 provinces');
   assert.equal(world1440.territories['616_GDN'].ownerId, '428', 'Marienburg/Danzig should belong to Teutonic Order');
-  assert.equal(countByOwner('440').length, 10, 'Grand Duchy of Lithuania should have 10 provinces');
+  assert.equal(world1440.territories['643_KGD'].ownerId, '428', 'Konigsberg should belong to Teutonic Order');
+  assert.equal(world1440.territories['440_KLP'].ownerId, '428', 'Memel should belong to Teutonic Order');
+  assert.equal(countByOwner('440').length, 11, 'Grand Duchy of Lithuania should have 11 provinces');
   assert.equal(world1440.territories['804'].ownerId, '440', 'Kiev should belong to Lithuania');
-  assert.equal(countByOwner('642').length, 6, 'Wallachia should have 6 provinces');
-  assert.equal(countByOwner('498').length, 4, 'Moldavia should have 4 provinces');
+  assert.equal(countByOwner('642').length, 3, 'Wallachia should have 3 provinces');
+  assert.equal(countByOwner('498').length, 5, 'Moldavia should have 5 provinces');
   assert.equal(world1440.territories['642_IAS'].ownerId, '498', 'Iasi should belong to Moldavia');
+  assert.equal(countByOwner('902').length, 10, 'Great Horde & Kazan should have 10 contiguous Volga-Ural provinces');
+  assert.equal(countByOwner('903').length, 19, 'Sibir & Manchuria should have 19 contiguous Siberian provinces');
+  assert.equal(countByOwner('643').length, 12, 'Muscovy should have 12 western Rus provinces');
   assert.equal(world1440.nations['031'].capitalTerritoryId, '364_TBZ', 'Karakoyunlu capital should be Tabriz');
   assert.equal(world1440.nations['364'].capitalTerritoryId, '860_SKD', 'Timurid capital should be Samarkand');
 });
@@ -7955,15 +7962,26 @@ test('three-stage label LOD keeps distant maps clean and reveals districts only 
   assert.ok(desktop.capitalNameMinZoom < desktop.provinceNameMinZoom);
   assert.ok(desktop.provinceNameMinZoom < desktop.districtNameMinZoom);
   assert.ok(
-    desktop.districtNameMinZoom >= 2.4,
-    'Districts should only appear at >= 2.4x on desktop'
+    desktop.capitalNameMinZoom >= 2.0,
+    'Capitals and cities must disappear when zooming out below 2.0x on desktop'
   );
   assert.ok(
-    mobile.districtNameMinZoom >= 2.8,
-    'Districts should only appear at >= 2.8x on mobile'
+    mobile.capitalNameMinZoom >= 2.2,
+    'Capitals and cities must disappear when zooming out below 2.2x on mobile'
+  );
+  assert.ok(
+    desktop.districtNameMinZoom >= 3.0,
+    'Districts should only appear at >= 3.0x on desktop'
+  );
+  assert.ok(
+    mobile.districtNameMinZoom >= 3.3,
+    'Districts should only appear at >= 3.3x on mobile'
   );
 
+  // Selected province stays visible even when zoomed out
   assert.equal(shouldRenderProvinceLabel('district', 0.5, desktop, true), true);
+  assert.equal(shouldRenderProvinceLabel('city', 1.8, desktop, false), false);
+  assert.equal(shouldRenderProvinceLabel('capital', 1.8, desktop, false), false);
   assert.equal(
     shouldRenderProvinceLabel('district', desktop.districtNameMinZoom - 0.01, desktop, false),
     false
@@ -7972,9 +7990,14 @@ test('three-stage label LOD keeps distant maps clean and reveals districts only 
     shouldRenderProvinceLabel('district', desktop.districtNameMinZoom, desktop, false),
     true
   );
-  assert.equal(shouldRenderProvinceLabel('city', 2.5, desktop, false), true);
-  assert.equal(shouldRenderProvinceLabel('capital', 1.45, desktop, false), true);
-  assert.equal(shouldRenderProvinceLabel('capital', 1.3, desktop, false), false);
+  assert.equal(
+    shouldRenderProvinceLabel('city', desktop.provinceNameMinZoom, desktop, false),
+    true
+  );
+  assert.equal(
+    shouldRenderProvinceLabel('capital', desktop.capitalNameMinZoom, desktop, false),
+    true
+  );
 
   // Density setting still shifts the thresholds (COMPACT later, DETAILED earlier).
   const compact = getMapLabelThresholds('COMPACT', false);
@@ -8080,3 +8103,204 @@ test('canvas labels render without errors at every LOD stage with ~900 provinces
     );
   }
 });
+
+test('all 1444 mainland realms form contiguous regions with unique city names and spaced Voronoi seeds', () => {
+  const world2026 = initializeWorld2026('STANDARD_2026');
+  const world1440 = initializeWorld2026('EMPIRES_1440');
+
+  // 1. No duplicate city names within the same realm in either scenario
+  for (const [label, w] of [
+    ['STANDARD_2026', world2026],
+    ['EMPIRES_1440', world1440],
+  ] as const) {
+    const seenByOwner = new Map<string, Set<string>>();
+    for (const terr of Object.values(w.territories)) {
+      const normalized = terr.name.replace(/^★\s*/, '');
+      let ownerSet = seenByOwner.get(terr.ownerId);
+      if (!ownerSet) {
+        ownerSet = new Set<string>();
+        seenByOwner.set(terr.ownerId, ownerSet);
+      }
+      assert.ok(
+        !ownerSet.has(normalized),
+        `Duplicate province name "${normalized}" (${terr.id}) in ${label} realm ${terr.ownerId}`
+      );
+      ownerSet.add(normalized);
+    }
+  }
+
+  // 2. Key mainland 1444 realms must each form a single connected landmass component
+  const contiguousRealms1440 = [
+    '902', '903', '643', '804', '642', '348', '498', '905', '826', '372',
+    '428', '440', '616', '276', '250', '170', '268', '904', '356', '050',
+    '860', '364', '840', '906', '124',
+  ];
+  for (const ownerId of contiguousRealms1440) {
+    const ownedIds = Object.values(world1440.territories)
+      .filter((t) => t.ownerId === ownerId)
+      .map((t) => t.id);
+    const ownedSet = new Set(ownedIds);
+    assert.ok(ownedIds.length > 0, `Realm ${ownerId} must own >= 1 territory`);
+
+    const visited = new Set<string>([ownedIds[0]]);
+    const queue = [ownedIds[0]];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      for (const n of world1440.territories[cur].neighbors) {
+        if (ownedSet.has(n) && !visited.has(n)) {
+          visited.add(n);
+          queue.push(n);
+        }
+      }
+    }
+    const unreached = ownedIds.filter((id) => !visited.has(id));
+    assert.equal(
+      unreached.length,
+      0,
+      `1444 realm ${ownerId} (${world1440.nations[ownerId]?.name}) has disconnected exclaves: ${unreached.join(', ')}`
+    );
+  }
+
+  // 3. No near-duplicate Voronoi seeds within the same base country (< 0.40 deg)
+  const seedsByBase = new Map<string, { id: string; name: string; centroid: [number, number] }[]>();
+  for (const terr of Object.values(world2026.territories)) {
+    const base = terr.id.split('_')[0];
+    let arr = seedsByBase.get(base);
+    if (!arr) {
+      arr = [];
+      seedsByBase.set(base, arr);
+    }
+    arr.push(terr);
+  }
+  for (const [, list] of seedsByBase) {
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const dist = Math.hypot(
+          list[i].centroid[0] - list[j].centroid[0],
+          list[i].centroid[1] - list[j].centroid[1]
+        );
+        assert.ok(
+          dist >= 0.4,
+          `Overlapping seeds in ${list[i].id} (${list[i].name}) vs ${list[j].id} (${list[j].name}): ${dist.toFixed(3)} deg`
+        );
+      }
+    }
+  }
+});
+
+test('polygon subdivision eliminates collinear sea bridges, keeps Chalkidiki inside Selanik, and avoids cross-bay city slivers', () => {
+  const world2026 = initializeWorld2026('STANDARD_2026');
+  const byId = new Map(world2026.features.map((f) => [f.id, f]));
+
+  const ptSegDist = (
+    px: number,
+    py: number,
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number
+  ) => {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < 1e-18) return { d: Math.hypot(px - ax, py - ay), t: 0 };
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+    return { d: Math.hypot(px - (ax + t * dx), py - (ay + t * dy)), t };
+  };
+
+  let totalSpikes = 0;
+  const badSubFeatures: string[] = [];
+  for (const feat of world2026.features) {
+    const polys =
+      feat.geometry.type === 'Polygon'
+        ? [feat.geometry.coordinates]
+        : feat.geometry.type === 'MultiPolygon'
+        ? feat.geometry.coordinates
+        : [];
+    for (const poly of polys) {
+      const ring = poly[0];
+      if (!ring || ring.length < 4) continue;
+      const pts = ring.slice(0, -1);
+      const n = pts.length;
+      for (let i = 0; i < n; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % n];
+        const lenA = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (lenA < 1e-4) continue;
+        for (let j = i + 1; j < n; j++) {
+          const c = pts[j];
+          const d = pts[(j + 1) % n];
+          const lenB = Math.hypot(d[0] - c[0], d[1] - c[1]);
+          if (lenB < 1e-4) continue;
+          const cross =
+            ((b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0])) /
+            (lenA * lenB);
+          const dot =
+            ((b[0] - a[0]) * (d[0] - c[0]) + (b[1] - a[1]) * (d[1] - c[1])) /
+            (lenA * lenB);
+          if (Math.abs(cross) < 1e-4 && dot < -0.999) {
+            const distC = ptSegDist(c[0], c[1], a[0], a[1], b[0], b[1]);
+            const distD = ptSegDist(d[0], d[1], a[0], a[1], b[0], b[1]);
+            const distA = ptSegDist(a[0], a[1], c[0], c[1], d[0], d[1]);
+            const distB = ptSegDist(b[0], b[1], c[0], c[1], d[0], d[1]);
+            if (
+              Math.min(distC.d, distD.d) < 1e-4 &&
+              ((distC.d < 1e-4 && distC.t > 0.01 && distC.t < 0.99) ||
+                (distD.d < 1e-4 && distD.t > 0.01 && distD.t < 0.99) ||
+                (distA.d < 1e-4 && distA.t > 0.01 && distA.t < 0.99) ||
+                (distB.d < 1e-4 && distB.t > 0.01 && distB.t < 0.99) ||
+                (distC.d < 1e-4 && distD.d < 1e-4))
+            ) {
+              totalSpikes++;
+              if (feat.id !== '729_NYL') {
+                badSubFeatures.push(feat.id);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert.deepEqual(
+    badSubFeatures,
+    [],
+    `No subdivided or dateline province should have collinear bridge spikes, found: ${badSubFeatures.join(', ')}`
+  );
+  assert.ok(totalSpikes <= 1, `Expected <= 1 natural raw hairpin total, got ${totalSpikes}`);
+
+  // Selanik (300_SKG) must hold all of Chalkidiki cleanly as a single Polygon,
+  // and Volos (300_VOL) must stay south on the Thessalian mainland without crossing the sea.
+  const selanik = byId.get('300_SKG');
+  const volos = byId.get('300_VOL');
+  assert.equal(selanik?.geometry.type, 'Polygon', 'Selanik must be a single Polygon');
+  assert.equal(volos?.geometry.type, 'Polygon', 'Volos must be a single Polygon');
+  assert.equal(
+    geometryContainsPointForTest(selanik!.geometry as unknown as { type: string; coordinates: unknown }, 23.6, 40.15),
+    true,
+    'Chalkidiki peninsula must stay inside Selanik'
+  );
+  assert.equal(
+    geometryContainsPointForTest(volos!.geometry as unknown as { type: string; coordinates: unknown }, 23.6, 39.98),
+    false,
+    'Volos must not steal the tip of Chalkidiki across the sea'
+  );
+  const volosMaxLat = Math.max(
+    ...((volos!.geometry as { coordinates: number[][][] }).coordinates[0].map((p) => p[1]))
+  );
+  assert.ok(
+    volosMaxLat < 39.85,
+    `Volos northernmost latitude must stay below 39.85°, got ${volosMaxLat.toFixed(3)}`
+  );
+
+  // Cities that previously had detached cross-strait/border slivers must remain single Polygons
+  for (const cleanPolyId of ['792_BAL', '276_FBG', '392_SPK', '156_CAN', '643_AND']) {
+    const f = byId.get(cleanPolyId);
+    assert.equal(
+      f?.geometry.type,
+      'Polygon',
+      `${cleanPolyId} (${world2026.territories[cleanPolyId]?.name}) must be a single contiguous Polygon`
+    );
+  }
+});
+

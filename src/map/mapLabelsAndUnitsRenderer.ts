@@ -11,7 +11,6 @@ import {
 import {
   calculateProvinceDevelopment,
   getOrCreateRelation,
-  isAtWar,
 } from '../engine/simulationEngine';
 import type { MapLabelDensityOption } from '../engine/gameSettings';
 import { TERRAIN_INFO } from '../engine/pashaAndFiefEngine';
@@ -45,6 +44,7 @@ export interface RenderLabelsParams {
   armyOrderSourceId?: string | null;
   fogOfWarEnabled: boolean;
   visibleTerritoryIds: Set<string>;
+  projectedCentroids?: Record<string, [number, number]>;
 }
 
 function formatTroopBadgeNumber(garrison: number, zoomK: number): string {
@@ -82,29 +82,29 @@ export function getMapLabelThresholds(
   isMobileViewport: boolean
 ): MapLabelThresholds {
   if (density === 'COMPACT') {
-    const capitalNameMinZoom = isMobileViewport ? 1.85 : 1.7;
+    const capitalNameMinZoom = isMobileViewport ? 2.65 : 2.45;
     return {
       nationNameMaxZoom: capitalNameMinZoom,
       capitalNameMinZoom,
-      provinceNameMinZoom: isMobileViewport ? 2.35 : 2.2,
-      districtNameMinZoom: isMobileViewport ? 2.95 : 2.75,
+      provinceNameMinZoom: isMobileViewport ? 3.2 : 2.95,
+      districtNameMinZoom: isMobileViewport ? 3.9 : 3.55,
     };
   }
   if (density === 'DETAILED') {
-    const capitalNameMinZoom = isMobileViewport ? 1.35 : 1.25;
+    const capitalNameMinZoom = isMobileViewport ? 2.0 : 1.85;
     return {
       nationNameMaxZoom: capitalNameMinZoom,
       capitalNameMinZoom,
-      provinceNameMinZoom: isMobileViewport ? 1.65 : 1.55,
-      districtNameMinZoom: isMobileViewport ? 2.45 : 2.15,
+      provinceNameMinZoom: isMobileViewport ? 2.4 : 2.25,
+      districtNameMinZoom: isMobileViewport ? 3.05 : 2.8,
     };
   }
-  const capitalNameMinZoom = isMobileViewport ? 1.5 : 1.4;
+  const capitalNameMinZoom = isMobileViewport ? 2.3 : 2.15;
   return {
     nationNameMaxZoom: capitalNameMinZoom,
     capitalNameMinZoom,
-    provinceNameMinZoom: isMobileViewport ? 1.95 : 1.8,
-    districtNameMinZoom: isMobileViewport ? 2.8 : 2.4,
+    provinceNameMinZoom: isMobileViewport ? 2.8 : 2.6,
+    districtNameMinZoom: isMobileViewport ? 3.5 : 3.2,
   };
 }
 
@@ -243,6 +243,25 @@ export function isNationPlayerOrAlly(
   return false;
 }
 
+const textWidthCache = new Map<string, number>();
+
+function measureCachedTextWidth(
+  ctx: CanvasRenderingContext2D,
+  font: string,
+  text: string
+): number {
+  const key = `${font}|${text}`;
+  const cached = textWidthCache.get(key);
+  if (cached !== undefined) return cached;
+  ctx.font = font;
+  const w = ctx.measureText(text).width;
+  if (textWidthCache.size > 2500) {
+    textWidthCache.clear();
+  }
+  textWidthCache.set(key, w);
+  return w;
+}
+
 export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
   const {
     ctx,
@@ -263,6 +282,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     visibleTerritoryIds,
     mapLabelDensity = 'BALANCED',
     mapLabelScaleMultiplier = 1.0,
+    projectedCentroids,
   } = params;
 
   const isMobileViewport = width < 768 || height < 540;
@@ -276,6 +296,19 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       (b) =>
         box.x1 < b.x2 && box.x2 > b.x1 && box.y1 < b.y2 && box.y2 > b.y1
     );
+
+  // Precompute active war enemies of the player once per frame (O(W) instead of O(N*W))
+  const warEnemySet = new Set<string>();
+  for (const w of wars) {
+    if (w.attackers.includes(playerNationId)) {
+      for (const id of w.defenders) warEnemySet.add(id);
+    } else if (w.defenders.includes(playerNationId)) {
+      for (const id of w.attackers) warEnemySet.add(id);
+    }
+  }
+
+  const getProjPt = (t: Territory): [number, number] | null =>
+    projectedCentroids?.[t.id] ?? projection(t.centroid);
 
   // Only show battles where the player or a player ally/vassal is involved
   const visibleBattles = battles.filter(
@@ -294,25 +327,6 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     if (t) visibleTerritories.push(t);
   }
 
-  // Label priority (approved plan):
-  // Selected → Player Capital → Capitals → Major Cities → Districts.
-  const labelRank = (t: Territory): number => {
-    if (t.id === selectedTerritoryId) return 0;
-    const isCapital = Boolean(t.isCapital || t.id === t.ownerId);
-    const isPlayer = t.ownerId === playerNationId;
-    const isDistrict = Boolean(t.isDistrict) && !isCapital;
-    if (isCapital) return isPlayer ? 1 : 2;
-    if (isDistrict) return isPlayer ? 6 : 7;
-    if (isPlayer) return 3;
-    if (isAtWar(wars, playerNationId, t.ownerId)) return 4;
-    return 5;
-  };
-  const sortedForLabels = [...visibleTerritories].sort((a, b) => {
-    const rankDiff = labelRank(a) - labelRank(b);
-    if (rankDiff !== 0) return rankDiff;
-    return (b.garrison || 0) - (a.garrison || 0);
-  });
-
   // 0. AoH3 Grand Strategy Country Realm Names (overview LOD only)
   if (transform.k < labelThresholds.nationNameMaxZoom) {
     const nationClusters: Record<
@@ -321,7 +335,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     > = {};
     for (const t of visibleTerritories) {
       if (!t.ownerId) continue;
-      const pt = projection(t.centroid);
+      const pt = getProjPt(t);
       if (!pt) continue;
       const sx = pt[0] * transform.k + transform.x;
       const sy = pt[1] * transform.k + transform.y;
@@ -398,9 +412,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
           .trim() || rawName;
 
       const isPlayer = nationId === playerNationId;
-      const isAtWarWithPlayer = Boolean(
-        isAtWar(wars, playerNationId, nationId)
-      );
+      const isAtWarWithPlayer = warEnemySet.has(nationId);
 
       // Proportional font size that scales DOWN smoothly when zoomed out
       const maxFontCap = isMobileViewport ? 12.5 : 14.5;
@@ -415,27 +427,25 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
           ? shortName.toLocaleUpperCase('tr-TR')
           : rawName.toLocaleUpperCase('tr-TR');
 
-      ctx.save();
-      ctx.font = `700 ${fontSize.toFixed(1)}px "Cinzel", "Georgia", serif`;
-      let measuredW = ctx.measureText(displayLabel).width;
+      let nationFont = `700 ${fontSize.toFixed(1)}px "Cinzel", "Georgia", serif`;
+      let measuredW = measureCachedTextWidth(ctx, nationFont, displayLabel);
 
       // If full name is wider than the country's on-screen span, switch to short name first
       const maxAllowedW = Math.max(isPlayer ? 56 : 44, spanW * 1.22);
       if (measuredW > maxAllowedW && displayLabel !== shortName.toLocaleUpperCase('tr-TR')) {
         displayLabel = shortName.toLocaleUpperCase('tr-TR');
-        measuredW = ctx.measureText(displayLabel).width;
+        measuredW = measureCachedTextWidth(ctx, nationFont, displayLabel);
       }
 
       // Shrink font size proportionally so the label fits inside the nation's screen footprint
       if (measuredW > maxAllowedW && measuredW > 0) {
         fontSize = Math.max(5.8, fontSize * (maxAllowedW / measuredW));
-        ctx.font = `700 ${fontSize.toFixed(1)}px "Cinzel", "Georgia", serif`;
-        measuredW = ctx.measureText(displayLabel).width;
+        nationFont = `700 ${fontSize.toFixed(1)}px "Cinzel", "Georgia", serif`;
+        measuredW = measureCachedTextWidth(ctx, nationFont, displayLabel);
       }
 
       // Skip tiny unreadable labels when deeply zoomed out
       if (fontSize < (isPlayer ? 6.0 : 6.4)) {
-        ctx.restore();
         continue;
       }
 
@@ -449,10 +459,12 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       };
 
       if (!isPlayer && collides(nationBox)) {
-        ctx.restore();
         continue;
       }
       placedBoxes.push(nationBox);
+
+      ctx.save();
+      ctx.font = nationFont;
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -471,50 +483,187 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     }
   }
 
-  for (const t of sortedForLabels) {
-    const pt = projection(t.centroid);
+  // Pre-filter on-screen territories that actually need a label, siege, resource badge, or army shield
+  // so zoomed-out frames never sort or inspect hundreds of off-screen / hidden provinces.
+  const isResourceOrEcoLens =
+    mapMode === 'RESOURCES' || mapMode === 'ECONOMIC';
+  const alliedCache = new Map<string, boolean>();
+  const isAlliedNation = (ownerId: string): boolean => {
+    if (!ownerId || ownerId === playerNationId) return false;
+    const cached = alliedCache.get(ownerId);
+    if (cached !== undefined) return cached;
+    const rel = getOrCreateRelation(relations, playerNationId, ownerId);
+    const owner = nations[ownerId];
+    const val =
+      Boolean(rel?.isAllied) ||
+      Boolean(rel?.allianceType) ||
+      owner?.vassalOf === playerNationId ||
+      nations[playerNationId]?.vassalOf === ownerId;
+    alliedCache.set(ownerId, val);
+    return val;
+  };
+
+  interface PreparedLabelItem {
+    t: Territory;
+    sx: number;
+    sy: number;
+    isSelected: boolean;
+    isPlayerTerritory: boolean;
+    isEnemy: boolean;
+    isAlliedOrVassal: boolean;
+    isCapital: boolean;
+    isDistrictTier: boolean;
+    hasIntel: boolean;
+    wantsName: boolean;
+    canSeeSiege: boolean;
+    wantsResourceBadge: boolean;
+    wantsArmyShield: boolean;
+    rank: number;
+  }
+
+  const labelCandidates: PreparedLabelItem[] = [];
+  for (const t of visibleTerritories) {
+    const pt = getProjPt(t);
     if (!pt) continue;
     const sx = pt[0] * transform.k + transform.x;
     const sy = pt[1] * transform.k + transform.y;
-
     if (sx < -60 || sx > width + 60 || sy < -60 || sy > height + 60) {
       continue;
     }
 
     const isSelected = t.id === selectedTerritoryId;
     const isPlayerTerritory = t.ownerId === playerNationId;
-    const isEnemy =
-      !isPlayerTerritory && Boolean(isAtWar(wars, playerNationId, t.ownerId));
-    const rel = !isPlayerTerritory
-      ? getOrCreateRelation(relations, playerNationId, t.ownerId)
-      : null;
-    const owner = nations[t.ownerId];
-    const isAlliedOrVassal =
-      !isPlayerTerritory &&
-      (Boolean(rel?.isAllied) ||
-        Boolean(rel?.allianceType) ||
-        owner?.vassalOf === playerNationId ||
-        nations[playerNationId]?.vassalOf === t.ownerId);
-
-    const isCapital = Boolean(t.isCapital || t.id === t.ownerId);
-    const hasIntel = !fogOfWarEnabled || visibleTerritoryIds.has(t.id);
-
-    // 1. Province / City Name Label (Only pure city names, no old dynasty/country prefixes)
+    const isEnemy = !isPlayerTerritory && warEnemySet.has(t.ownerId);
+    const isAlliedOrVassal = !isPlayerTerritory && isAlliedNation(t.ownerId);
+    const ownerNation = nations[t.ownerId];
+    const isCapital = Boolean(
+      t.isCapital ||
+        (ownerNation ? ownerNation.capitalTerritoryId === t.id : t.id === t.ownerId)
+    );
     const isDistrictTier = Boolean(t.isDistrict) && !isCapital;
+    const hasIntel = !fogOfWarEnabled || visibleTerritoryIds.has(t.id);
+    const inBattle = battleTerritorySet.has(t.id);
+
     const labelTier: ProvinceLabelTier = isCapital
       ? 'capital'
       : isDistrictTier
       ? 'district'
       : 'city';
-    const wantsName = shouldRenderProvinceLabel(
-      labelTier,
-      transform.k,
-      labelThresholds,
-      isSelected
-    );
+    const wantsName =
+      !inBattle &&
+      shouldRenderProvinceLabel(
+        labelTier,
+        transform.k,
+        labelThresholds,
+        isSelected
+      );
 
+    const canSeeSiege =
+      Boolean(t.siege) &&
+      !inBattle &&
+      (isPlayerTerritory ||
+        isAlliedOrVassal ||
+        isNationPlayerOrAlly(t.siege?.attackerId, playerNationId, nations, relations) ||
+        isNationPlayerOrAlly(t.siege?.defenderId, playerNationId, nations, relations));
+
+    const wantsResourceBadge =
+      isResourceOrEcoLens &&
+      !inBattle &&
+      !canSeeSiege &&
+      (isSelected ||
+        isPlayerTerritory ||
+        isCapital ||
+        transform.k >= (isMobileViewport ? 1.35 : 1.2));
+
+    const garrison = t.garrison || 0;
+    const wantsArmyShield =
+      !isResourceOrEcoLens &&
+      !inBattle &&
+      !canSeeSiege &&
+      (garrison > 0 || isSelected) &&
+      (isSelected ||
+        (hasIntel &&
+          garrison >= 500 &&
+          (mapMode === 'MILITARY' ||
+            (isPlayerTerritory && transform.k >= 1.0) ||
+            (isEnemy && transform.k >= 1.0) ||
+            (isAlliedOrVassal &&
+              (isCapital || garrison >= 5000) &&
+              transform.k >= 1.25) ||
+            (isCapital && transform.k >= 1.85) ||
+            (garrison >= 6000 && transform.k >= 2.0) ||
+            transform.k >= (isMobileViewport ? 2.35 : 2.15))));
+
+    if (!wantsName && !canSeeSiege && !wantsResourceBadge && !wantsArmyShield) {
+      continue;
+    }
+
+    const rank = isSelected
+      ? 0
+      : isCapital
+      ? isPlayerTerritory
+        ? 1
+        : 2
+      : isDistrictTier
+      ? isPlayerTerritory
+        ? 6
+        : 7
+      : isPlayerTerritory
+      ? 3
+      : isEnemy
+      ? 4
+      : 5;
+
+    labelCandidates.push({
+      t,
+      sx,
+      sy,
+      isSelected,
+      isPlayerTerritory,
+      isEnemy,
+      isAlliedOrVassal,
+      isCapital,
+      isDistrictTier,
+      hasIntel,
+      wantsName,
+      canSeeSiege,
+      wantsResourceBadge,
+      wantsArmyShield,
+      rank,
+    });
+  }
+
+  labelCandidates.sort((a, b) => {
+    const rankDiff = a.rank - b.rank;
+    if (rankDiff !== 0) return rankDiff;
+    return (b.t.garrison || 0) - (a.t.garrison || 0);
+  });
+
+  const maxCityLabelsOnScreen = isMobileViewport ? 36 : 64;
+  let placedCityLabelCount = 0;
+
+  for (const item of labelCandidates) {
+    const {
+      t,
+      sx,
+      sy,
+      isSelected,
+      isPlayerTerritory,
+      isEnemy,
+      isAlliedOrVassal,
+      isCapital,
+      isDistrictTier,
+      hasIntel,
+      wantsName,
+      canSeeSiege,
+      wantsResourceBadge,
+      wantsArmyShield,
+    } = item;
+    const owner = nations[t.ownerId];
+
+    // 1. Province / City Name Label (Only pure city names, hidden when zoomed out)
     let namePlaced = false;
-    if (wantsName && !battleTerritorySet.has(t.id)) {
+    if (wantsName && (isSelected || placedCityLabelCount < maxCityLabelsOnScreen)) {
       const { lines } = formatProvinceMapLabel(
         t.name,
         isCapital,
@@ -534,11 +683,11 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       const fontSize = baseFontSize * mobileScale;
       const labelWeight: '500' | '600' | '700' =
         isCapital || isSelected ? '700' : isDistrictTier ? '500' : '600';
-      ctx.font = `${labelWeight} ${fontSize.toFixed(1)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+      const labelFont = `${labelWeight} ${fontSize.toFixed(1)}px "Plus Jakarta Sans", system-ui, sans-serif`;
 
       const lineHeight = fontSize + 1.8;
       const widestLine = lines.reduce((maxW, ln) => {
-        const mW = ctx.measureText(ln).width;
+        const mW = measureCachedTextWidth(ctx, labelFont, ln);
         return Math.max(maxW, mW, ln.length * (fontSize * 0.52));
       }, 0);
       const estW = widestLine + 8;
@@ -580,7 +729,9 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       if (chosenBox) {
         placedBoxes.push(chosenBox);
         namePlaced = true;
+        placedCityLabelCount += 1;
 
+        ctx.font = labelFont;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.lineJoin = 'round';
@@ -609,14 +760,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     }
 
     // 1B. AoH3 Real-Time Siege Widget on Map (ONLY shown if player or player's allies/vassals are involved!)
-    const canSeeSiege =
-      Boolean(t.siege) &&
-      (isPlayerTerritory ||
-        isAlliedOrVassal ||
-        isNationPlayerOrAlly(t.siege?.attackerId, playerNationId, nations, relations) ||
-        isNationPlayerOrAlly(t.siege?.defenderId, playerNationId, nations, relations));
-
-    if (t.siege && canSeeSiege && !battleTerritorySet.has(t.id)) {
+    if (canSeeSiege && t.siege) {
       const siege = t.siege;
       const siegeAttacker = nations[siege.attackerId];
       const siegeBadgeY = namePlaced ? sy + 8 : sy;
@@ -670,88 +814,62 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     }
 
     // 1C. Compact Resource Icon & Investment Value Badge (in RESOURCES or ECONOMIC MapMode)
-    const isResourceOrEcoLens =
-      mapMode === 'RESOURCES' || mapMode === 'ECONOMIC';
-    if (isResourceOrEcoLens && !battleTerritorySet.has(t.id) && !canSeeSiege) {
+    if (wantsResourceBadge) {
       const resMeta = RESOURCE_INFO[t.resource] || RESOURCE_INFO.TAHIL;
       const dev = calculateProvinceDevelopment(t, owner);
-      const showResourceBadge =
-        isSelected ||
-        isPlayerTerritory ||
-        isCapital ||
-        transform.k >= (isMobileViewport ? 1.15 : 1.05);
+      const resY = namePlaced ? sy + 8 : sy;
+      const showDetailText = isSelected || transform.k >= 2.25;
+      const pillText =
+        mapMode === 'RESOURCES'
+          ? showDetailText
+            ? `${resMeta.icon} ${resMeta.shortName} ${dev.effectiveResourceValue}A`
+            : `${resMeta.icon} ${dev.effectiveResourceValue}A`
+          : showDetailText
+          ? `★${dev.developmentScore}P · ${resMeta.icon}${dev.effectiveResourceValue}A`
+          : `★${dev.developmentScore}P`;
 
-      if (showResourceBadge) {
-        const resY = namePlaced ? sy + 8 : sy;
-        const showDetailText = isSelected || transform.k >= 2.25;
-        const pillText =
-          mapMode === 'RESOURCES'
-            ? showDetailText
-              ? `${resMeta.icon} ${resMeta.shortName} ${dev.effectiveResourceValue}A`
-              : `${resMeta.icon} ${dev.effectiveResourceValue}A`
-            : showDetailText
-            ? `★${dev.developmentScore}P · ${resMeta.icon}${dev.effectiveResourceValue}A`
-            : `★${dev.developmentScore}P`;
+      const fontPx = isSelected ? 10 : transform.k >= 1.8 ? 9.2 : 8.4;
+      const pillFont = `700 ${fontPx}px "JetBrains Mono", "Plus Jakarta Sans", sans-serif`;
+      const textW = measureCachedTextWidth(ctx, pillFont, pillText);
+      const pillW = Math.max(34, textW + 10);
+      const pillH = isSelected ? 17 : 15;
+      const rBox: PlacedBox = {
+        x1: sx - pillW / 2 - 1,
+        y1: resY - pillH / 2 - 1,
+        x2: sx + pillW / 2 + 1,
+        y2: resY + pillH / 2 + 1,
+      };
+
+      if (isSelected || !collides(rBox)) {
+        placedBoxes.push(rBox);
+        const rx = sx - pillW / 2;
+        const ry = resY - pillH / 2;
 
         ctx.save();
-        const fontPx = isSelected ? 10 : transform.k >= 1.8 ? 9.2 : 8.4;
-        ctx.font = `700 ${fontPx}px "JetBrains Mono", "Plus Jakarta Sans", sans-serif`;
-        const textW = ctx.measureText(pillText).width;
-        const pillW = Math.max(34, textW + 10);
-        const pillH = isSelected ? 17 : 15;
-        const rBox: PlacedBox = {
-          x1: sx - pillW / 2 - 1,
-          y1: resY - pillH / 2 - 1,
-          x2: sx + pillW / 2 + 1,
-          y2: resY + pillH / 2 + 1,
-        };
+        ctx.font = pillFont;
+        ctx.fillStyle = 'rgba(7, 12, 24, 0.92)';
+        ctx.strokeStyle =
+          mapMode === 'RESOURCES'
+            ? resMeta.color
+            : dev.developmentScore >= 68
+            ? '#34D399'
+            : '#F59E0B';
+        ctx.lineWidth = isSelected ? 1.6 : 1.15;
+        ctx.beginPath();
+        ctx.roundRect(rx, ry, pillW, pillH, 5);
+        ctx.fill();
+        ctx.stroke();
 
-        if (isSelected || !collides(rBox)) {
-          placedBoxes.push(rBox);
-          const rx = sx - pillW / 2;
-          const ry = resY - pillH / 2;
-
-          ctx.fillStyle = 'rgba(7, 12, 24, 0.92)';
-          ctx.strokeStyle =
-            mapMode === 'RESOURCES'
-              ? resMeta.color
-              : dev.developmentScore >= 68
-              ? '#34D399'
-              : '#F59E0B';
-          ctx.lineWidth = isSelected ? 1.6 : 1.15;
-          ctx.beginPath();
-          ctx.roundRect(rx, ry, pillW, pillH, 5);
-          ctx.fill();
-          ctx.stroke();
-
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = isSelected ? '#FEF08A' : '#F8FAFC';
-          ctx.fillText(pillText, sx, resY + 0.5);
-        }
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = isSelected ? '#FEF08A' : '#F8FAFC';
+        ctx.fillText(pillText, sx, resY + 0.5);
         ctx.restore();
       }
     }
 
     // 2. Clean AoH3-Style Army Counter Plate (Graphical National Flag + Pure Troop Number, NO tiny soldier icons)
     const garrison = t.garrison || 0;
-    const wantsArmyShield =
-      !isResourceOrEcoLens &&
-      !battleTerritorySet.has(t.id) &&
-      !canSeeSiege &&
-      (isSelected ||
-        (hasIntel &&
-          garrison >= 500 &&
-          (mapMode === 'MILITARY' ||
-            (isPlayerTerritory && transform.k >= 1.0) ||
-            (isEnemy && transform.k >= 1.0) ||
-            (isAlliedOrVassal &&
-              (isCapital || garrison >= 5000) &&
-              transform.k >= 1.15) ||
-            (isCapital && transform.k >= 1.35) ||
-            (garrison >= 6000 && transform.k >= 1.55) ||
-            transform.k >= (isMobileViewport ? 2.0 : 1.8))));
-
     if (wantsArmyShield && (garrison > 0 || isSelected)) {
       const badgeY = namePlaced ? sy + 9 : sy + 2;
       const troopStr = hasIntel

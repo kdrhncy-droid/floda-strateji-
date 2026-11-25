@@ -162,6 +162,10 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     dimsKey: string;
     projection: GeoProjection;
   } | null>(null);
+  const centroidCacheRef = useRef<{
+    dimsKey: string;
+    centroids: Record<string, [number, number]>;
+  } | null>(null);
   const [viewportRevision, setViewportRevision] = useState(0);
 
   const visibleTerritoryIds = useMemo(
@@ -435,7 +439,21 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         features,
         projection
       );
+      centroidCacheRef.current = null;
     }
+
+    if (
+      !centroidCacheRef.current ||
+      centroidCacheRef.current.dimsKey !== dimsKey
+    ) {
+      const centroids: Record<string, [number, number]> = {};
+      for (const id in territories) {
+        const pt = projection(territories[id].centroid);
+        if (pt) centroids[id] = pt;
+      }
+      centroidCacheRef.current = { dimsKey, centroids };
+    }
+    const projectedCentroids = centroidCacheRef.current.centroids;
 
     const cache = geometryCacheRef.current;
     const visibleFeatures = queryVisibleFeatures(
@@ -639,6 +657,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         armyOrderSourceId,
         fogOfWarEnabled,
         visibleTerritoryIds,
+        projectedCentroids,
       });
 
       ctx.restore();
