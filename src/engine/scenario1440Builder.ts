@@ -1645,7 +1645,7 @@ export function transformBundleTo1440Scenario(
     '364': { targetArmy: 148000, targetGdp: 940 },  // Timur İmparatorluğu
     '276': { targetArmy: 138000, targetGdp: 980 },  // Kutsal Roma İmparatorluğu
     '031': { targetArmy: 112000, targetGdp: 690 },  // Karakoyunlu & Akkoyunlu
-    '250': { targetArmy: 108000, targetGdp: 810 },  // Fransa Krallığı
+    '250': { targetArmy: 108000, targetGdp: 880 },  // Fransa Krallığı (1444'te Venedik'ten büyük vergi tabanı)
     '356': { targetArmy: 104000, targetGdp: 760 },  // Delhi Sultanlığı
     '380': { targetArmy: 96000, targetGdp: 790 },   // Venedik & İtalya Devletleri
     '724': { targetArmy: 92000, targetGdp: 680 },   // Kastilya & Aragon

@@ -1,7 +1,7 @@
 import { geoArea, geoCentroid } from 'd3-geo';
 import { feature, neighbors } from 'topojson-client';
 import type { FeatureCollection, Geometry } from 'geojson';
-import worldData from 'world-atlas/countries-110m.json';
+import worldData from 'world-atlas/countries-50m.json';
 import {
   buildSeedForFeature,
   GAME_MODES,
@@ -444,7 +444,10 @@ export function computeCoastalTerritoryIds(
         const segDy = p2[1] - p1[1];
         if (Math.abs(segDx) > 30) continue;
         const segLenSq = segDx * segDx + segDy * segDy;
-        if (segLenSq < 0.0025) continue; // skip tiny <0.05° vertex jitters
+        // 1:50m coastlines are dense: most segments are a few hundred metres, so
+        // the old 0.05° cut discarded nearly every real coast segment and left
+        // coastal provinces (the Peloponnese, Attica) classified as inland.
+        if (segLenSq < 1e-6) continue; // skip sub-0.01° vertex jitters
 
         const mx = (p1[0] + p2[0]) * 0.5;
         const my = (p1[1] + p2[1]) * 0.5;
@@ -541,6 +544,69 @@ function pointInOuterRing(
  * actually contains its seed — i.e. the nearest mainland polygon — so a
  * district name can never drift into the ocean or onto a far-away island.
  */
+/**
+ * Guaranteed-inside label anchor for a province polygon. Centroid math breaks on
+ * multi-island provinces (Nome's centroid lands in the Bering Sea), so fall back
+ * to a scanline point that is inside by construction.
+ */
+function pickInteriorAnchor(geometry: Geometry): [number, number] | null {
+  const polys: number[][][][] =
+    geometry.type === 'Polygon'
+      ? [geometry.coordinates as number[][][]]
+      : geometry.type === 'MultiPolygon'
+        ? (geometry.coordinates as number[][][][])
+        : [];
+  if (polys.length === 0) return null;
+
+  const rings = polys.map((poly) => poly[0]).filter((ring): ring is [number, number][] => Boolean(ring && ring.length >= 4));
+  if (rings.length === 0) return null;
+  // Largest ring first: the anchor should sit on the province's main landmass.
+  rings.sort((a, b) => Math.abs(ringSignedArea(b)) - Math.abs(ringSignedArea(a)));
+
+  for (const ring of rings.slice(0, 4)) {
+    let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+    for (const [lon, lat] of ring) {
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+    for (const t of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+      const scanLat = minLat + (maxLat - minLat) * t;
+      const xs: number[] = [];
+      for (let i = 0; i < ring.length - 1; i++) {
+        const [x1, y1] = ring[i];
+        const [x2, y2] = ring[i + 1];
+        if ((y1 > scanLat) === (y2 > scanLat)) continue;
+        xs.push(x1 + ((scanLat - y1) / (y2 - y1)) * (x2 - x1));
+      }
+      if (xs.length < 2) continue;
+      xs.sort((a, b) => a - b);
+      let bestX = NaN;
+      let bestWidth = 0;
+      for (let i = 0; i + 1 < xs.length; i += 2) {
+        const width = xs[i + 1] - xs[i];
+        if (width > bestWidth) {
+          bestWidth = width;
+          bestX = (xs[i] + xs[i + 1]) / 2;
+        }
+      }
+      if (Number.isFinite(bestX) && bestWidth > 0) {
+        return [bestX, scanLat];
+      }
+    }
+  }
+  return null;
+}
+
+function ringSignedArea(ring: [number, number][]): number {
+  let area = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    area += ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+  }
+  return area / 2;
+}
+
 function resolveProvinceCentroid(
   provFeature: GeoCountryFeature,
   seedLon: number,
@@ -630,7 +696,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
   const rawGeometries = topology.objects.countries.geometries || [];
   const topoNeighbors: number[][] = neighbors(rawGeometries);
 
-  const countryFeatures: GeoCountryFeature[] = [];
+  let countryFeatures: GeoCountryFeature[] = [];
   const indexMap: number[] = [];
 
   geoCollection.features.forEach((feat, rawIdx) => {
@@ -652,6 +718,36 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
   countryFeatures.forEach((cf, idx) => {
     rawIdxToCountryId[indexMap[idx]] = cf.id;
   });
+
+  // Some Natural Earth builds list the same country twice (Australia at 1:50m)
+  // or split a country across two records carrying the same id. Slicing those as
+  // independent countries produced two polygon features per province but a
+  // single territory, which broke "one province = one polygon = one territory".
+  // Merge every record that shares an id into one MultiPolygon feature.
+  {
+    const byId = new Map<string, GeoCountryFeature>();
+    const merged: GeoCountryFeature[] = [];
+    const appendGeometry = (target: GeoCountryFeature, extra: Geometry) => {
+      const rings: number[][][][] = [];
+      const push = (g: Geometry) => {
+        if (g.type === 'Polygon') rings.push(g.coordinates as number[][][]);
+        else if (g.type === 'MultiPolygon') rings.push(...(g.coordinates as number[][][][]));
+      };
+      push(target.geometry);
+      push(extra);
+      target.geometry = { type: 'MultiPolygon', coordinates: rings };
+    };
+    for (const cf of countryFeatures) {
+      const existing = byId.get(cf.id);
+      if (!existing) {
+        byId.set(cf.id, cf);
+        merged.push(cf);
+        continue;
+      }
+      appendGeometry(existing, cf.geometry);
+    }
+    countryFeatures = merged;
+  }
 
   const nations: Record<string, Nation> = {};
   const territories: Record<string, Territory> = {};
@@ -757,7 +853,14 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
             : [piece.seed.lon, piece.seed.lat];
         // Guarantee the label anchor sits on land (never in a bay/ocean).
         if (!isPointInGeometry(provFeature.geometry, validCentroid[0], validCentroid[1])) {
-          validCentroid = [piece.seed.lon, piece.seed.lat];
+          const interior = pickInteriorAnchor(provFeature.geometry);
+          if (interior && isPointInGeometry(provFeature.geometry, interior[0], interior[1])) {
+            validCentroid = interior;
+          } else if (isPointInGeometry(provFeature.geometry, piece.seed.lon, piece.seed.lat)) {
+            validCentroid = [piece.seed.lon, piece.seed.lat];
+          } else if (interior) {
+            validCentroid = interior;
+          }
         }
 
         const provGdp = Math.max(2, Math.round(seed.baseGdp * share * 1.15));

@@ -779,7 +779,7 @@ test('computeGameTick preserves territories/nations references during hourly arm
 
 import { geoArea, geoMercator } from 'd3-geo';
 import { feature } from 'topojson-client';
-import worldData from 'world-atlas/countries-110m.json';
+import worldData from 'world-atlas/countries-50m.json';
 import { initializeWorld2026 } from './worldBuilder';
 import {
   COUNTRY_PROVINCE_SEEDS,
@@ -803,8 +803,8 @@ test('expanded province seeds and 1440 scenario cover 100% of world landmasses w
   const world1440 = initializeWorld2026('EMPIRES_1440');
 
   assert.ok(
-    world2026.features.length >= 880 && world2026.features.length <= 920,
-    `Expected 880-920 provinces in 2026 world, got ${world2026.features.length}`
+    world2026.features.length >= 940 && world2026.features.length <= 1020,
+    `Expected 940-1020 provinces in 2026 world, got ${world2026.features.length}`
   );
   assert.equal(
     world1440.features.length,
@@ -7643,12 +7643,12 @@ test('1444 scenario distributes historical city counts, borders, and capitals ac
   assert.equal(countByOwner('156').length, 36, 'Ming Dynasty should have 36 provinces');
   assert.equal(countByOwner('276').length, 20, 'Holy Roman Empire should have 20 provinces');
   assert.equal(countByOwner('250').length, 18, 'Kingdom of France should have 18 provinces');
-  assert.equal(countByOwner('724').length, 20, 'Castile & Aragon should have 20 provinces');
+  assert.equal(countByOwner('724').length, 21, 'Castile & Aragon should have 21 provinces');
   assert.equal(countByOwner('348').length, 12, 'Kingdom of Hungary should have 12 provinces');
   assert.equal(world1440.territories['642_CLJ'].ownerId, '348', 'Transylvania should belong to Hungary');
-  assert.equal(countByOwner('392').length, 14, 'Ashikaga Japan should have 14 provinces');
-  assert.equal(countByOwner('826').length, 12, 'Kingdom of England should have 12 provinces');
-  assert.equal(countByOwner('905').length, 3, 'Kingdom of Scotland should have 3 cities');
+  assert.equal(countByOwner('392').length, 18, 'Ashikaga Japan should have 18 provinces');
+  assert.equal(countByOwner('826').length, 14, 'Kingdom of England should have 14 provinces');
+  assert.equal(countByOwner('905').length, 5, 'Kingdom of Scotland should have 5 cities');
   assert.equal(world1440.territories['826_EDI'].ownerId, '905', 'Edinburgh should belong to Scotland');
   assert.equal(world1440.territories['826_INV'].ownerId, '905', 'Inverness should belong to Scotland');
   assert.equal(countByOwner('616').length, 12, 'Kingdom of Poland should have 12 provinces');
@@ -8065,12 +8065,12 @@ test('1444 great-power ranking is preserved after the district expansion', () =>
   assert.ok(topArmy.includes('792'), 'Ottoman army must stay in the 1444 top 5');
 });
 
-test('~900-province world build stays within the interactive start budget', () => {
+test('~980-province world build stays within the interactive start budget', () => {
   const startedAt = performance.now();
   const world = initializeWorld2026('STANDARD_2026');
   const elapsed = performance.now() - startedAt;
 
-  assert.ok(world.features.length >= 880 && world.features.length <= 920);
+  assert.ok(world.features.length >= 940 && world.features.length <= 1020);
   assert.ok(
     elapsed < 1500,
     `World creation with ~900 provinces took ${elapsed.toFixed(0)}ms (budget 1500ms, target 350ms)`

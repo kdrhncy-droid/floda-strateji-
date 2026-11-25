@@ -1,4 +1,6 @@
 import { geoArea } from 'd3-geo';
+import { Delaunay } from 'd3-delaunay';
+import polygonClipping from 'polygon-clipping';
 import type { Feature, Geometry, Polygon, Position } from 'geojson';
 import { ResourceType } from '../types/game';
 import { DISTRICT_PROVINCE_SEEDS } from './districtSeeds';
@@ -911,7 +913,66 @@ function clipRingWithHalfPlane(
 
   if (out.length < 3) return [];
   out.push([out[0][0], out[0][1]]);
-  return out;
+  return cleanRing(out);
+}
+
+/**
+ * Sutherland–Hodgman clipping of a *concave* coastline emits degenerate spikes:
+ * where the ring touches the clip line the algorithm inserts a vertex pair that
+ * doubles straight back, and those spikes make the ring self-intersecting. A
+ * self-intersecting ring is filled by the canvas with the "outside" of the loop,
+ * which is what painted blotches of province colour across the Aegean, the
+ * Adriatic and every other gulf. Collapse duplicates, collinear runs and
+ * reversing spikes so each ring stays simple.
+ */
+function cleanRing(ring: Position[]): Position[] {
+  if (ring.length < 4) return ring;
+
+  let pts: Position[] = [];
+  for (const pt of ring) {
+    const prev = pts[pts.length - 1];
+    if (!prev || Math.abs(pt[0] - prev[0]) > 1e-9 || Math.abs(pt[1] - prev[1]) > 1e-9) {
+      pts.push([pt[0], pt[1]]);
+    }
+  }
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  if (first && last && first[0] === last[0] && first[1] === last[1] && pts.length > 1) {
+    pts.pop();
+  }
+  if (pts.length < 3) return [];
+
+  let changed = true;
+  let guard = 0;
+  while (changed && guard < 8) {
+    changed = false;
+    guard += 1;
+    const next: Position[] = [];
+    const n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const a = next.length > 0 ? next[next.length - 1] : pts[(i - 1 + n) % n];
+      const b = pts[i];
+      const c = pts[(i + 1) % n];
+      const abx = b[0] - a[0];
+      const aby = b[1] - a[1];
+      const bcx = c[0] - b[0];
+      const bcy = c[1] - b[1];
+      const cross = abx * bcy - aby * bcx;
+      const dot = abx * bcx + aby * bcy;
+      // b is collinear with a→c and the path doubles back through it: drop b.
+      if (Math.abs(cross) < 1e-12 && dot < 0) {
+        changed = true;
+        continue;
+      }
+      next.push(b);
+    }
+    if (next.length >= 3) pts = next;
+    else break;
+  }
+
+  if (pts.length < 3) return [];
+  pts.push([pts[0][0], pts[0][1]]);
+  return pts;
 }
 
 function extractOuterRings(geometry: Geometry): Position[][] {
@@ -1078,6 +1139,268 @@ function buildFallbackCell(
   return null;
 }
 
+
+/**
+ * Cheap Douglas–Peucker style pass. The 1:50m coastline ships vertices far
+ * denser than a strategy map ever draws (and than the boolean clipper can
+ * afford per cell), so collapse near-collinear runs to a sub-pixel tolerance.
+ */
+function simplifyRingForClipping(ring: Position[], tolerance = 0.006): Position[] {
+  if (ring.length < 4) return ring;
+  const closed = ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1];
+  const pts = closed ? ring.slice(0, -1) : ring;
+  if (pts.length < 4) return ring;
+
+  const keep = new Array<boolean>(pts.length).fill(false);
+  keep[0] = true;
+  keep[pts.length - 1] = true;
+
+  const stack: [number, number][] = [[0, pts.length - 1]];
+  while (stack.length > 0) {
+    const [start, end] = stack.pop()!;
+    const a = pts[start];
+    const b = pts[end];
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len = Math.hypot(dx, dy);
+    let maxDist = -1;
+    let maxIdx = -1;
+    for (let i = start + 1; i < end; i++) {
+      const p = pts[i];
+      const dist =
+        len < 1e-12
+          ? Math.hypot(p[0] - a[0], p[1] - a[1])
+          : Math.abs(dy * p[0] - dx * p[1] + b[0] * a[1] - b[1] * a[0]) / len;
+      if (dist > maxDist) {
+        maxDist = dist;
+        maxIdx = i;
+      }
+    }
+    if (maxDist > tolerance && maxIdx > 0) {
+      keep[maxIdx] = true;
+      stack.push([start, maxIdx]);
+      stack.push([maxIdx, end]);
+    }
+  }
+
+  const out: Position[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    if (keep[i]) out.push(pts[i]);
+  }
+  if (out.length < 3) return ring;
+  out.push([out[0][0], out[0][1]]);
+  return out;
+}
+
+type Planar = (lon: number, lat: number) => [number, number];
+type Unplanar = (x: number, y: number) => Position;
+
+/** Local equirectangular projection so planar Voronoi stays metrically sane. */
+function makePlanarTransform(lat0: number): { project: Planar; unproject: Unplanar } {
+  const kx = Math.max(0.12, Math.cos((lat0 * Math.PI) / 180));
+  return {
+    project: (lon, lat) => [lon * kx, lat],
+    unproject: (x, y) => [x / kx, y],
+  };
+}
+
+function ringBBox(ring: Position[]): [number, number, number, number] {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const pt of ring) {
+    if (pt[0] < minX) minX = pt[0];
+    if (pt[0] > maxX) maxX = pt[0];
+    if (pt[1] < minY) minY = pt[1];
+    if (pt[1] > maxY) maxY = pt[1];
+  }
+  return [minX, minY, maxX, maxY];
+}
+
+/**
+ * True Voronoi partition of a country polygon.
+ *
+ * The previous implementation clipped every coastline ring against every other
+ * seed's bisector with Sutherland–Hodgman. That algorithm cannot represent a
+ * concave ring being cut into several disjoint pieces, so it bridged the pieces
+ * with edges along the clip line: provinces ended up with self-intersecting
+ * rings that the canvas filled as if they were the sea — the blotches of city
+ * colour over the Aegean, the Adriatic and the Gulf of Corinth.
+ *
+ * Instead we build the Voronoi diagram of the seeds once per country and
+ * intersect each cell with the real country geometry (Martinez boolean ops).
+ * The cells tile the country exactly, so no cell can spill into water, no ring
+ * self-intersects, and neighbouring cities share the very same border line.
+ */
+function buildVoronoiCells(
+  rings: Position[][],
+  seeds: ProvinceSubSeed[]
+): Position[][] | null {
+  if (rings.length === 0 || seeds.length === 0) return null;
+  const lat0 =
+    seeds.reduce((sum, seed) => sum + seed.lat, 0) / Math.max(1, seeds.length);
+  const { project } = makePlanarTransform(lat0);
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const ring of rings) {
+    const [rMinX, rMinY, rMaxX, rMaxY] = ringBBox(ring);
+    if (rMinX < minX) minX = rMinX;
+    if (rMinY < minY) minY = rMinY;
+    if (rMaxX > maxX) maxX = rMaxX;
+    if (rMaxY > maxY) maxY = rMaxY;
+  }
+  if (!Number.isFinite(minX)) return null;
+
+  const projected = seeds.map((seed) => project(seed.lon, seed.lat));
+  const padX = Math.max(1, (maxX - minX) * 0.25);
+  const padY = Math.max(1, (maxY - minY) * 0.25);
+  const bounds: [number, number, number, number] = [
+    Math.min(minX, ...projected.map((p) => p[0])) - padX,
+    Math.min(minY, ...projected.map((p) => p[1])) - padY,
+    Math.max(maxX, ...projected.map((p) => p[0])) + padX,
+    Math.max(maxY, ...projected.map((p) => p[1])) + padY,
+  ];
+
+  let voronoi;
+  try {
+    const delaunay = Delaunay.from(projected as [number, number][]);
+    voronoi = delaunay.voronoi(bounds);
+  } catch {
+    return null;
+  }
+
+  const cells: Position[][] = [];
+  for (let i = 0; i < seeds.length; i++) {
+    const cellPolygon = voronoi.cellPolygon(i) as unknown as number[][] | null;
+    if (!cellPolygon || cellPolygon.length < 3) return null;
+    const ring: Position[] = cellPolygon.map((pt) => [pt[0], pt[1]]);
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) ring.push([first[0], first[1]]);
+    cells.push(ring);
+  }
+  return cells;
+}
+
+/** Exact box clip (Sutherland–Hodgman is exact against a convex rectangle). */
+function clipRingToBox(
+  ring: Position[],
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number
+): Position[] {
+  let current = ring;
+  const planes: [number, number, number][] = [
+    [1, 0, maxX],   // x <= maxX
+    [-1, 0, -minX], // x >= minX
+    [0, 1, maxY],   // y <= maxY
+    [0, -1, -minY], // y >= minY
+  ];
+  for (const [a, b, c] of planes) {
+    if (current.length < 4) return [];
+    current = clipRingWithHalfPlane(current, a, b, c);
+  }
+  return current.length >= 4 ? current : [];
+}
+
+/** True when every vertex of `inner` lies inside `outer` (planar lon/lat). */
+function ringContainsRing(outer: Position[], inner: Position[]): boolean {
+  for (let i = 0; i < inner.length - 1; i++) {
+    if (!pointInRing(inner[i][0], inner[i][1], outer)) return false;
+  }
+  return true;
+}
+
+/** normalize a single lon/lat cell ring and wrap it as GeoJSON. */
+function cellToGeometry(lonLatRing: Position[]): Geometry | null {
+  const normalized = normalizeSphericalRing(lonLatRing);
+  if (!normalized) return null;
+  const cleaned = cleanRing(normalized);
+  if (cleaned.length < 4) return null;
+  return { type: 'Polygon', coordinates: [cleaned] };
+}
+
+/** Intersect one Voronoi cell (planar coords) with the country rings it touches. */
+function intersectCellWithCountry(
+  planarCellRing: Position[],
+  rings: Position[][],
+  unproject: Unplanar
+): Geometry | null {
+  // Voronoi works in a locally projected space; the country rings are lon/lat.
+  // Convert the cell back to lon/lat first — mixing the two produced clip boxes
+  // in the wrong units (Vienna's cell swallowed half of Slovakia).
+  const cellRing: Position[] = planarCellRing.map((pt) => unproject(pt[0], pt[1]));
+  const [cMinX, cMinY, cMaxX, cMaxY] = ringBBox(cellRing);
+
+  // Fast path: an inland cell sits completely inside one coastline ring, so the
+  // Voronoi cell *is* the province — no boolean op at all.
+  for (const ring of rings) {
+    if (ringContainsRing(ring, cellRing)) {
+      return cellToGeometry(cellRing);
+    }
+  }
+
+  const pad = 0.05;
+  const nearby: Position[][] = [];
+  for (const ring of rings) {
+    const [rMinX, rMinY, rMaxX, rMaxY] = ringBBox(ring);
+    if (rMaxX < cMinX - pad || rMinX > cMaxX + pad) continue;
+    if (rMaxY < cMinY - pad || rMinY > cMaxY + pad) continue;
+    // Pre-clip the coastline to the cell's box: exact inside the box, and it
+    // keeps Martinez from sweeping the whole 1:50m coastline for every cell
+    // (Russia alone dropped from 279ms to a few ms).
+    const boxed = clipRingToBox(
+      ring,
+      cMinX - pad,
+      cMinY - pad,
+      cMaxX + pad,
+      cMaxY + pad
+    );
+    if (boxed.length >= 4) {
+      nearby.push(boxed);
+    } else if (pointInRing((cMinX + cMaxX) / 2, (cMinY + cMaxY) / 2, ring)) {
+      // Box fully inside this ring, so the clip returned nothing: the cell is
+      // wholly on land here and needs no cut from this ring.
+      continue;
+    }
+  }
+  if (nearby.length === 0) {
+    return cellToGeometry(cellRing);
+  }
+
+  let result: number[][][][] | null = null;
+  try {
+    // One boolean op per cell: every ring the cell touches goes into a single
+    // clip MultiPolygon (looping the library per ring was 6x slower).
+    const subject = [[cellRing]] as unknown as number[][][][];
+    const clip = nearby.map((ring) => [ring]) as unknown as number[][][][];
+    const clipped = polygonClipping.intersection(
+      subject as never,
+      clip as never
+    ) as unknown as number[][][][];
+    if (clipped && clipped.length > 0) result = clipped;
+  } catch {
+    return null;
+  }
+  if (!result || result.length === 0) return null;
+
+  const polygons: Position[][][] = [];
+  for (const poly of result) {
+    const outer = poly[0];
+    if (!outer || outer.length < 4) continue;
+    const normalized = normalizeSphericalRing(poly[0] as Position[]);
+    if (!normalized) continue;
+    const cleaned = cleanRing(normalized);
+    if (cleaned.length < 4) continue;
+    polygons.push([cleaned]);
+  }
+  if (polygons.length === 0) return null;
+  if (polygons.length === 1) return { type: 'Polygon', coordinates: polygons[0] };
+  return { type: 'MultiPolygon', coordinates: polygons };
+}
+
+/** Diagnostics: how many cells came from the exact boolean path. */
+export const subdivisionDiagnostics = { exact: 0, fallback: 0 };
+
 export function subdivideCountryGeometry(
   geometry: Geometry,
   seeds: ProvinceSubSeed[]
@@ -1116,9 +1439,33 @@ export function subdivideCountryGeometry(
     return snappedSeeds.map((s) => ({ seed: s, geometry: safeBaseGeometry }));
   }
 
-  return snappedSeeds.map((seedI, i) => {
-    let currentRings = activeOuterRings.map((r) => [...r]);
+  const lat0 =
+    snappedSeeds.reduce((acc, seed) => acc + seed.lat, 0) /
+    Math.max(1, snappedSeeds.length);
+  const { unproject } = makePlanarTransform(lat0);
+  // One shared simplified ring set for the whole country: every cell is clipped
+  // against the exact same vertices, so neighbouring cities share identical
+  // border vertices (no cracks, no slivers) at a fraction of the boolean cost.
+  const clipRings = activeOuterRings
+    .map((ring) => simplifyRingForClipping(ring))
+    .filter((ring) => ring.length >= 4);
+  const ringsForCells = clipRings.length > 0 ? clipRings : activeOuterRings;
+  const cells = buildVoronoiCells(ringsForCells, snappedSeeds);
 
+  return snappedSeeds.map((seedI, i) => {
+    const cellRing = cells?.[i];
+    const exactGeom = cellRing
+      ? intersectCellWithCountry(cellRing, ringsForCells, unproject)
+      : null;
+    if (exactGeom) {
+      subdivisionDiagnostics.exact += 1;
+      return { seed: seedI, geometry: exactGeom };
+    }
+    subdivisionDiagnostics.fallback += 1;
+
+    // Fallback: legacy bisector clipping, used only if the boolean op failed
+    // (degenerate cell / clipping library edge case).
+    let currentRings = activeOuterRings.map((r) => [...r]);
     snappedSeeds.forEach((seedJ, j) => {
       if (i === j) return;
       const a = 2 * (seedJ.lon - seedI.lon);
@@ -1127,38 +1474,27 @@ export function subdivideCountryGeometry(
         seedJ.lon * seedJ.lon +
         seedJ.lat * seedJ.lat -
         (seedI.lon * seedI.lon + seedI.lat * seedI.lat);
-
       const nextRings: Position[][] = [];
       currentRings.forEach((ring) => {
         const clipped = clipRingWithHalfPlane(ring, a, b, c);
-        if (clipped.length >= 4) {
-          nextRings.push(clipped);
-        }
+        if (clipped.length >= 4) nextRings.push(clipped);
       });
       currentRings = nextRings;
     });
-
-    // Normalize spherical winding order on every clipped ring so d3-geo never inverts the polygon to fill the ocean
     const normalizedRings = currentRings
       .map((r) => normalizeSphericalRing(r))
-      .filter((r): r is Position[] => Boolean(r));
-
-    const clippedGeom: Geometry =
-      normalizedRings.length === 1
-        ? { type: 'Polygon', coordinates: [normalizedRings[0]] }
-        : {
-            type: 'MultiPolygon',
-            coordinates: normalizedRings.map((r) => [r]),
-          };
-
+      .filter((r): r is Position[] => Boolean(r))
+      .map((r) => cleanRing(r))
+      .filter((r) => r.length >= 4);
     const fallbackGeom =
       normalizedRings.length > 0
-        ? clippedGeom
+        ? normalizedRings.length === 1
+          ? { type: 'Polygon' as const, coordinates: [normalizedRings[0]] }
+          : {
+              type: 'MultiPolygon' as const,
+              coordinates: normalizedRings.map((r) => [r]),
+            }
         : buildFallbackCell(activeOuterRings, seedI) ?? safeBaseGeometry;
-
-    return {
-      seed: seedI,
-      geometry: fallbackGeom,
-    };
+    return { seed: seedI, geometry: fallbackGeom };
   });
 }
