@@ -2,6 +2,10 @@
 
 ## Tamamlanmış çıktılar
 
+- [x] Dünya haritası 448 → 895 eyalete genişletildi (880–920 hedef bandı); eski 448 eyalet kimliği, başkent yuvaları ve kayıt uyumu korunuyor. Ayrıntılar: `GENISLETILMIS_DUNYA_HARITASI.md`.
+- [x] 3 kademeli etiket LOD'u: uzakta devlet adları, orta zoom'da başkent + ana şehirler, ≥2.4x (mobil ≥2.8x) ilçe/sancak adları; seçili eyalet her zoom'da görünür.
+- [x] 1444 senaryosunda yeni ilçeler dönem adlarıyla (Saruhan, Ruha, Ayıntab, Pskov, Echigo, Flandre) ve tarihî sahiplerle gösteriliyor; 2026 modern adları koruyor.
+- [x] Nüfus/GSYİH/ordu payları ülke başına 1.00'a normalleştirildi; ilçeler bina kapasitesi ve manpower tavanını şişirmiyor.
 - [x] Dar-yatay drawer 667×375, 800×400 ve 896×414 viewportlarında haritanın çoğunluğunu görünür bırakıyor; açık panelin üstüne sabit müzik widget'ı binmiyor.
 - [x] Ambargo yönü uygulayan ülkeyi kaydediyor; yalnız hedefin ticaret geliri etkileniyor, iki tarafın ambargoları bağımsız açılıp kapanıyor ve eski yönsüz kayıt tek deterministik yöne eşleniyor.
 - [x] Küçük garnizonda bombardıman asker sayısını artırmıyor; taktik ve kuşatma metinleri gerçek sur/asker etkilerini bildiriyor.
@@ -48,6 +52,7 @@
 - [x] `npm test` depodaki tüm test dosyalarını çalıştırıyor ve herhangi bir başarısızlıkta non-zero çıkıyor.
 - [x] `package.json` temizleme komutu depoda bulunmayan `server.js` yolunu içermiyor. Kaynak ve `public/` taramasında yüksek güvenle kullanılmayan dosya bulunmadı; referans, save-compatibility veya dinamik yüklenen dosyalar silinmiyor.
 - [x] Kaynak/build yapılandırmasında kullanılmayan `@google/genai`, `dotenv`, `express`, `@types/express`, `motion` ve `autoprefixer` bağımlılıkları kaldırıldı; taramada referans kalmadı ve `bun.lock` eşitlendi.
+- [x] AoH3 referans ekran görüntülerindeki HUD dili uygulandı: pirinç kaynak hücreleri, bayrak kalkanı + ★ şeridi, tarih plakası ve −/+ zoom, seçim bayrak çipleri, bordo-altın ordu paneli, AoH3 eyalet kartı çerçevesi ve yeni **dünya mini haritası** (görüntü alanı dikdörtgeni + tıkla-odakla). Ayrıntı: `AOH3_HUD_UYGULAMASI.md`.
 
 ## Kapsam dışı bırakılmış varsayımlar
 

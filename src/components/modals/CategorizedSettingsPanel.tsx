@@ -9,6 +9,7 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
+  ZoomIn,
 } from 'lucide-react';
 import {
   AI_AGGRESSIVENESS_OPTIONS,
@@ -384,6 +385,45 @@ export const CategorizedSettingsPanel: React.FC<CategorizedSettingsPanelProps> =
                   }`}
                 >
                   {settings.fogOfWarEnabled ? 'Açık' : 'Kapalı'}
+                </span>
+              </button>
+            </div>
+
+            <div className="pt-3 border-t border-[#2a241d]">
+              <button
+                type="button"
+                aria-pressed={settings.showZoomControls}
+                onClick={() => {
+                  sound.playClick();
+                  onUpdateSettings({
+                    showZoomControls: !settings.showZoomControls,
+                  });
+                }}
+                className={`w-full min-h-[50px] p-3 rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                  settings.showZoomControls
+                    ? 'bg-[#26211a] border-[#c89d54]/60 text-[#f0e6d2]'
+                    : 'bg-[#1c1814] border-[#342d24] text-[#b2a58f]'
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#f0e6d2] flex items-center gap-1.5">
+                    <ZoomIn className="w-4 h-4 text-[#c89d54] shrink-0" />
+                    <span>Harita Yakınlaştırma Düğmeleri (AoH3)</span>
+                  </div>
+                  <div className="text-[11px] text-[#b2a58f] mt-0.5">
+                    {settings.showZoomControls
+                      ? 'Üst şeritte tarihin yanında −/+ plakası görünür.'
+                      : 'Gizli: Haritayı yalnızca sürükleyerek ve iki parmakla yakınlaştırın.'}
+                  </div>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 ${
+                    settings.showZoomControls
+                      ? 'bg-[#c89d54] text-[#110f0d]'
+                      : 'bg-[#2b251e] text-[#cfc3ae]'
+                  }`}
+                >
+                  {settings.showZoomControls ? 'Açık' : 'Kapalı'}
                 </span>
               </button>
             </div>

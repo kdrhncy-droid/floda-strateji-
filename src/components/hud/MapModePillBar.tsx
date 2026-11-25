@@ -54,6 +54,8 @@ interface MapModePillBarProps {
   hideWhenDrawerOpen?: boolean;
   outlinerSlot?: React.ReactNode;
   belowTraySlot?: React.ReactNode;
+  /** AoH3 selected-province flag chips, shown directly under the tool row. */
+  selectionChipsSlot?: React.ReactNode;
   onSetMapMode: (mode: MapMode) => void;
   onSetMacroMode?: (mode: MapMacroMode) => void;
   onSetMacroRecruitUnitMode?: (unitMode: BatchRecruitUnitMode) => void;
@@ -114,6 +116,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   hideWhenDrawerOpen = false,
   outlinerSlot,
   belowTraySlot,
+  selectionChipsSlot,
   onSetMapMode,
   onSetMacroMode,
   onSetMacroRecruitUnitMode,
@@ -223,6 +226,10 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
 
           {outlinerSlot}
         </div>
+
+        {selectionChipsSlot ? (
+          <div className="pointer-events-auto max-w-full">{selectionChipsSlot}</div>
+        ) : null}
 
         {/* Expandable Row: AoH3 Map Lenses */}
         {openTray === 'MODES' && (

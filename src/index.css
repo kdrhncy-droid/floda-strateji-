@@ -555,3 +555,837 @@
     padding-right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
   }
 }
+
+/* =========================================================================
+   AoH3 HUD CHROME — antique-gold bevels, oxblood title bars, brass plaques.
+   Mirrors the Age of History 3 reference layout while keeping the Obsidyen +
+   Antik Altın palette and all existing mobile breakpoints.
+   ========================================================================= */
+:root {
+  --aoh3-ink: #0b0907;
+  --aoh3-ink-soft: #14110e;
+  --aoh3-oxblood-a: #58241e;
+  --aoh3-oxblood-b: #26100e;
+  --aoh3-gold-line: rgba(200, 157, 84, 0.42);
+  --aoh3-gold-bright: #e6c07a;
+  --aoh3-parchment: #f3ead7;
+  --aoh3-muted: #b2a58f;
+  --aoh3-red: #b1454a;
+}
+
+/* Thin continuous dark bar with a double gold hairline, like the AoH3 top chrome */
+.aoh3-topbar {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(52, 42, 28, 0.55) 0%, rgba(14, 12, 9, 0.98) 42%, #080705 100%),
+    #0b0907;
+  border-bottom: 1px solid rgba(200, 157, 84, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(230, 192, 122, 0.16),
+    inset 0 -12px 22px rgba(0, 0, 0, 0.45),
+    0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.aoh3-topbar::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -2px;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(230, 192, 122, 0.5) 18%,
+    rgba(230, 192, 122, 0.16) 50%,
+    rgba(230, 192, 122, 0.5) 82%,
+    transparent 100%
+  );
+}
+
+/* Chamfered bevel panel used by floating HUD cards (desktop only, keeps mobile rounded) */
+.aoh3-panel,
+.aoh3-panel-soft {
+  background:
+    linear-gradient(180deg, rgba(46, 34, 24, 0.96) 0%, rgba(17, 13, 10, 0.98) 42%, rgba(10, 8, 7, 0.99) 100%);
+  border: 1px solid rgba(200, 157, 84, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 2px rgba(230, 192, 122, 0.1),
+    0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+.aoh3-panel::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(200, 157, 84, 0.18);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+@media (min-width: 901px) and (min-height: 541px) {
+  .aoh3-panel.aoh3-chamfer {
+    border-radius: 0;
+    clip-path: polygon(
+      9px 0,
+      calc(100% - 9px) 0,
+      100% 9px,
+      100% calc(100% - 9px),
+      calc(100% - 9px) 100%,
+      9px 100%,
+      0 calc(100% - 9px),
+      0 9px
+    );
+  }
+}
+
+/* Oxblood title bar with centred engraved caps, mirrors "Technology Tree" headers */
+.aoh3-panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1.85rem;
+  padding: 0.15rem 0.5rem;
+  border-bottom: 1px solid rgba(200, 157, 84, 0.5);
+  background:
+    linear-gradient(180deg, rgba(96, 40, 32, 0.95), rgba(48, 20, 16, 0.95) 55%, rgba(29, 13, 11, 0.96)),
+    #2a1210;
+  box-shadow:
+    inset 0 1px 0 rgba(246, 208, 148, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.7);
+}
+
+.aoh3-panel-title-text {
+  font-family: Cinzel, 'Trajan Pro', Georgia, serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f6e6c6;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aoh3-panel-title-rule {
+  flex: 1;
+  height: 1px;
+  min-width: 0.5rem;
+  background: linear-gradient(90deg, rgba(230, 192, 122, 0.45), rgba(230, 192, 122, 0));
+}
+
+.aoh3-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 2px;
+  border: 1px solid rgba(177, 69, 74, 0.7);
+  background: linear-gradient(180deg, #7a2a2c, #43161a);
+  color: #f7dcd2;
+  font-size: 0.62rem;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 200, 180, 0.25);
+}
+
+/* Brass resource cell: medallion + primary value + secondary rate */
+.aoh3-stat {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  padding: 0.15rem 0.5rem 0.15rem 0.3rem;
+  border-radius: 4px;
+  border: 1px solid rgba(200, 157, 84, 0.28);
+  background:
+    linear-gradient(180deg, rgba(58, 45, 30, 0.55), rgba(12, 10, 8, 0.92) 55%, rgba(8, 7, 6, 0.95)),
+    #0d0b08;
+  box-shadow: inset 0 1px 0 rgba(230, 192, 122, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.7);
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.aoh3-stat:hover {
+  border-color: rgba(230, 192, 122, 0.6);
+  background:
+    linear-gradient(180deg, rgba(84, 64, 38, 0.6), rgba(18, 14, 10, 0.95) 55%, rgba(10, 8, 7, 0.96)),
+    #0d0b08;
+}
+
+.aoh3-stat:active {
+  transform: translateY(1px);
+}
+
+.aoh3-stat.is-active {
+  border-color: rgba(230, 192, 122, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(246, 208, 148, 0.25),
+    0 0 0 1px rgba(230, 192, 122, 0.18),
+    0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.aoh3-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.42rem;
+  height: 1.42rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(200, 157, 84, 0.55);
+  background:
+    radial-gradient(circle at 35% 28%, rgba(246, 214, 156, 0.5), rgba(120, 84, 38, 0.35) 52%, rgba(24, 18, 12, 0.95) 100%);
+  color: #f2d69c;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.aoh3-stat-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.02;
+  min-width: 0;
+}
+
+.aoh3-stat-value {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #faf3e3;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+}
+
+.aoh3-stat-sub {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--aoh3-muted);
+  white-space: nowrap;
+}
+
+/* Imperial flag crest — square double frame flush to the corner like AoH3 */
+.aoh3-crest {
+  position: relative;
+  padding: 3px;
+  border-radius: 3px;
+  border: 1px solid rgba(230, 192, 122, 0.78);
+  background: linear-gradient(180deg, #33281b, #100d0a 65%, #080706);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.9),
+    0 3px 9px rgba(0, 0, 0, 0.65);
+}
+
+.aoh3-crest::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(200, 157, 84, 0.4);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.aoh3-crest-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 2px;
+  padding: 0 0.25rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  border: 1px solid rgba(200, 157, 84, 0.32);
+  background: linear-gradient(180deg, rgba(46, 34, 22, 0.95), rgba(9, 7, 6, 0.98));
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #e0b86e;
+  white-space: nowrap;
+}
+
+/* Right-hand date plaque + zoom controls */
+.aoh3-dateplaque {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  border: 1px solid rgba(200, 157, 84, 0.28);
+  background: linear-gradient(180deg, rgba(40, 31, 21, 0.55), rgba(9, 7, 6, 0.85));
+  box-shadow: inset 0 1px 0 rgba(230, 192, 122, 0.1);
+}
+
+.aoh3-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.62rem;
+  height: 1.62rem;
+  border-radius: 3px;
+  border: 1px solid rgba(200, 157, 84, 0.45);
+  background: linear-gradient(180deg, rgba(62, 48, 31, 0.9), rgba(12, 10, 8, 0.95));
+  color: #e6c07a;
+  box-shadow: inset 0 1px 0 rgba(246, 214, 156, 0.18);
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.aoh3-zoom-btn:hover {
+  border-color: rgba(230, 192, 122, 0.9);
+  color: #faf3e3;
+  background: linear-gradient(180deg, rgba(94, 72, 42, 0.95), rgba(18, 14, 10, 0.96));
+}
+
+.aoh3-zoom-btn:active {
+  transform: translateY(1px);
+}
+
+/* AoH3 top-centre instruction strip */
+.aoh3-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: min(92vw, 40rem);
+  padding: 0.32rem 0.55rem 0.32rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid rgba(200, 157, 84, 0.55);
+  background:
+    linear-gradient(180deg, rgba(58, 21, 17, 0.97), rgba(24, 11, 9, 0.97)),
+    #1b0d0b;
+  box-shadow:
+    inset 0 1px 0 rgba(246, 208, 148, 0.22),
+    0 10px 26px rgba(0, 0, 0, 0.55);
+  color: #f6e6c6;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.aoh3-hint::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -3px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(230, 192, 122, 0.65), transparent);
+}
+
+/* Minimap panel: gold viewport frame + icon toolbar strip */
+.aoh3-minimap {
+  position: relative;
+  border: 1px solid rgba(200, 157, 84, 0.62);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(28, 22, 16, 0.97), rgba(8, 7, 6, 0.98));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 2px rgba(230, 192, 122, 0.1),
+    0 14px 32px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.aoh3-minimap-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.12rem 0.22rem;
+  border-bottom: 1px solid rgba(200, 157, 84, 0.35);
+  background: linear-gradient(180deg, rgba(58, 45, 30, 0.75), rgba(10, 8, 7, 0.95));
+}
+
+.aoh3-minimap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  color: #c8a86a;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.aoh3-minimap-btn:hover,
+.aoh3-minimap-btn.is-active {
+  color: #faf3e3;
+  border-color: rgba(230, 192, 122, 0.55);
+  background: rgba(230, 192, 122, 0.14);
+}
+
+.aoh3-minimap-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.05rem 0.3rem 0.14rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #b2a58f;
+  text-transform: uppercase;
+}
+
+/* Province / army quick-bar frame (AoH3 plum card) */
+.aoh3-quickbar {
+  background:
+    linear-gradient(180deg, #33222a 0%, #241a1e 34%, #171114 100%),
+    #171114 !important;
+  border-color: rgba(202, 161, 90, 0.72) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.85),
+    inset 0 0 0 2px rgba(230, 192, 122, 0.12),
+    0 16px 36px rgba(0, 0, 0, 0.62) !important;
+}
+
+.aoh3-quickbar::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(202, 161, 90, 0.16);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Bottom navigation: gold hairline + engraved active plate */
+.hud-bottom-nav.aoh3-nav {
+  background: linear-gradient(180deg, rgba(38, 29, 18, 0.97), rgba(8, 7, 6, 0.99)) !important;
+  border-top: 1px solid rgba(200, 157, 84, 0.42);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.hud-bottom-nav.aoh3-nav .hud-bottom-nav-btn.hud-nav-active {
+  background:
+    linear-gradient(180deg, rgba(206, 164, 92, 0.95), rgba(146, 106, 48, 0.95)) !important;
+  color: #14100c !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 236, 200, 0.6),
+    0 0 0 1px rgba(230, 192, 122, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
+@media (min-width: 901px) and (min-height: 541px) {
+  .hud-bottom-nav.aoh3-nav {
+    border: 1px solid rgba(200, 157, 84, 0.45);
+    border-radius: 0.55rem;
+    background: linear-gradient(180deg, rgba(34, 26, 16, 0.96), rgba(7, 6, 5, 0.98)) !important;
+  }
+
+  .hud-bottom-nav.aoh3-nav .hud-bottom-nav-btn {
+    border-radius: 0.35rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aoh3-stat,
+  .aoh3-zoom-btn,
+  .aoh3-minimap-btn {
+    transition: none;
+  }
+}
+
+/* AoH3 stat cells stay legible on narrow phones without wrapping the strip */
+@media (max-width: 430px) {
+  .aoh3-stat {
+    min-height: 1.95rem;
+    padding: 0.1rem 0.32rem 0.1rem 0.22rem;
+    gap: 0.28rem;
+  }
+  .aoh3-stat-icon {
+    width: 1.22rem;
+    height: 1.22rem;
+  }
+  .aoh3-stat-value {
+    font-size: 0.66rem;
+  }
+  .aoh3-stat-sub {
+    font-size: 0.5rem;
+    letter-spacing: 0.01em;
+  }
+}
+
+@media (max-width: 359px) {
+  .aoh3-stat-sub {
+    display: none;
+  }
+}
+
+/* Keep the original army-cell breakpoint (visible on portrait, hidden on tablets) */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .aoh3-stat-army {
+    display: none;
+  }
+}
+
+/* Landscape phones: single 44px chrome row, drop secondary lines */
+@media (max-height: 540px) and (orientation: landscape) {
+  .aoh3-crest-ribbon {
+    display: none !important;
+  }
+  .aoh3-stat {
+    min-height: 1.65rem;
+    padding: 0.05rem 0.3rem;
+  }
+  .aoh3-stat-sub {
+    display: none;
+  }
+  .aoh3-stat-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+}
+
+/* AoH3 selected-province flag chips (second strip under the map tools) */
+.aoh3-chip-label {
+  display: inline-flex;
+  align-items: center;
+  height: 1.35rem;
+  padding: 0 0.32rem;
+  border-radius: 2px;
+  border: 1px solid rgba(202, 161, 90, 0.32);
+  background: linear-gradient(180deg, rgba(46, 34, 22, 0.95), rgba(9, 7, 6, 0.98));
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #e0b86e;
+  white-space: nowrap;
+}
+
+.aoh3-flagchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.35rem;
+  padding: 0 0.14rem 0 0.24rem;
+  border-radius: 2px;
+  border: 1px solid rgba(202, 161, 90, 0.5);
+  background: linear-gradient(180deg, rgba(56, 42, 28, 0.92), rgba(13, 11, 8, 0.96));
+  box-shadow: inset 0 1px 0 rgba(230, 192, 122, 0.12);
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #f0e6d2;
+}
+
+.aoh3-flagchip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  border: 1px solid rgba(177, 69, 74, 0.55);
+  background: linear-gradient(180deg, #6d272a, #3a1418);
+  color: #f7dcd2;
+}
+
+.aoh3-flagchip-x:hover {
+  background: linear-gradient(180deg, #8c3336, #4a1a1e);
+}
+
+.aoh3-chip-clear {
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 2px;
+  border: 1px solid rgba(202, 161, 90, 0.32);
+  background: linear-gradient(180deg, rgba(40, 30, 20, 0.9), rgba(10, 8, 7, 0.96));
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #d8cbb5;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.aoh3-chip-clear:hover {
+  color: #faf3e3;
+  border-color: rgba(230, 192, 122, 0.6);
+}
+
+/* Portrait phones: keep the imperial crest + star ribbon inside the old header height */
+@media (max-width: 639px) and (orientation: portrait) {
+  .aoh3-crest {
+    padding: 2px;
+  }
+  .aoh3-crest::after {
+    inset: 3px;
+  }
+  .aoh3-crest-ribbon {
+    height: 0.62rem;
+    font-size: 0.46rem;
+    margin-top: 1px;
+  }
+}
+
+@media (max-width: 360px) and (orientation: portrait) {
+  .aoh3-stat {
+    min-height: 1.75rem;
+  }
+}
+
+/* Portrait phones: slimmer stat medallions so the brass strip never crowds the flag */
+@media (max-width: 639px) {
+  .aoh3-stat-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+  .aoh3-stat-value {
+    font-size: 0.68rem;
+  }
+  .aoh3-stat {
+    padding-left: 0.26rem;
+    padding-right: 0.34rem;
+  }
+}
+
+/* Brass plaque treatment shared by the map-tool buttons, trays and roster toggle */
+.aoh3-plaque,
+.hud-mapmode-shell,
+.hud-macro-bar {
+  background:
+    linear-gradient(180deg, rgba(52, 40, 26, 0.94) 0%, rgba(15, 12, 9, 0.96) 58%, rgba(9, 7, 6, 0.98) 100%) !important;
+  border-color: rgba(200, 157, 84, 0.45) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(230, 192, 122, 0.14),
+    inset 0 -10px 18px rgba(0, 0, 0, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.45) !important;
+}
+
+.hud-mapmode-shell button,
+.hud-macro-bar button {
+  border-radius: 3px;
+}
+
+/* =========================================================================
+   AoH3 top chrome v2 — label-free, continuous stat strip.
+   Overrides the earlier brass-pill version: the reference bar is a single dark
+   plate with hairline-divided cells (icon, big serif number, small sub-number).
+   ========================================================================= */
+.aoh3-stat-strip {
+  display: flex;
+  align-items: center;
+  min-height: 2.6rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.aoh3-stat-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.aoh3-stat {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.1rem;
+  padding: 0 0.55rem;
+  border: 0;
+  border-right: 1px solid rgba(200, 157, 84, 0.16);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+
+.aoh3-stat:first-child {
+  border-left: 1px solid rgba(200, 157, 84, 0.1);
+}
+
+.aoh3-stat:hover {
+  background: rgba(202, 161, 90, 0.1);
+  border-color: rgba(200, 157, 84, 0.3);
+  transform: none;
+}
+
+.aoh3-stat.is-active {
+  background: rgba(202, 161, 90, 0.14);
+  box-shadow: inset 0 -2px 0 rgba(224, 184, 110, 0.85);
+}
+
+.aoh3-stat-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #d8b471;
+}
+
+.aoh3-stat-value {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #faf3e3;
+  font-variant-numeric: lining-nums tabular-nums;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.85);
+}
+
+.aoh3-stat-sub {
+  font-family: var(--font-display);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #b2a58f;
+}
+
+.aoh3-stat-sub.is-up {
+  color: #6fc08b;
+}
+
+.aoh3-stat-sub.is-down {
+  color: #d1746b;
+}
+
+.aoh3-stat-sub.is-muted {
+  color: #7d7365;
+}
+
+/* Quiet icon buttons in the top-right cluster (pause, zoom, hamburger) */
+.aoh3-topbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #d8b471;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.aoh3-topbtn:hover {
+  color: #faf3e3;
+  border-color: rgba(200, 157, 84, 0.4);
+  background: rgba(202, 161, 90, 0.12);
+}
+
+.aoh3-topbtn.is-active {
+  color: #faf3e3;
+  border-color: rgba(230, 192, 122, 0.7);
+  background: rgba(202, 161, 90, 0.2);
+}
+
+.aoh3-topbtn.is-paused {
+  color: #f0d9a6;
+}
+
+/* Bold AoH3 date, no season/hour text */
+.aoh3-datenow {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #f7f2e6;
+  white-space: nowrap;
+  padding-left: 0.2rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.aoh3-crest-ribbon-sep {
+  width: 1px;
+  height: 0.55rem;
+  margin: 0 0.12rem;
+  background: rgba(200, 157, 84, 0.4);
+}
+
+/* Divan menu internals */
+.aoh3-menu-label {
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b2a58f;
+}
+
+.aoh3-time-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.55rem;
+  height: 1.45rem;
+  border-radius: 2px;
+  border: 1px solid rgba(200, 157, 84, 0.3);
+  background: linear-gradient(180deg, rgba(46, 34, 22, 0.85), rgba(10, 8, 6, 0.95));
+  color: #d8cbb5;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.aoh3-time-btn:hover {
+  border-color: rgba(230, 192, 122, 0.7);
+  color: #faf3e3;
+}
+
+.aoh3-time-btn.is-active {
+  background: linear-gradient(180deg, #cfa75d, #9a7136);
+  border-color: #f0d9a6;
+  color: #14100c;
+}
+
+/* Compact cells on phones and landscape phones */
+@media (max-width: 639px) {
+  .aoh3-stat {
+    padding: 0 0.4rem;
+    min-height: 1.9rem;
+    gap: 0.22rem;
+  }
+  .aoh3-stat-icon {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+  .aoh3-stat-value {
+    font-size: 0.72rem;
+  }
+  .aoh3-stat-sub {
+    font-size: 0.5rem;
+  }
+  .aoh3-datenow {
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+  }
+  .aoh3-topbtn {
+    width: 1.7rem;
+    height: 1.7rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .aoh3-stat {
+    padding: 0 0.28rem;
+  }
+  .aoh3-stat-value {
+    font-size: 0.66rem;
+  }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .aoh3-stat {
+    min-height: 1.7rem;
+    padding: 0 0.4rem;
+  }
+  .aoh3-stat-strip {
+    min-height: 2rem;
+  }
+  .aoh3-stat-strip .aoh3-stat-sub {
+    display: none;
+  }
+}
+
+/* The legacy <=360px rule turns the second header child into a 2-column grid;
+   keep the AoH3 stat strip as one continuous row instead. */
+.hud-header > .aoh3-stat-strip {
+  display: flex !important;
+  grid-template-columns: none !important;
+}

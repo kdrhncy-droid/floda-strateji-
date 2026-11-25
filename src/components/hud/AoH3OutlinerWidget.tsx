@@ -294,7 +294,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
           sound.playClick();
           setIsOpen((prev) => !prev);
         }}
-        className={`pointer-events-auto min-h-[32px] sm:min-h-[34px] px-2 sm:px-2.5 py-1 rounded-xl border shadow-xl flex items-center gap-1 sm:gap-1.5 text-[10.5px] sm:text-[11px] font-bold transition-all cursor-pointer ${
+        className={`aoh3-plaque pointer-events-auto min-h-[32px] sm:min-h-[34px] px-2 sm:px-2.5 py-1 rounded-md border shadow-xl flex items-center gap-1 sm:gap-1.5 text-[10.5px] sm:text-[11px] font-bold transition-all cursor-pointer ${
           relevantBattles.length > 0
             ? 'bg-amber-500 text-slate-950 border-amber-300'
             : isOpen
@@ -324,14 +324,24 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
 
       {/* Expanded AoH3 Army Roster Menu — Anchored right-0 so it never overflows mobile screens */}
       {isOpen && (
-        <div className="pointer-events-auto absolute right-0 top-full mt-1.5 w-[min(320px,calc(100vw-1rem))] max-h-[min(56vh,calc(100dvh-11rem))] overflow-y-auto rounded-xl bg-[#14110e]/98 border border-[#caa15a]/65 shadow-2xl p-2.5 space-y-2.5 text-xs text-[#f3ead7] z-40">
+        <div className="pointer-events-auto absolute right-0 top-full mt-1.5 w-[min(320px,calc(100vw-1rem))] max-h-[min(56vh,calc(100dvh-11rem))] overflow-y-auto aoh3-panel aoh3-chamfer rounded-xl text-xs text-[#f3ead7] z-40">
+          <div className="sticky top-0 z-10 aoh3-panel-title rounded-t-[11px]">
+            <span className="aoh3-panel-title-text">Ordular &amp; Cephe</span>
+            <span className="aoh3-panel-title-rule" />
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="aoh3-panel-close"
+              aria-label="Ordu menüsünü kapat"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="p-2.5 space-y-2.5">
           {/* Header Summary */}
           <div className="flex items-center justify-between gap-2 px-1 pb-1.5 border-b border-[#caa15a]/25">
             <div className="min-w-0">
-              <div className="text-[11px] font-display font-bold text-[#e0b86e] truncate">
-                ORDULARIM
-              </div>
-              <div className="text-[10px] text-[#c5b79e] truncate">
+              <div className="text-[10px] font-bold tracking-wide text-[#c5b79e] truncate">
                 Toplam: {(totalStandingArmy / 1000).toFixed(1)}B Asker ·{' '}
                 {allPlayerArmies.length} Garnizon
                 {playerSeaArmies.length > 0
@@ -713,6 +723,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                 })}
               </div>
             </div>
+          </div>
           </div>
         )}
       </aside>
