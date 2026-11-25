@@ -42,7 +42,11 @@ import {
 import {
   BatchRecruitScope,
   BatchRecruitUnitMode,
+  calculateRecruitGoldCost,
+  calculateRecruitmentDurationDays,
+  NUCLEAR_STRIKE_GOLD_COST,
 } from '../../engine/empireAndArmyActions';
+import { computeSendableTroops } from '../../engine/actions/armyMovementActions';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
 import {
   cleanNationName,
@@ -87,6 +91,7 @@ interface SelectedProvinceBarProps {
   onAssimilateTerritory?: (territoryId: string) => void;
   onMergeArmies?: (territoryId: string) => void;
   onDisbandArmy?: (territoryId: string, ratio: 0.5 | 1) => void;
+  onLaunchNuclearStrike?: (territoryId: string) => void;
   onSelectTerritory: (territoryId: string) => void;
   onOpenFullDrawer: () => void;
   onInspectNation?: (nationId: string) => void;
@@ -115,6 +120,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   onAssimilateTerritory,
   onMergeArmies,
   onDisbandArmy,
+  onLaunchNuclearStrike,
   onSelectTerritory,
   onOpenFullDrawer,
   onInspectNation,
@@ -192,7 +198,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   const isUnderCombat =
     battles.some((b) => b.territoryId === territory.id) ||
     Boolean(territory.siege);
-  const sendableTroops = Math.max(0, Math.floor(territory.garrison - 500));
+  const sendableTroops = computeSendableTroops(territory.garrison);
   const plannedSendTroops = Math.min(
     sendableTroops,
     Math.round(sendableTroops * (Number.isFinite(moveRatio) ? moveRatio : 1))
@@ -370,48 +376,57 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
           </div>
 
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            <button
-              type="button"
-              data-testid="province-recruit-1k-btn"
-              onClick={() => {
-                const baseGold =
-                  quickUnitType === 'infantry'
-                    ? 120
-                    : quickUnitType === 'armor'
-                    ? 180
-                    : 500;
-                if (onRecruitUnit) {
-                  onRecruitUnit(territory.id, quickUnitType, 1000, baseGold);
-                } else {
-                  onQuickRecruitInfantry(territory.id);
-                }
-              }}
-              className="px-2 py-1 rounded-lg bg-[#2a2117] hover:bg-[#382b1d] border border-[#caa15a]/50 text-[#f3ead7] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              +1.000 Bas ({quickUnitType === 'infantry' ? '120A' : quickUnitType === 'armor' ? '180A' : '500A'})
-            </button>
+            {(() => {
+              const pNation = nations[playerNationId];
+              const cost1k = calculateRecruitGoldCost(quickUnitType, 1000, pNation);
+              const days1k = calculateRecruitmentDurationDays(
+                1000,
+                quickUnitType,
+                territory,
+                pNation
+              );
+              const bigAmt = quickUnitType === 'infantry' ? 5000 : 2500;
+              const costBig = calculateRecruitGoldCost(quickUnitType, bigAmt, pNation);
+              const daysBig = calculateRecruitmentDurationDays(
+                bigAmt,
+                quickUnitType,
+                territory,
+                pNation
+              );
+              return (
+                <>
+                  <button
+                    type="button"
+                    data-testid="province-recruit-1k-btn"
+                    onClick={() => {
+                      if (onRecruitUnit) {
+                        onRecruitUnit(territory.id, quickUnitType, 1000, cost1k);
+                      } else {
+                        onQuickRecruitInfantry(territory.id);
+                      }
+                    }}
+                    className="px-2 py-1 rounded-lg bg-[#2a2117] hover:bg-[#382b1d] border border-[#caa15a]/50 text-[#f3ead7] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    +1.000 Bas ({cost1k}A · {days1k}g)
+                  </button>
 
-            <button
-              type="button"
-              data-testid="province-recruit-25k-btn"
-              onClick={() => {
-                const amt = quickUnitType === 'infantry' ? 5000 : 2500;
-                const baseGold =
-                  quickUnitType === 'infantry'
-                    ? 250
-                    : quickUnitType === 'armor'
-                    ? 420
-                    : 1100;
-                if (onRecruitUnit) {
-                  onRecruitUnit(territory.id, quickUnitType, amt, baseGold);
-                } else {
-                  onQuickRecruitInfantry(territory.id);
-                }
-              }}
-              className="px-2 py-1 rounded-lg bg-[#2a2117] hover:bg-[#382b1d] border border-[#caa15a]/50 text-[#e0b86e] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              +{quickUnitType === 'infantry' ? '5.000 (250A)' : quickUnitType === 'armor' ? '2.500 (420A)' : '2.500 (1100A)'}
-            </button>
+                  <button
+                    type="button"
+                    data-testid="province-recruit-25k-btn"
+                    onClick={() => {
+                      if (onRecruitUnit) {
+                        onRecruitUnit(territory.id, quickUnitType, bigAmt, costBig);
+                      } else {
+                        onQuickRecruitInfantry(territory.id);
+                      }
+                    }}
+                    className="px-2 py-1 rounded-lg bg-[#2a2117] hover:bg-[#382b1d] border border-[#caa15a]/50 text-[#e0b86e] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    +{bigAmt.toLocaleString('tr-TR')} ({costBig}A · {daysBig}g)
+                  </button>
+                </>
+              );
+            })()}
 
             {onBatchRecruitUnits && (
               <>
@@ -631,6 +646,91 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
           </button>
         </div>
 
+        {/* Active Siege 0/100 -> 100/100 Progress Strip */}
+        {territory.siege && (() => {
+          const siegePct = Math.max(0, Math.min(100, Math.round(territory.siege.progress)));
+          const besieger = nations[territory.siege.attackerId];
+          const isPlayerAtt = territory.siege.attackerId === playerNationId;
+          return (
+            <div
+              data-testid="province-siege-progress-strip"
+              className="px-2.5 py-1.5 rounded-xl bg-[#1b1510]/95 border border-[#caa15a]/45 flex flex-col gap-1"
+            >
+              <div className="flex items-center justify-between gap-2 text-[10.5px]">
+                <span className="font-bold text-[#f3ead7] flex items-center gap-1.5 truncate">
+                  <AoH3GlyphSvg name="fortress" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                  <span className="truncate">
+                    {cleanNationName(besieger?.name || 'Kuşatmacı')} Kuşatması (
+                    {formatTroopsShort(territory.siege.attackerTroops)})
+                  </span>
+                </span>
+                <span className="font-mono-num font-extrabold text-[#e0b86e] shrink-0">
+                  {siegePct}/100
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-[#0d0a07] border border-[#caa15a]/25 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    isPlayerAtt
+                      ? 'bg-gradient-to-r from-[#b8862d] to-[#facc15]'
+                      : 'bg-gradient-to-r from-rose-700 to-rose-400'
+                  }`}
+                  style={{ width: `${Math.max(siegePct > 0 ? 3 : 0, siegePct)}%` }}
+                />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Active Recruitment Queue Strip (Asker Eğitim Sırası) */}
+        {isPlayerOwned &&
+          Array.isArray(territory.recruitmentQueue) &&
+          territory.recruitmentQueue.length > 0 && (() => {
+            const activeJob = territory.recruitmentQueue[0];
+            const doneDays = Math.max(0, activeJob.progressDays || 0);
+            const remDays = Math.max(1, activeJob.totalDays - doneDays);
+            const pct = Math.max(
+              6,
+              Math.min(
+                100,
+                Math.round((doneDays / Math.max(1, activeJob.totalDays)) * 100)
+              )
+            );
+            const totalQueuedTroops = territory.recruitmentQueue.reduce(
+              (acc, j) => acc + (j.troops || 0),
+              0
+            );
+            const hearthLvl = territory.buildings?.armyHearth ?? 0;
+            return (
+              <div
+                data-testid="province-recruitment-queue-strip"
+                className="px-2.5 py-1.5 rounded-xl bg-[#18130d]/95 border border-[#caa15a]/40 flex flex-col gap-1"
+              >
+                <div className="flex items-center justify-between gap-2 text-[10.5px]">
+                  <span className="font-bold text-[#f3ead7] flex items-center gap-1.5 truncate">
+                    <AoH3GlyphSvg name="sword" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                    <span className="truncate">
+                      Eğitimde: {activeJob.label} (+{formatTroopsShort(totalQueuedTroops)})
+                      {territory.recruitmentQueue.length > 1
+                        ? ` · ${territory.recruitmentQueue.length} Sıra`
+                        : ''}
+                    </span>
+                  </span>
+                  <span className="font-mono-num font-bold text-[#e0b86e] shrink-0">
+                    {remDays}g kaldı
+                    {hearthLvl > 0 ? ` · Ocak Sv.${hearthLvl}` : ''}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-[#0d0a07] border border-[#caa15a]/25 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#caa15a] to-[#facc15] transition-all duration-300"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
         {/* Bottom Row: Direct Army Actions + Province Controls */}
         <div className="hud-province-actions flex items-center gap-1.5 shrink-0 overflow-x-auto no-scrollbar">
           {isUnderCombat && onOpenBattleOverview && (
@@ -646,7 +746,11 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               ) : (
                 <Swords className="w-3.5 h-3.5 shrink-0" />
               )}
-              <span>{territory.siege ? 'Kuşatma' : 'Muharebe'}</span>
+              <span>
+                {territory.siege
+                  ? `Kuşatma (${Math.round(territory.siege.progress)}/100)`
+                  : 'Muharebe'}
+              </span>
             </button>
           )}
 
@@ -784,6 +888,25 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             </button>
           )}
 
+          {!isPlayerOwned &&
+            atWar &&
+            onLaunchNuclearStrike &&
+            nations[playerNationId]?.unlockedTechs?.includes('mil_10') && (
+              <button
+                type="button"
+                data-testid="province-bar-nuclear-strike-btn"
+                onClick={() => {
+                  sound.playWarHorn();
+                  onLaunchNuclearStrike(territory.id);
+                }}
+                title="2026 Nükleer Füze Saldırısı: düşman garnizonunu ve surlarını yok eder (1500 Altın, +18 Agresiflik)"
+                className="min-h-[36px] px-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-amber-600 hover:from-rose-600 hover:to-amber-500 border border-amber-300/70 text-[#faf3e3] text-[11px] font-extrabold flex items-center justify-center gap-1 shadow-lg whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <AoH3GlyphSvg name="bolt" className="w-3.5 h-3.5 shrink-0" />
+                <span>Nükleer Füze ({NUCLEAR_STRIKE_GOLD_COST}A)</span>
+              </button>
+            )}
+
           {onInspectNation && !isPlayerOwned && (
             <button
               type="button"
@@ -810,7 +933,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             {isPlayerOwned ? (
               <>
                 <Landmark className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
-                <span>İnşa & Eyalet</span>
+                <span>Eyalet</span>
               </>
             ) : (
               <>

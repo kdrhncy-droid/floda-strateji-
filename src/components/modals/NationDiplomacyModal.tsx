@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Ban,
@@ -18,6 +18,7 @@ import {
   Sparkles,
   Swords,
   Timer,
+  TrendingDown,
   TrendingUp,
   Trophy,
   Users,
@@ -44,9 +45,11 @@ import {
 } from '../../engine/nationDiplomacySummary';
 import {
   calculateNationEconomy,
+  computeNationEconomySummary,
   getOrCreateRelation,
   isAtWar,
 } from '../../engine/simulationEngine';
+import { EconomySourcesPopover, useLongPress } from '../common/EconomySourcesPopover';
 import {
   AI_PERSONALITY_META,
   resolveNationAiPersonality,
@@ -238,7 +241,13 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
   seaArmies = [],
 }) => {
   const dialogRef = useAccessibleDialog(isOpen, onClose);
+  const modalBackdropPressedRef = useRef(false);
   const [modalTab, setModalTab] = useState<ModalTabId>('OVERVIEW');
+  const [showEconomyPopover, setShowEconomyPopover] = useState(false);
+  const economyLongPress = useLongPress(() => {
+    sound.playClick();
+    setShowEconomyPopover(true);
+  });
   const targetId = inspectedNationId || playerNationId;
 
   const summary = useMemo(
@@ -319,6 +328,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
     gameMode,
     seaArmies
   );
+  const economySummary = computeNationEconomySummary(summary.nation, territories);
   const techMetrics = computeNationTechMetrics(
     summary.nation,
     territories,
@@ -567,12 +577,19 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 overscroll-contain"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 overscroll-contain"
+        onPointerDown={(e) => {
+          modalBackdropPressedRef.current = e.target === e.currentTarget;
+        }}
+        onClick={(e) => {
+          if (modalBackdropPressedRef.current && e.target === e.currentTarget) {
+            onClose();
+          }
+          modalBackdropPressedRef.current = false;
+        }}
+      >
       <div
         ref={dialogRef}
         role="dialog"
@@ -737,15 +754,23 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 ] as const
               ).map((tab) => {
                 const active = modalTab === tab.id;
+                const isEconomyTab = tab.id === 'ECONOMY';
                 return (
                   <button
                     key={tab.id}
                     type="button"
+                    data-testid={`modal-tab-${tab.id.toLowerCase()}`}
+                    onPointerDown={isEconomyTab ? economyLongPress.onPointerDown : undefined}
+                    onPointerUp={isEconomyTab ? economyLongPress.onPointerUp : undefined}
+                    onPointerLeave={isEconomyTab ? economyLongPress.onPointerLeave : undefined}
+                    onPointerCancel={isEconomyTab ? economyLongPress.onPointerCancel : undefined}
                     onClick={() => {
+                      if (isEconomyTab && economyLongPress.consumeLongPressFlag()) return;
                       sound.playClick();
                       setModalTab(tab.id);
                     }}
-                    className={`min-h-[36px] px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                    title={isEconomyTab ? 'Ekonomi kaynakları için basılı tutabilirsiniz' : undefined}
+                    className={`min-h-[36px] px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer select-none ${
                       active
                         ? 'bg-[#c89d54] text-[#14100c] shadow'
                         : 'text-[#cfc3ae] hover:text-white hover:bg-[#272019]'
@@ -939,33 +964,53 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                   </div>
                 </button>
 
-                {/* 7. Ekonomi (Brüt Gelir & Enflasyon) */}
+                {/* 7. Ekonomi (Ülkem: Brüt Gelir/Gider · Diğer Ülkeler: Yalnızca Mevcut Ekonomi + Basılı Tut Kaynaklar) */}
                 <button
                   type="button"
+                  data-testid="modal-economy-tile"
+                  onPointerDown={economyLongPress.onPointerDown}
+                  onPointerUp={economyLongPress.onPointerUp}
+                  onPointerLeave={economyLongPress.onPointerLeave}
+                  onPointerCancel={economyLongPress.onPointerCancel}
                   onClick={() => {
+                    if (economyLongPress.consumeLongPressFlag()) return;
                     sound.playClick();
                     setModalTab('ECONOMY');
                   }}
-                  className="rounded-xl bg-[#1e1a15] hover:bg-[#29221a] border border-[#3a3126] hover:border-[#c89d54]/60 p-2.5 flex flex-col justify-between gap-1 text-left transition-colors cursor-pointer"
-                  title="Detaylı Ekonomi Tablosunu Aç"
+                  className="rounded-xl bg-[#1e1a15] hover:bg-[#29221a] border border-[#3a3126] hover:border-[#c89d54]/60 p-2.5 flex flex-col justify-between gap-1 text-left transition-colors cursor-pointer select-none"
+                  title="Ekonomi kaynakları ve yatırımlar için basılı tutun"
                 >
                   <div className="flex items-center justify-between w-full text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
                       <TrendingUp className="w-3.5 h-3.5 text-[#e0b86e]" />
-                      <span>Ekonomi</span>
+                      <span>{isPlayerNation ? 'Ekonomi' : 'Mevcut Ekonomi'}</span>
                     </span>
                     <span className="font-mono-num text-[#d8cbb5]">
-                      Enf %{summary.nation.inflation.toFixed(1)}
+                      {isPlayerNation
+                        ? `Enf %${summary.nation.inflation.toFixed(1)}`
+                        : 'Basılı tut'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between w-full gap-1">
-                    <span className="font-mono-num text-sm font-extrabold text-emerald-300 leading-none">
-                      +{grossDailyIncome.toFixed(1)}/g
-                    </span>
-                    <span className="font-mono-num text-[10px] text-rose-300/90">
-                      -{totalDailyExpense.toFixed(1)}
-                    </span>
-                  </div>
+                  {isPlayerNation ? (
+                    <div className="flex items-center justify-between w-full gap-1">
+                      <span className="font-mono-num text-sm font-extrabold text-emerald-300 leading-none">
+                        +{grossDailyIncome.toFixed(1)}/g
+                      </span>
+                      <span className="font-mono-num text-[10px] text-rose-300/90">
+                        -{totalDailyExpense.toFixed(1)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline justify-between w-full gap-1">
+                      <span
+                        data-testid="modal-foreign-economy-value"
+                        className="font-mono-num text-base font-extrabold text-[#e0b86e] leading-none"
+                      >
+                        {economySummary.totalEconomy.toLocaleString('tr-TR')}
+                      </span>
+                      <span className="text-[9.5px] text-[#9b8e78]">Kaynaklar</span>
+                    </div>
+                  )}
                 </button>
 
                 {/* 8. Dünya Sıralaması & Prestij */}
@@ -998,6 +1043,116 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                   </div>
                 </button>
               </div>
+
+              {/* Koalisyon / Agresiflik & Savaş Yorgunluğu Göstergesi */}
+              {(() => {
+                const aeVal = Math.min(
+                  100,
+                  Math.max(0, Math.round(summary.nation.aggressiveExpansion || 0))
+                );
+                const weVal = Math.min(
+                  100,
+                  Math.max(0, Math.round(summary.nation.warExhaustion || 0))
+                );
+                const coalitionActive =
+                  aeVal >= 100 ||
+                  wars.some(
+                    (w) =>
+                      w.isCoalitionWar &&
+                      (w.defenderId === summary.nation.id ||
+                        w.defenders.includes(summary.nation.id))
+                  );
+                return (
+                  <section
+                    data-testid="nation-coalition-status"
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                  >
+                    <div
+                      className={`rounded-xl border p-2.5 space-y-1.5 ${
+                        coalitionActive
+                          ? 'bg-rose-950/50 border-rose-500/60'
+                          : aeVal >= 75
+                          ? 'bg-amber-950/35 border-amber-500/45'
+                          : 'bg-[#120f0c] border-[#342d24]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="font-bold text-[#e0bc78] inline-flex items-center gap-1">
+                          <AoH3GlyphSvg name="flag" className="w-3.5 h-3.5 text-rose-400" />
+                          <span>Koalisyon &amp; Agresiflik</span>
+                        </span>
+                        <span
+                          className={`font-mono-num font-extrabold ${
+                            coalitionActive
+                              ? 'text-rose-300'
+                              : aeVal >= 75
+                              ? 'text-amber-300'
+                              : 'text-emerald-300'
+                          }`}
+                        >
+                          {aeVal} / 100
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-[#0a0806] border border-[#3a3126] overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            coalitionActive
+                              ? 'bg-rose-500'
+                              : aeVal >= 75
+                              ? 'bg-amber-400'
+                              : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${aeVal}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-[#b2a58f] leading-snug">
+                        {coalitionActive
+                          ? 'DÜNYA KOALİSYONU AKTİF! Agresiflik 100 eşiğine ulaştı.'
+                          : aeVal >= 75
+                          ? `Koalisyon tehlikesi yüksek! ${100 - aeVal} puan sonra tüm dünya savaş açar.`
+                          : 'Agresiflik 100\'e ulaşırsa bütün dünya koalisyon kurup savaş açar.'}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-[#120f0c] border border-[#342d24] p-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="font-bold text-[#e0bc78] inline-flex items-center gap-1">
+                          <AoH3GlyphSvg name="sword" className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Savaş Yorgunluğu</span>
+                        </span>
+                        <span
+                          className={`font-mono-num font-extrabold ${
+                            weVal >= 55
+                              ? 'text-rose-300'
+                              : weVal >= 25
+                              ? 'text-amber-300'
+                              : 'text-emerald-300'
+                          }`}
+                        >
+                          %{weVal}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-[#0a0806] border border-[#3a3126] overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            weVal >= 55
+                              ? 'bg-rose-500'
+                              : weVal >= 25
+                              ? 'bg-amber-400'
+                              : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${weVal}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-[#b2a58f] leading-snug">
+                        {weVal > 0
+                          ? `Vergi/Üretim -%${Math.round(weVal * 0.45)} · Ordu Morali -%${Math.round(weVal * 0.42)} · Bakım +%${Math.round(weVal * 0.7)}`
+                          : 'Ülke dinç ve seferberliğe hazır. Uzun savaşlar ekonomiyi yıpratır.'}
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
 
               {/* Clean Active Pacts & Wars Strip (Zero Empty-Box Clutter) */}
               <section className="rounded-xl bg-[#120f0c] border border-[#342d24] p-3 space-y-2.5">
@@ -1188,7 +1343,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                           className="min-h-[34px] px-2.5 py-1 rounded-lg bg-rose-600/35 hover:bg-rose-600/55 border border-rose-400/50 text-rose-100 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shrink-0"
                         >
                           <Flame className="w-3 h-3" />
-                          <span>Hakaret (-25)</span>
+                          <span>Hakaret (-30)</span>
                         </button>
                       )}
                     </div>
@@ -1216,6 +1371,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     ) : (
                       <button
                         type="button"
+                        data-testid="modal-declare-war-btn"
                         onClick={() =>
                           onDiplomaticAction(summary.nation.id, 'DECLARE_WAR')
                         }
@@ -1232,20 +1388,48 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
 
                     <button
                       type="button"
+                      data-testid="modal-improve-relations-btn"
                       onClick={() => onDiplomaticAction(summary.nation.id, 'IMPROVE')}
-                      className="min-h-[54px] px-2 py-1.5 rounded-xl bg-[#1b1510] hover:bg-[#271f17] border border-[#caa15a]/40 text-[#f3ead7] text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer"
+                      title="Diplomatik elçi gönder (+3/gün · 10 gün)"
+                      className="min-h-[54px] px-2 py-1.5 rounded-xl bg-[#1b1510] hover:bg-[#271f17] border border-[#caa15a]/40 text-[#f3ead7] text-[11px] font-bold flex flex-col items-center justify-center gap-0.5 text-center cursor-pointer"
                     >
                       <Handshake className="w-4 h-4 shrink-0 text-[#e0b86e]" />
                       <span className="leading-tight truncate max-w-full">+İlişki</span>
+                      <span className="text-[9px] text-[#e0b86e] font-mono-num">+3/g · 10g</span>
                     </button>
 
                     <button
                       type="button"
+                      data-testid="modal-damage-relations-btn"
+                      onClick={() => onDiplomaticAction(summary.nation.id, 'DAMAGE')}
+                      title="İlişki bozma elçisi gönder (-3/gün · 10 gün)"
+                      className="min-h-[54px] px-2 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/55 border border-rose-500/40 text-rose-200 text-[11px] font-bold flex flex-col items-center justify-center gap-0.5 text-center cursor-pointer"
+                    >
+                      <TrendingDown className="w-4 h-4 shrink-0 text-rose-300" />
+                      <span className="leading-tight truncate max-w-full">-İlişki</span>
+                      <span className="text-[9px] text-rose-300 font-mono-num">-3/g · 10g</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      data-testid="modal-insult-btn"
                       onClick={() => onDiplomaticAction(summary.nation.id, 'INSULT')}
-                      className="min-h-[54px] px-2 py-1.5 rounded-xl bg-rose-950/45 hover:bg-rose-900/55 border border-rose-500/40 text-rose-200 text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer"
+                      title="Diplomatik hakaret (-30 ilişki · +1 prestij · 5 gün soğuma)"
+                      className="min-h-[54px] px-2 py-1.5 rounded-xl bg-rose-950/45 hover:bg-rose-900/55 border border-rose-500/40 text-rose-200 text-[11px] font-bold flex flex-col items-center justify-center gap-0.5 text-center cursor-pointer"
                     >
                       <Flame className="w-4 h-4 shrink-0 text-rose-300" />
-                      <span className="leading-tight truncate max-w-full">Hakaret</span>
+                      <span className="leading-tight truncate max-w-full">Hakaret Et</span>
+                      <span className="text-[9px] text-rose-300 font-mono-num">
+                        {(() => {
+                          const lastTick =
+                            nations[playerNationId]?.lastInsultTickByNation?.[
+                              summary.nation.id
+                            ];
+                          const rem =
+                            lastTick !== undefined ? Math.max(0, 5 - (tick - lastTick)) : 0;
+                          return rem > 0 ? `${rem}g soğuma` : '-30 · 5g';
+                        })()}
+                      </span>
                     </button>
 
                     <button
@@ -1551,73 +1735,113 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
 
           {modalTab === 'ECONOMY' && (
             <div className="space-y-3">
-              {/* AoH3 Income vs Expense Ledger */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-300 inline-flex items-center gap-1.5">
-                      <TrendingUp className="w-3.5 h-3.5" />
-                      <span>Günlük Gelirler</span>
-                    </span>
-                    <span className="font-mono-num text-xs font-extrabold text-emerald-300">
-                      +{grossDailyIncome.toFixed(1)} A/g
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 text-xs">
-                    {[
-                      { label: 'Vergi Geliri', val: econ.taxIncome },
-                      { label: 'Üretim & Atölye', val: econ.productionIncome },
-                      { label: 'Ticaret & Anlaşmalar', val: econ.tradeIncome },
-                      { label: 'Boğaz & Kervan', val: econ.straitTollIncome + econ.caravanTradeIncome },
-                      { label: 'Vasal & Abluka', val: econ.vassalIncome + econ.seizedBlockadeIncome },
-                    ].map((row) => (
-                      <div key={row.label} className="flex items-center justify-between text-[11px]">
-                        <span className="text-[#cfc3ae]">{row.label}</span>
-                        <span className="font-mono-num font-bold text-emerald-200">
-                          +{row.val.toFixed(1)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-rose-300 inline-flex items-center gap-1.5">
-                      <Coins className="w-3.5 h-3.5" />
-                      <span>Günlük Giderler & Denge</span>
-                    </span>
-                    <span className="font-mono-num text-xs font-extrabold text-rose-300">
-                      -{totalDailyExpense.toFixed(1)} A/g
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 text-xs">
-                    {[
-                      { label: 'Ordu Bakımı', val: econ.militaryUpkeep },
-                      { label: 'Enflasyon Kaybı', val: econ.inflationPenalty },
-                      { label: 'Ödenen Vasal Haracı', val: econ.vassalTributeOut },
-                      { label: 'Abluka Kesintisi', val: econ.blockadePenaltyLoss },
-                    ].map((row) => (
-                      <div key={row.label} className="flex items-center justify-between text-[11px]">
-                        <span className="text-[#cfc3ae]">{row.label}</span>
-                        <span className="font-mono-num font-bold text-rose-200">
-                          -{row.val.toFixed(1)}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="pt-1.5 border-t border-[#2d261e] flex items-center justify-between text-xs font-bold">
-                      <span className="text-[#f0e6d2]">Günlük Net Kâr</span>
-                      <span
-                        className={`font-mono-num ${
-                          econ.netDailyGold >= 0 ? 'text-emerald-300' : 'text-rose-400'
-                        }`}
-                      >
-                        {netGoldLabel} A/gün
+              {/* Player: Full Daily Income/Expense Ledger · Foreign: ONLY Mevcut Ekonomi + Basılı Tut Kaynaklar */}
+              {isPlayerNation ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-300 inline-flex items-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>Günlük Gelirler</span>
+                      </span>
+                      <span className="font-mono-num text-xs font-extrabold text-emerald-300">
+                        +{grossDailyIncome.toFixed(1)} A/g
                       </span>
                     </div>
+                    <div className="space-y-1.5 text-xs">
+                      {[
+                        { label: 'Vergi Geliri', val: econ.taxIncome },
+                        { label: 'Üretim & Atölye', val: econ.productionIncome },
+                        { label: 'Ticaret & Anlaşmalar', val: econ.tradeIncome },
+                        { label: 'Boğaz & Kervan', val: econ.straitTollIncome + econ.caravanTradeIncome },
+                        { label: 'Vasal & Abluka', val: econ.vassalIncome + econ.seizedBlockadeIncome },
+                      ].map((row) => (
+                        <div key={row.label} className="flex items-center justify-between text-[11px]">
+                          <span className="text-[#cfc3ae]">{row.label}</span>
+                          <span className="font-mono-num font-bold text-emerald-200">
+                            +{row.val.toFixed(1)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-rose-300 inline-flex items-center gap-1.5">
+                        <Coins className="w-3.5 h-3.5" />
+                        <span>Günlük Giderler &amp; Denge</span>
+                      </span>
+                      <span className="font-mono-num text-xs font-extrabold text-rose-300">
+                        -{totalDailyExpense.toFixed(1)} A/g
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      {[
+                        { label: 'Ordu Bakımı', val: econ.militaryUpkeep },
+                        { label: 'Enflasyon Kaybı', val: econ.inflationPenalty },
+                        { label: 'Ödenen Vasal Haracı', val: econ.vassalTributeOut },
+                        { label: 'Abluka Kesintisi', val: econ.blockadePenaltyLoss },
+                      ].map((row) => (
+                        <div key={row.label} className="flex items-center justify-between text-[11px]">
+                          <span className="text-[#cfc3ae]">{row.label}</span>
+                          <span className="font-mono-num font-bold text-rose-200">
+                            -{row.val.toFixed(1)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="pt-1.5 border-t border-[#2d261e] flex items-center justify-between text-xs font-bold">
+                        <span className="text-[#f0e6d2]">Günlük Net Kâr</span>
+                        <span
+                          className={`font-mono-num ${
+                            econ.netDailyGold >= 0 ? 'text-emerald-300' : 'text-rose-400'
+                          }`}
+                        >
+                          {netGoldLabel} A/gün
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              ) : (
+                <section
+                  data-testid="foreign-current-economy-card"
+                  className="rounded-xl bg-[#13110e] border border-[#caa15a]/40 p-3.5 flex flex-wrap items-center justify-between gap-3"
+                >
+                  <div>
+                    <div className="text-xs font-bold text-[#e0b86e] flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>Mevcut Ekonomi</span>
+                    </div>
+                    <div className="font-mono-num text-xl font-extrabold text-[#faf3e3] mt-0.5">
+                      {economySummary.totalEconomy.toLocaleString('tr-TR')}
+                    </div>
+                    <div className="text-[11px] text-[#b2a58f] mt-0.5">
+                      {economySummary.provinceCount} Eyalet · Ort. Yatırım ×
+                      {economySummary.avgInvestmentMult.toFixed(2)}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    data-testid="foreign-economy-sources-btn"
+                    onPointerDown={economyLongPress.onPointerDown}
+                    onPointerUp={economyLongPress.onPointerUp}
+                    onPointerLeave={economyLongPress.onPointerLeave}
+                    onPointerCancel={economyLongPress.onPointerCancel}
+                    onClick={() => {
+                      if (economyLongPress.consumeLongPressFlag()) return;
+                      sound.playClick();
+                      setShowEconomyPopover(true);
+                    }}
+                    className="min-h-[42px] px-3.5 py-2 rounded-xl bg-[#241c13] hover:bg-[#31261a] border border-[#e0b86e]/55 text-xs font-bold text-[#e0b86e] flex flex-col items-end cursor-pointer select-none"
+                  >
+                    <span>Ekonomi Kaynaklarını Gör</span>
+                    <span className="text-[10px] font-normal text-[#c5b79e]">
+                      (Ekonomi butonuna basılı tutun)
+                    </span>
+                  </button>
                 </section>
-              </div>
+              )}
 
               {/* Tech, Population Growth & Infrastructure */}
               <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3 space-y-2.5">
@@ -1741,6 +1965,13 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+      </div>
+
+      <EconomySourcesPopover
+        nation={showEconomyPopover ? summary.nation : null}
+        territories={territories}
+        onClose={() => setShowEconomyPopover(false)}
+      />
+    </>
   );
 };

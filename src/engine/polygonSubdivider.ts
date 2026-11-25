@@ -1,6 +1,5 @@
 import { geoArea } from 'd3-geo';
 import type { Feature, Geometry, Polygon, Position } from 'geojson';
-import { ResourceType } from '../types/game';
 import { DISTRICT_PROVINCE_SEEDS } from './districtSeeds';
 import type { ProvinceSubSeed } from './core/provinceSeedTypes';
 

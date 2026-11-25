@@ -36,7 +36,7 @@ export function adjustOccupiedUnrestDrift(
   return Number((baseDrift * 0.7).toFixed(2));
 }
 
-/** ADM_2 (-25%), ADM_2B (-10%), and ADM_6B (-15%) reduce positive aggressive-expansion gains; losses are unchanged. */
+/** ADM_2 (-25%), ADM_2B (-10%), ADM_6B (-15%), and ADM_8 (-15%) reduce positive aggressive-expansion gains; losses are unchanged. */
 export function adjustAggressiveExpansionGain(
   nation: NationTechState,
   baseGain: number
@@ -46,25 +46,33 @@ export function adjustAggressiveExpansionGain(
   if (nation?.unlockedTechs?.includes('adm_2')) factor *= 0.75;
   if (nation?.unlockedTechs?.includes('adm_2b')) factor *= 0.9;
   if (nation?.unlockedTechs?.includes('adm_6b')) factor *= 0.85;
+  if (nation?.unlockedTechs?.includes('adm_8')) factor *= 0.85;
   if (factor === 1.0) return baseGain;
   return Number((baseGain * factor).toFixed(2));
 }
 
 import {
+  calculateProjectedPeaceAE,
+  evaluateWorldCoalitionAt100AE,
   getEmbargoingNationIds,
   getOrCreateRelation,
   isAtWar,
   isNationEmbargoed,
   isNationEmbargoing,
   relationKey,
+  WAR_DECLARATION_BASE_AE,
 } from './core/diplomacyHelpers';
 
 export {
+  calculateProjectedPeaceAE,
+  evaluateWorldCoalitionAt100AE,
   getEmbargoingNationIds,
   getOrCreateRelation,
   isAtWar,
   isNationEmbargoed,
   isNationEmbargoing,
+  relationKey,
+  WAR_DECLARATION_BASE_AE,
 };
 
 export interface NationEconomyBreakdown {
@@ -88,6 +96,9 @@ export interface NationEconomyBreakdown {
   netDailyGold: number;
   dailyResearch: number;
   dailyManpower: number;
+  activeWarCount?: number;
+  warExhaustion?: number;
+  warUpkeepSurchargePct?: number;
 }
 
 type ResourceEconomicEffect = {
@@ -169,6 +180,7 @@ export function calculateProvinceDevelopment(
     (bld.capitalPalace || 0) +
     (bld.supplyDepot || 0) +
     (bld.barracks || 0) +
+    (bld.armyHearth || 0) +
     (bld.fortress || 0) +
     (bld.shipyard || 0) +
     (bld.mint || 0) +
@@ -203,6 +215,10 @@ export function calculateProvinceDevelopment(
   if (unlockedTechs.includes('eco_5')) techMult += 0.2;
   if (unlockedTechs.includes('eco_5b')) techMult += 0.18;
   if (unlockedTechs.includes('eco_6')) techMult += 0.22;
+  if (unlockedTechs.includes('eco_7')) techMult += 0.22;
+  if (unlockedTechs.includes('eco_8')) techMult += 0.22;
+  if (unlockedTechs.includes('eco_9')) techMult += 0.24;
+  if (unlockedTechs.includes('eco_10')) techMult += 0.28;
   if (unlockedTechs.includes('adm_3b')) techMult += 0.12;
   if (unlockedTechs.includes('sci_1')) techMult += 0.08;
   if (unlockedTechs.includes('sci_2')) techMult += 0.15;
@@ -210,6 +226,10 @@ export function calculateProvinceDevelopment(
   if (unlockedTechs.includes('sci_4b')) techMult += 0.16;
   if (unlockedTechs.includes('sci_5')) techMult += 0.2;
   if (unlockedTechs.includes('sci_6b')) techMult += 0.2;
+  if (unlockedTechs.includes('sci_7')) techMult += 0.18;
+  if (unlockedTechs.includes('sci_8')) techMult += 0.2;
+  if (unlockedTechs.includes('sci_9')) techMult += 0.22;
+  if (unlockedTechs.includes('sci_10')) techMult += 0.25;
   if (enactedReforms.includes('ref_free_trade_zones')) techMult += 0.12;
   const techInvestmentMult = Number(techMult.toFixed(2));
 
@@ -251,6 +271,7 @@ export function calculateProvinceDevelopment(
     (bld.granary || 0) * 5 +
     (bld.supplyDepot || 0) * 5 +
     (bld.barracks || 0) * 3 +
+    (bld.armyHearth || 0) * 4 +
     (bld.fortress || 0) * 3;
   const techTerm = Math.round((techInvestmentMult - 1) * 28);
   const capitalBonus = territory.isCapital ? 8 : 0;
@@ -312,14 +333,20 @@ export function resolveWarParticipants(
   attackerId: string,
   defenderId: string,
   relations: Record<string, DiplomaticRelation>,
-  nations: Record<string, Nation>
+  nations: Record<string, Nation>,
+  calledAllyIds?: string[]
 ): WarParticipantsResolution {
   const attackers = new Set<string>([attackerId]);
   const defenders = new Set<string>([defenderId]);
   const offensiveAlliesCalled: string[] = [];
   const defensiveAlliesCalled: string[] = [];
 
-  // Attacker side: ONLY Offensive Pact allies join the attack
+  const selectiveAllySet =
+    calledAllyIds !== undefined ? new Set(calledAllyIds) : null;
+
+  // Attacker side:
+  // - Default (calledAllyIds === undefined): ONLY Offensive Pact allies join automatically
+  // - Selective (calledAllyIds provided from War Declaration UI): ONLY explicitly checked allies/vassals join
   Object.values(relations).forEach((rel) => {
     const isAttackerPartner =
       rel.nationA === attackerId || rel.nationB === attackerId;
@@ -330,11 +357,34 @@ export function resolveWarParticipants(
     const partnerNation = nations[partnerId];
     if (!partnerNation || partnerNation.isEliminated) return;
 
-    if (rel.allianceType === 'OFFENSIVE') {
+    if (selectiveAllySet) {
+      if (
+        selectiveAllySet.has(partnerId) &&
+        (rel.isAllied || Boolean(rel.allianceType) || partnerNation.vassalOf === attackerId)
+      ) {
+        attackers.add(partnerId);
+        offensiveAlliesCalled.push(partnerId);
+      }
+    } else if (rel.allianceType === 'OFFENSIVE') {
       attackers.add(partnerId);
       offensiveAlliesCalled.push(partnerId);
     }
   });
+
+  if (selectiveAllySet) {
+    Object.values(nations).forEach((n) => {
+      if (
+        n.vassalOf === attackerId &&
+        !n.isEliminated &&
+        n.id !== defenderId &&
+        selectiveAllySet.has(n.id) &&
+        !attackers.has(n.id)
+      ) {
+        attackers.add(n.id);
+        offensiveAlliesCalled.push(n.id);
+      }
+    });
+  }
 
   // Defender side: Target is attacked -> Both Defensive Pacts and Offensive Pacts trigger to defend!
   Object.values(relations).forEach((rel) => {
@@ -403,6 +453,7 @@ export function calculateNationEconomy(
   const ideology = IDEOLOGIES[nation.ideology] || IDEOLOGIES.MONARCHY;
   let totalPopulation = 0;
   let totalGarrison = 0;
+  let effectiveUpkeepGarrison = 0;
   const totalUnits: UnitComposition = { infantry: 0, armor: 0, airDrone: 0 };
   let baseProduction = 0;
   let universityOutput = 0;
@@ -423,6 +474,16 @@ export function calculateNationEconomy(
   };
   const claimedResourceBonuses = new Set<ResourceType>();
 
+  const activeWarCount = (wars || []).filter(
+    (w) =>
+      w &&
+      (w.attackerId === nation.id ||
+        w.defenderId === nation.id ||
+        w.attackers?.includes(nation.id) ||
+        w.defenders?.includes(nation.id))
+  ).length;
+  const warExhaustion = Math.max(0, Math.min(100, nation.warExhaustion || 0));
+
   const navalBlockadedSet = computeNavalBlockadedTerritoryIds(
     territories,
     wars,
@@ -431,7 +492,13 @@ export function calculateNationEconomy(
 
   ownedTerritories.forEach((t) => {
     totalPopulation += t.population || 0;
-    totalGarrison += t.garrison || 0;
+    const provGarrison = t.garrison || 0;
+    totalGarrison += provGarrison;
+    const hearthLvl = t.buildings?.armyHearth || 0;
+    // Asker Ocağı reduces daily military upkeep of stationed garrison by 12% per level (max -60%)
+    const hearthDiscount = Math.min(0.6, hearthLvl * 0.12);
+    effectiveUpkeepGarrison += provGarrison * (1 - hearthDiscount);
+
     if (t.units) {
       totalUnits.infantry += t.units.infantry || 0;
       totalUnits.armor += t.units.armor || 0;
@@ -442,6 +509,7 @@ export function calculateNationEconomy(
     const bld = t.buildings || {
       factory: 0,
       barracks: 0,
+      armyHearth: 0,
       fortress: 0,
       university: 0,
       tradeHub: 0,
@@ -508,6 +576,7 @@ export function calculateNationEconomy(
   }
 
   const totalTroops = totalGarrison + movingTroops + seaTroops;
+  const effectiveUpkeepTroops = effectiveUpkeepGarrison + movingTroops + seaTroops;
 
   const unlockedTechs = nation.unlockedTechs || [];
   const enactedReforms = nation.enactedReforms || [];
@@ -518,6 +587,15 @@ export function calculateNationEconomy(
     welfare: 20,
   };
 
+  // Prolonged war exhaustion and multi-front war drain domestic tax & production output
+  const warEconomyDrag =
+    warExhaustion > 0 || activeWarCount > 1
+      ? Math.max(
+          0.42,
+          1 - (warExhaustion / 100) * 0.42 - Math.max(0, activeWarCount - 1) * 0.07
+        )
+      : 1.0;
+
   const taxRateFactor = (nation.taxRate || 25) / 25;
   let taxTechMult = 1 + ideology.taxBonus / 100;
   taxTechMult += resourceEffects.taxPct / 100;
@@ -526,10 +604,14 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('eco_4')) taxTechMult += 0.2;
   if (unlockedTechs.includes('eco_5b')) taxTechMult += 0.25;
   if (unlockedTechs.includes('eco_6')) taxTechMult += 0.2;
+  if (unlockedTechs.includes('eco_7')) taxTechMult += 0.2;
+  if (unlockedTechs.includes('eco_8')) taxTechMult += 0.2;
+  if (unlockedTechs.includes('eco_9')) taxTechMult += 0.22;
+  if (unlockedTechs.includes('eco_10')) taxTechMult += 0.25;
   if (enactedReforms.includes('ref_free_trade_zones')) taxTechMult += 0.2;
 
   const taxIncome = Math.round(
-    (baseProduction + mintTaxBase) * 0.55 * taxRateFactor * taxTechMult
+    (baseProduction + mintTaxBase) * 0.55 * taxRateFactor * taxTechMult * warEconomyDrag
   );
 
   let prodMult = 1 + ((budget.economy || 25) - 25) * 0.008;
@@ -537,13 +619,21 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('eco_2')) prodMult += 0.25;
   if (unlockedTechs.includes('eco_2b')) prodMult += 0.15;
   if (unlockedTechs.includes('eco_6')) prodMult += 0.25;
+  if (unlockedTechs.includes('eco_7')) prodMult += 0.25;
+  if (unlockedTechs.includes('eco_8')) prodMult += 0.25;
+  if (unlockedTechs.includes('eco_9')) prodMult += 0.28;
+  if (unlockedTechs.includes('eco_10')) prodMult += 0.3;
   if (unlockedTechs.includes('sci_2')) prodMult += 0.15;
   if (unlockedTechs.includes('sci_4')) prodMult += 0.35;
   if (unlockedTechs.includes('sci_4b')) prodMult += 0.2;
   if (unlockedTechs.includes('sci_5')) prodMult += 0.2;
   if (unlockedTechs.includes('sci_6b')) prodMult += 0.2;
+  if (unlockedTechs.includes('sci_9')) prodMult += 0.22;
+  if (unlockedTechs.includes('sci_10')) prodMult += 0.25;
 
-  const productionIncome = Math.round(baseProduction * 0.48 * prodMult);
+  const productionIncome = Math.round(
+    baseProduction * 0.48 * prodMult * warEconomyDrag
+  );
 
   let tradeAgreementCount = 0;
   let embargoCount = 0;
@@ -564,6 +654,8 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('eco_3')) tradeMult += 0.3;
   if (unlockedTechs.includes('eco_4b')) tradeMult += 0.18;
   if (unlockedTechs.includes('eco_6b')) tradeMult += 0.25;
+  if (unlockedTechs.includes('eco_8b')) tradeMult += 0.25;
+  if (unlockedTechs.includes('eco_9b')) tradeMult += 0.25;
   if (enactedReforms.includes('ref_free_trade_zones')) tradeMult += 0.2;
 
   const embargoResistance = unlockedTechs.includes('sci_2') ? 0.5 : 1.0;
@@ -623,7 +715,7 @@ export function calculateNationEconomy(
 
   const vassalTributeOut = nation.vassalOf ? Math.round(taxIncome * 0.25) : 0;
 
-  let upkeepPerThousand = 2.25 * (0.75 + (budget.military || 35) / 100);
+  let upkeepPerThousand = 2.65 * (0.75 + (budget.military || 35) / 100);
   upkeepPerThousand *=
     1 - Math.min(0.3, resourceEffects.militaryUpkeepReductionPct / 100);
   if (unlockedTechs.includes('mil_5')) {
@@ -632,13 +724,21 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('mil_5b')) {
     upkeepPerThousand *= 0.9;
   }
+  if (unlockedTechs.includes('mil_9b')) {
+    upkeepPerThousand *= 0.88;
+  }
   if (enactedReforms.includes('ref_professional_army')) {
     upkeepPerThousand *= 0.9;
   }
   if (nation.ideology === 'MILITARY_JUNTA') {
     upkeepPerThousand *= 0.82;
   }
-  const militaryUpkeep = Math.round((totalTroops / 1000) * upkeepPerThousand);
+  // Multi-front war mobilization + war exhaustion sharply raise army upkeep so one country cannot easily fight the whole world
+  const warUpkeepMult =
+    1 + activeWarCount * 0.24 + (warExhaustion / 100) * 0.7;
+  const militaryUpkeep = Math.round(
+    (effectiveUpkeepTroops / 1000) * upkeepPerThousand * warUpkeepMult
+  );
 
   const grossIncome = taxIncome + productionIncome + tradeIncome + vassalIncome;
   const incomeAfterTribute = grossIncome - vassalTributeOut;
@@ -663,6 +763,10 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('sci_5b')) researchMult += 0.35;
   if (unlockedTechs.includes('sci_6')) researchMult += 0.35;
   if (unlockedTechs.includes('sci_6b')) researchMult += 0.25;
+  if (unlockedTechs.includes('sci_7')) researchMult += 0.35;
+  if (unlockedTechs.includes('sci_8')) researchMult += 0.35;
+  if (unlockedTechs.includes('sci_9')) researchMult += 0.4;
+  if (unlockedTechs.includes('sci_10')) researchMult += 0.5;
   const dailyResearch = Number((researchBase * researchMult).toFixed(1));
 
   // totalPopulation is stored in thousands (e.g. 86,500 = 86.5M). Use a damped power curve so
@@ -681,12 +785,21 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('sci_1b')) manpowerMult += 0.15;
   if (unlockedTechs.includes('adm_3')) manpowerMult += 0.35;
   if (unlockedTechs.includes('adm_6')) manpowerMult += 0.2;
-  const dailyManpower = Math.round(manpowerBase * manpowerMult);
+  if (unlockedTechs.includes('adm_7')) manpowerMult += 0.25;
+  const warManpowerDrag =
+    warExhaustion > 0 || activeWarCount > 1
+      ? Math.max(
+          0.35,
+          1 - (warExhaustion / 100) * 0.45 - Math.max(0, activeWarCount - 1) * 0.14
+        )
+      : 1.0;
+  const dailyManpower = Math.round(manpowerBase * manpowerMult * warManpowerDrag);
 
   let techInflationRelief = 0;
   if (unlockedTechs.includes('eco_3b')) techInflationRelief += 0.02;
   if (unlockedTechs.includes('eco_5b')) techInflationRelief += 0.025;
   if (unlockedTechs.includes('eco_6b')) techInflationRelief += 0.025;
+  if (unlockedTechs.includes('eco_8b')) techInflationRelief += 0.03;
 
   return {
     territoryCount: ownedTerritories.length,
@@ -715,6 +828,9 @@ export function calculateNationEconomy(
     netDailyGold,
     dailyResearch,
     dailyManpower,
+    activeWarCount,
+    warExhaustion,
+    warUpkeepSurchargePct: Math.round((warUpkeepMult - 1) * 100),
   };
 }
 
@@ -724,12 +840,14 @@ export function computeNationManpowerCap(
 ): number {
   let ownedCount = 0;
   let totalBarracks = 0;
+  let totalHearths = 0;
   let totalGranaries = 0;
   let totalPop = 0;
   for (const t of Object.values(territories)) {
     if (t && t.ownerId === nation.id) {
       ownedCount++;
       totalBarracks += t.buildings?.barracks || 0;
+      totalHearths += t.buildings?.armyHearth || 0;
       totalGranaries += t.buildings?.granary || 0;
       totalPop += t.population || 0;
     }
@@ -737,10 +855,12 @@ export function computeNationManpowerCap(
   let techBonus = 1.0;
   if (nation.unlockedTechs?.includes('adm_3')) techBonus += 0.25;
   if (nation.unlockedTechs?.includes('adm_4b')) techBonus += 0.2;
+  if (nation.unlockedTechs?.includes('adm_7')) techBonus += 0.25;
   const popCapBonus = Math.min(200_000, Math.round(totalPop * 0.65));
   const rawCap =
     ownedCount * 6_500 +
     totalBarracks * 9_000 +
+    totalHearths * 4_500 +
     totalGranaries * 6_000 +
     popCapBonus;
   return Math.max(50_000, Math.round(rawCap * techBonus));
@@ -813,6 +933,8 @@ export function computeNationNavalBonus(
   if (unlocked.includes('mil_1b')) bonus += 0.15;
   if (unlocked.includes('mil_3b')) bonus += 0.2;
   if (unlocked.includes('mil_6b')) bonus += 0.25;
+  if (unlocked.includes('mil_7b')) bonus += 0.25;
+  if (unlocked.includes('mil_8b')) bonus += 0.25;
   if (unlocked.includes('sci_3b')) bonus += 0.15;
   return Number(bonus.toFixed(2));
 }
@@ -837,8 +959,13 @@ export function computeCombatStrength(
   if (unlockedTechs.includes('mil_3')) mult += 0.25;
   if (unlockedTechs.includes('mil_5')) mult += 0.2;
   if (unlockedTechs.includes('mil_6')) mult += 0.25;
+  if (unlockedTechs.includes('mil_7')) mult += 0.25;
+  if (unlockedTechs.includes('mil_8')) mult += 0.3;
+  if (unlockedTechs.includes('mil_9')) mult += 0.3;
+  if (unlockedTechs.includes('mil_10')) mult += 0.4;
   if (unlockedTechs.includes('sci_5b')) mult += 0.15;
   if (!isDefender && unlockedTechs.includes('mil_5b')) mult += 0.2;
+  if (isDefender && unlockedTechs.includes('mil_10b')) mult += 0.3;
   if (enactedReforms.includes('ref_professional_army')) mult += 0.15;
 
   // National Army Modernization Generation Bonus (applied once standing armies are modernized to unlocked tech!)
@@ -900,7 +1027,13 @@ export function computeCombatStrength(
     }
   }
 
-  return Math.max(0.5, mult);
+  // War Exhaustion combat morale penalty (up to -42% at 100% exhaustion)
+  const warEx = Math.max(0, Math.min(100, nation?.warExhaustion || 0));
+  if (warEx > 0) {
+    mult *= Math.max(0.58, 1 - (warEx / 100) * 0.42);
+  }
+
+  return Math.max(0.45, mult);
 }
 
 export function formatGameDate(
@@ -933,4 +1066,206 @@ export function formatGameDate(
     return `${baseDate} · ${hh}:00`;
   }
   return baseDate;
+}
+
+export interface NationEconomyResourceSource {
+  resource: ResourceType;
+  label: string;
+  name: string;
+  shortName: string;
+  icon: string;
+  color: string;
+  provinceCount: number;
+  economyContribution: number;
+  totalValue: number;
+  sharePct: number;
+}
+
+export interface NationEconomyInvestmentLine {
+  buildingId: string;
+  id: string;
+  label: string;
+  totalLevels: number;
+  estimatedEconomyValue: number;
+  boostSummary: string;
+}
+
+export interface NationEconomySourcesSummary {
+  nationId: string;
+  totalEconomy: number;
+  provinceCount: number;
+  avgInvestmentMult: number;
+  resourceSources: NationEconomyResourceSource[];
+  investments: NationEconomyInvestmentLine[];
+  currentEconomyValue: number;
+  territoryCount: number;
+  avgTechMult: number;
+  resourceBreakdown: NationEconomyResourceSource[];
+  investmentBreakdown: NationEconomyInvestmentLine[];
+}
+
+export function computeNationEconomySummary(
+  nation: Nation,
+  territories: Record<string, Territory>
+): NationEconomySourcesSummary {
+  const owned = Object.values(territories).filter(
+    (t) => t && t.ownerId === nation.id
+  );
+
+  let currentEconomyValue = 0;
+  let techMultSum = 0;
+  let invMultSum = 0;
+  const byResource = new Map<
+    ResourceType,
+    { provinceCount: number; totalValue: number }
+  >();
+
+  let factoryLvl = 0;
+  let factoryContrib = 0;
+  let tradeHubLvl = 0;
+  let shipyardLvl = 0;
+  let tradeContrib = 0;
+  let mintLvl = 0;
+  let granaryLvl = 0;
+  let mintGranaryContrib = 0;
+  let eduAndPalaceLvl = 0;
+  let eduContrib = 0;
+
+  for (const t of owned) {
+    const dev = calculateProvinceDevelopment(t, nation);
+    currentEconomyValue += dev.effectiveDailyGdp;
+    techMultSum += dev.techInvestmentMult;
+    invMultSum += dev.totalInvestmentMult;
+
+    const prev = byResource.get(t.resource) || { provinceCount: 0, totalValue: 0 };
+    byResource.set(t.resource, {
+      provinceCount: prev.provinceCount + 1,
+      totalValue: prev.totalValue + dev.effectiveDailyGdp,
+    });
+
+    const b = t.buildings || {
+      factory: 0,
+      tradeHub: 0,
+      shipyard: 0,
+      mint: 0,
+      granary: 0,
+      school: 0,
+      highSchool: 0,
+      university: 0,
+      capitalPalace: 0,
+    };
+    const fL = b.factory || 0;
+    const thL = b.tradeHub || 0;
+    const syL = b.shipyard || 0;
+    const mL = b.mint || 0;
+    const gL = b.granary || 0;
+    const eL =
+      (b.school || 0) +
+      (b.highSchool || 0) +
+      (b.university || 0) +
+      (b.capitalPalace || 0);
+
+    factoryLvl += fL;
+    tradeHubLvl += thL;
+    shipyardLvl += syL;
+    mintLvl += mL;
+    granaryLvl += gL;
+    eduAndPalaceLvl += eL;
+
+    const unitBase = dev.baseResourceValue * 0.25;
+    factoryContrib += fL * 0.36 * unitBase;
+    tradeContrib += (thL * 0.22 + syL * 0.24) * unitBase;
+    mintGranaryContrib += (mL * 0.16 + gL * 0.15) * unitBase;
+    eduContrib +=
+      ((b.university || 0) * 0.12 +
+        (b.highSchool || 0) * 0.1 +
+        (b.school || 0) * 0.06 +
+        (b.capitalPalace || 0) * 0.18) *
+      unitBase;
+  }
+
+  const denom = Math.max(1, currentEconomyValue);
+  const resourceSources: NationEconomyResourceSource[] = Array.from(
+    byResource.entries()
+  )
+    .map(([resource, agg]) => {
+      const meta = RESOURCE_INFO[resource] || RESOURCE_INFO.TAHIL;
+      const roundedVal = Math.round(agg.totalValue);
+      return {
+        resource,
+        label: meta.name,
+        name: meta.name,
+        shortName: meta.shortName,
+        icon: meta.icon,
+        color: meta.color,
+        provinceCount: agg.provinceCount,
+        economyContribution: roundedVal,
+        totalValue: roundedVal,
+        sharePct: Math.max(1, Math.round((agg.totalValue / denom) * 100)),
+      };
+    })
+    .sort((a, b) => b.totalValue - a.totalValue);
+
+  const investments: NationEconomyInvestmentLine[] = [];
+  if (factoryLvl > 0) {
+    investments.push({
+      buildingId: 'factory',
+      id: 'factory',
+      label: 'Sanayi & İmalathane Yatırımı',
+      totalLevels: factoryLvl,
+      estimatedEconomyValue: Math.max(1, Math.round(factoryContrib)),
+      boostSummary: `+%${factoryLvl * 25} üretim tabanı`,
+    });
+  }
+  if (tradeHubLvl + shipyardLvl > 0) {
+    investments.push({
+      buildingId: 'trade',
+      id: 'trade',
+      label: 'Ticaret & Tersane Ağı',
+      totalLevels: tradeHubLvl + shipyardLvl,
+      estimatedEconomyValue: Math.max(1, Math.round(tradeContrib)),
+      boostSummary: `Sv.${tradeHubLvl} Ticaret · Sv.${shipyardLvl} Tersane`,
+    });
+  }
+  if (mintLvl + granaryLvl > 0) {
+    investments.push({
+      buildingId: 'mint_granary',
+      id: 'mint_granary',
+      label: 'Darphane & Tarım Ambarları',
+      totalLevels: mintLvl + granaryLvl,
+      estimatedEconomyValue: Math.max(1, Math.round(mintGranaryContrib)),
+      boostSummary: `Sv.${mintLvl} Darphane · Sv.${granaryLvl} Ambar`,
+    });
+  }
+  if (eduAndPalaceLvl > 0) {
+    investments.push({
+      buildingId: 'edu_palace',
+      id: 'edu_palace',
+      label: 'Medrese, Üniversite & Saray',
+      totalLevels: eduAndPalaceLvl,
+      estimatedEconomyValue: Math.max(1, Math.round(eduContrib)),
+      boostSummary: `Sv.${eduAndPalaceLvl} bilim/yönetim yatırımı`,
+    });
+  }
+
+  const totalRounded = Math.round(currentEconomyValue);
+  return {
+    nationId: nation.id,
+    totalEconomy: totalRounded,
+    provinceCount: owned.length,
+    avgInvestmentMult:
+      owned.length > 0
+        ? Number((invMultSum / owned.length).toFixed(2))
+        : 1.0,
+    resourceSources,
+    investments,
+    currentEconomyValue: totalRounded,
+    territoryCount: owned.length,
+    avgTechMult:
+      owned.length > 0
+        ? Number((techMultSum / owned.length).toFixed(2))
+        : 1.0,
+    resourceBreakdown: resourceSources,
+    investmentBreakdown: investments,
+  };
 }

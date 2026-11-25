@@ -10,11 +10,12 @@ import {
 } from '../../types/game';
 import {
   applyConquestDiplomaticPenalty,
+  calculateProjectedPeaceAE,
+  evaluateWorldCoalitionAt100AE,
   getOrCreateRelation,
   relationKey,
 } from '../core/diplomacyHelpers';
 import {
-  adjustAggressiveExpansionGain,
   calculateProvinceDevelopment,
 } from '../simulationEngine';
 import { sound } from '../../utils/soundEngine';
@@ -123,10 +124,12 @@ export function resolvePeaceDealDomain(params: {
       playerWarScore >= 75 ? 2 : playerWarScore >= 45 ? 1 : 0;
     let annexedCount = 0;
 
+    const annexedIds: string[] = [];
     Object.values(nextTerritories).forEach((t) => {
       if (t.ownerId === playerNationId && t.isOccupied) {
         const isCore = t.coreOwnerId === playerNationId;
         annexedCount++;
+        annexedIds.push(t.id);
         nextTerritories[t.id] = {
           ...t,
           isOccupied: false,
@@ -143,6 +146,7 @@ export function resolvePeaceDealDomain(params: {
     remainingEnemyTerrs.slice(0, extraProvincesAllowed).forEach((t) => {
       const isCore = t.coreOwnerId === playerNationId;
       annexedCount++;
+      annexedIds.push(t.id);
       nextTerritories[t.id] = {
         ...t,
         ownerId: playerNationId,
@@ -180,6 +184,20 @@ export function resolvePeaceDealDomain(params: {
       };
     }
 
+    const aeCalc = calculateProjectedPeaceAE({
+      territories: nextTerritories,
+      demandedTerritoryIds: annexedIds,
+      isFullAnnex: fullAnnex,
+      demandVassal: false,
+      conquerorNation: nextNations[playerNationId],
+    });
+    if (aeCalc.adjustedGain > 0 && nextNations[playerNationId]) {
+      nextNations[playerNationId] = {
+        ...nextNations[playerNationId],
+        aggressiveExpansion: aeCalc.projectedTotal,
+      };
+    }
+
     const penaltyRes = applyConquestDiplomaticPenalty({
       conquerorId: playerNationId,
       victimId: enemyId,
@@ -200,15 +218,28 @@ export function resolvePeaceDealDomain(params: {
       tick,
       gameMode,
       `${war.name} Sona Erdi`,
-      `${playerNation.name} ve ${enemy?.name} arasında imzalanan barış antlaşmasıyla ${Math.max(1, annexedCount)} eyalet resmen ilhak edildi.${diploSuffix}`,
+      `${playerNation.name} ve ${enemy?.name} arasında imzalanan barış antlaşmasıyla ${Math.max(1, annexedCount)} eyalet resmen ilhak edildi (+${aeCalc.adjustedGain} Agresiflik).${diploSuffix}`,
       'PEACE'
     );
-    toast = `📜 ${enemy?.name} ile Barış: ${Math.max(1, annexedCount)} eyalet ilhak edildi (Eyalet panelinden Asimile Et başlatabilirsiniz).${diploSuffix}`;
+    toast = `📜 ${enemy?.name} ile Barış: ${Math.max(1, annexedCount)} eyalet ilhak edildi (+${aeCalc.adjustedGain} Agresiflik).${diploSuffix}`;
   } else if (dealType === 'VASSALIZE') {
     if (nextNations[enemyId]) {
       nextNations[enemyId] = {
         ...nextNations[enemyId],
         vassalOf: playerNationId,
+      };
+    }
+    const aeCalc = calculateProjectedPeaceAE({
+      territories: nextTerritories,
+      demandedTerritoryIds: [],
+      isFullAnnex: false,
+      demandVassal: true,
+      conquerorNation: nextNations[playerNationId],
+    });
+    if (aeCalc.adjustedGain > 0 && nextNations[playerNationId]) {
+      nextNations[playerNationId] = {
+        ...nextNations[playerNationId],
+        aggressiveExpansion: aeCalc.projectedTotal,
       };
     }
     const penaltyRes = applyConquestDiplomaticPenalty({
@@ -263,13 +294,32 @@ export function resolvePeaceDealDomain(params: {
     },
   };
 
-  return {
+  const remainingWars = wars.filter((w) => w.id !== warId);
+  const coalitionRes = evaluateWorldCoalitionAt100AE({
+    targetNationId: playerNationId,
     nations: nextNations,
     territories: nextTerritories,
     relations: nextRelations,
-    wars: wars.filter((w) => w.id !== warId),
+    wars: remainingWars,
+    tick,
+    gameMode,
     newsEvents: nextNews,
-    toast,
+    playerNationId,
+  });
+
+  return {
+    nations: nextNations,
+    territories: nextTerritories,
+    relations: coalitionRes.relations,
+    wars: coalitionRes.wars,
+    newsEvents: coalitionRes.newsEvents,
+    ...(coalitionRes.warAnnouncement
+      ? { warAnnouncement: coalitionRes.warAnnouncement }
+      : {}),
+    toast:
+      coalitionRes.triggered && coalitionRes.toast
+        ? `${toast} ${coalitionRes.toast}`
+        : toast,
   };
 }
 
@@ -747,18 +797,17 @@ export function resolvePeaceConferenceDomain(params: {
     clauseLabels.push(`Tazminat (+${repGold} Altın)`);
   }
 
-  const aeRaw =
-    demandedIds.length * 4.5 +
-    (fullAnnexationAchieved ? 8 : 0) +
-    (wantVassal ? 6 : 0);
-  if (aeRaw > 0) {
+  const aeCalc = calculateProjectedPeaceAE({
+    territories: nextTerritories,
+    demandedTerritoryIds: demandedIds,
+    isFullAnnex: fullAnnexationAchieved,
+    demandVassal: wantVassal,
+    conquerorNation: updatedPlayer,
+  });
+  if (aeCalc.adjustedGain > 0) {
     updatedPlayer = {
       ...updatedPlayer,
-      aggressiveExpansion: Math.min(
-        100,
-        updatedPlayer.aggressiveExpansion +
-          adjustAggressiveExpansionGain(updatedPlayer, aeRaw)
-      ),
+      aggressiveExpansion: aeCalc.projectedTotal,
     };
   }
 
@@ -793,16 +842,37 @@ export function resolvePeaceConferenceDomain(params: {
     tick,
     gameMode,
     `📜 ${war.name} Barış Konferansı`,
-    `${playerNation.name} ile ${enemy.name} arasında barış antlaşması imzalandı: ${summaryStr}.`,
+    `${playerNation.name} ile ${enemy.name} arasında barış antlaşması imzalandı: ${summaryStr}${aeCalc.adjustedGain > 0 ? ` (+${aeCalc.adjustedGain} Agresiflik)` : ''}.`,
     'PEACE'
   );
+
+  const remainingWars = wars.filter((w) => w.id !== war.id);
+  const coalitionRes = evaluateWorldCoalitionAt100AE({
+    targetNationId: playerNationId,
+    nations: nextNations,
+    territories: nextTerritories,
+    relations: workingRelations,
+    wars: remainingWars,
+    tick,
+    gameMode,
+    newsEvents: nextNews,
+    playerNationId,
+  });
+
+  const baseToast = `📜 ${enemy.name} ile Barış İmzalandı: ${summaryStr}${aeCalc.adjustedGain > 0 ? ` (+${aeCalc.adjustedGain} Agresiflik)` : ''}`;
 
   return {
     nations: nextNations,
     territories: nextTerritories,
-    relations: workingRelations,
-    wars: wars.filter((w) => w.id !== war.id),
-    newsEvents: nextNews,
-    toast: `📜 ${enemy.name} ile Barış İmzalandı: ${summaryStr}`,
+    relations: coalitionRes.relations,
+    wars: coalitionRes.wars,
+    newsEvents: coalitionRes.newsEvents,
+    ...(coalitionRes.warAnnouncement
+      ? { warAnnouncement: coalitionRes.warAnnouncement }
+      : {}),
+    toast:
+      coalitionRes.triggered && coalitionRes.toast
+        ? `${baseToast} · ${coalitionRes.toast}`
+        : baseToast,
   };
 }

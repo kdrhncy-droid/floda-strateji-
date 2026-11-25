@@ -163,6 +163,16 @@ export const BUILDINGS: BuildingDefinition[] = [
     effectSummary: '+350 İnsan Gücü Tabanı / Seviye',
   },
   {
+    id: 'armyHearth',
+    name: 'Asker Ocağı & Talimgâh',
+    eraName1440: 'Asker Ocağı & Acemi Talimgâhı',
+    artKey: 'INFANTRY',
+    description: 'Bu şehirde konuşlu birliklerin günlük bakım giderini azaltır ve asker basma eğitim süresini belirgin şekilde kısaltır.',
+    baseCost: 420,
+    maxLevel: 5,
+    effectSummary: '-%12 Şehir Ordu Bakımı/Sv · -%15 Asker Basım Süresi/Sv',
+  },
+  {
     id: 'fortress',
     name: 'Hava Savunma & Tahkimat',
     eraName1440: 'Taş Hisar & Kale Burcu',

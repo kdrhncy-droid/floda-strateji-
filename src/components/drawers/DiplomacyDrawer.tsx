@@ -176,13 +176,16 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
             </span>
             <span className="text-[#caa15a]/40">·</span>
             <span
+              title="Agresiflik 100'e ulaşırsa bütün dünya size koalisyon savaşı ilan eder"
               className={
-                playerNation.aggressiveExpansion >= 50
-                  ? 'text-rose-400 font-bold'
+                playerNation.aggressiveExpansion >= 90
+                  ? 'text-rose-400 font-extrabold animate-pulse'
+                  : playerNation.aggressiveExpansion >= 60
+                  ? 'text-amber-400 font-bold'
                   : 'text-emerald-400 font-bold'
               }
             >
-              AE %{playerNation.aggressiveExpansion.toFixed(0)}
+              Koalisyon {Math.round(playerNation.aggressiveExpansion)}/100
             </span>
           </div>
         }

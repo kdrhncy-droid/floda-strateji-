@@ -218,7 +218,6 @@ export const LiveWarHudBadges: React.FC<{
 
 export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
   playerNationId,
-  nations,
   territories,
   battles = [],
   movements,

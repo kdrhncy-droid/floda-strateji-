@@ -25,9 +25,13 @@ import { transformBundleTo1440Scenario } from './scenario1440Builder';
 import { STRATEGIC_STRAITS } from './straitsAndTradeEngine';
 import type { GeoCountryFeature, InitialWorldBundle } from './core/worldTypes';
 import { relationKey } from './core/diplomacyHelpers';
+import {
+  deconflictNeighborColors,
+  rgbColorDistance,
+} from './core/nationColorUtils';
 
 export type { GeoCountryFeature, InitialWorldBundle };
-export { relationKey };
+export { relationKey, deconflictNeighborColors, rgbColorDistance };
 
 const STRAIT_SHORE_ID_SET = new Set<string>(
   STRATEGIC_STRAITS.flatMap((s) => s.shoreIds)
@@ -620,8 +624,14 @@ function isPointInGeometry(
 export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
   const mode = GAME_MODES.find((m) => m.id === modeId) || GAME_MODES[0];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const topology = worldData as any;
+  type WorldAtlasTopology = Parameters<typeof feature>[0] & {
+    objects: {
+      countries: Parameters<typeof feature>[1] & {
+        geometries?: Parameters<typeof neighbors>[0];
+      };
+    };
+  };
+  const topology = worldData as unknown as WorldAtlasTopology;
   const geoCollection = feature(
     topology,
     topology.objects.countries
@@ -701,6 +711,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
       bannerCalledLordIds: [],
       formedEmpireId: null,
       vassalOf: null,
+      warExhaustion: 0,
       isEliminated: false,
     };
 
@@ -810,6 +821,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
             shipyard: 0,
             mint: 0,
             granary: 0,
+            armyHearth: 0,
           },
           garrison: infantryCount + armorCount + airDroneCount,
           units: {
@@ -911,6 +923,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
           shipyard: 0,
           mint: 0,
           granary: 0,
+          armyHearth: 0,
         },
         garrison: infantryCount + armorCount + airDroneCount,
         units: {
@@ -1109,52 +1122,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
     hasTradeAgreement: true,
   });
 
-  // Ensure no two neighboring countries ever share the exact same map color
-  const DECONFLICT_PALETTE = [
-    '#2563EB', '#16A34A', '#D97706', '#DC2626', '#7C3AED', '#0891B2',
-    '#EA580C', '#059669', '#DB2777', '#4F46E5', '#CA8A04', '#0D9488',
-    '#9333EA', '#E11D48', '#65A30D', '#0284C7', '#B45309', '#4338CA',
-  ];
-  const neighborOwnersMap = new Map<string, Set<string>>();
-  for (const t of Object.values(territories)) {
-    if (!t || !t.ownerId) continue;
-    let set = neighborOwnersMap.get(t.ownerId);
-    if (!set) {
-      set = new Set<string>();
-      neighborOwnersMap.set(t.ownerId, set);
-    }
-    for (const nbId of t.neighbors) {
-      const nb = territories[nbId];
-      if (nb && nb.ownerId && nb.ownerId !== t.ownerId) {
-        set.add(nb.ownerId);
-      }
-    }
-  }
-  const sortedNationIds = Object.keys(nations).sort();
-  for (const nid of sortedNationIds) {
-    const nation = nations[nid];
-    if (!nation) continue;
-    const nbOwners = neighborOwnersMap.get(nid);
-    if (!nbOwners || nbOwners.size === 0) continue;
-    const usedByNeighbors = new Set<string>();
-    let hasClash = false;
-    for (const nbOwnerId of nbOwners) {
-      const nbColor = nations[nbOwnerId]?.color?.toLowerCase();
-      if (!nbColor) continue;
-      usedByNeighbors.add(nbColor);
-      if (nbColor === nation.color.toLowerCase() && nbOwnerId < nid) {
-        hasClash = true;
-      }
-    }
-    if (hasClash) {
-      const replacement = DECONFLICT_PALETTE.find(
-        (c) => !usedByNeighbors.has(c.toLowerCase())
-      );
-      if (replacement) {
-        nation.color = replacement;
-      }
-    }
-  }
+  deconflictNeighborColors(nations, territories);
 
   const baseBundle: InitialWorldBundle = {
     features: provinceFeatures,
@@ -1169,3 +1137,5 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
 
   return baseBundle;
 }
+
+

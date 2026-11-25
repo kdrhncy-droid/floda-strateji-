@@ -27,6 +27,7 @@ import {
 import { NationFlagCanvasBadge } from '../map/nationFlagRenderer';
 import { TERRAIN_INFO } from '../engine/pashaAndFiefEngine';
 import {
+  calculateProjectedPeaceAE,
   calculateProvinceDevelopment,
   getOrCreateRelation,
 } from '../engine/simulationEngine';
@@ -184,7 +185,9 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
                     : `${territory.name} Kuşatması`}
                 </h2>
                 <span className="font-mono-num text-[11px] font-bold text-[#e0b86e] shrink-0">
-                  {battle ? `Tur ${battle.round || 1}` : `%${Math.round(siege?.progress || 0)}`}
+                  {battle
+                    ? `Tur ${battle.round || 1}`
+                    : `${Math.round(siege?.progress || 0)}/100`}
                 </span>
               </div>
               <div className="text-[11px] font-mono-num text-[#c5b79e] flex items-center gap-2 truncate">
@@ -497,19 +500,37 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
           </div>
 
           {/* Siege Status Banner if territory has active siege */}
-          {siege && (
-            <div className="p-3 rounded-xl bg-[#1b1510] border border-[#caa15a]/45 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Castle className="w-5 h-5 text-[#e0b86e] shrink-0" />
-                <div className="text-xs font-bold text-[#f3ead7] truncate">
-                  Kuşatma: %{Math.round(siege.progress)} · Sur: %{wallHp}
+          {siege && (() => {
+            const siegePct = Math.max(0, Math.min(100, Math.round(siege.progress)));
+            return (
+              <div className="p-3 rounded-xl bg-[#1b1510] border border-[#caa15a]/45 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Castle className="w-5 h-5 text-[#e0b86e] shrink-0" />
+                    <div className="text-xs font-bold text-[#f3ead7] truncate">
+                      Kuşatma İlerlemesi: {siegePct}/100 · Sur: %{wallHp}
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono-num font-bold text-[#e0b86e] shrink-0">
+                    {siege.attackerTroops >= 1000
+                      ? `${(siege.attackerTroops / 1000).toFixed(1)}B`
+                      : siege.attackerTroops}{' '}
+                    Kuşatmacı
+                  </span>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-[#0d0a07] border border-[#caa15a]/25 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      isPlayerAttacker
+                        ? 'bg-gradient-to-r from-[#b8862d] to-[#facc15]'
+                        : 'bg-gradient-to-r from-rose-700 to-rose-400'
+                    }`}
+                    style={{ width: `${Math.max(siegePct > 0 ? 3 : 0, siegePct)}%` }}
+                  />
                 </div>
               </div>
-              <span className="text-xs font-mono-num font-bold text-[#e0b86e] shrink-0">
-                {(siege.attackerTroops / 1000).toFixed(1)}B Kuşatmacı
-              </span>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Tactical Command Action Buttons */}
           {hasTacticalOrders && onApplyTacticalOrder && (
@@ -790,6 +811,24 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
 
   const isOverBudget = totalSpentPoints > availableBudget;
   const canSignDemands = totalSpentPoints > 0 && !isOverBudget;
+
+  const peaceAE = useMemo(
+    () =>
+      calculateProjectedPeaceAE({
+        territories,
+        demandedTerritoryIds: validSelectedIds,
+        isFullAnnex: isFullAnnexSelected,
+        demandVassal: demandVassal && !isFullAnnexSelected,
+        conquerorNation: playerNation,
+      }),
+    [
+      territories,
+      validSelectedIds,
+      isFullAnnexSelected,
+      demandVassal,
+      playerNation,
+    ]
+  );
 
   const toggleProvinceDemand = (territoryId: string) => {
     sound.playClick();
@@ -1118,6 +1157,84 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                     ? `${enemyNation.name} seçilen barış şartlarını (${totalSpentPoints} Puan) kabul ediyor!`
                     : 'Aşağıdan talep edeceğiniz şehirleri veya antlaşma şartlarını seçin.'}
                 </span>
+              </div>
+            </div>
+
+            {/* Live Aggressive Expansion & World Coalition Preview */}
+            <div
+              data-testid="peace-conference-ae-banner"
+              className={`rounded-xl px-3 py-2.5 border text-xs space-y-1.5 ${
+                peaceAE.triggersCoalition
+                  ? 'bg-rose-950/75 border-rose-500/80 text-rose-100'
+                  : peaceAE.projectedTotal >= 75
+                  ? 'bg-amber-950/55 border-amber-500/60 text-amber-100'
+                  : 'bg-[#17120d] border-[#caa15a]/30 text-[#e8dcc8]'
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-bold flex items-center gap-1.5">
+                  <AlertTriangle
+                    className={`w-3.5 h-3.5 shrink-0 ${
+                      peaceAE.triggersCoalition
+                        ? 'text-rose-300'
+                        : peaceAE.projectedTotal >= 75
+                        ? 'text-amber-300'
+                        : 'text-[#e0b86e]'
+                    }`}
+                  />
+                  <span>Agresiflik &amp; Dünya Koalisyonu Etkisi</span>
+                </span>
+                <span className="font-mono-num text-[11px] font-extrabold">
+                  Mevcut {Math.round(peaceAE.currentAE)} + Talep{' '}
+                  <span
+                    className={
+                      peaceAE.adjustedGain > 0
+                        ? peaceAE.triggersCoalition
+                          ? 'text-rose-300'
+                          : 'text-amber-300'
+                        : 'text-[#c5b79e]'
+                    }
+                  >
+                    +{Math.round(peaceAE.adjustedGain)}
+                  </span>{' '}
+                  = {Math.round(peaceAE.projectedTotal)} / 100
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-[#0c0907] border border-[#caa15a]/25 overflow-hidden flex">
+                <div
+                  className="h-full bg-[#caa15a] transition-all duration-200"
+                  style={{ width: `${Math.min(100, peaceAE.currentAE)}%` }}
+                />
+                <div
+                  className={`h-full transition-all duration-200 ${
+                    peaceAE.triggersCoalition
+                      ? 'bg-rose-500'
+                      : peaceAE.projectedTotal >= 75
+                      ? 'bg-amber-400'
+                      : 'bg-emerald-400'
+                  }`}
+                  style={{
+                    width: `${Math.max(
+                      0,
+                      Math.min(100 - peaceAE.currentAE, peaceAE.adjustedGain)
+                    )}%`,
+                  }}
+                />
+              </div>
+              <div className="text-[10.5px] leading-snug">
+                {peaceAE.triggersCoalition ? (
+                  <span className="font-extrabold text-rose-200">
+                    TEHLİKE: Bu barış talebi agresifliği 100&apos;e ulaştırır — DÜNYA KOALİSYONU tüm devletlerle size savaş ilan eder!
+                  </span>
+                ) : peaceAE.projectedTotal >= 75 ? (
+                  <span className="text-amber-200">
+                    Dikkat: Koalisyon sınırına ({Math.round(100 - peaceAE.projectedTotal)} puan) yaklaşıyorsunuz. Talepleri azaltmayı düşünün.
+                  </span>
+                ) : (
+                  <span className="text-[#b8a990]">
+                    100 puana ulaşan ülkeye karşı Dünya Koalisyonu savaş açar. Agresiflik zamanla azalır.
+                  </span>
+                )}
               </div>
             </div>
 

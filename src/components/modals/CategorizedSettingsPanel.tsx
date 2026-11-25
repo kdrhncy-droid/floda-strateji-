@@ -15,7 +15,6 @@ import {
   AI_AGGRESSIVENESS_OPTIONS,
   AUTO_SAVE_OPTIONS,
   BORDER_THICKNESS_OPTIONS,
-  CAPITULATION_THRESHOLD_OPTIONS,
   CRISIS_FREQUENCY_OPTIONS,
   GameSettings,
   GRAPHICS_QUALITY_OPTIONS,
@@ -589,41 +588,8 @@ export const CategorizedSettingsPanel: React.FC<CategorizedSettingsPanelProps> =
           </section>
 
           <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3.5 sm:p-4 space-y-3">
-            <div>
-              <h3 className="text-xs sm:text-sm font-bold text-[#e0bc78]">
-                Otomatik Teslimiyet (Kapitülasyon) Eşiği
-              </h3>
-              <p className="text-[11px] text-[#b2a58f] mt-0.5">
-                Başkenti düşen bir devletin topraklarının yüzde kaçı işgal edildiğinde teslim olacağını belirleyin.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {CAPITULATION_THRESHOLD_OPTIONS.map((opt) => {
-                const active = (settings.capitulationThresholdPct ?? 75) === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    aria-pressed={active}
-                    title={opt.desc}
-                    onClick={() => {
-                      sound.playClick();
-                      onUpdateSettings({ capitulationThresholdPct: opt.value });
-                    }}
-                    className={`min-h-[42px] px-2.5 py-2 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
-                      active
-                        ? 'bg-[#c89d54] text-[#110f0d] border-[#e0bc78]'
-                        : 'bg-[#1c1814] border-[#342d24] text-[#cfc3ae] hover:border-[#7a5e2f]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="pt-3 border-t border-[#2a241d] space-y-2">
-              <div className="text-xs font-bold text-[#e0bc78]">
+            <div className="space-y-2">
+              <div className="text-xs sm:text-sm font-bold text-[#e0bc78]">
                 Kabine Kriz ve Fırsat Olayları Sıklığı
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

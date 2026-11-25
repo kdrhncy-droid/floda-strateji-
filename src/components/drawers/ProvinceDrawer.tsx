@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { Swords, ArrowRight, Shield, Flag, Landmark, Crown, Globe, Users, Flame, Hammer, Castle, Truck } from "lucide-react";
+import { Swords, ArrowRight, Shield, Flag, Crown, Globe, Users, Flame, Castle, Truck, Hammer } from "lucide-react";
 import { CommandDrawersProps } from "./drawerTypes";
 import { ProvinceForeignDiplomacyPanel } from "./ProvinceForeignDiplomacyPanel";
 import { ProvinceFiefPanel } from "./ProvinceFiefPanel";
-import { ProvinceBuildingsPanel } from "./ProvinceBuildingsPanel";
 import {
   COMMANDERS,
   IDEOLOGIES,
@@ -32,6 +31,7 @@ import {
   getProvinceCorridorNames,
   getProvinceStraitBadge,
 } from "../../engine/straitsAndTradeEngine";
+import { computeSendableTroops } from "../../engine/actions/armyMovementActions";
 import { NationFlagCanvasBadge } from "../../map/nationFlagRenderer";
 import { cleanNationName, cleanProvinceName } from "../../utils/formatters";
 import { sound } from "../../utils/soundEngine";
@@ -46,7 +46,6 @@ import {
 export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   onClose,
   playerNation,
-  playerEconomy,
   selectedTerritory,
   territories,
   nations,
@@ -58,7 +57,6 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   onExecuteArmyMove,
   onRecruitUnit,
   onBatchRecruitUnits,
-  onUpgradeBuilding,
   onAssimilateTerritory,
   onStartMissionary,
   onDiplomaticAction,
@@ -75,7 +73,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   gameMode = "EMPIRES_1440",
   fogOfWarEnabled = true,
 }) => {
-  const [provinceSubTab, setProvinceSubTab] = useState<"ARMY" | "ECONOMY" | "FIEF">("ARMY");
+  const [provinceSubTab, setProvinceSubTab] = useState<"ARMY" | "FIEF">("ARMY");
 
   const visibleTerritoryIds = useMemo(
     () =>
@@ -423,12 +421,12 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     </div>
                   )}
 
-                  {/* Compact Mobile 3-Tab Switcher (Obsidian + Gold, 44px touch targets) */}
+                  {/* Compact Mobile 2-Tab Switcher (Obsidian + Gold, 44px touch targets) */}
                   {isSelectedPlayerOwned && (
                     <div
                       role="tablist"
                       aria-label="Eyalet yönetim bölümleri"
-                      className="sticky top-0 z-10 grid grid-cols-3 gap-1 bg-[#0f0c09]/95 backdrop-blur-md p-1 rounded-xl border border-[#caa15a]/30 lg:hidden"
+                      className="sticky top-0 z-10 grid grid-cols-2 gap-1 bg-[#0f0c09]/95 backdrop-blur-md p-1 rounded-xl border border-[#caa15a]/30 lg:hidden"
                     >
                       <button
                         type="button"
@@ -443,20 +441,6 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                       >
                         <Swords className="w-3.5 h-3.5 shrink-0" />
                         <span>Ordu</span>
-                      </button>
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={provinceSubTab === 'ECONOMY'}
-                        onClick={() => setProvinceSubTab('ECONOMY')}
-                        className={`min-h-[44px] rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                          provinceSubTab === 'ECONOMY'
-                            ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c]'
-                            : 'text-[#d8cbb5] hover:text-white'
-                        }`}
-                      >
-                        <Landmark className="w-3.5 h-3.5 shrink-0" />
-                        <span>Ekonomi</span>
                       </button>
                       <button
                         type="button"
@@ -549,7 +533,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     (isDifferentReligion || selectedTerritory.missionary) && (
                       <div
                         className={
-                          provinceSubTab === 'ECONOMY'
+                          provinceSubTab === 'FIEF'
                             ? 'block'
                             : 'hidden lg:block'
                         }
@@ -873,7 +857,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                           <span className="text-[#f3ead7] font-medium font-mono-num">
                             Sevk: <strong>%{Math.round(moveRatio * 100)}</strong> (
                             {Math.round(
-                              Math.max(0, selectedTerritory.garrison - 500) * moveRatio
+                              computeSendableTroops(selectedTerritory.garrison) * moveRatio
                             ).toLocaleString('tr-TR')}{' '}
                             Asker)
                           </span>
@@ -958,12 +942,6 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                       isVisibleOnMobile={provinceSubTab === 'FIEF'}
                       onAssignFiefLord={onAssignFiefLord}
                       onBestowFavorOnLord={onBestowFavorOnLord}
-                    />
-                    <ProvinceBuildingsPanel
-                      playerNation={playerNation}
-                      selectedTerritory={selectedTerritory}
-                      isVisibleOnMobile={provinceSubTab === 'ECONOMY'}
-                      onUpgradeBuilding={onUpgradeBuilding}
                     />
                   </>
                 ) : (

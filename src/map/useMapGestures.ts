@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { geoNaturalEarth1 } from 'd3-geo';
 import { Territory } from '../types/game';
 import { getBaseProjectionScale } from './spatialIndex';
@@ -11,7 +11,10 @@ function clampMapTransform(
   width: number,
   height: number
 ): { k: number; x: number; y: number } {
-  const k = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, t.k));
+  const safeK = Number.isFinite(t.k) ? t.k : 1.85;
+  const safeX = Number.isFinite(t.x) ? t.x : 0;
+  const safeY = Number.isFinite(t.y) ? t.y : 0;
+  const k = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, safeK));
   const baseScale = getBaseProjectionScale(width, height);
   // Natural Earth projection spans roughly ±2.75 * baseScale horizontally and ±1.42 * baseScale vertically around [width/2, height/2].
   // On mobile portrait (e.g., 390x844), baseScale is 150 so the unscaled map width (~830px) is much wider than viewport width (390px).
@@ -31,8 +34,8 @@ function clampMapTransform(
 
   return {
     k,
-    x: Math.max(minX, Math.min(maxX, t.x)),
-    y: Math.max(minY, Math.min(maxY, t.y)),
+    x: Math.max(minX, Math.min(maxX, safeX)),
+    y: Math.max(minY, Math.min(maxY, safeY)),
   };
 }
 
@@ -235,6 +238,7 @@ export function useMapGestures(params: {
   );
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button !== 0) return;
     dragRef.current = {
       isDragging: true,
       startX: e.clientX,
@@ -251,6 +255,10 @@ export function useMapGestures(params: {
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!dragRef.current.isDragging) return;
+    if ((e.buttons & 1) === 0) {
+      dragRef.current.isDragging = false;
+      return;
+    }
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
     dragRef.current.movedDistance = Math.hypot(dx, dy);
@@ -279,16 +287,25 @@ export function useMapGestures(params: {
     }
   };
 
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+  // Native non-passive wheel listener so browser scroll/zoom never steals events and zoom stays smooth
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const factor = e.deltaY < 0 ? 1.18 : 0.85;
-    zoomAtPoint(factor, mouseX, mouseY);
-  };
+    const onNativeWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY === 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const clampedDelta = Math.max(-240, Math.min(240, e.deltaY));
+      const factor = Math.pow(0.9982, clampedDelta);
+      zoomAtPoint(factor, mouseX, mouseY);
+    };
+    canvas.addEventListener('wheel', onNativeWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener('wheel', onNativeWheel);
+    };
+  }, [canvasRef, zoomAtPoint]);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (e.touches.length === 1) {
@@ -414,23 +431,8 @@ export function useMapGestures(params: {
       e.touches.length === 0
     ) {
       const t = e.changedTouches[0];
-      const prevTap = lastTapRef.current;
-      if (
-        prevTap &&
-        now - prevTap.time < 280 &&
-        Math.hypot(t.clientX - prevTap.x, t.clientY - prevTap.y) < 30
-      ) {
-        // Double-tap zooms cleanly around the tapped location
-        lastTapRef.current = null;
-        const canvas = canvasRef.current;
-        const rect = canvas?.getBoundingClientRect();
-        const fx = t.clientX - (rect?.left || 0);
-        const fy = t.clientY - (rect?.top || 0);
-        zoomAtPoint(transformRef.current.k >= 8.5 ? 0.6 : 1.65, fx, fy);
-      } else {
-        lastTapRef.current = { time: now, x: t.clientX, y: t.clientY };
-        onTapClientPoint(t.clientX, t.clientY);
-      }
+      lastTapRef.current = { time: now, x: t.clientX, y: t.clientY };
+      onTapClientPoint(t.clientX, t.clientY);
     }
 
     if (e.touches.length === 1) {
@@ -465,7 +467,6 @@ export function useMapGestures(params: {
       onMouseDown: handleMouseDown,
       onMouseMove: handleMouseMove,
       onMouseUp: handleMouseUp,
-      onWheel: handleWheel,
       onTouchStart: handleTouchStart,
       onTouchMove: handleTouchMove,
       onTouchEnd: handleTouchEnd,

@@ -9,6 +9,7 @@ import {
   CrisisEventDefinition,
   CrisisEventOption,
   DiplomaticActionType,
+  DiplomaticEnvoy,
   DiplomaticRelation,
   GameModeId,
   GameScreenState,
@@ -18,11 +19,13 @@ import {
   Nation,
   PeaceDealType,
   PendingWarMoveRequest,
+  RecruitFeedbackEvent,
   SeaArmy,
   SpeedLevel,
   TacticalBattleState,
   Territory,
   UnitType,
+  WarAnnouncement,
   WorldNewsEvent,
 } from '../types/game';
 import {
@@ -82,6 +85,7 @@ import {
   formEmpireDomain,
   hireMercenaryDomain,
   investSpecialtyProductionDomain,
+  launchNuclearStrikeDomain,
   mergeNeighborArmiesDomain,
   modernizeNationalArmyDomain,
   pickNextAutoResearchTech,
@@ -148,6 +152,10 @@ export interface GameStoreState {
   activeTacticalBattle: TacticalBattleState | null;
   activeBattleOverviewTerritoryId: string | null;
   activeWarModalId: string | null;
+  pendingWarDeclarationTargetId: string | null;
+  diplomaticEnvoys: DiplomaticEnvoy[];
+  activeWarAnnouncement: WarAnnouncement | null;
+  recentRecruitFeedback: RecruitFeedbackEvent | null;
   showNewsDrawer: boolean;
   showSystemModal: boolean;
   campaignOutcome: 'VICTORY' | 'DEFEAT' | null;
@@ -175,6 +183,10 @@ export interface GameStoreState {
   setShowSystemModal: (open: boolean) => void;
   setActiveBattleOverviewTerritoryId: (id: string | null) => void;
   setActiveWarModalId: (id: string | null) => void;
+  openWarDeclarationModal: (targetNationId: string | null) => void;
+  confirmWarDeclaration: (targetNationId: string, calledAllyIds: string[]) => void;
+  cancelDiplomaticEnvoy: (envoyId: string) => void;
+  dismissWarAnnouncement: () => void;
   applyTacticalOrder: (
     territoryId: string,
     tactic: 'TURAN' | 'BOMBARD' | 'RETREAT'
@@ -247,6 +259,7 @@ export interface GameStoreState {
     territoryId: string,
     method: 'ARTILLERY' | 'DRONE_RAID'
   ) => void;
+  launchNuclearStrike: (territoryId: string) => void;
   updateTaxRate: (newRate: number) => void;
   updateBudget: (key: keyof Nation['budget'], value: number) => void;
   centralBankIntervention: () => void;
@@ -331,6 +344,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   activeTacticalBattle: null,
   activeBattleOverviewTerritoryId: null,
   activeWarModalId: null,
+  pendingWarDeclarationTargetId: null,
+  diplomaticEnvoys: [],
+  activeWarAnnouncement: null,
+  recentRecruitFeedback: null,
   showNewsDrawer: false,
   showSystemModal: false,
   campaignOutcome: null,
@@ -401,6 +418,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         ...patch,
         pendingWarMove: null,
         moveRatio: 1,
+        ...(patch.warAnnouncement ? { activeWarAnnouncement: patch.warAnnouncement } : {}),
         ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
       };
     }),
@@ -868,6 +886,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       activeCrisis: null,
       incomingDiplomaticOffer: null,
       activeTacticalBattle: null,
+      pendingWarDeclarationTargetId: null,
+      diplomaticEnvoys: [],
+      activeWarAnnouncement: null,
+      recentRecruitFeedback: null,
       campaignOutcome: null,
       dismissedVictoryBanner: false,
       screenState: 'PLAYING',
@@ -899,6 +921,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       battles: s.battles,
       movements: s.movements,
       seaArmies: s.seaArmies,
+      diplomaticEnvoys: s.diplomaticEnvoys,
       newsEvents: s.newsEvents,
       tick: s.tick,
       hour: s.hour,
@@ -914,6 +937,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       modeBundle.nations,
       modeBundle.territories
     );
+    const playerCapId = hydrated.nations[hydrated.playerNationId]?.capitalTerritoryId;
+    const validSelectedTerritoryId =
+      playerCapId && hydrated.territories[playerCapId]
+        ? playerCapId
+        : Object.values(hydrated.territories).find(
+            (t) => t.ownerId === hydrated.playerNationId
+          )?.id ?? null;
+
     set({
       features: modeBundle.features,
       gameMode: hydrated.gameMode,
@@ -925,15 +956,22 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       battles: hydrated.battles,
       movements: hydrated.movements,
       seaArmies: hydrated.seaArmies || [],
+      diplomaticEnvoys: hydrated.diplomaticEnvoys || [],
       newsEvents: hydrated.newsEvents,
       tick: hydrated.tick,
       hour: hydrated.hour ?? 8,
       worldSeed: hydrated.worldSeed ?? generateWorldSeed(),
-      selectedTerritoryId: hydrated.playerNationId,
+      selectedTerritoryId: validSelectedTerritoryId,
       selectedSeaArmyId: null,
       armyOrderSourceId: null,
       seaArmyOrderSourceId: null,
       pendingWarMove: null,
+      pendingWarDeclarationTargetId: null,
+      activeWarAnnouncement: null,
+      recentRecruitFeedback: null,
+      activeCrisis: null,
+      activeTacticalBattle: null,
+      activeWarModalId: null,
       moveRatio: 1,
       aiCommanderEnabled: false,
       activeTab: 'NONE',
@@ -989,6 +1027,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       aiCommanderEnabled: s.aiCommanderEnabled,
       aiCommanderStance: s.aiCommanderStance,
       activeIncomingOffer: s.incomingDiplomaticOffer,
+      diplomaticEnvoys: s.diplomaticEnvoys,
       worldSeed: s.worldSeed,
     });
 
@@ -1023,6 +1062,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       seaArmies: out.seaArmies,
       selectedSeaArmyId: stillSelectedSea,
       newsEvents: out.newsEvents,
+      ...(out.diplomaticEnvoys !== undefined
+        ? { diplomaticEnvoys: out.diplomaticEnvoys }
+        : {}),
+      ...(out.warAnnouncements && out.warAnnouncements.length > 0
+        ? { activeWarAnnouncement: out.warAnnouncements[0] }
+        : {}),
       ...(out.shouldPause || outcome ? { speed: 0 as SpeedLevel } : {}),
       ...(outcome
         ? {
@@ -1084,8 +1129,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     })),
 
   recruitUnit: (territoryId, unitType, amount, baseGoldCost) =>
-    set((s) =>
-      recruitUnitDomain({
+    set((s) => {
+      const patch = recruitUnitDomain({
         territoryId,
         unitType,
         amount,
@@ -1093,19 +1138,55 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         territories: s.territories,
         nations: s.nations,
         playerNationId: s.playerNationId,
-      })
-    ),
+        tick: s.tick,
+      });
+      return {
+        ...patch,
+        ...(patch.recruitFeedback
+          ? { recentRecruitFeedback: patch.recruitFeedback }
+          : {}),
+      };
+    }),
 
   hireMercenary: (territoryId, companyId) =>
-    set((s) =>
-      hireMercenaryDomain({
+    set((s) => {
+      const patch = hireMercenaryDomain({
         territoryId,
         companyId,
         territories: s.territories,
         nations: s.nations,
         playerNationId: s.playerNationId,
-      })
-    ),
+        gameMode: s.gameMode,
+        tick: s.tick,
+      });
+      return {
+        ...patch,
+        ...(patch.recruitFeedback
+          ? { recentRecruitFeedback: patch.recruitFeedback }
+          : {}),
+      };
+    }),
+
+  launchNuclearStrike: (territoryId) =>
+    set((s) => {
+      const patch = launchNuclearStrikeDomain({
+        territoryId,
+        territories: s.territories,
+        nations: s.nations,
+        relations: s.relations,
+        wars: s.wars,
+        playerNationId: s.playerNationId,
+        tick: s.tick,
+        gameMode: s.gameMode,
+        newsEvents: s.newsEvents,
+      });
+      return {
+        ...patch,
+        ...(patch.warAnnouncement
+          ? { activeWarAnnouncement: patch.warAnnouncement }
+          : {}),
+      };
+    }),
 
   recruitOrAssignGeneral: (generalId) =>
     set((s) =>
@@ -1178,17 +1259,24 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     ),
 
   batchBorderMobilization: () =>
-    set((s) =>
-      batchBorderMobilizationDomain({
+    set((s) => {
+      const patch = batchBorderMobilizationDomain({
         territories: s.territories,
         nations: s.nations,
         playerNationId: s.playerNationId,
-      })
-    ),
+        tick: s.tick,
+      });
+      return {
+        ...patch,
+        ...(patch.recruitFeedback
+          ? { recentRecruitFeedback: patch.recruitFeedback }
+          : {}),
+      };
+    }),
 
   batchRecruitUnits: (scope, unitMode = 'MIXED', territoryId, roundsPerCity = 1) =>
-    set((s) =>
-      batchRecruitUnitsDomain({
+    set((s) => {
+      const patch = batchRecruitUnitsDomain({
         territories: s.territories,
         nations: s.nations,
         playerNationId: s.playerNationId,
@@ -1197,8 +1285,15 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         territoryId: territoryId || s.selectedTerritoryId || undefined,
         roundsPerCity,
         gameMode: s.gameMode,
-      })
-    ),
+        tick: s.tick,
+      });
+      return {
+        ...patch,
+        ...(patch.recruitFeedback
+          ? { recentRecruitFeedback: patch.recruitFeedback }
+          : {}),
+      };
+    }),
 
   startMissionary: (territoryId) =>
     set((s) =>
@@ -1228,6 +1323,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       const patch = executeArmyMoveDomain({ ...s, fromId, toId });
       return {
         ...patch,
+        ...(patch.warAnnouncement
+          ? { activeWarAnnouncement: patch.warAnnouncement }
+          : {}),
         ...(patch.movements ? { moveRatio: 1 } : {}),
         ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
       };
@@ -1243,6 +1341,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       });
       return {
         ...patch,
+        ...(patch.warAnnouncement
+          ? { activeWarAnnouncement: patch.warAnnouncement }
+          : {}),
         ...(patch.movements ? { moveRatio: 1 } : {}),
         ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
       };
@@ -1290,6 +1391,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       });
       return {
         ...patch,
+        ...(patch.warAnnouncement
+          ? { activeWarAnnouncement: patch.warAnnouncement }
+          : {}),
         ...(patch.movements ? { moveRatio: 1 } : {}),
         ...(patch.movements && s.speed === 0 ? { speed: 1 as SpeedLevel } : {}),
       };
@@ -1662,8 +1766,81 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       })
     ),
 
-  diplomaticAction: (targetNationId, action) => {
+  openWarDeclarationModal: (targetNationId) =>
+    set({ pendingWarDeclarationTargetId: targetNationId }),
+
+  dismissWarAnnouncement: () => set({ activeWarAnnouncement: null }),
+
+  cancelDiplomaticEnvoy: (envoyId) =>
+    set((s) => {
+      const targetEnvoy = s.diplomaticEnvoys.find((e) => e.id === envoyId);
+      if (!targetEnvoy) return {};
+      const targetName = s.nations[targetEnvoy.targetNationId]?.name || 'Ülke';
+      sound.playClick();
+      return {
+        diplomaticEnvoys: s.diplomaticEnvoys.filter((e) => e.id !== envoyId),
+        toastMessage: `${targetName} elçilik görevi iptal edildi.`,
+      };
+    }),
+
+  confirmWarDeclaration: (targetNationId, calledAllyIds) => {
     const s = get();
+    const totalPlayerGarrison = Object.values(s.territories)
+      .filter((t) => t.ownerId === s.playerNationId)
+      .reduce((sum, t) => sum + t.garrison, 0);
+
+    const patch = executeDiplomaticActionDomain({
+      targetNationId,
+      action: 'DECLARE_WAR',
+      playerNationId: s.playerNationId,
+      totalPlayerGarrison,
+      tick: s.tick,
+      gameMode: s.gameMode,
+      nations: s.nations,
+      territories: s.territories,
+      relations: s.relations,
+      wars: s.wars,
+      movements: s.movements,
+      newsEvents: s.newsEvents,
+      calledAllyIds,
+    });
+
+    set({
+      pendingWarDeclarationTargetId: null,
+      ...(patch.nations ? { nations: patch.nations } : {}),
+      ...(patch.territories ? { territories: patch.territories } : {}),
+      ...(patch.relations ? { relations: patch.relations } : {}),
+      ...(patch.wars ? { wars: patch.wars } : {}),
+      ...(patch.movements ? { movements: patch.movements } : {}),
+      ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.warAnnouncement
+        ? { activeWarAnnouncement: patch.warAnnouncement }
+        : {}),
+      ...(patch.toast ? { toastMessage: patch.toast } : {}),
+    });
+  },
+
+  diplomaticAction: (targetNationId, action) => {
+    if (action === 'DECLARE_WAR') {
+      sound.playClick();
+      set({ pendingWarDeclarationTargetId: targetNationId });
+      return;
+    }
+    const s = get();
+    const isEnvoyMission = action === 'IMPROVE' || action === 'DAMAGE';
+    if (
+      isEnvoyMission &&
+      s.diplomaticEnvoys.length >= 3 &&
+      !s.diplomaticEnvoys.some((e) => e.targetNationId === targetNationId)
+    ) {
+      sound.playClick();
+      set({
+        toastMessage:
+          'Aynı anda en fazla 3 diplomatik elçilik görevi yürütebilirsiniz. Önce bir elçiliği kapatın.',
+      });
+      return;
+    }
+
     const totalPlayerGarrison = Object.values(s.territories)
       .filter((t) => t.ownerId === s.playerNationId)
       .reduce((sum, t) => sum + t.garrison, 0);
@@ -1683,6 +1860,21 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       newsEvents: s.newsEvents,
     });
 
+    let nextEnvoys = s.diplomaticEnvoys;
+    if (patch.startEnvoy) {
+      const envoy: DiplomaticEnvoy = {
+        ...patch.startEnvoy,
+        id: `envoy_${patch.startEnvoy.targetNationId}_${Date.now()}`,
+        startedTick: s.tick,
+      };
+      nextEnvoys = [
+        ...s.diplomaticEnvoys.filter(
+          (e) => e.targetNationId !== patch.startEnvoy!.targetNationId
+        ),
+        envoy,
+      ];
+    }
+
     set({
       ...(patch.nations ? { nations: patch.nations } : {}),
       ...(patch.territories ? { territories: patch.territories } : {}),
@@ -1690,6 +1882,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ...(patch.wars ? { wars: patch.wars } : {}),
       ...(patch.movements ? { movements: patch.movements } : {}),
       ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.startEnvoy ? { diplomaticEnvoys: nextEnvoys } : {}),
+      ...(patch.warAnnouncement
+        ? { activeWarAnnouncement: patch.warAnnouncement }
+        : {}),
       ...(patch.toast ? { toastMessage: patch.toast } : {}),
     });
   },
@@ -1852,6 +2048,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ...(patch.relations ? { relations: patch.relations } : {}),
       ...(patch.wars ? { wars: patch.wars } : {}),
       ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.warAnnouncement
+        ? { activeWarAnnouncement: patch.warAnnouncement }
+        : {}),
       ...(patch.toast ? { toastMessage: patch.toast } : {}),
       ...(patch.wars ? { activeWarModalId: null } : {}),
       ...(outcome
@@ -1912,6 +2111,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ...(patch.relations ? { relations: patch.relations } : {}),
       ...(patch.wars ? { wars: patch.wars, activeWarModalId: null } : {}),
       ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
+      ...(patch.warAnnouncement
+        ? { activeWarAnnouncement: patch.warAnnouncement }
+        : {}),
       ...(patch.toast ? { toastMessage: patch.toast } : {}),
       ...(outcome
         ? {

@@ -220,18 +220,26 @@
     padding-right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
     gap: 0.45rem !important;
   }
-  .hud-header > div:first-child,
+  .hud-header > div:first-child {
+    display: contents !important;
+  }
+  .hud-header > .aoh3-stat-strip {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
   .hud-header > div:nth-child(2),
   .hud-header > div:nth-child(3) {
     width: auto !important;
     flex-wrap: nowrap !important;
   }
-  .hud-header > div:nth-child(2) {
-    gap: 0.3rem !important;
+  .hud-header .aoh3-topbtn {
+    width: 1.65rem !important;
+    height: 1.65rem !important;
   }
-  .hud-header > div:nth-child(2) button {
-    padding-left: 0.45rem !important;
-    padding-right: 0.45rem !important;
+  .hud-header .aoh3-datenow {
+    font-size: 0.68rem !important;
+    letter-spacing: 0.02em !important;
   }
   .hud-landscape-hide {
     display: none !important;
@@ -305,10 +313,13 @@
     right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
     width: auto !important;
     max-width: calc(100vw - 5.05rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
+    max-height: calc(100dvh - 7.4rem) !important;
+    overflow-y: auto !important;
     padding: 0.35rem 0.5rem !important;
     flex-direction: row !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
-    gap: 0.45rem !important;
+    gap: 0.4rem !important;
   }
   .hud-province-thumb {
     display: none !important;
@@ -345,7 +356,8 @@
   }
   .hud-mehter-dock {
     bottom: max(0.45rem, env(safe-area-inset-bottom, 0px)) !important;
-    right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+    left: calc(4.55rem + env(safe-area-inset-left, 0px)) !important;
+    right: auto !important;
   }
   .hud-mehter-yield {
     display: none !important;
@@ -360,10 +372,28 @@
   .hud-onboarding-card > div {
     padding: 0.65rem 0.75rem !important;
   }
+  .hud-minimap-dock {
+    bottom: max(0.4rem, env(safe-area-inset-bottom, 0px)) !important;
+    right: max(0.45rem, env(safe-area-inset-right, 0px)) !important;
+    gap: 0.25rem !important;
+  }
+  .hud-minimap-dock .aoh3-minimap {
+    width: 156px !important;
+  }
+  .hud-minimap-dock .aoh3-minimap-canvas {
+    height: 76px !important;
+  }
   .hud-world-toast-stack {
-    top: 2.85rem !important;
+    width: min(192px, 34vw) !important;
+  }
+  .hud-envoy-overlay {
+    top: 3.15rem !important;
     right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
-    width: min(230px, 38vw) !important;
+    max-height: calc(100dvh - 10.5rem) !important;
+    width: min(208px, 34vw) !important;
+  }
+  .hud-production-queue {
+    width: min(216px, 36vw) !important;
   }
   .aoh3-menu-panel {
     padding: 0.65rem 0.85rem !important;
@@ -1015,12 +1045,7 @@
   }
 }
 
-/* Keep the original army-cell breakpoint (visible on portrait, hidden on tablets) */
-@media (min-width: 641px) and (max-width: 1023px) {
-  .aoh3-stat-army {
-    display: none;
-  }
-}
+/* Keep the army stat cell visible across all screen sizes so the unified military menu is always reachable */
 
 /* Landscape phones: single 44px chrome row, drop secondary lines */
 @media (max-height: 540px) and (orientation: landscape) {

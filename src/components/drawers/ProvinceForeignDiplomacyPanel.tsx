@@ -1,8 +1,9 @@
-import React from "react";
-import { Swords, Handshake, Crown, Ban, AlertTriangle, Coins, Shield, ArrowRight, Landmark, ScrollText, Globe } from "lucide-react";
+import React, { useState } from "react";
+import { Swords, Handshake, Crown, Ban, AlertTriangle, Coins, Shield, ArrowRight, Landmark, ScrollText, Globe, TrendingUp, TrendingDown } from "lucide-react";
 import { ActiveWar, DiplomaticRelation, GameModeId, Nation, Territory } from "../../types/game";
 import { DiplomaticActionType, PeaceDealType } from "./drawerTypes";
 import {
+  computeNationEconomySummary,
   getOrCreateRelation,
   getWarScoreForNation,
   isAtWar,
@@ -21,6 +22,7 @@ import { computeNationTechMetrics } from "../../data/world2026Data";
 import { cleanNationName } from "../../utils/formatters";
 import { sound } from "../../utils/soundEngine";
 import { AoH3GlyphSvg, AoH3MenuBanner } from "../illustrations/AoH3Illustrations";
+import { EconomySourcesPopover, useLongPress } from "../common/EconomySourcesPopover";
 
 interface ProvinceForeignDiplomacyPanelProps {
   playerNation: Nation;
@@ -103,6 +105,15 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
     selectedOwner.id,
     territories
   );
+  const [showEconomyPopover, setShowEconomyPopover] = useState(false);
+  const ownerEconomySummary = computeNationEconomySummary(
+    selectedOwner,
+    territories
+  );
+  const economyLongPress = useLongPress(() => {
+    sound.playClick();
+    setShowEconomyPopover(true);
+  });
 
   // Unified AoH3 button classes
   const btnStandard =
@@ -147,16 +158,37 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-rose-200 inline-flex items-center gap-1.5">
               <AoH3GlyphSvg name="fortress" className="w-3.5 h-3.5 text-rose-300 shrink-0" />
-              <span>{selectedTerritory.name} Kalesi Kuşatma Harekatı</span>
+              <span>{selectedTerritory.name} Kuşatma Harekatı</span>
             </span>
             <span className="font-mono-num text-xs font-bold text-[#e0b86e]">
               Sur Dayanıklılığı: %{selectedTerritory.castleWallHp ?? 100}
             </span>
           </div>
+          {selectedTerritory.siege && (() => {
+            const siegePct = Math.max(0, Math.min(100, Math.round(selectedTerritory.siege.progress)));
+            return (
+              <div className="p-2 rounded-lg bg-[#14100c]/90 border border-[#caa15a]/40 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="text-[#f3ead7]">
+                    Kuşatma İlerlemesi ({selectedTerritory.siege.attackerTroops.toLocaleString("tr-TR")} Kuşatmacı)
+                  </span>
+                  <span className="font-mono-num text-[#e0b86e]">
+                    {siegePct}/100
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-[#0d0a07] border border-[#caa15a]/25 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#b8862d] to-[#facc15] transition-all duration-300"
+                    style={{ width: `${Math.max(siegePct > 0 ? 3 : 0, siegePct)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
           <p className="text-[11px] text-[#d8cbb5]">
             {gameMode === "EMPIRES_1440"
-              ? "Ordularınız hücuma geçmeden önce kuşatma bataryaları veya lağımcı ocaklarıyla kale surlarını yıkabilirsiniz."
-              : "Ordularınız hücuma geçmeden önce topçu bataryaları veya taarruz filolarıyla kale surlarını yıkabilirsiniz."}
+              ? "Ordularınız şehirde kuşatmayı (100/100) tamamladığında şehir düşer; kuşatma bataryalarıyla surları yıkarak süreci hızlandırabilirsiniz."
+              : "Ordularınız şehirde kuşatmayı (100/100) tamamladığında şehir düşer; topçu bataryalarıyla surları yıkarak süreci hızlandırabilirsiniz."}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
@@ -246,10 +278,10 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
           </div>
         </div>
 
-        {/* 4-Box Foreign Intel Strip: Altın, Asker, Teknoloji, Başkent & Toprak */}
+        {/* 5-Box Foreign Intel Strip: Hazine, Mevcut Ekonomi (Basılı Tut), Asker, Teknoloji, Başkent & Toprak */}
         <div
           data-testid="foreign-nation-intel-strip"
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"
+          className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center"
         >
           <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
             <div className="text-[10px] text-[#b8a990]">Hazine (Altın)</div>
@@ -257,6 +289,32 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
               {Math.floor(selectedOwner.treasury).toLocaleString("tr-TR")} A
             </div>
           </div>
+          <button
+            type="button"
+            data-testid="foreign-economy-hold-btn"
+            onPointerDown={economyLongPress.onPointerDown}
+            onPointerUp={economyLongPress.onPointerUp}
+            onPointerLeave={economyLongPress.onPointerLeave}
+            onPointerCancel={economyLongPress.onPointerCancel}
+            onClick={() => {
+              if (economyLongPress.consumeLongPressFlag()) return;
+              if (onInspectNation) {
+                sound.playClick();
+                onInspectNation(selectedOwner.id);
+              }
+            }}
+            title="Ekonomi kaynakları ve yatırımlar için basılı tutun"
+            className="rounded-xl bg-[#1b1510] hover:bg-[#241c13] border border-[#caa15a]/35 hover:border-[#e0b86e]/65 p-2 text-center transition-colors cursor-pointer select-none"
+          >
+            <div className="text-[10px] text-[#b8a990] flex items-center justify-center gap-1">
+              <TrendingUp className="w-3 h-3 text-[#e0b86e]" />
+              <span>Mevcut Ekonomi</span>
+            </div>
+            <div className="font-mono-num text-xs sm:text-sm font-bold text-[#e0b86e]">
+              {ownerEconomySummary.totalEconomy.toLocaleString("tr-TR")}
+            </div>
+            <div className="text-[9px] text-[#9b8e78]">Basılı tut: Kaynaklar</div>
+          </button>
           <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
             <div className="text-[10px] text-[#b8a990]">Toplam Asker</div>
             <div className="font-mono-num text-xs sm:text-sm font-bold text-[#f3ead7]">
@@ -269,7 +327,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
               Sv.{ownerTech.techLevel.toFixed(2)} / {ownerTech.maxTechLevel.toFixed(1)}
             </div>
           </div>
-          <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
+          <div className="col-span-2 sm:col-span-1 rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
             <div className="text-[10px] text-[#b8a990]">Başkent &amp; Toprak</div>
             <div className="font-mono-num text-xs sm:text-sm font-bold text-[#f3ead7]">
               Bşk.Sv.{ownerTech.capitalLevel} · {ownerProvCount} Eyalet
@@ -281,30 +339,48 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
       {/* Diplomatic Action Grid — Unified AoH3 Obsidian / Antique Gold / Emerald / Crimson Palette */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         <button
+          data-testid="foreign-improve-relations-btn"
           onClick={() => onDiplomaticAction(selectedOwner.id, "IMPROVE")}
           className={btnStandard}
         >
           <div>
             <div className="text-xs font-bold text-[#f3ead7]">
-              Diplomatik Heyet Gönder
+              İlişkileri Geliştir (Elçi)
             </div>
             <div className="text-[11px] text-[#e0b86e]">
-              +20 İlişki Puanı (150 Altın)
+              Günlük +3 İlişki · 10 Gün (150 Altın)
             </div>
           </div>
           <Handshake className="w-4 h-4 text-[#e0b86e] shrink-0" />
         </button>
 
         <button
+          data-testid="foreign-damage-relations-btn"
+          onClick={() => onDiplomaticAction(selectedOwner.id, "DAMAGE")}
+          className={btnHostile}
+        >
+          <div>
+            <div className="text-xs font-bold text-rose-100">
+              İlişkileri Düşür (Elçi)
+            </div>
+            <div className="text-[11px] text-rose-300">
+              Günlük -3 İlişki · 10 Gün (Savaş zemini)
+            </div>
+          </div>
+          <TrendingDown className="w-4 h-4 text-rose-300 shrink-0" />
+        </button>
+
+        <button
+          data-testid="foreign-insult-btn"
           onClick={() => onDiplomaticAction(selectedOwner.id, "INSULT")}
           className={btnHostile}
         >
           <div>
             <div className="text-xs font-bold text-rose-100">
-              Diplomatik Nota &amp; Kınama
+              Hakaret Et &amp; Nota Ver
             </div>
             <div className="text-[11px] text-rose-300">
-              -25 İlişki · Savaş Gerekçesi Hazırlar
+              -30 İlişki · +1 Prestij (5 gün soğuma)
             </div>
           </div>
           <AlertTriangle className="w-4 h-4 text-rose-300 shrink-0" />
@@ -626,6 +702,12 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
           </button>
         )}
       </div>
+
+      <EconomySourcesPopover
+        nation={showEconomyPopover ? selectedOwner : null}
+        territories={territories}
+        onClose={() => setShowEconomyPopover(false)}
+      />
     </div>
   );
 };

@@ -7,15 +7,19 @@ import {
   Nation,
   SpeedLevel,
   Territory,
+  WarAnnouncement,
   WorldNewsEvent,
 } from '../../types/game';
 import {
+  adjustAggressiveExpansionGain,
   formatGameDate,
   resolveWarParticipants,
 } from '../simulationEngine';
 import {
+  evaluateWorldCoalitionAt100AE,
   getOrCreateRelation,
   isAtWar,
+  WAR_DECLARATION_BASE_AE,
 } from '../core/diplomacyHelpers';
 import { getLordRetinueTroops } from '../pashaAndFiefEngine';
 import { findArmyRouteAStar } from '../pathfindingEngine';
@@ -23,6 +27,16 @@ import { evaluateWartimeAiOperations } from '../aiAndRebellionEngine';
 import { scaleUnits } from '../core/unitHelpers';
 import { sound } from '../../utils/soundEngine';
 import { EmpireActionPatch } from './empireActionTypes';
+
+export const MIN_MARCH_TROOPS = 300;
+
+export function computeSendableTroops(garrison: number): number {
+  const g = Math.max(0, Math.floor(garrison || 0));
+  if (g < MIN_MARCH_TROOPS) return 0;
+  if (g >= 1500) return Math.max(0, g - 500);
+  if (g >= 600) return Math.max(0, g - 200);
+  return g;
+}
 
 export function executeArmyMoveDomain(params: {
   fromId: string;
@@ -122,7 +136,13 @@ export function executeArmyMoveDomain(params: {
   const [firstHopId, ...remainingHops] = route.hops;
   const firstHopTerr = territories[firstHopId];
 
-  const sendableTroops = Math.max(0, Math.floor(fromT.garrison - 500));
+  if (fromT.garrison < MIN_MARCH_TROOPS) {
+    return {
+      toastMessage: `Hareket için şehirde en az ${MIN_MARCH_TROOPS} asker bulunmalıdır.`,
+    };
+  }
+
+  const sendableTroops = computeSendableTroops(fromT.garrison);
   const normalizedMoveRatio = Number.isFinite(moveRatio)
     ? Math.max(0, Math.min(1, moveRatio))
     : 0;
@@ -130,16 +150,16 @@ export function executeArmyMoveDomain(params: {
     sendableTroops,
     Math.round(sendableTroops * normalizedMoveRatio)
   );
-  if (sendTroops < 1000) {
+  if (sendTroops < MIN_MARCH_TROOPS) {
     return {
-      toastMessage:
-        'Hareket için en az 1.000 asker sevk edilmeli; kaynak eyalette 500 savunma askeri kalır.',
+      toastMessage: `Hareket için en az ${MIN_MARCH_TROOPS} asker sevk edilmelidir.`,
     };
   }
 
   let nextWars = wars;
   let nextNews = newsEvents;
   let toast: string | undefined;
+  let warAnnouncement: WarAnnouncement | undefined;
 
   if (
     isForeign &&
@@ -175,6 +195,22 @@ export function executeArmyMoveDomain(params: {
       casualtiesDefender: 0,
     };
     nextWars = [...wars, newWar];
+    if (targetNation) {
+      warAnnouncement = {
+        id: newWar.id,
+        warName: newWar.name,
+        attackerId: playerNationId,
+        attackerName: playerNation.name,
+        attackerFlagCode: playerNation.flagCode,
+        attackerColor: playerNation.color,
+        defenderId: targetNation.id,
+        defenderName: targetNation.name,
+        defenderFlagCode: targetNation.flagCode,
+        defenderColor: targetNation.color,
+        isPlayerDefender: false,
+        createdAtMs: Date.now(),
+      };
+    }
 
     let warDesc = `${playerNation.name} orduları ${toT.name} hedefine askeri harekat başlattı.`;
     if (attAllyNames.length > 0) {
@@ -270,19 +306,60 @@ export function executeArmyMoveDomain(params: {
     },
   ];
 
-  // If this move declared a new war, trigger immediate enemy AI counter-mobilization & counter-attack!
+  let workingRelations = relations;
+
+  // If this move declared a new war, add War Declaration AE, evaluate World Coalition, and trigger enemy counter-mobilization
   if (
     isForeign &&
     !isAlliedOrVassalDest &&
     !alreadyAtWarWithTarget &&
     forceDeclareWar
   ) {
+    const pCur = workingNations[playerNationId] || playerNation;
+    const warAeGain = adjustAggressiveExpansionGain(
+      pCur,
+      WAR_DECLARATION_BASE_AE
+    );
+    workingNations = {
+      ...workingNations,
+      [playerNationId]: {
+        ...pCur,
+        aggressiveExpansion: Math.min(
+          100,
+          Number(((pCur.aggressiveExpansion || 0) + warAeGain).toFixed(1))
+        ),
+      },
+    };
+
+    const coalitionRes = evaluateWorldCoalitionAt100AE({
+      targetNationId: playerNationId,
+      nations: workingNations,
+      territories: workingTerritories,
+      relations: workingRelations,
+      wars: nextWars,
+      tick,
+      gameMode,
+      newsEvents: nextNews,
+      playerNationId,
+    });
+    if (coalitionRes.triggered) {
+      nextWars = coalitionRes.wars;
+      workingRelations = coalitionRes.relations;
+      nextNews = coalitionRes.newsEvents;
+      if (coalitionRes.warAnnouncement) {
+        warAnnouncement = coalitionRes.warAnnouncement;
+      }
+      if (coalitionRes.toast) {
+        toast = coalitionRes.toast;
+      }
+    }
+
     const aiCounter = evaluateWartimeAiOperations({
       nextTick: tick,
       playerNationId,
       nations: workingNations,
       territories: workingTerritories,
-      relations,
+      relations: workingRelations,
       wars: nextWars,
       movements: workingMovements,
       aiAggressiveness: 'AGGRESSIVE',
@@ -294,7 +371,7 @@ export function executeArmyMoveDomain(params: {
       if (aiCounter.newMovements.length > 0) {
         workingMovements = [...workingMovements, ...aiCounter.newMovements];
       }
-      if (aiCounter.playerAlerts.length > 0) {
+      if (aiCounter.playerAlerts.length > 0 && !coalitionRes.triggered) {
         toast = `${toast || ''} ${aiCounter.playerAlerts[0]}`.trim();
       }
     }
@@ -302,12 +379,14 @@ export function executeArmyMoveDomain(params: {
 
   return {
     nations: workingNations,
+    relations: workingRelations,
     wars: nextWars,
     newsEvents: nextNews,
     territories: workingTerritories,
     movements: workingMovements,
     armyOrderSourceId: null,
     ...(speed === 0 ? { speed: 1 as SpeedLevel } : {}),
+    ...(warAnnouncement ? { warAnnouncement } : {}),
     ...(toast ? { toastMessage: toast } : {}),
   };
 }
@@ -366,20 +445,19 @@ export function executeBatchArmyMoveDomain(params: {
   for (const sId of uniqueSourceIds) {
     const t = territories[sId];
     if (!t || t.ownerId !== playerNationId) continue;
-    const sendable = Math.max(0, Math.floor(t.garrison - 500));
+    const sendable = computeSendableTroops(t.garrison);
     const sendTroops = Math.min(
       sendable,
       Math.round(sendable * normalizedMoveRatio)
     );
-    if (sendTroops >= 1000) {
+    if (sendTroops >= MIN_MARCH_TROOPS) {
       eligibleSources.push({ terr: t, sendTroops });
     }
   }
 
   if (eligibleSources.length === 0) {
     return {
-      toastMessage:
-        'Seçili şehirlerde sevk edilebilir yeterli asker yok (en az 1.000 asker sevk edilmeli ve 500 garnizon kalmalıdır).',
+      toastMessage: `Seçili şehirlerde sevk edilebilir yeterli asker yok (en az ${MIN_MARCH_TROOPS} asker gereklidir).`,
     };
   }
 
@@ -449,6 +527,7 @@ export function executeBatchArmyMoveDomain(params: {
   let nextWars = wars;
   let nextNews = newsEvents;
   let warNotice = '';
+  let warAnnouncement: WarAnnouncement | undefined;
 
   if (
     isForeign &&
@@ -483,6 +562,22 @@ export function executeBatchArmyMoveDomain(params: {
       casualtiesDefender: 0,
     };
     nextWars = [...wars, newWar];
+    if (targetNation) {
+      warAnnouncement = {
+        id: newWar.id,
+        warName: newWar.name,
+        attackerId: playerNationId,
+        attackerName: playerNation.name,
+        attackerFlagCode: playerNation.flagCode,
+        attackerColor: playerNation.color,
+        defenderId: targetNation.id,
+        defenderName: targetNation.name,
+        defenderFlagCode: targetNation.flagCode,
+        defenderColor: targetNation.color,
+        isPlayerDefender: false,
+        createdAtMs: Date.now(),
+      };
+    }
 
     let warDesc = `${playerNation.name}, ${routedSources.length} eyaletlik toplu orduyu ${toT.name} hedefine sevk etti.`;
     if (attAllyNames.length > 0) {
@@ -629,6 +724,7 @@ export function executeBatchArmyMoveDomain(params: {
     movements: workingMovements,
     armyOrderSourceId: null,
     ...(speed === 0 ? { speed: 1 as SpeedLevel } : {}),
+    ...(warAnnouncement ? { warAnnouncement } : {}),
     toastMessage: toast,
   };
 }

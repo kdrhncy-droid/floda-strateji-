@@ -111,12 +111,16 @@ const BRANCH_CONFIGS: BranchConfig[] = [
 ];
 
 const ERA_COLUMNS_1440 = [
-  { tier: 1, title: "ÇAĞ I", subtitle: "Erken Doktrin" },
-  { tier: 2, title: "ÇAĞ II", subtitle: "Teşkilat & Ocak" },
-  { tier: 3, title: "ÇAĞ III", subtitle: "İmparatorluk" },
-  { tier: 4, title: "ÇAĞ IV", subtitle: "Cihan Hakimiyeti" },
-  { tier: 5, title: "ÇAĞ V", subtitle: "Altın Çağ" },
-  { tier: 6, title: "ÇAĞ VI", subtitle: "Cihan Zirvesi" },
+  { tier: 1, title: "ÇAĞ I", subtitle: "1444 Erken Doktrin" },
+  { tier: 2, title: "ÇAĞ II", subtitle: "1520 Teşkilat & Ocak" },
+  { tier: 3, title: "ÇAĞ III", subtitle: "1600 İmparatorluk" },
+  { tier: 4, title: "ÇAĞ IV", subtitle: "1700 Cihan Hakimiyeti" },
+  { tier: 5, title: "ÇAĞ V", subtitle: "1780 Altın Çağ" },
+  { tier: 6, title: "ÇAĞ VI", subtitle: "1830 Sanayi Şafağı" },
+  { tier: 7, title: "ÇAĞ VII", subtitle: "1890 Endüstri & Buhar" },
+  { tier: 8, title: "ÇAĞ VIII", subtitle: "1945 Zırh & Hava" },
+  { tier: 9, title: "ÇAĞ IX", subtitle: "1985 Balistik Füze" },
+  { tier: 10, title: "ÇAĞ X", subtitle: "2026 Nükleer Füze" },
 ];
 
 const ERA_COLUMNS_2026 = [
@@ -126,6 +130,10 @@ const ERA_COLUMNS_2026 = [
   { tier: 4, title: "ÇAĞ IV", subtitle: "İleri Teknoloji" },
   { tier: 5, title: "ÇAĞ V", subtitle: "Gelecek Çağı" },
   { tier: 6, title: "ÇAĞ VI", subtitle: "Uzay & Kuantum" },
+  { tier: 7, title: "ÇAĞ VII", subtitle: "Hipersonik Ağ" },
+  { tier: 8, title: "ÇAĞ VIII", subtitle: "Otonom Ordu" },
+  { tier: 9, title: "ÇAĞ IX", subtitle: "Kıtalararası Füze" },
+  { tier: 10, title: "ÇAĞ X", subtitle: "2026 Nükleer Füze" },
 ];
 
 type TreeZoomLevel = 75 | 100 | 115;
@@ -135,23 +143,23 @@ const ZOOM_SPECS: Record<
   { minCanvasPx: number; railPx: number; colMinPx: number; cardHeightClass: string; titleClass: string }
 > = {
   75: {
-    minCanvasPx: 840,
+    minCanvasPx: 1340,
     railPx: 108,
-    colMinPx: 112,
+    colMinPx: 114,
     cardHeightClass: "h-[74px]",
     titleClass: "text-[10px]",
   },
   100: {
-    minCanvasPx: 1020,
+    minCanvasPx: 1640,
     railPx: 124,
-    colMinPx: 138,
+    colMinPx: 140,
     cardHeightClass: "h-[88px]",
     titleClass: "text-[11px]",
   },
   115: {
-    minCanvasPx: 1170,
+    minCanvasPx: 1920,
     railPx: 136,
-    colMinPx: 162,
+    colMinPx: 164,
     cardHeightClass: "h-[102px]",
     titleClass: "text-xs",
   },
@@ -201,8 +209,6 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
   onToggleAutoResearch,
   onUpdateBudget,
   onModernizeNationalArmy,
-  onUpgradeBuilding,
-  onBatchUpgradeBuilding,
   onSelectTerritory,
   gameMode = "EMPIRES_1440",
 }) => {
@@ -925,11 +931,11 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
               className="space-y-3"
               style={{ minWidth: `${zoomSpec.minCanvasPx}px` }}
             >
-              {/* Era Column Headers (Çağ I -> Çağ VI) — scrolls naturally with the tree on iPhone so Dal · Hat never covers lower branches */}
+              {/* Era Column Headers (Çağ I -> Çağ X) — scrolls naturally with the tree on iPhone so Dal · Hat never covers lower branches */}
               <div
                 className="grid gap-2.5 pb-2 border-b border-[#caa15a]/25 items-center bg-[#0f0c09]"
                 style={{
-                  gridTemplateColumns: `${zoomSpec.railPx}px repeat(6, minmax(${zoomSpec.colMinPx}px, 1fr))`,
+                  gridTemplateColumns: `${zoomSpec.railPx}px repeat(${eraColumns.length}, minmax(${zoomSpec.colMinPx}px, 1fr))`,
                 }}
               >
                 <div className="px-2 py-1 text-[10px] font-display font-bold uppercase tracking-wider text-[#b8a990]">
@@ -987,7 +993,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                             key={`${branch.id}_row_${subRow}`}
                             className="grid gap-2.5 items-stretch"
                             style={{
-                              gridTemplateColumns: `${zoomSpec.railPx - 16}px repeat(6, minmax(${zoomSpec.colMinPx}px, 1fr))`,
+                              gridTemplateColumns: `${zoomSpec.railPx - 16}px repeat(${eraColumns.length}, minmax(${zoomSpec.colMinPx}px, 1fr))`,
                             }}
                           >
                             {/* Compact Track Label Cell */}
@@ -1036,8 +1042,9 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                               </div>
                             </div>
 
-                            {/* 6 Era Illustrated Tech Cards Connected Horizontally */}
-                            {[1, 2, 3, 4, 5, 6].map((tierNum) => {
+                            {/* 10 Era Illustrated Tech Cards Connected Horizontally */}
+                            {eraColumns.map((col) => {
+                              const tierNum = col.tier;
                               const tech = rowTechs.find(
                                 (t) => t.tier === tierNum
                               );
@@ -1540,7 +1547,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                   </div>
                 </div>
 
-                {/* Direct Capital Palace Upgrade Action */}
+                {/* Capital Palace Status (Build moved to Hammer Construction menu) */}
                 {capitalTerritory &&
                   (() => {
                     const palaceDef = BUILDINGS.find(
@@ -1549,20 +1556,9 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     const curLvl =
                       capitalTerritory.buildings.capitalPalace ?? 0;
                     const maxLvl = palaceDef?.maxLevel ?? 5;
-                    const isMax = curLvl >= maxLvl;
-                    const hasAdm1 =
-                      playerNation.unlockedTechs.includes("adm_1");
-                    const cost = Math.round(
-                      (palaceDef?.baseCost ?? 500) * Math.pow(1.35, curLvl)
-                    );
                     const queued = capitalTerritory.constructionQueue?.find(
                       (q) => q.building === "capitalPalace"
                     );
-                    const canUpgrade =
-                      hasAdm1 &&
-                      !isMax &&
-                      !queued &&
-                      playerNation.treasury >= cost;
 
                     return (
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 rounded-xl bg-[#1d1711] border border-[#caa15a]/35">
@@ -1581,53 +1577,18 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          data-testid="upgrade-capital-palace-btn"
-                          disabled={!canUpgrade}
-                          onClick={() =>
-                            onUpgradeBuilding(
-                              capitalTerritory.id,
-                              "capitalPalace"
-                            )
-                          }
-                          className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-colors inline-flex items-center gap-1 ${
-                            !hasAdm1
-                              ? "bg-[#120e0a] text-rose-300 border border-rose-500/35 cursor-not-allowed"
-                              : queued
-                              ? "bg-[#241c13] text-[#e0b86e] border border-[#caa15a]/40 cursor-default"
-                              : isMax
-                              ? "bg-[#241c13] text-[#e0b86e] border border-[#e0b86e]/40 cursor-default"
-                              : canUpgrade
-                              ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow"
-                              : "bg-[#120e0a] text-[#8e806a] border border-[#caa15a]/20 cursor-not-allowed"
-                          }`}
-                        >
-                          {!hasAdm1 ? (
-                            <>
-                              <AoH3GlyphSvg name="lock" className="w-3 h-3 shrink-0" />
-                              <span>İdare Çağ I (adm_1) Gerekli</span>
-                            </>
-                          ) : queued ? (
-                            `İnşa Sürüyor (${
-                              queued.totalDays - queued.progressDays
-                            }g)`
-                          ) : isMax ? (
-                            <>
-                              <AoH3GlyphSvg name="check" className="w-3 h-3 shrink-0" />
-                              <span>Maksimum Seviye</span>
-                            </>
-                          ) : (
-                            `Sarayı Yükselt (${cost} Altın)`
-                          )}
-                        </button>
+                        <span className="px-2.5 py-1 rounded-lg bg-[#14100c] border border-[#caa15a]/30 text-[10.5px] font-bold text-[#c5b79e] shrink-0">
+                          {queued
+                            ? `İnşa Sürüyor (${queued.totalDays - queued.progressDays}g)`
+                            : "İnşaat (Çekiç) menüsünden kurulur"}
+                        </span>
                       </div>
                     );
                   })()}
               </div>
             </div>
 
-            {/* AoH3 Tech-Gated Educational Network Card (İlkokul/Mektep, Ortaokul/Medrese, Üniversite/Darülfünun) */}
+            {/* AoH3 Tech-Gated Educational Network Info Card */}
             <div className="rounded-2xl bg-[#15110d] border border-[#caa15a]/35 p-3.5 space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
@@ -1684,25 +1645,10 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     },
                   ] as const
                 ).map((edu) => {
-                  const bDef = BUILDINGS.find((b) => b.id === edu.id);
                   const unlocked =
                     !edu.reqTechId ||
                     playerNation.unlockedTechs.includes(edu.reqTechId);
-                  const capLvl = capitalTerritory
-                    ? capitalTerritory.buildings[edu.id] ?? 0
-                    : 0;
-                  const cost = Math.round(
-                    (bDef?.baseCost ?? 220) * Math.pow(1.35, capLvl)
-                  );
                   const art = getTechArtwork(edu.artKey, "SCIENCE");
-                  const canBuildInCap =
-                    Boolean(capitalTerritory) &&
-                    unlocked &&
-                    capLvl < (bDef?.maxLevel ?? 5) &&
-                    playerNation.treasury >= cost &&
-                    !capitalTerritory?.constructionQueue?.some(
-                      (q) => q.building === edu.id
-                    );
 
                   return (
                     <div
@@ -1745,39 +1691,6 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                             )}
                           </div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {capitalTerritory && (
-                          <button
-                            type="button"
-                            disabled={!canBuildInCap}
-                            onClick={() =>
-                              onUpgradeBuilding(capitalTerritory.id, edu.id)
-                            }
-                            className={`min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-colors ${
-                              canBuildInCap
-                                ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c]"
-                                : "bg-[#120e0a] text-[#8e806a] border border-[#caa15a]/20 cursor-not-allowed"
-                            }`}
-                          >
-                            {!unlocked
-                              ? "Kilitli"
-                              : capLvl >= (bDef?.maxLevel ?? 5)
-                              ? "Başkentte Maks"
-                              : `Başkente Kur (${cost}A)`}
-                          </button>
-                        )}
-                        {onBatchUpgradeBuilding && unlocked && (
-                          <button
-                            type="button"
-                            onClick={() => onBatchUpgradeBuilding(edu.id)}
-                            className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#241c14] hover:bg-[#2f2419] border border-[#caa15a]/35 text-[11px] font-bold text-[#e0b86e] cursor-pointer"
-                            title="Hazine yettiğince uygun eyaletlerde toplu inşa başlatır"
-                          >
-                            Toplu Kur
-                          </button>
-                        )}
                       </div>
                     </div>
                   );

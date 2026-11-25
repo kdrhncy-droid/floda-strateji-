@@ -157,12 +157,12 @@ export const ArmyModernizationCard: React.FC<ArmyModernizationCardProps> = ({
       ) : (
         <div className="text-[11px] text-[#b8a990] flex items-center justify-between pt-0.5">
           <span>
-            {unlockedMilTier < 4
+            {unlockedMilTier < 7
               ? 'Yeni asker sınıfları ve birlik yükseltmeleri için Askeri Teknoloji Ağacında ilerleyin.'
-              : 'Tüm birlik sınıflarınız çağın zirve teknolojisine yükseltildi!'}
+              : 'Tüm birlik sınıflarınız 2026 zirve teknolojisine yükseltildi!'}
           </span>
           <span className="font-mono-num text-[#e0b86e] font-semibold shrink-0 ml-2">
-            Askeri Tek.: {unlockedMilTier}/4
+            Askeri Tek.: {unlockedMilTier}/7
           </span>
         </div>
       )}

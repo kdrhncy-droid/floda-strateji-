@@ -3,6 +3,7 @@ import {
   ActiveBattle,
   ActiveWar,
   ArmyMovement,
+  DiplomaticEnvoy,
   DiplomaticRelation,
   GameModeId,
   Nation,
@@ -30,6 +31,7 @@ export interface SaveGamePayload {
   battles: ActiveBattle[];
   movements: ArmyMovement[];
   seaArmies?: SeaArmy[];
+  diplomaticEnvoys?: DiplomaticEnvoy[];
   newsEvents: WorldNewsEvent[];
   tick: number;
   hour?: number;
@@ -379,6 +381,13 @@ export function hydrateSavedPayload(
         : 60,
       researchProgressByTech,
       taxRate: Number.isFinite(merged.taxRate) ? merged.taxRate : 25,
+      aggressiveExpansion: Number.isFinite(merged.aggressiveExpansion)
+        ? Math.max(0, Math.min(100, merged.aggressiveExpansion))
+        : 0,
+      warExhaustion:
+        typeof merged.warExhaustion === 'number' && Number.isFinite(merged.warExhaustion)
+          ? Math.max(0, Math.min(100, merged.warExhaustion))
+          : 0,
       unlockedTechs: Array.isArray(merged.unlockedTechs)
         ? merged.unlockedTechs
         : ['eco_1'],
@@ -433,7 +442,11 @@ export function hydrateSavedPayload(
         buildings: {
           ...baseT.buildings,
           ...(savedT.buildings || {}),
+          armyHearth: savedT.buildings?.armyHearth ?? baseT.buildings?.armyHearth ?? 0,
         },
+        recruitmentQueue: Array.isArray(savedT.recruitmentQueue)
+          ? savedT.recruitmentQueue
+          : [],
         units: {
           ...baseT.units,
           ...(savedT.units || {}),
@@ -479,7 +492,13 @@ export function hydrateSavedPayload(
     wars: (rawPayload.wars || []).filter(
       (w) => w && mergedNations[w.attackerId] && mergedNations[w.defenderId]
     ),
-    battles: rawPayload.battles || [],
+    battles: (rawPayload.battles || []).filter(
+      (b) =>
+        b &&
+        mergedTerritories[b.territoryId] &&
+        mergedNations[b.attackerId] &&
+        mergedNations[b.defenderId]
+    ),
     movements: (rawPayload.movements || []).filter(
       (mv) =>
         mv &&
@@ -496,6 +515,16 @@ export function hydrateSavedPayload(
         s.coords.length === 2 &&
         Number.isFinite(s.troops) &&
         s.troops > 0
+    ),
+    diplomaticEnvoys: (rawPayload.diplomaticEnvoys || []).filter(
+      (env) =>
+        env &&
+        (env.mission === 'IMPROVE' || env.mission === 'DAMAGE') &&
+        Number.isFinite(env.daysRemaining) &&
+        env.daysRemaining > 0 &&
+        Number.isFinite(env.dailyDelta) &&
+        mergedNations[env.targetNationId] &&
+        !mergedNations[env.targetNationId].isEliminated
     ),
     newsEvents: rawPayload.newsEvents || [],
     tick: Number.isFinite(rawPayload.tick) ? rawPayload.tick : 0,

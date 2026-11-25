@@ -34,8 +34,15 @@ import {
   getGameSeason,
   resolveNationAiPersonality,
 } from './seasonSupplyAndAiProfile';
-import { applyConquestDiplomaticPenalty } from './core/diplomacyHelpers';
+import {
+  applyConquestDiplomaticPenalty,
+  calculateProjectedPeaceAE,
+} from './core/diplomacyHelpers';
 import { isTerritoryCoastal, relationKey } from './worldBuilder';
+
+const STRATEGIC_STRAIT_SHORE_SET: ReadonlySet<string> = new Set(
+  STRATEGIC_STRAITS.flatMap((s) => s.shoreIds)
+);
 
 function scaleUnitComp(units: UnitComposition, ratio: number): UnitComposition {
   return {
@@ -307,6 +314,7 @@ export function evaluateWartimeAiOperations(params: {
   seaArmies?: SeaArmy[];
   aiAggressiveness: AiAggressivenessLevel;
   maxActionsPerPass?: number;
+  maxActorsScanned?: number;
 }): WartimeAiBatchResult | null {
   const {
     nextTick,
@@ -319,75 +327,201 @@ export function evaluateWartimeAiOperations(params: {
     seaArmies = [],
     aiAggressiveness,
     maxActionsPerPass = 3,
+    maxActorsScanned,
   } = params;
 
   if (wars.length === 0) return null;
 
-  // Collect all non-eliminated AI nations currently involved in at least one active war
+  // Build O(1) enemy lookup sets and collect all non-eliminated AI nations currently in an active war
   const warAiSet = new Set<string>();
+  const enemyIdsByNation = new Map<string, Set<string>>();
+  const addEnemyEdge = (a: string, b: string) => {
+    if (!a || !b || a === b) return;
+    let set = enemyIdsByNation.get(a);
+    if (!set) {
+      set = new Set<string>();
+      enemyIdsByNation.set(a, set);
+    }
+    set.add(b);
+  };
+
   for (const w of wars) {
-    for (const id of [...w.attackers, ...w.defenders, w.attackerId, w.defenderId]) {
-      if (id && id !== playerNationId && nations[id] && !nations[id].isEliminated) {
-        warAiSet.add(id);
+    const attSide = w.attackers.length > 0 ? w.attackers : [w.attackerId];
+    const defSide = w.defenders.length > 0 ? w.defenders : [w.defenderId];
+    for (const a of attSide) {
+      if (a && a !== playerNationId && nations[a] && !nations[a].isEliminated) {
+        warAiSet.add(a);
+      }
+      for (const d of defSide) {
+        addEnemyEdge(a, d);
+        addEnemyEdge(d, a);
+      }
+    }
+    for (const d of defSide) {
+      if (d && d !== playerNationId && nations[d] && !nations[d].isEliminated) {
+        warAiSet.add(d);
+      }
+    }
+    if (w.attackerId && w.defenderId) {
+      addEnemyEdge(w.attackerId, w.defenderId);
+      addEnemyEdge(w.defenderId, w.attackerId);
+      if (w.attackerId !== playerNationId && nations[w.attackerId] && !nations[w.attackerId].isEliminated) {
+        warAiSet.add(w.attackerId);
+      }
+      if (w.defenderId !== playerNationId && nations[w.defenderId] && !nations[w.defenderId].isEliminated) {
+        warAiSet.add(w.defenderId);
       }
     }
   }
   if (warAiSet.size === 0) return null;
 
-  // Prioritize AI nations that are at war with the player so player wars feel immediately responsive
+  const playerEnemies = enemyIdsByNation.get(playerNationId);
+
+  // Prioritize AI nations directly at war with the player; rotate remaining AI-vs-AI combatants deterministically
   const warAiIds = Array.from(warAiSet).sort((a, b) => {
-    const aVsPlayer = isAtWar(wars, a, playerNationId) ? 0 : 1;
-    const bVsPlayer = isAtWar(wars, b, playerNationId) ? 0 : 1;
+    const aVsPlayer = playerEnemies?.has(a) ? 0 : 1;
+    const bVsPlayer = playerEnemies?.has(b) ? 0 : 1;
     if (aVsPlayer !== bVsPlayer) return aVsPlayer - bVsPlayer;
     return ((nextTick + a.charCodeAt(0)) % 7) - ((nextTick + b.charCodeAt(0)) % 7);
   });
 
-  let nextNations: Record<string, Nation> = { ...nations };
-  let nextTerritories: Record<string, Territory> = { ...territories };
+  // Single O(N) pass over territories to index owned provinces, coastal provinces, and lost cores
+  const provsByOwner = new Map<string, Territory[]>();
+  const coastalProvsByOwner = new Map<string, Territory[]>();
+  const lostCoreOwnerIds = new Set<string>();
+  for (const t of Object.values(territories)) {
+    if (!t || !t.ownerId) continue;
+    let list = provsByOwner.get(t.ownerId);
+    if (!list) {
+      list = [];
+      provsByOwner.set(t.ownerId, list);
+    }
+    list.push(t);
+    if (t.centroid && isTerritoryCoastal(t)) {
+      let cList = coastalProvsByOwner.get(t.ownerId);
+      if (!cList) {
+        cList = [];
+        coastalProvsByOwner.set(t.ownerId, cList);
+      }
+      cList.push(t);
+    }
+    if (t.coreOwnerId && t.coreOwnerId !== t.ownerId) {
+      lostCoreOwnerIds.add(t.coreOwnerId);
+    }
+  }
+
+  // Single O(M) pass over movements to pre-index active counts, origins, targets, naval flags, and incoming attacks
+  const activeMoveCountByOwner = new Map<string, number>();
+  const marchingFromKeys = new Set<string>();
+  const targetedKeys = new Set<string>();
+  const navalMoveOwners = new Set<string>();
+  const incomingAttackByTerr = new Map<string, { total: number; byOwner: Map<string, number> }>();
+
+  for (const m of movements) {
+    activeMoveCountByOwner.set(m.ownerId, (activeMoveCountByOwner.get(m.ownerId) || 0) + 1);
+    marchingFromKeys.add(`${m.ownerId}|${m.fromTerritoryId}`);
+    if (m.toTerritoryId) {
+      targetedKeys.add(`${m.ownerId}|${m.toTerritoryId}`);
+    }
+    if (m.isNaval) {
+      navalMoveOwners.add(m.ownerId);
+    }
+    if (m.isAttack && m.toTerritoryId) {
+      let entry = incomingAttackByTerr.get(m.toTerritoryId);
+      if (!entry) {
+        entry = { total: 0, byOwner: new Map<string, number>() };
+        incomingAttackByTerr.set(m.toTerritoryId, entry);
+      }
+      entry.total += m.troops;
+      entry.byOwner.set(m.ownerId, (entry.byOwner.get(m.ownerId) || 0) + m.troops);
+    }
+  }
+
+  // Lazy copy-on-write maps so no-op passes do zero 900-entry object clones
+  let nationsCloned = false;
+  let territoriesCloned = false;
+  let nextNations: Record<string, Nation> = nations;
+  let nextTerritories: Record<string, Territory> = territories;
+  const writeNation = (id: string, nat: Nation) => {
+    if (!nationsCloned) {
+      nextNations = { ...nations };
+      nationsCloned = true;
+    }
+    nextNations[id] = nat;
+  };
+  const writeTerritory = (id: string, terr: Territory) => {
+    if (!territoriesCloned) {
+      nextTerritories = { ...territories };
+      territoriesCloned = true;
+    }
+    nextTerritories[id] = terr;
+  };
+
   const newMovements: ArmyMovement[] = [];
   const newsItems: WartimeAiBatchResult['newsItems'] = [];
   const playerAlerts: string[] = [];
   let actionsCount = 0;
+  let actorsScanned = 0;
+
+  const recordNewMovement = (mv: ArmyMovement) => {
+    newMovements.push(mv);
+    activeMoveCountByOwner.set(mv.ownerId, (activeMoveCountByOwner.get(mv.ownerId) || 0) + 1);
+    marchingFromKeys.add(`${mv.ownerId}|${mv.fromTerritoryId}`);
+    if (mv.toTerritoryId) {
+      targetedKeys.add(`${mv.ownerId}|${mv.toTerritoryId}`);
+    }
+    if (mv.isNaval) {
+      navalMoveOwners.add(mv.ownerId);
+    }
+  };
 
   for (const actorId of warAiIds) {
     if (actionsCount >= maxActionsPerPass) break;
+    if (
+      maxActorsScanned !== undefined &&
+      actorsScanned >= maxActorsScanned &&
+      !playerEnemies?.has(actorId)
+    ) {
+      break;
+    }
+    actorsScanned++;
 
     let actorNation = nextNations[actorId];
     if (!actorNation || actorNation.isEliminated) continue;
 
     // Avoid spamming if this AI already has 2+ armies marching simultaneously
-    const existingAiMoves =
-      movements.filter((m) => m.ownerId === actorId).length +
-      newMovements.filter((m) => m.ownerId === actorId).length;
+    const existingAiMoves = activeMoveCountByOwner.get(actorId) || 0;
     if (existingAiMoves >= 2) continue;
 
-    const ownedProvs = Object.values(nextTerritories).filter(
-      (t) => t && t.ownerId === actorId
-    );
-    if (ownedProvs.length === 0) continue;
+    const baseOwnedProvs = provsByOwner.get(actorId);
+    if (!baseOwnedProvs || baseOwnedProvs.length === 0) continue;
+    const ownedProvs = baseOwnedProvs.map((p) => nextTerritories[p.id]);
+    const actorEnemies = enemyIdsByNation.get(actorId);
+    if (!actorEnemies || actorEnemies.size === 0) continue;
 
     // Identify frontline provinces (directly bordering a war enemy) and threatened homeland/sieged provinces
     const frontlineProvs = ownedProvs.filter((p) =>
       p.neighbors.some((nbId) => {
         const nb = nextTerritories[nbId];
-        return Boolean(nb && nb.ownerId !== actorId && isAtWar(wars, actorId, nb.ownerId));
+        return Boolean(nb && nb.ownerId !== actorId && actorEnemies.has(nb.ownerId));
       })
     );
 
-    const straitShoreSet = new Set(STRATEGIC_STRAITS.flatMap((s) => s.shoreIds));
+    const straitShoreSet = STRATEGIC_STRAIT_SHORE_SET;
 
     // Identify highest-threat friendly province (under siege, capital bordering stronger enemy, or outnumbered border)
     const getProvinceThreatScore = (p: Territory): number => {
       let adjacentEnemyTroops = 0;
       for (const nbId of p.neighbors) {
         const nb = nextTerritories[nbId];
-        if (nb && nb.ownerId !== actorId && isAtWar(wars, actorId, nb.ownerId)) {
+        if (nb && nb.ownerId !== actorId && actorEnemies.has(nb.ownerId)) {
           adjacentEnemyTroops += nb.garrison || 0;
         }
       }
-      const incomingEnemyTroops = movements
-        .filter((m) => m.toTerritoryId === p.id && m.isAttack && m.ownerId !== actorId)
-        .reduce((s, m) => s + m.troops, 0);
+      const inc = incomingAttackByTerr.get(p.id);
+      const incomingEnemyTroops = inc
+        ? inc.total - (inc.byOwner.get(actorId) || 0)
+        : 0;
       const totalThreat = adjacentEnemyTroops * 0.55 + incomingEnemyTroops;
       const deficit = totalThreat - p.garrison;
       let score = deficit;
@@ -407,7 +541,11 @@ export function evaluateWartimeAiOperations(params: {
       actorNation.treasury >= 200 &&
       actorNation.manpower >= 2200
     ) {
-      const personality = resolveNationAiPersonality(actorNation, nextTerritories);
+      const personality = resolveNationAiPersonality(
+        actorNation,
+        nextTerritories,
+        lostCoreOwnerIds
+      );
       const scaleBonus = Math.min(8500, Math.max(0, ownedProvs.length - 1) * 1250);
       const personalityLevyMult =
         personality === 'CONQUEROR' || personality === 'REVANCHIST'
@@ -431,14 +569,16 @@ export function evaluateWartimeAiOperations(params: {
           ? 2
           : 1;
 
+      const unbesiegedThreatened = threatenedProvs.filter((p) => !p.siege);
+      const unbesiegedFrontline = frontlineProvs.filter((p) => !p.siege);
       const levyTargets: Territory[] = [];
       const primaryTarget =
-        threatenedProvs[0] && getProvinceThreatScore(threatenedProvs[0]) > 3000
-          ? threatenedProvs[0]
-          : [...frontlineProvs].sort((a, b) => b.garrison - a.garrison)[0];
+        unbesiegedThreatened[0] && getProvinceThreatScore(unbesiegedThreatened[0]) > 3000
+          ? unbesiegedThreatened[0]
+          : [...unbesiegedFrontline].sort((a, b) => b.garrison - a.garrison)[0];
       if (primaryTarget) levyTargets.push(primaryTarget);
       if (maxLevyFronts > 1) {
-        const secondaryTarget = threatenedProvs.find(
+        const secondaryTarget = unbesiegedThreatened.find(
           (p) => p.id !== primaryTarget?.id && p.garrison < 38000
         );
         if (secondaryTarget) levyTargets.push(secondaryTarget);
@@ -448,6 +588,7 @@ export function evaluateWartimeAiOperations(params: {
         const liveTarget = nextTerritories[bolsterTarget.id] || bolsterTarget;
         const maxGarrisonCap = Math.min(54000, 32000 + ownedProvs.length * 2200);
         if (
+          liveTarget.siege ||
           liveTarget.garrison >= maxGarrisonCap ||
           actorNation.treasury < 200 ||
           actorNation.manpower < 2200
@@ -468,7 +609,7 @@ export function evaluateWartimeAiOperations(params: {
             treasury: Math.max(0, actorNation.treasury - goldCost),
             manpower: Math.max(0, actorNation.manpower - levyTroops),
           };
-          nextNations[actorId] = actorNation;
+          writeNation(actorId, actorNation);
           const updatedTarget: Territory = {
             ...liveTarget,
             garrison: liveTarget.garrison + levyTroops,
@@ -484,7 +625,7 @@ export function evaluateWartimeAiOperations(params: {
                 Math.round(levyTroops * 0.13),
             },
           };
-          nextTerritories[liveTarget.id] = updatedTarget;
+          writeTerritory(liveTarget.id, updatedTarget);
         }
       }
     }
@@ -511,12 +652,7 @@ export function evaluateWartimeAiOperations(params: {
             p.id !== criticalDefenseProv.id &&
             p.garrison >= 8500 &&
             !p.siege &&
-            !movements.some(
-              (m) => m.ownerId === actorId && m.fromTerritoryId === p.id
-            ) &&
-            !newMovements.some(
-              (m) => m.ownerId === actorId && m.fromTerritoryId === p.id
-            )
+            !marchingFromKeys.has(`${actorId}|${p.id}`)
         )
         .sort((a, b) => b.garrison - a.garrison)[0];
 
@@ -533,12 +669,12 @@ export function evaluateWartimeAiOperations(params: {
         if (reliefRoute.reachable && reliefRoute.hops.length > 0) {
           const reliefRatio = 0.65;
           const reliefTroops = Math.round(reliefDonor.garrison * reliefRatio);
-          nextTerritories[reliefDonor.id] = {
+          writeTerritory(reliefDonor.id, {
             ...reliefDonor,
             garrison: Math.max(1500, reliefDonor.garrison - reliefTroops),
             units: scaleUnitComp(reliefDonor.units, 1 - reliefRatio),
-          };
-          newMovements.push({
+          });
+          recordNewMovement({
             id: `ai_relief_${nextTick}_${reliefDonor.id}`,
             ownerId: actorId,
             fromTerritoryId: reliefDonor.id,
@@ -571,9 +707,14 @@ export function evaluateWartimeAiOperations(params: {
       return priority;
     };
 
-    const allEnemyWarProvs = Object.values(nextTerritories).filter(
-      (t) => t && t.ownerId !== actorId && isAtWar(wars, actorId, t.ownerId)
-    );
+    const allEnemyWarProvs: Territory[] = [];
+    for (const enemyId of actorEnemies) {
+      const eList = provsByOwner.get(enemyId);
+      if (!eList) continue;
+      for (const ep of eList) {
+        allEnemyWarProvs.push(nextTerritories[ep.id]);
+      }
+    }
     const actorTotalGarrison = refreshedOwned.reduce(
       (sum, p) => sum + (p?.garrison || 0),
       0
@@ -595,14 +736,7 @@ export function evaluateWartimeAiOperations(params: {
       .sort((a, b) => b.garrison - a.garrison);
 
     for (const srcProv of sortieCandidates) {
-      const alreadyMarchingFromHere =
-        movements.some(
-          (m) => m.ownerId === actorId && m.fromTerritoryId === srcProv.id
-        ) ||
-        newMovements.some(
-          (m) => m.ownerId === actorId && m.fromTerritoryId === srcProv.id
-        );
-      if (alreadyMarchingFromHere) continue;
+      if (marchingFromKeys.has(`${actorId}|${srcProv.id}`)) continue;
 
       const enemyNeighbors = srcProv.neighbors
         .map((nId) => nextTerritories[nId])
@@ -610,7 +744,7 @@ export function evaluateWartimeAiOperations(params: {
           (nTerr): nTerr is Territory =>
             Boolean(nTerr) &&
             nTerr.ownerId !== actorId &&
-            Boolean(isAtWar(wars, actorId, nTerr.ownerId))
+            actorEnemies.has(nTerr.ownerId)
         )
         .sort((a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a));
 
@@ -633,13 +767,7 @@ export function evaluateWartimeAiOperations(params: {
       if (dispatchable < minDispatchFloor) continue;
 
       const viableTarget = enemyNeighbors.find((enemyTerr) => {
-        const alreadyTargetedByUs =
-          movements.some(
-            (m) => m.ownerId === actorId && m.toTerritoryId === enemyTerr.id
-          ) ||
-          newMovements.some(
-            (m) => m.ownerId === actorId && m.toTerritoryId === enemyTerr.id
-          );
+        const alreadyTargetedByUs = targetedKeys.has(`${actorId}|${enemyTerr.id}`);
         if (alreadyTargetedByUs && !isEnemyMopUp) return false;
 
         const baseMinRatio =
@@ -672,16 +800,16 @@ export function evaluateWartimeAiOperations(params: {
           isEnemyMopUp ? 600 : srcProv.garrison >= 5000 ? 2500 : 1200,
           srcProv.garrison - dispatchable
         );
-        nextTerritories[srcProv.id] = {
+        writeTerritory(srcProv.id, {
           ...srcProv,
           garrison: remainingGarrison,
           units: scaleUnitComp(
             srcProv.units,
             remainingGarrison / Math.max(1, srcProv.garrison)
           ),
-        };
+        });
 
-        newMovements.push({
+        recordNewMovement({
           id: `ai_war_mv_${nextTick}_${srcProv.id}_${viableTarget.id}`,
           ownerId: actorId,
           fromTerritoryId: srcProv.id,
@@ -724,12 +852,7 @@ export function evaluateWartimeAiOperations(params: {
               p.ownerId === actorId &&
               !p.siege &&
               p.garrison >= 1600 &&
-              !movements.some(
-                (m) => m.ownerId === actorId && m.fromTerritoryId === p.id
-              ) &&
-              !newMovements.some(
-                (m) => m.ownerId === actorId && m.fromTerritoryId === p.id
-              )
+              !marchingFromKeys.has(`${actorId}|${p.id}`)
           );
         if (adjDonors.length < 2) continue;
         const pooledSendable = adjDonors.reduce(
@@ -741,12 +864,12 @@ export function evaluateWartimeAiOperations(params: {
             const sendAmt = Math.max(0, donor.garrison - 750);
             if (sendAmt < 600) continue;
             const ratio = sendAmt / Math.max(1, donor.garrison);
-            nextTerritories[donor.id] = {
+            writeTerritory(donor.id, {
               ...donor,
               garrison: 750,
               units: scaleUnitComp(donor.units, 1 - ratio),
-            };
-            newMovements.push({
+            });
+            recordNewMovement({
               id: `ai_pincer_mv_${nextTick}_${donor.id}_${enemyHoldout.id}`,
               ownerId: actorId,
               fromTerritoryId: donor.id,
@@ -775,7 +898,7 @@ export function evaluateWartimeAiOperations(params: {
           p.garrison >= rearMinGarrison &&
           !p.neighbors.some((nbId) => {
             const nb = nextTerritories[nbId];
-            return Boolean(nb && nb.ownerId !== actorId && isAtWar(wars, actorId, nb.ownerId));
+            return Boolean(nb && nb.ownerId !== actorId && actorEnemies.has(nb.ownerId));
           })
       )
       .sort((a, b) => b.garrison - a.garrison);
@@ -809,24 +932,24 @@ export function evaluateWartimeAiOperations(params: {
           const moveRatio = isEnemyMopUp ? 0.74 : 0.65;
           const moveTroops = Math.round(srcRear.garrison * moveRatio);
 
-          nextTerritories[srcRear.id] = {
+          writeTerritory(srcRear.id, {
             ...srcRear,
             garrison: Math.max(isEnemyMopUp ? 700 : 1200, srcRear.garrison - moveTroops),
             units: scaleUnitComp(srcRear.units, 1 - moveRatio),
-          };
+          });
 
           const isFinalEnemy = Boolean(
             targetDest.ownerId !== actorId &&
-              isAtWar(wars, actorId, targetDest.ownerId)
+              actorEnemies.has(targetDest.ownerId)
           );
           const isFirstHopAttack = Boolean(
             isFinalEnemy ||
               (firstHopTerr &&
                 firstHopTerr.ownerId !== actorId &&
-                isAtWar(wars, actorId, firstHopTerr.ownerId))
+                actorEnemies.has(firstHopTerr.ownerId))
           );
 
-          newMovements.push({
+          recordNewMovement({
             id: `ai_war_march_${nextTick}_${srcRear.id}`,
             ownerId: actorId,
             fromTerritoryId: srcRear.id,
@@ -852,20 +975,14 @@ export function evaluateWartimeAiOperations(params: {
     }
 
     // Step 4: Wartime Naval Operations — Counter-Blockade Interception & Amphibious Coastal Landings
-    const alreadyHasNavalMove =
-      movements.some((m) => m.ownerId === actorId && Boolean(m.isNaval)) ||
-      newMovements.some((m) => m.ownerId === actorId && Boolean(m.isNaval));
-    if (alreadyHasNavalMove) continue;
+    if (navalMoveOwners.has(actorId)) continue;
 
-    const coastalStrongProvs = refreshedOwned
-      .filter(
-        (p) =>
-          p &&
-          isTerritoryCoastal(p) &&
-          p.garrison >= 6500 &&
-          !p.siege &&
-          Boolean(p.centroid)
-      )
+    const actorCoastalList = coastalProvsByOwner.get(actorId);
+    if (!actorCoastalList || actorCoastalList.length === 0) continue;
+
+    const coastalStrongProvs = actorCoastalList
+      .map((p) => nextTerritories[p.id])
+      .filter((p) => p && p.garrison >= 6500 && !p.siege && Boolean(p.centroid))
       .sort((a, b) => b.garrison - a.garrison);
     if (coastalStrongProvs.length === 0) continue;
 
@@ -879,7 +996,7 @@ export function evaluateWartimeAiOperations(params: {
       .filter(
         (f) =>
           f.ownerId !== actorId &&
-          Boolean(isAtWar(wars, actorId, f.ownerId)) &&
+          actorEnemies.has(f.ownerId) &&
           navalTroops >= f.troops * 0.85 &&
           coastalStrongProvs.some(
             (cp) =>
@@ -893,15 +1010,15 @@ export function evaluateWartimeAiOperations(params: {
 
     if (hostileNearFleet) {
       const remainingGarrison = Math.max(2500, srcCoast.garrison - navalTroops);
-      nextTerritories[srcCoast.id] = {
+      writeTerritory(srcCoast.id, {
         ...srcCoast,
         garrison: remainingGarrison,
         units: scaleUnitComp(
           srcCoast.units,
           remainingGarrison / Math.max(1, srcCoast.garrison)
         ),
-      };
-      newMovements.push({
+      });
+      recordNewMovement({
         id: `ai_naval_int_${nextTick}_${srcCoast.id}`,
         ownerId: actorId,
         fromTerritoryId: srcCoast.id,
@@ -925,40 +1042,37 @@ export function evaluateWartimeAiOperations(params: {
     }
 
     // 4B. Amphibious Assault: cross open water to invade a vulnerable enemy coastal province
-    const enemyCoastalTargets = Object.values(nextTerritories)
-      .filter((t) => {
-        if (!t || t.ownerId === actorId || !isTerritoryCoastal(t) || !t.centroid) {
-          return false;
-        }
-        if (!isAtWar(wars, actorId, t.ownerId)) return false;
-        const alreadyTargeted =
-          movements.some(
-            (m) => m.ownerId === actorId && m.toTerritoryId === t.id
-          ) ||
-          newMovements.some(
-            (m) => m.ownerId === actorId && m.toTerritoryId === t.id
-          );
-        if (alreadyTargeted) return false;
+    const enemyCoastalTargets: Territory[] = [];
+    for (const enemyId of actorEnemies) {
+      const eCoast = coastalProvsByOwner.get(enemyId);
+      if (!eCoast) continue;
+      for (const rawT of eCoast) {
+        const t = nextTerritories[rawT.id];
+        if (!t || t.ownerId !== enemyId || !t.centroid) continue;
+        if (targetedKeys.has(`${actorId}|${t.id}`)) continue;
         const dist = Math.hypot(
           srcCoast.centroid[0] - t.centroid[0],
           srcCoast.centroid[1] - t.centroid[1]
         );
-        return dist <= 28 && navalTroops >= Math.max(3000, t.garrison * 1.05);
-      })
-      .sort((a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a));
+        if (dist <= 28 && navalTroops >= Math.max(3000, t.garrison * 1.05)) {
+          enemyCoastalTargets.push(t);
+        }
+      }
+    }
+    enemyCoastalTargets.sort((a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a));
 
     const amphibTarget = enemyCoastalTargets[0];
     if (amphibTarget) {
       const remainingGarrison = Math.max(2500, srcCoast.garrison - navalTroops);
-      nextTerritories[srcCoast.id] = {
+      writeTerritory(srcCoast.id, {
         ...srcCoast,
         garrison: remainingGarrison,
         units: scaleUnitComp(
           srcCoast.units,
           remainingGarrison / Math.max(1, srcCoast.garrison)
         ),
-      };
-      newMovements.push({
+      });
+      recordNewMovement({
         id: `ai_amphib_${nextTick}_${srcCoast.id}_${amphibTarget.id}`,
         ownerId: actorId,
         fromTerritoryId: srcCoast.id,
@@ -1136,42 +1250,139 @@ export function evaluateMultiProvinceAiTurn(params: {
           650
         );
 
-        // On decisive victory (>= 55 score), transfer 1 occupied border province if loser has > 1 province
+        // Smart AE-aware peace demands: AI evaluates calculateProjectedPeaceAE so it stays under 95 AE,
+        // except rare reckless CONQUEROR AI (~15%) that may push to 100 AE and trigger a World Coalition!
         let peaceTerritories: Record<string, Territory> | undefined;
-        let annexedProvName: string | null = null;
-        if (absScore >= 55) {
-          const loserProvs = Object.values(territories).filter(
-            (t) => t.ownerId === loser.id
-          );
-          if (loserProvs.length > 1) {
-            const occupiedFrontier =
-              loserProvs.find(
-                (t) =>
-                  !t.isCapital &&
-                  t.isOccupied &&
-                  t.occupiedById === winner.id
-              ) ||
-              loserProvs.find(
-                (t) =>
-                  !t.isCapital &&
-                  t.neighbors.some((nId) => territories[nId]?.ownerId === winner.id)
-              );
-            if (occupiedFrontier) {
-              annexedProvName = occupiedFrontier.name;
-              peaceTerritories = {
-                ...territories,
-                [occupiedFrontier.id]: {
-                  ...occupiedFrontier,
-                  ownerId: winner.id,
-                  isOccupied: false,
-                  occupiedById: undefined,
-                  siege: undefined,
-                  unrest: Math.min(60, (occupiedFrontier.unrest || 15) + 22),
-                  garrison: Math.max(3500, occupiedFrontier.garrison),
-                },
-              };
+        const demandedIds: string[] = [];
+        const winnerPersonality = resolveNationAiPersonality(winner, territories);
+        const recklessOverreach =
+          winnerPersonality === 'CONQUEROR' &&
+          (nextTick + winner.id.charCodeAt(0)) % 7 === 0;
+        const maxDesiredAE = recklessOverreach ? 105 : 94;
+
+        // Gather all loser provinces (including provinces currently occupied by winner)
+        const loserOwnedProvs = Object.values(territories).filter(
+          (t) => t && t.ownerId === loser.id
+        );
+        const occupiedByWinner = Object.values(territories).filter(
+          (t) =>
+            t &&
+            t.ownerId === winner.id &&
+            t.isOccupied &&
+            t.coreOwnerId === loser.id
+        );
+
+        const candidatePool: Territory[] = [
+          ...occupiedByWinner,
+          ...loserOwnedProvs.filter((t) =>
+            t.neighbors.some((nId) => territories[nId]?.ownerId === winner.id)
+          ),
+          ...loserOwnedProvs.filter(
+            (t) =>
+              !t.neighbors.some((nId) => territories[nId]?.ownerId === winner.id)
+          ),
+        ];
+        const uniqueCandidates: Territory[] = [];
+        const seenCand = new Set<string>();
+        for (const c of candidatePool) {
+          if (!seenCand.has(c.id)) {
+            seenCand.add(c.id);
+            uniqueCandidates.push(c);
+          }
+        }
+
+        const maxProvsByScore =
+          absScore >= 95
+            ? uniqueCandidates.length
+            : absScore >= 70
+            ? Math.min(4, uniqueCandidates.length)
+            : absScore >= 50
+            ? Math.min(2, uniqueCandidates.length)
+            : 1;
+
+        if (absScore >= 45 && uniqueCandidates.length > 0) {
+          for (const cand of uniqueCandidates) {
+            if (demandedIds.length >= maxProvsByScore) break;
+            const trialIds = [...demandedIds, cand.id];
+            const trialFullAnnex = trialIds.length >= uniqueCandidates.length;
+            const aeTrial = calculateProjectedPeaceAE({
+              territories,
+              demandedTerritoryIds: trialIds,
+              isFullAnnex: trialFullAnnex,
+              conquerorNation: winner,
+            });
+            if (aeTrial.projectedTotal <= maxDesiredAE || demandedIds.length === 0 && recklessOverreach) {
+              demandedIds.push(cand.id);
+            } else {
+              break;
             }
           }
+        }
+
+        const demandedSet = new Set(demandedIds);
+        const isFullAnnex =
+          uniqueCandidates.length > 0 && demandedIds.length >= uniqueCandidates.length;
+        const workingTerrs: Record<string, Territory> = { ...territories };
+        let terrsChanged = false;
+
+        // Transfer demanded provinces permanently
+        for (const dId of demandedIds) {
+          const prov = workingTerrs[dId];
+          if (!prov) continue;
+          workingTerrs[dId] = {
+            ...prov,
+            ownerId: winner.id,
+            isCapital: false,
+            isOccupied: false,
+            occupiedById: undefined,
+            siege: undefined,
+            unrest: Math.min(65, (prov.unrest || 15) + 20),
+            garrison: Math.max(3000, prov.garrison),
+          };
+          terrsChanged = true;
+        }
+
+        // Return occupied provinces that winner chose NOT to take (to keep AE safe!)
+        for (const occ of occupiedByWinner) {
+          if (!demandedSet.has(occ.id)) {
+            workingTerrs[occ.id] = {
+              ...occ,
+              ownerId: loser.id,
+              isOccupied: false,
+              occupiedById: undefined,
+              siege: undefined,
+            };
+            terrsChanged = true;
+          }
+        }
+
+        if (terrsChanged) {
+          peaceTerritories = workingTerrs;
+        }
+
+        const aeResult = calculateProjectedPeaceAE({
+          territories: workingTerrs,
+          demandedTerritoryIds: demandedIds,
+          isFullAnnex,
+          conquerorNation: winner,
+        });
+
+        const stillOwnedByLoser = Object.values(workingTerrs).filter(
+          (t) => t && t.ownerId === loser.id
+        );
+        const loserEliminated = stillOwnedByLoser.length === 0;
+        let loserCapId = loser.capitalTerritoryId;
+        if (
+          !loserEliminated &&
+          workingTerrs[loserCapId]?.ownerId !== loser.id &&
+          stillOwnedByLoser[0]
+        ) {
+          loserCapId = stillOwnedByLoser[0].id;
+          workingTerrs[loserCapId] = {
+            ...stillOwnedByLoser[0],
+            isCapital: true,
+          };
+          peaceTerritories = workingTerrs;
         }
 
         const nextNats: Record<string, Nation> = {
@@ -1180,30 +1391,36 @@ export function evaluateMultiProvinceAiTurn(params: {
             ...winner,
             treasury: winner.treasury + indemnity,
             stability: Math.min(100, winner.stability + 4),
-            aggressiveExpansion: Math.min(
-              100,
-              winner.aggressiveExpansion + (annexedProvName ? 6 : 0)
-            ),
+            aggressiveExpansion: aeResult.projectedTotal,
           },
           [loser.id]: {
             ...loser,
+            isEliminated: loserEliminated,
+            capitalTerritoryId: loserCapId,
             treasury: Math.max(0, loser.treasury - indemnity),
             aggressiveExpansion: Math.max(0, loser.aggressiveExpansion - 8),
           },
         };
 
         let finalRelations = nextRelations;
-        if (annexedProvName) {
+        if (demandedIds.length > 0) {
           const penalty = applyConquestDiplomaticPenalty({
             conquerorId: winner.id,
             victimId: loser.id,
-            provincesTakenCount: 1,
-            isFullAnnexation: false,
+            provincesTakenCount: demandedIds.length,
+            isFullAnnexation: isFullAnnex,
             nations: nextNats,
             relations: nextRelations,
           });
           finalRelations = penalty.updatedRelations;
         }
+
+        const annexedSummary =
+          demandedIds.length > 0
+            ? isFullAnnex
+              ? `${loser.name} topraklarının tamamını (${demandedIds.length} eyalet)`
+              : `${demandedIds.length} eyalet`
+            : null;
 
         return {
           updatedNations: nextNats,
@@ -1212,8 +1429,8 @@ export function evaluateMultiProvinceAiTurn(params: {
           updatedRelations: finalRelations,
           newsItem: {
             title: `📜 Barış Antlaşması: ${winner.name} Zaferi`,
-            description: annexedProvName
-              ? `${winner.name} ile ${loser.name} arasındaki savaş sona erdi; ${winner.name} ${annexedProvName} eyaletini ve ${indemnity} Altın tazminat alarak ateşkes imzaladı.`
+            description: annexedSummary
+              ? `${winner.name} ile ${loser.name} arasındaki savaş sona erdi; ${winner.name} ${annexedSummary} ve ${indemnity} Altın tazminat alarak ateşkes imzaladı (+${aeResult.adjustedGain} Agresiflik).`
               : `${winner.name} ile ${loser.name} arasındaki savaş sona erdi; ${loser.name} ${indemnity} Altın savaş tazminatı ödeyerek ateşkes imzaladı.`,
             type: 'PEACE',
           },
@@ -1537,7 +1754,9 @@ export function evaluateMultiProvinceAiTurn(params: {
         actorNation.treasury >= 780 &&
         actorNation.manpower >= 5500
       ) {
-        const targetProv = weakestBorder || ownedProvinces[0];
+        const targetProv = [weakestBorder, ...ownedProvinces].find(
+          (p) => p && !p.siege
+        );
         if (targetProv) {
           const empireScale = Math.min(5500, Math.max(0, ownedProvinces.length - 1) * 850);
           const addTroops = Math.min(
@@ -2407,9 +2626,9 @@ export function evaluateWeeklyUnrestAndRebellions(
     if (!owner) return;
 
     const isCore = t.coreOwnerId === t.ownerId;
-    const welfareRelief = Math.max(0, (owner.budget.welfare - 20) * 0.08);
-    const depotRelief = t.buildings.supplyDepot * 1.2;
-    const taxPressure = Math.max(0, (owner.taxRate - 30) * 0.15);
+    const welfareRelief = Math.max(0, ((owner.budget?.welfare ?? 15) - 20) * 0.08);
+    const depotRelief = (t.buildings?.supplyDepot ?? 0) * 1.2;
+    const taxPressure = Math.max(0, ((owner.taxRate ?? 30) - 30) * 0.15);
 
     let nextUnrest = t.unrest;
     if (!isCore) {

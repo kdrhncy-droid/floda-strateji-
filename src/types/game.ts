@@ -57,7 +57,8 @@ export type BuildingType =
   | 'granary'
   | 'school'
   | 'highSchool'
-  | 'capitalPalace';
+  | 'capitalPalace'
+  | 'armyHearth';
 
 export type UnitType = 'infantry' | 'armor' | 'airDrone';
 
@@ -210,6 +211,7 @@ export interface TerritoryBuildings {
   school?: number;
   highSchool?: number;
   capitalPalace?: number;
+  armyHearth?: number;
 }
 
 export interface Territory {
@@ -242,6 +244,7 @@ export interface Territory {
   assimilation?: number; // 0 to 100% (Core status)
   isAssimilating?: boolean; // active assimilation ongoing
   constructionQueue?: QueuedBuildingConstruction[]; // ongoing building construction projects
+  recruitmentQueue?: QueuedArmyRecruitment[]; // ongoing troop training orders
   religion?: ReligionId;
   culture?: CultureId;
   missionary?: ActiveMissionaryConversion | null;
@@ -311,8 +314,22 @@ export interface QueuedBuildingConstruction {
   specialtyName?: string;
 }
 
+export interface QueuedArmyRecruitment {
+  id: string;
+  unitType?: UnitType | 'MIXED';
+  unitMode?: UnitType | 'MIXED';
+  troops: number;
+  units: UnitComposition;
+  progressDays: number;
+  totalDays: number;
+  startedTick?: number;
+  goldCost?: number;
+  label: string;
+}
+
 export interface ActiveSiege {
   territoryId: string;
+  fromTerritoryId?: string;
   attackerId: string;
   defenderId: string;
   attackerTroops: number;
@@ -362,6 +379,10 @@ export interface Nation {
   formedEmpireId?: string | null;
   vassalOf?: string | null;
   aiPersonality?: AiPersonality;
+  prestige?: number;
+  lastInsultTickByNation?: Record<string, number>;
+  warExhaustion?: number; // 0-100 wartime economic/military fatigue
+  lastNuclearStrikeTick?: number;
   isEliminated: boolean;
 }
 
@@ -392,6 +413,7 @@ export interface ActiveWar {
   attackerWarScore: number; // -100 to +100
   casualtiesAttacker: number;
   casualtiesDefender: number;
+  isCoalitionWar?: boolean;
 }
 
 export interface ActiveBattle {
@@ -485,9 +507,47 @@ export interface CrisisEventDefinition {
   options: CrisisEventOption[];
 }
 
+export interface DiplomaticEnvoy {
+  id: string;
+  targetNationId: string;
+  mission: 'IMPROVE' | 'DAMAGE';
+  dailyDelta: number;
+  daysRemaining: number;
+  totalDays: number;
+  startScore: number;
+  startedTick: number;
+}
+
+export interface WarAnnouncement {
+  id: string;
+  warId?: string;
+  warName?: string;
+  attackerId: string;
+  defenderId: string;
+  attackerName: string;
+  defenderName: string;
+  attackerFlagCode?: string;
+  attackerColor?: string;
+  defenderFlagCode?: string;
+  defenderColor?: string;
+  isPlayerAttacker?: boolean;
+  isPlayerDefender: boolean;
+  alliesJoinedNames?: string[];
+  createdAtMs: number;
+}
+
+export interface RecruitFeedbackEvent {
+  id: string;
+  troopsAdded: number;
+  goldSpent: number;
+  label: string;
+  timestamp: number;
+}
+
 export type BottomDrawerTab =
   | 'NONE'
   | 'TERRITORY'
+  | 'CONSTRUCTION'
   | 'ECONOMY'
   | 'DIPLOMACY'
   | 'GOVERNMENT'
@@ -552,6 +612,7 @@ export interface TacticalBattleState {
 
 export type DiplomaticActionType =
   | 'IMPROVE'
+  | 'DAMAGE'
   | 'INSULT'
   | 'ALLIANCE'
   | 'DEFENSIVE_PACT'

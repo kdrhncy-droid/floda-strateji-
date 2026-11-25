@@ -24,7 +24,7 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
 
   return (
     <div
-      className={`hud-mehter-dock fixed bottom-16 right-3 z-30 flex flex-col items-end gap-1.5 pointer-events-none ${
+      className={`hud-mehter-dock fixed bottom-16 left-3 z-30 flex flex-col items-start gap-1.5 pointer-events-none ${
         hideCompactOnMobile && !isExpanded ? 'hud-mehter-yield' : ''
       }`}
     >

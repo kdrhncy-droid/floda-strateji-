@@ -3,23 +3,43 @@ import { geoNaturalEarth1, geoPath } from 'd3-geo';
 import { ChevronDown, ChevronUp, Crosshair, Minus, Plus } from 'lucide-react';
 import { GeoCountryFeature } from '../../engine/worldBuilder';
 import { getBaseProjectionScale } from '../../map/spatialIndex';
-import { Nation, Territory } from '../../types/game';
+import { MapMode, Nation, Territory } from '../../types/game';
 import { sound } from '../../utils/soundEngine';
+import {
+  AoH3GlyphName,
+  AoH3GlyphSvg,
+} from '../illustrations/AoH3Illustrations';
 
 /**
- * AoH3-style world minimap.
- *
- * The reference HUD keeps a small parchment world plate with a gold viewport
- * rectangle in the bottom-right corner. Clicking it recentres the main map.
- * Province polygons are pre-projected once (Path2D cache) and only re-filled
- * when ownership changes, so panning stays cheap.
+ * AoH3-style interactive bottom-right world minimap HUD.
+ * Includes a top header bar with minimize/collapse toggle, clickable/draggable
+ * political canvas with live gold viewport frame, and an integrated brass
+ * map-mode icon strip replacing the former top-left "Siyasi" menu.
  */
 
-const MINI_WIDTH = 188;
+const MINI_WIDTH = 200;
 const MINI_HEIGHT = 104;
 /** Natural Earth 1 spans about ±2.75 scale horizontally and ±1.42 vertically. */
 const MINI_X_SPAN = 2.75;
 const MINI_Y_SPAN = 1.42;
+
+const MINIMAP_MODE_ICONS: ReadonlyArray<{
+  id: MapMode;
+  label: string;
+  glyph: AoH3GlyphName;
+  tone: string;
+}> = [
+  { id: 'POLITICAL', label: 'Siyasi', glyph: 'crown', tone: 'text-[#e0b86e]' },
+  { id: 'ECONOMIC', label: 'Ekonomi', glyph: 'gold', tone: 'text-[#e0b86e]' },
+  { id: 'RESOURCES', label: 'Kaynaklar', glyph: 'hammer', tone: 'text-[#e0b86e]' },
+  { id: 'DIPLOMATIC', label: 'Diplomasi', glyph: 'scale', tone: 'text-[#e0b86e]' },
+  { id: 'MILITARY', label: 'Askeri', glyph: 'sword', tone: 'text-rose-300' },
+  { id: 'RELIGION', label: 'Din', glyph: 'fleur', tone: 'text-[#e0b86e]' },
+  { id: 'CULTURE', label: 'Kültür', glyph: 'flag', tone: 'text-[#e0b86e]' },
+  { id: 'ASSIMILATION', label: 'Asimilasyon', glyph: 'globe', tone: 'text-[#e0b86e]' },
+  { id: 'TERRAIN', label: 'Arazi', glyph: 'compass', tone: 'text-[#e0b86e]' },
+  { id: 'IDEOLOGY', label: 'İdeoloji', glyph: 'star', tone: 'text-[#e0b86e]' },
+];
 
 function getMiniScale(width: number, height: number) {
   return Math.min(width / (2 * MINI_X_SPAN), height / (2 * MINI_Y_SPAN));
@@ -47,9 +67,11 @@ interface AoH3MinimapProps {
   territories: Record<string, Territory>;
   nations: Record<string, Nation>;
   playerNationId: string;
+  mapMode: MapMode;
   transform: { k: number; x: number; y: number };
   viewportWidth: number;
   viewportHeight: number;
+  onSetMapMode?: (mode: MapMode) => void;
   onJumpToCoords: (coords: [number, number]) => void;
   onZoom: (factor: number) => void;
   onFocusCapital: () => void;
@@ -60,9 +82,11 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
   territories,
   nations,
   playerNationId,
+  mapMode,
   transform,
   viewportWidth,
   viewportHeight,
+  onSetMapMode,
   onJumpToCoords,
   onZoom,
   onFocusCapital,
@@ -77,12 +101,13 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
   const [baseRevision, setBaseRevision] = useState(0);
   const isDraggingRef = useRef(false);
 
-  // Read the live data through refs so the expensive base rebuild only runs when
-  // a province actually changes owner, not on every simulation tick.
   const territoriesRef = useRef(territories);
   territoriesRef.current = territories;
   const nationsRef = useRef(nations);
   nationsRef.current = nations;
+
+  const activeModeMeta =
+    MINIMAP_MODE_ICONS.find((m) => m.id === mapMode) || MINIMAP_MODE_ICONS[0];
 
   const miniProjection = useMemo(() => {
     const scale = getMiniScale(MINI_WIDTH, MINI_HEIGHT);
@@ -133,7 +158,6 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
     if (!ctx) return;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // Ocean: deep ink like the main map.
     ctx.fillStyle = '#0a1826';
     ctx.fillRect(0, 0, MINI_WIDTH, MINI_HEIGHT);
 
@@ -153,7 +177,6 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
       ctx.fill(path);
     }
 
-    // Hairline political borders, drawn after all fills so they stay crisp.
     ctx.strokeStyle = 'rgba(6, 6, 6, 0.55)';
     ctx.lineWidth = 0.4;
     for (const feat of features) {
@@ -162,7 +185,6 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
       ctx.stroke(path);
     }
 
-    // Parchment vignette so the plate reads as an antique chart.
     const vignette = ctx.createRadialGradient(
       MINI_WIDTH / 2,
       MINI_HEIGHT / 2,
@@ -181,6 +203,7 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
 
   // Composite base + live viewport rectangle.
   useEffect(() => {
+    if (collapsed) return;
     const canvas = canvasRef.current;
     const base = baseCanvasRef.current;
     if (!canvas || !base || base.width === 0) return;
@@ -219,12 +242,16 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
     const rectH = Math.max(0, y1 - y0);
 
     if (rectW > 2 && rectH > 2) {
-      ctx.fillStyle = 'rgba(230, 192, 122, 0.13)';
+      ctx.fillStyle = 'rgba(230, 192, 122, 0.14)';
       ctx.fillRect(x0, y0, rectW, rectH);
-      ctx.strokeStyle = 'rgba(246, 214, 156, 0.9)';
+      ctx.strokeStyle = 'rgba(246, 214, 156, 0.92)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(x0 + 0.5, y0 + 0.5, Math.max(1, rectW - 1), Math.max(1, rectH - 1));
-      // Corner ticks, as in the reference plate.
+      ctx.strokeRect(
+        x0 + 0.5,
+        y0 + 0.5,
+        Math.max(1, rectW - 1),
+        Math.max(1, rectH - 1)
+      );
       ctx.strokeStyle = 'rgba(246, 214, 156, 0.45)';
       ctx.lineWidth = 0.75;
       ctx.beginPath();
@@ -237,7 +264,7 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
       ctx.stroke();
     }
 
-    // Player capital diamond so the plate always answers "where am I?".
+    // Player capital diamond
     const capitalId =
       nations[playerNationId]?.capitalTerritoryId || playerNationId;
     const capitalCentroid = territories[capitalId]?.centroid;
@@ -258,6 +285,7 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
       }
     }
   }, [
+    collapsed,
     transform,
     viewportWidth,
     viewportHeight,
@@ -287,87 +315,107 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
 
   return (
     <aside
+      data-testid="aoh3-minimap-hud"
       className="pointer-events-auto select-none"
-      aria-label="Dünya mini haritası"
+      aria-label="Dünya mini haritası ve harita katmanları"
     >
-      <div className="aoh3-minimap w-[188px]">
+      <div className="aoh3-minimap w-[176px] sm:w-[202px]">
+        {/* Top HUD Bar: Active Map Mode + Utility Actions + Minimize Toggle */}
         <div className="aoh3-minimap-toolbar">
-          <span className="aoh3-minimap-caption !p-0 !text-[#e0b86e] !tracking-[0.14em]">
-            DÜNYA
+          <span className="inline-flex items-center gap-1 text-[9.5px] font-bold text-[#e0b86e] tracking-wide truncate pl-0.5">
+            <AoH3GlyphSvg
+              name={activeModeMeta.glyph}
+              className={`w-3 h-3 shrink-0 ${activeModeMeta.tone}`}
+            />
+            <span className="truncate">{activeModeMeta.label}</span>
           </span>
-          <span className="ml-1 h-px flex-1 bg-[#caa15a]/30" />
+          <span className="mx-0.5 h-px flex-1 bg-[#caa15a]/25" />
+
+          {!collapsed && (
+            <>
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  sound.playClick();
+                  onFocusCapital();
+                }}
+                title="Başkente odakla"
+                aria-label="Başkente odakla"
+                className="aoh3-minimap-btn cursor-pointer"
+              >
+                <Crosshair className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  sound.playClick();
+                  onZoom(1.25);
+                }}
+                title="Yakınlaştır"
+                aria-label="Haritayı yakınlaştır"
+                className="aoh3-minimap-btn cursor-pointer"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  sound.playClick();
+                  onZoom(0.8);
+                }}
+                title="Uzaklaştır"
+                aria-label="Haritayı uzaklaştır"
+                className="aoh3-minimap-btn cursor-pointer"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+            </>
+          )}
+
           <button
             type="button"
+            data-testid="minimap-collapse-btn"
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => {
-              sound.playClick();
-              onFocusCapital();
-            }}
-            title="Başkente odakla"
-            aria-label="Başkente odakla"
-            className="aoh3-minimap-btn"
-          >
-            <Crosshair className="h-3 w-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              sound.playClick();
-              onZoom(1.25);
-            }}
-            title="Yakınlaştır"
-            aria-label="Haritayı yakınlaştır"
-            className="aoh3-minimap-btn"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              sound.playClick();
-              onZoom(0.8);
-            }}
-            title="Uzaklaştır"
-            aria-label="Haritayı uzaklaştır"
-            className="aoh3-minimap-btn"
-          >
-            <Minus className="h-3 w-3" />
-          </button>
-          <button
-            type="button"
             onClick={() => {
               sound.playClick();
               setCollapsed((v) => !v);
             }}
-            title={collapsed ? 'Mini haritayı aç' : 'Mini haritayı daralt'}
-            aria-label={collapsed ? 'Mini haritayı aç' : 'Mini haritayı daralt'}
+            title={collapsed ? 'Mini haritayı büyüt' : 'Mini haritayı küçült'}
+            aria-label={collapsed ? 'Mini haritayı büyüt' : 'Mini haritayı küçült'}
             aria-expanded={!collapsed}
-            className="aoh3-minimap-btn"
+            className="aoh3-minimap-btn is-active cursor-pointer"
           >
             {collapsed ? (
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="h-3.5 w-3.5" />
             ) : (
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-3.5 w-3.5" />
             )}
           </button>
         </div>
 
+        {/* Interactive Click/Drag Minimap Canvas + Map Mode Icon Frame */}
         {!collapsed && (
           <>
             <canvas
               ref={canvasRef}
-              style={{ width: MINI_WIDTH, height: MINI_HEIGHT }}
-              className="block cursor-crosshair touch-none"
+              data-testid="aoh3-minimap-canvas"
+              className="aoh3-minimap-canvas block w-full h-[90px] sm:h-[104px] cursor-crosshair touch-none"
               onPointerDown={(e) => {
+                e.stopPropagation();
                 isDraggingRef.current = true;
                 e.currentTarget.setPointerCapture?.(e.pointerId);
                 jumpToClientPoint(e.clientX, e.clientY);
               }}
               onPointerMove={(e) => {
                 if (!isDraggingRef.current) return;
+                e.stopPropagation();
                 jumpToClientPoint(e.clientX, e.clientY);
               }}
               onPointerUp={(e) => {
+                e.stopPropagation();
                 isDraggingRef.current = false;
                 e.currentTarget.releasePointerCapture?.(e.pointerId);
               }}
@@ -375,12 +423,50 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
                 isDraggingRef.current = false;
               }}
             />
-            <div className="aoh3-minimap-caption">
-              <span>{Math.round(transform.k * 100)}% yakınlık</span>
-              <span className="text-[#caa15a]">TIKLA · ODAKLA</span>
-            </div>
+
+            {/* Integrated Frame Strip: Map-Mode Icon Buttons (replaces top-left Siyasi dropdown) */}
+            {onSetMapMode && (
+              <div
+                data-testid="minimap-mapmode-frame"
+                role="toolbar"
+                aria-label="Harita katman ikonları"
+                className="grid grid-cols-5 gap-1 p-1 border-t border-[#caa15a]/35 bg-[#120e0a]/95"
+              >
+                {MINIMAP_MODE_ICONS.map((m) => {
+                  const isActive = mapMode === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      data-testid={`minimap-mode-${m.id}`}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => {
+                        sound.playClick();
+                        onSetMapMode(m.id);
+                      }}
+                      title={m.label}
+                      aria-label={`${m.label} haritası`}
+                      aria-pressed={isActive}
+                      className={`h-[24px] sm:h-[26px] rounded flex items-center justify-center border transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-[#caa15a] text-[#14100c] border-[#f3ead7] shadow-sm'
+                          : 'bg-[#1a140e]/90 border-[#caa15a]/25 text-[#c8a86a] hover:text-[#faf3e3] hover:border-[#caa15a]/65 hover:bg-[#251d14]'
+                      }`}
+                    >
+                      <AoH3GlyphSvg
+                        name={m.glyph}
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          isActive ? 'text-[#14100c]' : m.tone
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
+
         <canvas ref={baseCanvasRef} className="hidden" aria-hidden="true" />
       </div>
     </aside>

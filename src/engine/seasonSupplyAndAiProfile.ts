@@ -115,16 +115,21 @@ const HISTORICAL_PERSONALITY_PRESETS: Record<string, AiPersonality> = {
  */
 export function resolveNationAiPersonality(
   nation: Nation | undefined,
-  territories: Record<string, Territory>
+  territories: Record<string, Territory>,
+  lostCoreOwnerIds?: ReadonlySet<string>
 ): AiPersonality {
   if (!nation) return 'DEFENDER';
 
   // Dynamic Revanchism: losing homeland cores triggers strong drive to reclaim them
   let hasLostCore = false;
-  for (const t of Object.values(territories)) {
-    if (t && t.coreOwnerId === nation.id && t.ownerId !== nation.id) {
-      hasLostCore = true;
-      break;
+  if (lostCoreOwnerIds) {
+    hasLostCore = lostCoreOwnerIds.has(nation.id);
+  } else {
+    for (const t of Object.values(territories)) {
+      if (t && t.coreOwnerId === nation.id && t.ownerId !== nation.id) {
+        hasLostCore = true;
+        break;
+      }
     }
   }
   if (hasLostCore) return 'REVANCHIST';
@@ -298,11 +303,13 @@ export interface SupplyAttritionResult {
  */
 export function computeEncircledProvinceIds(
   territories: Record<string, Territory>,
-  nations: Record<string, Nation>
+  nations: Record<string, Nation>,
+  onlyOwnerIds?: ReadonlySet<string>
 ): Set<string> {
   const byOwner = new Map<string, Territory[]>();
   for (const t of Object.values(territories)) {
     if (!t || !t.ownerId) continue;
+    if (onlyOwnerIds && !onlyOwnerIds.has(t.ownerId)) continue;
     const list = byOwner.get(t.ownerId);
     if (list) list.push(t);
     else byOwner.set(t.ownerId, [t]);
@@ -327,14 +334,18 @@ export function computeEncircledProvinceIds(
 
     // Fallback if capital was lost and all remaining provinces are inland: largest province acts as emergency HQ
     if (supplyRoots.length === 0) {
-      const fallbackRoot = [...provs].sort((a, b) => b.garrison - a.garrison)[0];
+      let fallbackRoot = provs[0];
+      for (let i = 1; i < provs.length; i++) {
+        if (provs[i].garrison > fallbackRoot.garrison) fallbackRoot = provs[i];
+      }
       if (fallbackRoot) supplyRoots.push(fallbackRoot.id);
     }
 
     const supplied = new Set<string>(supplyRoots);
     const queue = [...supplyRoots];
-    while (queue.length > 0) {
-      const curId = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const curId = queue[head++];
       const curTerr = territories[curId];
       if (!curTerr) continue;
       for (const nbId of curTerr.neighbors) {
@@ -395,8 +406,9 @@ export function isTerritoryEncircled(
 
   const supplied = new Set<string>(supplyRoots);
   const queue = [...supplyRoots];
-  while (queue.length > 0) {
-    const curId = queue.shift()!;
+  let head = 0;
+  while (head < queue.length) {
+    const curId = queue[head++];
     const curTerr = territories[curId];
     if (!curTerr) continue;
     for (const nbId of curTerr.neighbors) {
@@ -429,6 +441,13 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
   let worstLoss = 0;
   let worstPlayerProvinceName: string | null = null;
   const encircledIds = computeEncircledProvinceIds(territories, nations);
+  const warNationIds = new Set<string>();
+  for (const w of wars) {
+    warNationIds.add(w.attackerId);
+    warNationIds.add(w.defenderId);
+    for (const id of w.attackers) warNationIds.add(id);
+    for (const id of w.defenders) warNationIds.add(id);
+  }
 
   const writeTerr = (id: string, terr: Territory) => {
     if (!cloned) {
@@ -442,13 +461,7 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
     if (!t) continue;
     const owner = nations[t.ownerId];
     const isEncircled = encircledIds.has(t.id);
-    const ownerAtWar = wars.some(
-      (w) =>
-        w.attackerId === t.ownerId ||
-        w.defenderId === t.ownerId ||
-        w.attackers.includes(t.ownerId) ||
-        w.defenders.includes(t.ownerId)
-    );
+    const ownerAtWar = warNationIds.has(t.ownerId);
     // Encircled provinces have 35% lower effective supply limit
     const supplyLimit = Math.round(
       calculateProvinceSupplyLimit(t, owner, season) * (isEncircled ? 0.65 : 1.0)

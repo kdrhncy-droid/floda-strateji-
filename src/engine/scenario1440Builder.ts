@@ -3,6 +3,7 @@ import { STRATEGIC_STRAITS } from './straitsAndTradeEngine';
 import { GeoCountryFeature, InitialWorldBundle } from './core/worldTypes';
 import { relationKey } from './core/diplomacyHelpers';
 import { getHistoricProvinceNames } from './polygonSubdivider';
+import { deconflictNeighborColors } from './core/nationColorUtils';
 
 interface Empire1440Def {
   id: string;
@@ -96,13 +97,15 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '792_GZP': 'Ayıntab',
       '682_JED': 'Mekke',
       '682_MED': 'Medine',
+      '682_TBK': 'Tebük',
+      '682_TIF': 'Taif',
     },
   },
   {
     id: '682',
     name: 'Necid & Hürmüz Emirliği',
     flagCode: 'NEC',
-    color: '#B58938',
+    color: '#52796F',
     ideology: 'MONARCHY',
     capitalName: '★ Riyad',
     treasury: 1650,
@@ -136,7 +139,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     id: '729',
     name: 'Funj & Nubya Sultanlığı',
     flagCode: 'NUB',
-    color: '#A86D3A',
+    color: '#6B4C9A',
     ideology: 'MONARCHY',
     capitalName: '★ Hartum',
     treasury: 1400,
@@ -419,7 +422,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     id: '070',
     name: 'Bosna Krallığı',
     flagCode: 'BOS',
-    color: '#3A6F94',
+    color: '#4361EE',
     ideology: 'MONARCHY',
     capitalName: '★ Saraybosna',
     treasury: 1450,
@@ -735,7 +738,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     id: '012',
     name: 'Tilimsan & Cezayir Sultanlığı',
     flagCode: 'CEZ',
-    color: '#2E7052',
+    color: '#1E6091',
     ideology: 'MONARCHY',
     capitalName: '★ Tilimsan',
     capitalTerritoryId: '012_ORN',
@@ -769,7 +772,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     id: '788',
     name: 'Tunus Hafsî Sultanlığı',
     flagCode: 'TUN',
-    color: '#A8732A',
+    color: '#2E8B57',
     ideology: 'MONARCHY',
     capitalName: '★ Tunus',
     treasury: 2000,
@@ -883,7 +886,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '566_LOS': 'Eko',
       '566_BNI': 'Benin',
       '204': 'Dahomey',
-      '562': 'Agadez',
+      '562': 'Dosso',
       '148': 'Bornu',
     },
   },
@@ -1011,7 +1014,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     id: '050',
     name: 'Bengal Sultanlığı',
     flagCode: 'BNG',
-    color: '#2A8C6A',
+    color: '#0EA5E9',
     ideology: 'MONARCHY',
     capitalName: '★ Dakka',
     treasury: 1950,
@@ -1127,7 +1130,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     id: '704',
     name: 'Dai Viet İmparatorluğu',
     flagCode: 'DAI',
-    color: '#B8423B',
+    color: '#A21CAF',
     ideology: 'MONARCHY',
     capitalName: '★ Hanoi',
     treasury: 1750,
@@ -1497,8 +1500,10 @@ const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
   '380_CTA': '724',
   '380_PMO': '724', // Unified Sicily under Aragon
   '380_TRS': '040',
-  '682_JED': '818', // Hejaz under Mamluk protectorate
-  '682_MED': '818',
+  '682_JED': '818', // Hejaz (Mecca / Jeddah) under Mamluk protectorate
+  '682_MED': '818', // Medina under Mamluk protectorate
+  '682_TBK': '818', // Tabuk along Hejaz pilgrimage route under Mamluks
+  '682_TIF': '818', // Taif under Mamluk Hejaz sphere
   '364_TBZ': '031', // Tabriz: Karakoyunlu capital in 1444
   '860_SKD': '364', // Samarkand: Timurid capital in 1444
   '860_BHK': '364', // Bukhara under Timurids
@@ -1920,6 +1925,8 @@ export function transformBundleTo1440Scenario(
   setRel('792', '818', { score: 25, hasTradeAgreement: true });
   setRel('792', '031', { score: 35, hasTradeAgreement: true });
   setRel('792', '364', { score: -20 });
+
+  deconflictNeighborColors(nations, territories, 58);
 
   return {
     features,

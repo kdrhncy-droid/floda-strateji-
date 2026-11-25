@@ -121,7 +121,39 @@ export default defineConfig(() => {
       ],
     },
     build: {
-      chunkSizeWarningLimit: 1200,
+      chunkSizeWarningLimit: 700,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (
+                id.includes('/react/') ||
+                id.includes('/react-dom/') ||
+                id.includes('/scheduler/') ||
+                id.includes('/zustand/')
+              ) {
+                return 'vendor-react';
+              }
+              if (
+                id.includes('/d3-geo/') ||
+                id.includes('/d3-array/') ||
+                id.includes('/topojson-client/') ||
+                id.includes('/rbush/') ||
+                id.includes('/world-atlas/')
+              ) {
+                return 'vendor-geo';
+              }
+              if (id.includes('/lucide-react/')) {
+                return 'vendor-icons';
+              }
+            }
+            if (id.includes('/src/data/')) {
+              return 'game-data';
+            }
+            return undefined;
+          },
+        },
+      },
     },
     server: {
       allowedHosts: true as const,

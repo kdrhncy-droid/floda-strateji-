@@ -327,53 +327,90 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     if (t) visibleTerritories.push(t);
   }
 
-  // 0. AoH3 Grand Strategy Country Realm Names (overview LOD only)
+  // 0. AoH3 Grand Strategy Country Realm Names (overview LOD only, centered over each country's core contiguous landmass)
   if (transform.k < labelThresholds.nationNameMaxZoom) {
-    const nationClusters: Record<
-      string,
-      { pts: [number, number][]; count: number }
-    > = {};
-    for (const t of visibleTerritories) {
-      if (!t.ownerId) continue;
-      const pt = getProjPt(t);
-      if (!pt) continue;
-      const sx = pt[0] * transform.k + transform.x;
-      const sy = pt[1] * transform.k + transform.y;
-      if (sx < -80 || sx > width + 80 || sy < -80 || sy > height + 80)
-        continue;
-      if (!nationClusters[t.ownerId]) {
-        nationClusters[t.ownerId] = { pts: [], count: 0 };
+    const ownedTerrsByNation: Record<string, Territory[]> = {};
+    for (const t of Object.values(territories)) {
+      if (!t || !t.ownerId) continue;
+      if (!ownedTerrsByNation[t.ownerId]) {
+        ownedTerrsByNation[t.ownerId] = [];
       }
-      nationClusters[t.ownerId].pts.push([sx, sy]);
-      nationClusters[t.ownerId].count += 1;
+      ownedTerrsByNation[t.ownerId].push(t);
     }
 
-    const sortedNationClusters = Object.entries(nationClusters).sort(
-      ([idA, a], [idB, b]) => {
-        if (idA === playerNationId) return -1;
-        if (idB === playerNationId) return 1;
-        return b.count - a.count;
-      }
-    );
+    const nationCorePlacements: {
+      nationId: string;
+      pts: [number, number][];
+      totalOwnedCount: number;
+    }[] = [];
 
-    for (const [nationId, cluster] of sortedNationClusters) {
+    for (const [nationId, owned] of Object.entries(ownedTerrsByNation)) {
+      if (owned.length === 0) continue;
+      const visited = new Set<string>();
+      const components: Territory[][] = [];
+      const capitalId = nations[nationId]?.capitalTerritoryId;
+
+      for (const startT of owned) {
+        if (visited.has(startT.id)) continue;
+        const comp: Territory[] = [];
+        const queue: Territory[] = [startT];
+        visited.add(startT.id);
+        while (queue.length > 0) {
+          const cur = queue.pop()!;
+          comp.push(cur);
+          for (const nbId of cur.neighbors) {
+            if (visited.has(nbId)) continue;
+            const nb = territories[nbId];
+            if (nb && nb.ownerId === nationId) {
+              visited.add(nbId);
+              queue.push(nb);
+            }
+          }
+        }
+        components.push(comp);
+      }
+
+      if (components.length === 0) continue;
+      components.sort((a, b) => b.length - a.length);
+      const largestCount = components[0].length;
+      const capitalComp = capitalId
+        ? components.find((c) => c.some((t) => t.id === capitalId))
+        : undefined;
+      const coreComp =
+        capitalComp && capitalComp.length >= Math.max(2, largestCount * 0.55)
+          ? capitalComp
+          : components[0];
+
+      const pts: [number, number][] = [];
+      let anyInViewport = false;
+      for (const t of coreComp) {
+        const pt = getProjPt(t);
+        if (!pt) continue;
+        const sx = pt[0] * transform.k + transform.x;
+        const sy = pt[1] * transform.k + transform.y;
+        pts.push([sx, sy]);
+        if (sx >= -80 && sx <= width + 80 && sy >= -80 && sy <= height + 80) {
+          anyInViewport = true;
+        }
+      }
+      if (!anyInViewport || pts.length === 0) continue;
+
+      nationCorePlacements.push({
+        nationId,
+        pts,
+        totalOwnedCount: owned.length,
+      });
+    }
+
+    nationCorePlacements.sort((a, b) => {
+      if (a.nationId === playerNationId) return -1;
+      if (b.nationId === playerNationId) return 1;
+      return b.pts.length - a.pts.length;
+    });
+
+    for (const { nationId, pts } of nationCorePlacements) {
       const nat = nations[nationId];
-      if (!nat || cluster.pts.length === 0) continue;
-
-      // Use capital or median center to filter out far-flung outlier provinces
-      let sumX = 0;
-      let sumY = 0;
-      for (const [x, y] of cluster.pts) {
-        sumX += x;
-        sumY += y;
-      }
-      const avgX = sumX / cluster.pts.length;
-      const avgY = sumY / cluster.pts.length;
-      const maxClusterRadius = Math.max(95, 165 * transform.k);
-      const corePts = cluster.pts.filter(
-        ([x, y]) => Math.hypot(x - avgX, y - avgY) <= maxClusterRadius
-      );
-      const activePts = corePts.length > 0 ? corePts : cluster.pts;
+      if (!nat || pts.length === 0) continue;
 
       let minX = Infinity;
       let maxX = -Infinity;
@@ -381,7 +418,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       let maxY = -Infinity;
       let cSumX = 0;
       let cSumY = 0;
-      for (const [x, y] of activePts) {
+      for (const [x, y] of pts) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -389,14 +426,24 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         cSumX += x;
         cSumY += y;
       }
-      const cx = cSumX / activePts.length;
-      const cy = cSumY / activePts.length;
 
-      // Estimated screen-space width of this nation's territory cluster
+      // Blend centroid average and bounding-box center for stable centering over wide empires
+      const avgX = cSumX / pts.length;
+      const avgY = cSumY / pts.length;
+      const bboxCx = (minX + maxX) * 0.5;
+      const bboxCy = (minY + maxY) * 0.5;
+      const cx = avgX * 0.65 + bboxCx * 0.35;
+      const cy = avgY * 0.65 + bboxCy * 0.35;
+
+      if (cx < -100 || cx > width + 100 || cy < -60 || cy > height + 60) {
+        continue;
+      }
+
+      // Estimated screen-space width of this nation's core contiguous landmass
       const singleProvRadius = (isMobileViewport ? 22 : 28) * transform.k;
       const spanW = Math.max(
-        singleProvRadius * 1.6,
-        maxX - minX + singleProvRadius * 1.4
+        singleProvRadius * 1.65,
+        maxX - minX + singleProvRadius * 1.45
       );
 
       const rawName = nat.name
@@ -413,13 +460,14 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
 
       const isPlayer = nationId === playerNationId;
       const isAtWarWithPlayer = warEnemySet.has(nationId);
+      const isMajorRealm = pts.length >= 4;
 
-      // Proportional font size that scales DOWN smoothly when zoomed out
-      const maxFontCap = isMobileViewport ? 12.5 : 14.5;
-      const zoomFactor = Math.max(0.45, Math.min(1.35, transform.k * 0.78));
+      // Proportional font size that scales smoothly with cluster footprint & zoom
+      const maxFontCap = isMobileViewport ? 13.5 : 16.0;
+      const zoomFactor = Math.max(0.5, Math.min(1.35, transform.k * 0.82));
       let fontSize = Math.min(
         maxFontCap,
-        (6.4 + Math.sqrt(activePts.length) * 1.45) * zoomFactor
+        (6.6 + Math.sqrt(pts.length) * 1.6) * zoomFactor
       );
 
       let displayLabel =
@@ -431,7 +479,10 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       let measuredW = measureCachedTextWidth(ctx, nationFont, displayLabel);
 
       // If full name is wider than the country's on-screen span, switch to short name first
-      const maxAllowedW = Math.max(isPlayer ? 56 : 44, spanW * 1.22);
+      const maxAllowedW = Math.max(
+        isPlayer ? 62 : isMajorRealm ? 54 : 44,
+        spanW * 1.24
+      );
       if (measuredW > maxAllowedW && displayLabel !== shortName.toLocaleUpperCase('tr-TR')) {
         displayLabel = shortName.toLocaleUpperCase('tr-TR');
         measuredW = measureCachedTextWidth(ctx, nationFont, displayLabel);
@@ -439,13 +490,14 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
 
       // Shrink font size proportionally so the label fits inside the nation's screen footprint
       if (measuredW > maxAllowedW && measuredW > 0) {
-        fontSize = Math.max(5.8, fontSize * (maxAllowedW / measuredW));
+        fontSize = Math.max(5.5, fontSize * (maxAllowedW / measuredW));
         nationFont = `700 ${fontSize.toFixed(1)}px "Cinzel", "Georgia", serif`;
         measuredW = measureCachedTextWidth(ctx, nationFont, displayLabel);
       }
 
-      // Skip tiny unreadable labels when deeply zoomed out
-      if (fontSize < (isPlayer ? 6.0 : 6.4)) {
+      // Keep major empires legible even when zoomed out globally
+      const minReadableFont = isPlayer ? 5.6 : isMajorRealm ? 5.6 : 6.4;
+      if (fontSize < minReadableFont) {
         continue;
       }
 
@@ -477,7 +529,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         ? 'rgba(253, 230, 138, 0.96)'
         : isAtWarWithPlayer
         ? 'rgba(254, 202, 202, 0.94)'
-        : 'rgba(245, 238, 220, 0.88)';
+        : 'rgba(245, 238, 220, 0.90)';
       ctx.fillText(displayLabel, cx, cy);
       ctx.restore();
     }
@@ -561,7 +613,8 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     const canSeeSiege =
       Boolean(t.siege) &&
       !inBattle &&
-      (isPlayerTerritory ||
+      (hasIntel ||
+        isPlayerTerritory ||
         isAlliedOrVassal ||
         isNationPlayerOrAlly(t.siege?.attackerId, playerNationId, nations, relations) ||
         isNationPlayerOrAlly(t.siege?.defenderId, playerNationId, nations, relations));
@@ -600,6 +653,8 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
 
     const rank = isSelected
       ? 0
+      : canSeeSiege
+      ? 0.5
       : isCapital
       ? isPlayerTerritory
         ? 1
@@ -759,57 +814,91 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       }
     }
 
-    // 1B. AoH3 Real-Time Siege Widget on Map (ONLY shown if player or player's allies/vassals are involved!)
+    // 1B. Clean Under-Army Siege Bar (normal besieging army plate + slim progress bar directly underneath)
     if (canSeeSiege && t.siege) {
       const siege = t.siege;
       const siegeAttacker = nations[siege.attackerId];
-      const siegeBadgeY = namePlaced ? sy + 8 : sy;
-      const siegeW = 86;
-      const siegeH = 21;
+      const isPlayerBesieging = siege.attackerId === playerNationId;
+      const siegePct = Math.max(0, Math.min(100, Math.round(siege.progress)));
+      const siegeBadgeY = namePlaced ? sy + 11 : sy;
+      const plateW = 68;
+      const plateH = 18;
+      const barH = 4;
+      const barGap = 2.5;
+      const totalH = plateH + barGap + barH;
       const sBox: PlacedBox = {
-        x1: sx - siegeW / 2 - 2,
-        y1: siegeBadgeY - siegeH / 2 - 2,
-        x2: sx + siegeW / 2 + 2,
-        y2: siegeBadgeY + siegeH / 2 + 2,
+        x1: sx - plateW / 2 - 2,
+        y1: siegeBadgeY - totalH / 2 - 2,
+        x2: sx + plateW / 2 + 2,
+        y2: siegeBadgeY + totalH / 2 + 2,
       };
 
-      if (isSelected || !collides(sBox)) {
+      if (isSelected || canSeeSiege || !collides(sBox)) {
         placedBoxes.push(sBox);
-        const bx = sx - siegeW / 2;
-        const by = siegeBadgeY - siegeH / 2;
+        const bx = sx - plateW / 2;
+        const by = siegeBadgeY - totalH / 2;
 
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.96)';
-        ctx.strokeStyle = 'rgba(226, 232, 240, 0.75)';
-        ctx.lineWidth = 1.2;
+        // Besieging army plate (attacker flag + troop count, matching normal map army badges)
+        ctx.fillStyle = 'rgba(13, 18, 28, 0.94)';
+        ctx.strokeStyle = isPlayerBesieging
+          ? 'rgba(245, 158, 11, 0.9)'
+          : 'rgba(244, 63, 94, 0.85)';
+        ctx.lineWidth = 1.25;
         ctx.beginPath();
-        ctx.roundRect(bx, by, siegeW, siegeH, 4);
+        ctx.roundRect(bx, by, plateW, plateH, 4);
         ctx.fill();
         ctx.stroke();
 
         drawNationFlagOnCanvas(
           ctx,
-          bx + 1.5,
-          by + 1.5,
-          22,
-          siegeH - 3,
+          bx + 2,
+          by + 2,
+          18,
+          plateH - 4,
           siege.attackerId,
           (siegeAttacker?.flagCode || 'ORD').slice(0, 3),
           siegeAttacker?.color || '#DC2626'
         );
 
-        ctx.font = '700 9px "JetBrains Mono", monospace';
-        ctx.textAlign = 'center';
+        const troopText =
+          siege.attackerTroops >= 1000
+            ? `${(siege.attackerTroops / 1000).toFixed(1)}B`
+            : `${Math.round(siege.attackerTroops)}`;
+        ctx.font = '800 9.5px "JetBrains Mono", monospace';
         ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
         ctx.fillStyle = '#F8FAFC';
-        ctx.fillText(
-          `%${Math.round(siege.progress)}`,
-          bx + 23 + (siegeW - 23) / 2,
-          siegeBadgeY - 1
-        );
+        ctx.fillText(troopText, bx + 22 + (plateW - 24) / 2, by + plateH / 2 + 0.5);
 
-        const progW = ((siegeW - 25) * Math.min(100, siege.progress)) / 100;
-        ctx.fillStyle = '#F87171';
-        ctx.fillRect(bx + 23, by + siegeH - 3, progW, 2);
+        // Simple slim siege progress bar directly underneath the besieging army plate
+        const barX = bx;
+        const barY = by + plateH + barGap;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.7)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, plateW, barH, 2);
+        ctx.fill();
+        ctx.stroke();
+
+        const fillW = Math.max(
+          siegePct > 0 ? 3 : 0,
+          (plateW * siegePct) / 100
+        );
+        if (fillW > 0) {
+          const grad = ctx.createLinearGradient(barX, 0, barX + plateW, 0);
+          if (isPlayerBesieging) {
+            grad.addColorStop(0, '#D97706');
+            grad.addColorStop(1, '#FACC15');
+          } else {
+            grad.addColorStop(0, '#BE123C');
+            grad.addColorStop(1, '#FB7185');
+          }
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.roundRect(barX, barY, fillW, barH, 2);
+          ctx.fill();
+        }
       }
     }
 

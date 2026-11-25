@@ -4,7 +4,7 @@ import {
   TrendingUp,
   Handshake,
   Landmark,
-  Swords,
+  Hammer,
   WifiOff,
 } from 'lucide-react';
 import { BottomDrawerTab } from '../../types/game';
@@ -48,13 +48,13 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   const tabs = [
     { id: 'TERRITORY' as const, label: 'Eyalet', icon: Globe },
     { id: 'ECONOMY' as const, label: 'Ekonomi', icon: TrendingUp },
+    { id: 'CONSTRUCTION' as const, label: 'İnşaat', icon: Hammer },
     {
       id: 'DIPLOMACY' as const,
       label: `Diplomasi${activeWarCount > 0 ? ` (${activeWarCount})` : ''}`,
       icon: Handshake,
     },
     { id: 'GOVERNMENT' as const, label: 'Yönetim', icon: Landmark },
-    { id: 'MILITARY' as const, label: 'Ordugâh', icon: Swords },
   ];
 
   return (

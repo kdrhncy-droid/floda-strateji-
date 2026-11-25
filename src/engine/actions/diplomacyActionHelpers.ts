@@ -2,10 +2,12 @@ import {
   ActiveWar,
   ArmyMovement,
   DiplomaticActionType,
+  DiplomaticEnvoy,
   DiplomaticRelation,
   GameModeId,
   Nation,
   Territory,
+  WarAnnouncement,
   WorldNewsEvent,
 } from '../../types/game';
 import { formatGameDate } from '../simulationEngine';
@@ -17,11 +19,14 @@ export interface DomainActionPatch {
   wars?: ActiveWar[];
   movements?: ArmyMovement[];
   newsEvents?: WorldNewsEvent[];
+  startEnvoy?: Omit<DiplomaticEnvoy, 'id' | 'startedTick'>;
+  warAnnouncement?: WarAnnouncement;
   toast?: string;
 }
 
 export const DIPLOMACY_POINT_COSTS: Partial<Record<DiplomaticActionType, number>> = {
   IMPROVE: 5,
+  DAMAGE: 5,
   INSULT: 10,
   NON_AGGRESSION: 20,
   MILITARY_ACCESS: 10,

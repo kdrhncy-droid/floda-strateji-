@@ -10,10 +10,12 @@ import {
 } from '../../types/game';
 import {
   applyConquestDiplomaticPenalty,
+  evaluateWorldCoalitionAt100AE,
   getEmbargoingNationIds,
   getOrCreateRelation,
   isAtWar,
   relationKey,
+  WAR_DECLARATION_BASE_AE,
 } from '../core/diplomacyHelpers';
 import {
   adjustAggressiveExpansionGain,
@@ -55,6 +57,7 @@ export function executeDiplomaticActionDomain(params: {
   wars: ActiveWar[];
   movements?: ArmyMovement[];
   newsEvents: WorldNewsEvent[];
+  calledAllyIds?: string[];
 }): DomainActionPatch {
   const {
     targetNationId,
@@ -69,6 +72,7 @@ export function executeDiplomaticActionDomain(params: {
     wars,
     movements = [],
     newsEvents,
+    calledAllyIds,
   } = params;
 
   const playerNation = nations[playerNationId];
@@ -79,6 +83,12 @@ export function executeDiplomaticActionDomain(params: {
   const currentRel = getOrCreateRelation(relations, playerNationId, targetNationId);
 
   if (action === 'IMPROVE') {
+    if (isAtWar(wars, playerNationId, targetNationId)) {
+      return { toast: `${target.name} ile savaş halindeyken elçilik heyeti gönderilemez.` };
+    }
+    if (currentRel.score >= 100) {
+      return { toast: `${target.name} ile ilişkileriniz zaten en üst seviyede (+100).` };
+    }
     const spent = spendDiplomacyPoints(
       playerNation,
       DIPLOMACY_POINT_COSTS.IMPROVE || 0
@@ -90,33 +100,77 @@ export function executeDiplomaticActionDomain(params: {
         ...nations,
         [playerNationId]: spent.nation,
       },
-      relations: {
-        ...relations,
-        [key]: {
-          ...currentRel,
-          score: Math.min(100, currentRel.score + 20),
-        },
+      startEnvoy: {
+        targetNationId,
+        mission: 'IMPROVE',
+        dailyDelta: 3,
+        daysRemaining: 10,
+        totalDays: 10,
+        startScore: currentRel.score,
       },
-      toast: `${target.name} ile diplomatik ilişkiler +20 gelişti (-${DIPLOMACY_POINT_COSTS.IMPROVE} DP).`,
+      toast: `🕊️ ${target.name} başkentine Elçi Heyeti gönderildi (10 gün boyunca günde +3 İlişki).`,
+    };
+  }
+
+  if (action === 'DAMAGE') {
+    if (currentRel.score <= -100) {
+      return { toast: `${target.name} ile ilişkiler zaten en düşük seviyede (-100).` };
+    }
+    const spent = spendDiplomacyPoints(
+      playerNation,
+      DIPLOMACY_POINT_COSTS.DAMAGE || 5
+    );
+    if ('error' in spent) return { toast: spent.error };
+    sound.playClick();
+    return {
+      nations: {
+        ...nations,
+        [playerNationId]: spent.nation,
+      },
+      startEnvoy: {
+        targetNationId,
+        mission: 'DAMAGE',
+        dailyDelta: -3,
+        daysRemaining: 10,
+        totalDays: 10,
+        startScore: currentRel.score,
+      },
+      toast: `⚡ ${target.name} ile ilişkileri düşürme süreci başlatıldı (10 gün boyunca günde -3 İlişki).`,
     };
   }
 
   if (action === 'INSULT') {
+    const lastInsultTick = playerNation.lastInsultTickByNation?.[targetNationId];
+    if (typeof lastInsultTick === 'number' && tick - lastInsultTick < 5) {
+      const remDays = Math.max(1, 5 - (tick - lastInsultTick));
+      return {
+        toast: `⏳ ${target.name} devletine tekrar sert nota/hakaret göndermek için ${remDays} gün beklemelisiniz.`,
+      };
+    }
     const spent = spendDiplomacyPoints(
       playerNation,
       DIPLOMACY_POINT_COSTS.INSULT || 0
     );
     if ('error' in spent) return { toast: spent.error };
-    sound.playClick();
+    sound.playWarHorn();
+    const updatedInsultNation: Nation = {
+      ...spent.nation,
+      prestige: Math.min(100, Number(((spent.nation.prestige ?? 10) + 1).toFixed(1))),
+      lastInsultTickByNation: {
+        ...(spent.nation.lastInsultTickByNation || {}),
+        [targetNationId]: tick,
+      },
+    };
     return {
-      nations: { ...nations, [playerNationId]: spent.nation },
+      nations: { ...nations, [playerNationId]: updatedInsultNation },
       relations: {
         ...relations,
         [key]: {
           ...currentRel,
           isAllied: false,
+          allianceType: null,
           hasNonAggression: false,
-          score: Math.max(-100, currentRel.score - 25),
+          score: Math.max(-100, currentRel.score - 30),
         },
       },
       newsEvents: prependNews(
@@ -124,10 +178,10 @@ export function executeDiplomaticActionDomain(params: {
         tick,
         gameMode,
         `Diplomatik Gerilim: ${playerNation.name} - ${target.name}`,
-        `${playerNation.name} Dışişleri Bakanlığı, ${target.name} hükümetine sert bir diplomatik nota verdi.`,
+        `${playerNation.name} Dışişleri, ${target.name} sarayına ağır hakaret içeren bir nota gönderdi (-30 İlişki).`,
         'WAR'
       ),
-      toast: `${target.name} hükümetine diplomatik nota verildi (-25 İlişki).`,
+      toast: `💢 ${target.name} hükümetine sert diplomatik hakaret gönderildi (-30 İlişki, +1 Prestij).`,
     };
   }
 
@@ -535,7 +589,8 @@ export function executeDiplomaticActionDomain(params: {
       playerNationId,
       targetNationId,
       relations,
-      nations
+      nations,
+      calledAllyIds
     );
 
     const defAllyNames = resolution.defensiveAlliesCalled
@@ -595,10 +650,10 @@ export function executeDiplomaticActionDomain(params: {
 
     let warDesc = `${playerNation.name}, ${target.name} devletine resmen savaş ilan etti.`;
     if (attAllyNames.length > 0) {
-      warDesc += ` Saldırı Paktı müttefikleriniz (${attAllyNames.join(', ')}) ortak taarruza katıldı.`;
+      warDesc += ` Çağrılan müttefikleriniz (${attAllyNames.join(', ')}) ortak taarruza katıldı.`;
     }
     if (defAllyNames.length > 0) {
-      warDesc += ` Hedefin Savunma Paktı ortakları (${defAllyNames.join(', ')}) savunmaya katıldı!`;
+      warDesc += ` Hedefin ittifak ortakları (${defAllyNames.join(', ')}) savunmaya katıldı!`;
     }
 
     let updatedNews = prependNews(
@@ -622,15 +677,57 @@ export function executeDiplomaticActionDomain(params: {
       }
     }
 
+    const warAeGain = adjustAggressiveExpansionGain(
+      spent.nation,
+      WAR_DECLARATION_BASE_AE
+    );
+    const playerAfterWarAe: Nation = {
+      ...spent.nation,
+      aggressiveExpansion: Math.min(
+        100,
+        Number(((spent.nation.aggressiveExpansion || 0) + warAeGain).toFixed(1))
+      ),
+    };
+
     const baseToast =
       defAllyNames.length > 0
-        ? `⚔️ ${target.name} ile savaş başladı (Savunma Paktı: ${defAllyNames.join(', ')})`
+        ? `⚔️ ${target.name} ile savaş başladı (+${warAeGain} Agresiflik, Savunma İttifakı: ${defAllyNames.join(', ')})`
         : attAllyNames.length > 0
-        ? `⚔️ ${target.name} ile savaş başladı (Müttefik: ${attAllyNames.join(', ')})`
-        : `⚔️ ${target.name} devletine savaş ilan edildi!`;
+        ? `⚔️ ${target.name} ile savaş başladı (+${warAeGain} Agresiflik, Müttefik: ${attAllyNames.join(', ')})`
+        : `⚔️ ${target.name} devletine savaş ilan edildi (+${warAeGain} Agresiflik)!`;
     const nextNations = {
       ...(aiCounter?.updatedNations || nations),
-      [playerNationId]: spent.nation,
+      [playerNationId]: playerAfterWarAe,
+    };
+
+    const coalitionRes = evaluateWorldCoalitionAt100AE({
+      targetNationId: playerNationId,
+      nations: nextNations,
+      territories: aiCounter?.updatedTerritories || territories,
+      relations: nextRelations,
+      wars: nextWars,
+      tick,
+      gameMode,
+      newsEvents: updatedNews,
+      playerNationId,
+    });
+
+    const primaryAnnouncement = coalitionRes.warAnnouncement || {
+      id: newWar.id,
+      warId: newWar.id,
+      warName: newWar.name,
+      attackerId: playerNationId,
+      attackerName: playerNation.name,
+      attackerFlagCode: playerNation.flagCode,
+      attackerColor: playerNation.color,
+      defenderId: targetNationId,
+      defenderName: target.name,
+      defenderFlagCode: target.flagCode,
+      defenderColor: target.color,
+      isPlayerAttacker: true,
+      isPlayerDefender: false,
+      alliesJoinedNames: [...attAllyNames, ...defAllyNames],
+      createdAtMs: Date.now(),
     };
 
     return {
@@ -641,10 +738,11 @@ export function executeDiplomaticActionDomain(params: {
       ...(aiCounter?.newMovements?.length
         ? { movements: [...movements, ...aiCounter.newMovements] }
         : {}),
-      wars: nextWars,
-      relations: nextRelations,
-      newsEvents: updatedNews,
-      toast: baseToast,
+      wars: coalitionRes.wars,
+      relations: coalitionRes.relations,
+      newsEvents: coalitionRes.newsEvents,
+      warAnnouncement: primaryAnnouncement,
+      toast: coalitionRes.triggered && coalitionRes.toast ? coalitionRes.toast : baseToast,
     };
   }
 

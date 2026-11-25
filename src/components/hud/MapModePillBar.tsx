@@ -1,32 +1,27 @@
 import React, { useState } from 'react';
 import {
   Crosshair,
-  Hammer,
   Navigation,
-  ShieldPlus,
   UserPlus,
   MousePointerClick,
   Info,
-  Layers3,
   ChevronDown,
   ChevronUp,
   X,
 } from 'lucide-react';
-import { BuildingType, MapMode, Territory } from '../../types/game';
+import { MapMode, Territory } from '../../types/game';
 import {
   BatchRecruitScope,
   BatchRecruitUnitMode,
-  SPECIALTY_PRODUCTION_OPTIONS,
-  SpecialtyProductionId,
-  getSpecialtyOptionForResource,
-  getSpecialtyTerritoryEligibility,
 } from '../../engine/empireAndArmyActions';
-import { isTerritoryCoastal } from '../../engine/worldBuilder';
+import {
+  MIN_MARCH_TROOPS,
+  computeSendableTroops,
+} from '../../engine/actions/armyMovementActions';
 import { sound } from '../../utils/soundEngine';
 import { CULTURES, RELIGIONS } from '../../data/religionAndCultureData';
-import { BUILDINGS, RESOURCE_INFO } from '../../data/world2026Data';
+import { RESOURCE_INFO } from '../../data/world2026Data';
 import {
-  AoH3GlyphName,
   AoH3GlyphSvg,
   ReligionSvg,
   ResourceSvg,
@@ -35,8 +30,6 @@ import {
 export type MapMacroMode =
   | 'NONE'
   | 'RECRUIT_INFANTRY'
-  | 'BUILD_ECONOMY'
-  | 'BUILD_FORT'
   | 'BATCH_MARCH';
 
 interface MapModePillBarProps {
@@ -44,19 +37,16 @@ interface MapModePillBarProps {
   macroMode?: MapMacroMode;
   macroRecruitUnitMode?: BatchRecruitUnitMode;
   toastMessage: string | null;
-  economySelectedIds?: string[];
   batchMarchSourceIds?: string[];
   batchMarchTargetPicking?: boolean;
   batchMarchRatio?: number;
   territories?: Record<string, Territory>;
-  playerTreasury?: number;
   hasBottomCard?: boolean;
   hideWhenDrawerOpen?: boolean;
-  outlinerSlot?: React.ReactNode;
   belowTraySlot?: React.ReactNode;
   /** AoH3 selected-province flag chips, shown directly under the tool row. */
   selectionChipsSlot?: React.ReactNode;
-  onSetMapMode: (mode: MapMode) => void;
+  onSetMapMode?: (mode: MapMode) => void;
   onSetMacroMode?: (mode: MapMacroMode) => void;
   onSetMacroRecruitUnitMode?: (unitMode: BatchRecruitUnitMode) => void;
   onBatchRecruitUnits?: (
@@ -65,75 +55,38 @@ interface MapModePillBarProps {
     territoryId?: string,
     roundsPerCity?: number
   ) => void;
-  onToggleEconomyCity?: (territoryId: string) => void;
-  onClearEconomyCities?: () => void;
   onToggleBatchCity?: (territoryId: string) => void;
   onSelectReadyBatchCities?: () => void;
   onSelectBorderBatchCities?: () => void;
   onClearBatchCities?: () => void;
   onSetBatchTargetPicking?: (picking: boolean) => void;
   onSetBatchMarchRatio?: (ratio: number) => void;
-  onInvestSpecialtyProduction?: (
-    territoryIds: string[],
-    specialtyId: SpecialtyProductionId
-  ) => void;
-  onUpgradeBuildingBatch?: (
-    building: BuildingType,
-    territoryIds?: string[]
-  ) => void;
   onDismissToast?: () => void;
 }
-
-const MAP_MODES: ReadonlyArray<{
-  id: MapMode;
-  label: string;
-  glyph: AoH3GlyphName;
-  tone: string;
-}> = [
-  { id: 'POLITICAL', label: 'Siyasi', glyph: 'crown', tone: 'text-[#e0b86e]' },
-  { id: 'ECONOMIC', label: 'Ekonomi', glyph: 'gold', tone: 'text-[#e0b86e]' },
-  { id: 'RESOURCES', label: 'Kaynaklar', glyph: 'hammer', tone: 'text-[#e0b86e]' },
-  { id: 'DIPLOMATIC', label: 'Diplomasi', glyph: 'scale', tone: 'text-[#e0b86e]' },
-  { id: 'MILITARY', label: 'Askeri', glyph: 'sword', tone: 'text-rose-300' },
-  { id: 'RELIGION', label: 'Din', glyph: 'fleur', tone: 'text-[#e0b86e]' },
-  { id: 'CULTURE', label: 'Kültür', glyph: 'flag', tone: 'text-[#e0b86e]' },
-  { id: 'ASSIMILATION', label: 'Asimilasyon', glyph: 'globe', tone: 'text-[#e0b86e]' },
-  { id: 'TERRAIN', label: 'Arazi', glyph: 'compass', tone: 'text-[#e0b86e]' },
-  { id: 'IDEOLOGY', label: 'İdeoloji', glyph: 'star', tone: 'text-[#e0b86e]' },
-];
 
 export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   mapMode,
   macroMode = 'NONE',
   macroRecruitUnitMode = 'infantry',
-  economySelectedIds = [],
   batchMarchSourceIds = [],
   batchMarchTargetPicking = false,
   batchMarchRatio = 1,
   territories = {},
-  playerTreasury = 0,
   hasBottomCard = false,
   hideWhenDrawerOpen = false,
-  outlinerSlot,
   belowTraySlot,
   selectionChipsSlot,
-  onSetMapMode,
   onSetMacroMode,
   onSetMacroRecruitUnitMode,
   onBatchRecruitUnits,
-  onToggleEconomyCity,
-  onClearEconomyCities,
   onToggleBatchCity,
   onSelectReadyBatchCities,
   onSelectBorderBatchCities,
   onClearBatchCities,
   onSetBatchTargetPicking,
   onSetBatchMarchRatio,
-  onInvestSpecialtyProduction,
-  onUpgradeBuildingBatch,
 }) => {
   const [legendOpen, setLegendOpen] = useState(true);
-  const [openTray, setOpenTray] = useState<'NONE' | 'MODES' | 'MACRO'>('NONE');
   const [macroBodyCollapsed, setMacroBodyCollapsed] = useState(false);
 
   const hasLegend =
@@ -142,8 +95,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
     mapMode === 'RELIGION' ||
     mapMode === 'CULTURE' ||
     mapMode === 'ASSIMILATION';
-  const activeModeMeta = MAP_MODES.find((m) => m.id === mapMode) || MAP_MODES[0];
-  const showMacroTray = openTray === 'MACRO' || macroMode !== 'NONE';
+  const showMacroTray = macroMode !== 'NONE';
 
   return (
     <>
@@ -152,113 +104,9 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
           hideWhenDrawerOpen ? 'portrait:max-[900px]:hidden' : ''
         }`}
       >
-        {/* Unified Non-Overlapping Top Row: [Map Lenses + Macro] on Left, [Ordular] on Right */}
-        <div className="flex flex-wrap items-start justify-between gap-1.5 w-full">
-          <div className="flex items-center gap-1 sm:gap-1.5 pointer-events-auto flex-wrap">
-            <button
-              type="button"
-              onClick={() => {
-                sound.playClick();
-                setOpenTray((prev) => (prev === 'MODES' ? 'NONE' : 'MODES'));
-              }}
-              className={`hud-mapmode-shell hud-surface min-h-[32px] sm:min-h-[34px] flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl border text-[10.5px] sm:text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
-                openTray === 'MODES'
-                  ? 'border-[#e0b86e] text-[#f3ead7]'
-                  : 'border-[#caa15a]/40 text-[#f3ead7] hover:border-[#e0b86e]'
-              }`}
-              aria-expanded={openTray === 'MODES'}
-              aria-label="Harita katmanlarını aç veya kapat"
-            >
-              <Layers3 className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
-              <span className="whitespace-nowrap inline-flex items-center gap-1">
-                <AoH3GlyphSvg name={activeModeMeta.glyph} className={`w-3 h-3 shrink-0 ${activeModeMeta.tone}`} />
-                <span>{activeModeMeta.label}</span>
-              </span>
-              {openTray === 'MODES' ? (
-                <ChevronUp className="w-3 h-3 text-[#b8a990] shrink-0" />
-              ) : (
-                <ChevronDown className="w-3 h-3 text-[#b8a990] shrink-0" />
-              )}
-            </button>
-
-            {onSetMacroMode && (
-              <button
-                type="button"
-                onClick={() => {
-                  sound.playClick();
-                  if (macroMode !== 'NONE') {
-                    onSetMacroMode('NONE');
-                    setOpenTray('NONE');
-                    setMacroBodyCollapsed(false);
-                  } else {
-                    setOpenTray((prev) => (prev === 'MACRO' ? 'NONE' : 'MACRO'));
-                  }
-                }}
-                className={`hud-macro-bar hud-surface min-h-[32px] sm:min-h-[34px] flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl border text-[10.5px] sm:text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
-                  macroMode !== 'NONE'
-                    ? 'border-[#e0b86e] bg-[#2a2117] text-[#f3ead7]'
-                    : openTray === 'MACRO'
-                    ? 'border-[#e0b86e] text-[#e0b86e]'
-                    : 'border-[#caa15a]/35 text-[#d8cbb5] hover:border-[#e0b86e]'
-                }`}
-                aria-expanded={showMacroTray}
-                aria-label="Hızlı işlemleri aç veya kapat"
-              >
-                <MousePointerClick className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
-                <span className="whitespace-nowrap inline-flex items-center gap-1">
-                  {macroMode === 'NONE'
-                    ? 'Hızlı İşlem'
-                    : macroMode === 'BUILD_ECONOMY'
-                    ? `Ekonomi (${economySelectedIds.length})`
-                    : macroMode === 'BATCH_MARCH'
-                    ? `Toplu Sevk (${batchMarchSourceIds.length})`
-                    : 'Aktif İşlem'}
-                  {macroMode !== 'NONE' && <X className="w-3 h-3 shrink-0" />}
-                </span>
-                {showMacroTray ? (
-                  <ChevronUp className="w-3 h-3 text-[#b8a990] shrink-0" />
-                ) : (
-                  <ChevronDown className="w-3 h-3 text-[#b8a990] shrink-0" />
-                )}
-              </button>
-            )}
-          </div>
-
-          {outlinerSlot}
-        </div>
-
         {selectionChipsSlot ? (
           <div className="pointer-events-auto max-w-full">{selectionChipsSlot}</div>
         ) : null}
-
-        {/* Expandable Row: AoH3 Map Lenses */}
-        {openTray === 'MODES' && (
-          <div className="hud-mapmode-shell hud-surface pointer-events-auto rounded-xl border border-[#caa15a]/45 shadow-xl overflow-hidden max-w-full sm:max-w-[640px]">
-            <div className="flex flex-nowrap items-center gap-1 p-1 overflow-x-auto no-scrollbar">
-              {MAP_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => {
-                    sound.playClick();
-                    onSetMapMode(m.id);
-                    setOpenTray('NONE');
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 border ${
-                    mapMode === m.id
-                      ? 'bg-[#caa15a] text-[#14100c] font-bold shadow-sm border-[#f3ead7]'
-                      : `border-transparent text-[#d8cbb5] hover:text-[#faf3e3] hover:bg-[#241c13]`
-                  }`}
-                >
-                  <AoH3GlyphSvg
-                    name={m.glyph}
-                    className={`w-3.5 h-3.5 shrink-0 ${mapMode === m.id ? 'text-[#14100c]' : m.tone}`}
-                  />
-                  <span>{m.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Expandable Row: AoH3 Mobile Macro-Builder & Compact Non-Blocking Multi-City Production Builder */}
         {onSetMacroMode && showMacroTray && (
@@ -269,15 +117,10 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   onClick={() => {
                     sound.playClick();
                     onSetMacroMode('NONE');
-                    setOpenTray('NONE');
                     setMacroBodyCollapsed(false);
                   }}
                   title="Normal Eyalet Seçim Modu"
-                  className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
-                    macroMode === 'NONE'
-                      ? 'bg-[#241c13] text-[#e0b86e] border border-[#caa15a]/45'
-                      : 'text-[#b8a990] hover:text-[#f3ead7]'
-                  }`}
+                  className="px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors text-[#b8a990] hover:text-[#f3ead7]"
                 >
                   <MousePointerClick className="w-3 h-3 shrink-0" />
                   <span>Seçim</span>
@@ -302,50 +145,6 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   <span>
                     <span className="lg:hidden">+Asker</span>
                     <span className="hidden lg:inline">+Asker Bas</span>
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    sound.playClick();
-                    setMacroBodyCollapsed(false);
-                    onSetMacroMode(
-                      macroMode === 'BUILD_ECONOMY' ? 'NONE' : 'BUILD_ECONOMY'
-                    );
-                  }}
-                  title="Şehirleri haritadan seçip İnek Çiftliği, Pamuk Tarlası, Kereste Ocağı veya Maden kurun"
-                  className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
-                    macroMode === 'BUILD_ECONOMY'
-                      ? 'bg-[#caa15a] text-[#14100c] shadow'
-                      : 'text-[#d8cbb5] hover:bg-[#caa15a]/15 hover:text-[#f3ead7]'
-                  }`}
-                >
-                  <Hammer className="w-3 h-3 shrink-0" />
-                  <span>
-                    <span className="lg:hidden">Ekonomi</span>
-                    <span className="hidden lg:inline">Ekonomi Kur</span>
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    sound.playClick();
-                    setMacroBodyCollapsed(false);
-                    onSetMacroMode(
-                      macroMode === 'BUILD_FORT' ? 'NONE' : 'BUILD_FORT'
-                    );
-                  }}
-                  title="Makro Tahkimat: Haritada kendi eyaletinize dokunarak Kale/Hisar yükseltin"
-                  className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
-                    macroMode === 'BUILD_FORT'
-                      ? 'bg-[#caa15a] text-[#14100c] shadow'
-                      : 'text-[#d8cbb5] hover:bg-[#caa15a]/15 hover:text-[#f3ead7]'
-                  }`}
-                >
-                  <ShieldPlus className="w-3 h-3 shrink-0" />
-                  <span>
-                    <span className="lg:hidden">Kale</span>
-                    <span className="hidden lg:inline">Kale Kur</span>
                   </span>
                 </button>
 
@@ -495,14 +294,12 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
             )}
 
             {/* Collapsed Mini Status Strip (keeps 85%+ of map open for tapping cities!) */}
-            {macroBodyCollapsed && (macroMode === 'BUILD_ECONOMY' || macroMode === 'BATCH_MARCH') && (
+            {macroBodyCollapsed && macroMode === 'BATCH_MARCH' && (
               <div className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-black/50 border border-[#3a2f22] text-[10px] text-[#f3ead7]">
                 <span className="truncate font-semibold flex items-center gap-1">
-                  <AoH3GlyphSvg name={macroMode === 'BUILD_ECONOMY' ? 'pin' : 'compass'} className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                  <AoH3GlyphSvg name="compass" className="w-3 h-3 text-[#e0b86e] shrink-0" />
                   <span className="truncate">
-                    {macroMode === 'BUILD_ECONOMY'
-                      ? `Haritadan şehir dokunun (${economySelectedIds.length} seçili)`
-                      : `Haritadan ordu şehri dokunun (${batchMarchSourceIds.length} seçili)`}
+                    {`Haritadan ordu şehri dokunun (${batchMarchSourceIds.length} seçili)`}
                   </span>
                 </span>
                 <button
@@ -514,264 +311,11 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   }}
                   className="px-2 py-0.5 rounded bg-[#caa15a] text-[#14100c] font-extrabold flex items-center gap-1 shrink-0 cursor-pointer"
                 >
-                  <span>Paneli Aç ({macroMode === 'BUILD_ECONOMY' ? economySelectedIds.length : batchMarchSourceIds.length})</span>
+                  <span>Paneli Aç ({batchMarchSourceIds.length})</span>
                   <ChevronDown className="w-3 h-3" />
                 </button>
               </div>
             )}
-
-            {/* Multi-City Production & Farm Selector Panel when "Ekonomi Kur" is active */}
-            {macroMode === 'BUILD_ECONOMY' && !macroBodyCollapsed && (() => {
-              const selectedTerrs = economySelectedIds
-                .map((id) => territories[id])
-                .filter((t): t is Territory => Boolean(t));
-              const matchingByResource: Record<string, Territory[]> = {};
-              for (const t of selectedTerrs) {
-                if (!matchingByResource[t.resource]) {
-                  matchingByResource[t.resource] = [];
-                }
-                matchingByResource[t.resource].push(t);
-              }
-              const availableOptions = SPECIALTY_PRODUCTION_OPTIONS.filter(
-                (opt) => (matchingByResource[opt.resource]?.length || 0) > 0
-              );
-
-              const autoEligiblePairs = selectedTerrs
-                .map((t) => ({
-                  t,
-                  opt: getSpecialtyOptionForResource(t.resource),
-                }))
-                .filter(({ t, opt }) => getSpecialtyTerritoryEligibility(t, opt).eligible);
-
-              const autoNaturalCost = autoEligiblePairs.reduce(
-                (sum, pair) => sum + pair.opt.costGold,
-                0
-              );
-              const canAffordAuto =
-                autoEligiblePairs.length > 0 && playerTreasury >= autoNaturalCost;
-
-              const shipyardDef = BUILDINGS.find((b) => b.id === 'shipyard');
-              const eligibleShipyardCities = selectedTerrs.filter((t) => {
-                if (!isTerritoryCoastal(t)) return false;
-                if ((t.buildings?.shipyard || 0) >= (shipyardDef?.maxLevel ?? 5))
-                  return false;
-                if ((t.constructionQueue || []).some((q) => q.building === 'shipyard'))
-                  return false;
-                return true;
-              });
-              const shipyardTotalCost = eligibleShipyardCities.reduce(
-                (sum, t) =>
-                  sum +
-                  Math.round(
-                    (shipyardDef?.baseCost ?? 520) *
-                      Math.pow(1.35, t.buildings?.shipyard || 0)
-                  ),
-                0
-              );
-
-              return (
-                <div
-                  data-testid="economy-macro-panel"
-                  className="rounded-lg bg-[#14110e]/95 border border-[#caa15a]/50 p-1.5 flex flex-col gap-1.5 shadow-xl"
-                >
-                  <div className="flex items-center justify-between gap-1.5 text-[10px]">
-                    <span className="text-[#e0b86e] font-bold truncate">
-                      {selectedTerrs.length === 0
-                        ? 'Haritada şehirlerinize dokunun'
-                        : `${selectedTerrs.length} şehir · Süreli & Sv.5`}
-                    </span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {selectedTerrs.length > 0 && onClearEconomyCities && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            sound.playClick();
-                            onClearEconomyCities();
-                          }}
-                          className="px-1.5 py-0.5 rounded bg-black/60 hover:bg-black/80 border border-[#caa15a]/30 text-[#d8cbb5] font-semibold cursor-pointer"
-                        >
-                          Temizle
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        data-testid="macro-tray-collapse-btn"
-                        onClick={() => {
-                          sound.playClick();
-                          setMacroBodyCollapsed(true);
-                        }}
-                        title="Haritadan rahat şehir seçmek için menüyü küçült"
-                        className="px-1.5 py-0.5 rounded bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/40 text-[#e0b86e] font-bold flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <span>Haritayı Gör</span>
-                        <ChevronUp className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {selectedTerrs.length > 0 && (
-                    <div className="flex flex-nowrap items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
-                      {selectedTerrs.map((t) => {
-                        const opt = getSpecialtyOptionForResource(t.resource);
-                        const elig = getSpecialtyTerritoryEligibility(t, opt);
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => onToggleEconomyCity?.(t.id)}
-                            className={`px-1.5 py-0.5 rounded-md border text-[10px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer ${
-                              elig.reason === 'MAXED'
-                                ? 'bg-[#1b1510] border-[#3a2f22] text-[#9b8d77]'
-                                : elig.reason === 'IN_PROGRESS'
-                                ? 'bg-[#241c13] border-[#caa15a]/60 text-[#e0b86e]'
-                                : 'bg-[#caa15a]/20 hover:bg-[#caa15a]/35 border-[#caa15a]/50 text-[#f3ead7]'
-                            }`}
-                          >
-                            <ResourceSvg resource={t.resource} className="w-3 h-3 text-[#e0b86e] shrink-0" />
-                            <span>{t.name.replace(/^★\s*/, '')}</span>
-                            <span className="font-mono-num text-[9px] opacity-80 inline-flex items-center gap-0.5">
-                              {elig.reason === 'IN_PROGRESS' ? (
-                                <AoH3GlyphSvg name="hammer" className="w-2.5 h-2.5 shrink-0" />
-                              ) : (
-                                `${elig.currentLvl}/${elig.maxLvl}`
-                              )}
-                            </span>
-                            <X className="w-2.5 h-2.5 text-[#e0b86e] shrink-0" />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {selectedTerrs.length > 0 && (
-                    <>
-                      {selectedTerrs.length > 1 && availableOptions.length > 1 && (
-                        <button
-                          type="button"
-                          disabled={autoEligiblePairs.length === 0}
-                          onClick={() => {
-                            onInvestSpecialtyProduction?.(
-                              economySelectedIds,
-                              'AUTO_NATURAL'
-                            );
-                          }}
-                          className={`w-full px-2 py-1 rounded-lg border text-left transition-colors flex items-center justify-between gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                            canAffordAuto
-                              ? 'bg-[#2a2117] hover:bg-[#382b1d] border-[#caa15a]/70 text-[#f3ead7]'
-                              : 'bg-black/45 border-rose-500/40 text-rose-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <AoH3GlyphSvg name="bolt" className="w-3 h-3 text-[#e0b86e] shrink-0" />
-                            <span className="text-[10px] font-extrabold truncate">
-                              {autoEligiblePairs.length > 0
-                                ? `Uygun Tesisleri Başlat (${autoEligiblePairs.length}/${selectedTerrs.length} Şehir)`
-                                : 'Seçili Şehirlerin Hepsi Azami / İnşada'}
-                            </span>
-                          </div>
-                          {autoEligiblePairs.length > 0 && (
-                            <span className="text-[10px] font-mono-num font-extrabold text-[#e0b86e] shrink-0">
-                              {autoNaturalCost}A
-                            </span>
-                          )}
-                        </button>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-1 max-h-[155px] overflow-y-auto pr-0.5">
-                        {availableOptions.map((opt) => {
-                          const matchingCities = matchingByResource[opt.resource] || [];
-                          const eligResults = matchingCities.map((c) => ({
-                            city: c,
-                            ...getSpecialtyTerritoryEligibility(c, opt),
-                          }));
-                          const eligibleCities = eligResults.filter((r) => r.eligible);
-                          const maxedCount = eligResults.filter((r) => r.reason === 'MAXED').length;
-                          const queuedCount = eligResults.filter((r) => r.reason === 'IN_PROGRESS').length;
-                          const matchingIds = eligibleCities.map((r) => r.city.id);
-                          const totalCost = opt.costGold * eligibleCities.length;
-                          const canAfford = eligibleCities.length > 0 && playerTreasury >= totalCost;
-                          const isLocked = eligibleCities.length === 0;
-
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              disabled={isLocked}
-                              onClick={() => {
-                                onInvestSpecialtyProduction?.(matchingIds, opt.id);
-                              }}
-                              title={opt.description}
-                              className={`px-2 py-1 rounded-lg border text-left transition-colors flex items-center justify-between gap-1 cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed ${
-                                isLocked
-                                  ? 'bg-[#14100c] border-[#3a2f22] text-[#9b8d77]'
-                                  : canAfford
-                                  ? 'bg-black/55 hover:bg-[#caa15a]/20 border-[#caa15a]/50 text-[#f3ead7]'
-                                  : 'bg-black/40 border-rose-500/35 text-rose-300'
-                              }`}
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1">
-                                  <ResourceSvg resource={opt.resource} className="w-3 h-3 text-[#e0b86e] shrink-0" />
-                                  <span className="text-[10px] font-bold truncate">
-                                    {opt.shortName} ({eligibleCities.length}/{matchingCities.length})
-                                  </span>
-                                </div>
-                                <div className="text-[9px] text-[#c5b79e] truncate font-mono-num flex items-center gap-1">
-                                  {isLocked ? (
-                                    queuedCount > 0 ? (
-                                      <>
-                                        <AoH3GlyphSvg name="hammer" className="w-2.5 h-2.5 shrink-0" />
-                                        <span>İnşa Sürüyor</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <AoH3GlyphSvg name="check" className="w-2.5 h-2.5 shrink-0" />
-                                        <span>Azami 5/5</span>
-                                      </>
-                                    )
-                                  ) : (
-                                    <span>{`${opt.buildDays}g · +${opt.gdpBonus} GSYİH`}</span>
-                                  )}
-                                  {!isLocked && maxedCount > 0 ? ` · ${maxedCount} tam` : ''}
-                                </div>
-                              </div>
-                              <span className="text-[10px] font-mono-num font-bold text-[#e0b86e] shrink-0">
-                                {isLocked ? '—' : `${totalCost}A`}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {eligibleShipyardCities.length > 0 && onUpgradeBuildingBatch && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onUpgradeBuildingBatch(
-                              'shipyard',
-                              eligibleShipyardCities.map((c) => c.id)
-                            )
-                          }
-                          className={`w-full px-2 py-1 rounded-lg border text-left transition-colors flex items-center justify-between gap-2 cursor-pointer ${
-                            playerTreasury >= shipyardTotalCost
-                              ? 'bg-[#1b1510] hover:bg-[#2a2117] border-[#caa15a]/55 text-[#f3ead7]'
-                              : 'bg-black/45 border-rose-500/40 text-rose-300'
-                          }`}
-                        >
-                          <span className="text-[10px] font-bold truncate flex items-center gap-1">
-                            <AoH3GlyphSvg name="anchor" className="w-3 h-3 text-[#e0b86e] shrink-0" />
-                            <span>Kıyı Limanı & Tersane ({eligibleShipyardCities.length}/{selectedTerrs.length} Kıyı)</span>
-                          </span>
-                          <span className="text-[10px] font-mono-num font-bold text-[#e0b86e] shrink-0">
-                            {shipyardTotalCost}A
-                          </span>
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })()}
 
             {/* Multi-City Batch Army Dispatch Panel when "Toplu Sevk" is active */}
             {macroMode === 'BATCH_MARCH' && !macroBodyCollapsed && (() => {
@@ -780,14 +324,14 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 .filter((t): t is Territory => Boolean(t));
 
               const stagedTroops = selectedArmies.reduce((sum, t) => {
-                const sendable = Math.max(0, Math.floor(t.garrison - 500));
+                const sendable = computeSendableTroops(t.garrison);
                 const amt = Math.min(sendable, Math.round(sendable * batchMarchRatio));
-                return sum + (amt >= 1000 ? amt : 0);
+                return sum + (amt >= MIN_MARCH_TROOPS ? amt : 0);
               }, 0);
 
               const readyCityCount = selectedArmies.filter((t) => {
-                const sendable = Math.max(0, Math.floor(t.garrison - 500));
-                return Math.min(sendable, Math.round(sendable * batchMarchRatio)) >= 1000;
+                const sendable = computeSendableTroops(t.garrison);
+                return Math.min(sendable, Math.round(sendable * batchMarchRatio)) >= MIN_MARCH_TROOPS;
               }).length;
 
               return (
@@ -864,7 +408,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   {selectedArmies.length > 0 && (
                     <div className="flex flex-nowrap gap-1 overflow-x-auto no-scrollbar pb-0.5">
                       {selectedArmies.map((t) => {
-                        const sendable = Math.max(0, Math.floor(t.garrison - 500));
+                        const sendable = computeSendableTroops(t.garrison);
                         const sendAmt = Math.min(
                           sendable,
                           Math.round(sendable * batchMarchRatio)
@@ -875,7 +419,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                             type="button"
                             onClick={() => onToggleBatchCity?.(t.id)}
                             className={`px-1.5 py-0.5 rounded-md border text-[10px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer ${
-                              sendAmt >= 1000
+                              sendAmt >= MIN_MARCH_TROOPS
                                 ? 'bg-[#caa15a]/20 hover:bg-[#caa15a]/35 border-[#caa15a]/55 text-[#f3ead7]'
                                 : 'bg-rose-950/50 border-rose-500/45 text-rose-200'
                             }`}

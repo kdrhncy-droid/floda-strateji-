@@ -77,8 +77,11 @@ interface WorldMapCanvasProps {
   focusCoordsSignal?: { coords: [number, number]; seq: number } | null;
   /** Imperative zoom from the AoH3 top-bar `-` / `+` plaque. */
   zoomCommand?: { factor: number; seq: number } | null;
-  /** Bottom-right AoH3 world plate. Hidden on portrait phones by default. */
+  /** Bottom-right AoH3 world plate (visible on all viewports with minimize button). */
   showMinimap?: boolean;
+  /** Optional HUD stack (notifications / chronicle) pinned directly above the bottom-right minimap. */
+  minimapTopSlot?: React.ReactNode;
+  onSetMapMode?: (mode: MapMode) => void;
   onSelectTerritory: (territoryId: string | null) => void;
   onSelectSeaArmy?: (seaArmyId: string | null) => void;
   onExecuteArmyMove: (fromId: string, toId: string) => void;
@@ -120,6 +123,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   focusCoordsSignal = null,
   zoomCommand = null,
   showMinimap = true,
+  minimapTopSlot,
+  onSetMapMode,
   onSelectTerritory,
   onSelectSeaArmy,
   onExecuteArmyMove,
@@ -158,6 +163,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     borderThickness: BorderThicknessOption;
   } | null>(null);
   const lastCenteredKeyRef = useRef<string>('');
+  const lastFocusCapitalSignalRef = useRef<number>(focusCapitalSignal);
+  const lastFocusCoordsSeqRef = useRef<number>(focusCoordsSignal?.seq || 0);
   const projectionCacheRef = useRef<{
     dimsKey: string;
     projection: GeoProjection;
@@ -354,11 +361,11 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     return () => ro.disconnect();
   }, [reprojectOnResize]);
 
-  // Center on capital once when campaign starts or nation changes
+  // Center on capital ONCE when campaign starts or nation changes (never re-snaps on war ticks or capital relocation)
   useEffect(() => {
     const capId =
       nations[playerNationId]?.capitalTerritoryId || playerNationId;
-    const key = `${playerNationId}_${capId}_${features.length}`;
+    const key = `${playerNationId}_${features.length}`;
     if (
       playerNationId &&
       territories[capId] &&
@@ -369,9 +376,15 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     }
   }, [playerNationId, nations, features.length, territories, centerOnTerritory]);
 
-  // Re-center on player's capital whenever triggered from TopHudBar
+  // Re-center on player's capital ONLY when focusCapitalSignal explicitly increments from TopHudBar
   useEffect(() => {
-    if (focusCapitalSignal <= 0) return;
+    if (
+      focusCapitalSignal <= 0 ||
+      focusCapitalSignal === lastFocusCapitalSignalRef.current
+    ) {
+      return;
+    }
+    lastFocusCapitalSignalRef.current = focusCapitalSignal;
     const capId =
       nations[playerNationId]?.capitalTerritoryId || playerNationId;
     if (capId && territories[capId]) {
@@ -381,9 +394,13 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     }
   }, [focusCapitalSignal, nations, playerNationId, territories, centerOnTerritory]);
 
-  // Smoothly focus camera on open-sea coordinates when a fleet is selected from Outliner
+  // Smoothly focus camera on open-sea coordinates ONLY when focusCoordsSignal.seq increments
   useEffect(() => {
-    if (!focusCoordsSignal || focusCoordsSignal.seq <= 0) return;
+    const seq = focusCoordsSignal?.seq || 0;
+    if (!focusCoordsSignal || seq <= 0 || seq === lastFocusCoordsSeqRef.current) {
+      return;
+    }
+    lastFocusCoordsSeqRef.current = seq;
     centerOnCoords(focusCoordsSignal.coords, 2.5);
   }, [focusCoordsSignal, centerOnCoords]);
 
@@ -752,15 +769,21 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         )}
 
       {showMinimap && (
-        <div className="absolute bottom-2.5 right-2.5 z-20 hidden lg:block">
+        <div
+          data-testid="minimap-hud-dock"
+          className="hud-minimap-dock absolute bottom-2 right-2 z-[22] flex flex-col items-end gap-1.5 pointer-events-none"
+        >
+          {minimapTopSlot}
           <AoH3Minimap
             features={features}
             territories={territories}
             nations={nations}
             playerNationId={playerNationId}
+            mapMode={mapMode}
             transform={transform}
             viewportWidth={containerRef.current?.clientWidth || 1024}
             viewportHeight={containerRef.current?.clientHeight || 640}
+            onSetMapMode={onSetMapMode}
             onJumpToCoords={(coords) =>
               centerOnCoords(coords, Math.max(2.1, Math.min(6, transform.k)))
             }

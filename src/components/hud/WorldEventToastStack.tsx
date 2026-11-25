@@ -78,7 +78,6 @@ function getEventAccent(type: WorldNewsEvent['type']): {
 export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
   newsEvents,
   toastMessage,
-  isDrawerOpen = false,
   onDismissToast,
   onOpenNewsFeed,
 }) => {
@@ -134,45 +133,44 @@ export const WorldEventToastStack: React.FC<WorldEventToastStackProps> = ({
   // When a direct toastMessage is active, suppress redundant simultaneous liveToast so only ONE compact notification renders on the right
   const visibleNewsToasts = toastMessage ? [] : liveToasts;
 
+  if (!toastMessage && visibleNewsToasts.length === 0) {
+    return null;
+  }
+
   return (
     <div
+      data-testid="world-event-toast-stack"
       aria-live="polite"
-      className={`hud-world-toast-stack absolute z-[55] pointer-events-none flex flex-col items-end gap-1 w-[min(220px,calc(100vw-1rem))] sm:w-[255px] right-2 ${
-        isDrawerOpen
-          ? 'top-1.5 sm:top-[3.15rem]'
-          : 'top-[3.05rem] sm:top-[3.15rem]'
-      }`}
+      className="hud-world-toast-stack relative pointer-events-none flex flex-col items-end gap-1 w-[176px] sm:w-[228px]"
     >
-      {/* Unified AoH3 Horizontal Action / War Toast Ribbon */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        onClick={() => onDismissToast?.()}
-        className={
-          toastMessage
-            ? 'hud-toast-banner pointer-events-auto w-full rounded-lg bg-[#14110e]/95 border border-[#caa15a]/65 shadow-xl px-2.5 py-1.5 text-[10px] font-semibold text-[#f5ecd9] flex items-center gap-1.5 cursor-pointer backdrop-blur-sm'
-            : 'sr-only'
-        }
-      >
-        <Bell className="w-3 h-3 text-amber-400 shrink-0" />
-        <span className="flex-1 min-w-0 leading-tight line-clamp-2 break-words">
-          {toastMessage ?? ''}
-        </span>
-        {toastMessage && onDismissToast && (
-          <button
-            type="button"
-            aria-label="Bildirimi kapat"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDismissToast();
-            }}
-            className="w-4 h-4 rounded text-[#c5b79e] hover:text-white hover:bg-black/50 flex items-center justify-center shrink-0"
-          >
-            <X className="w-2.5 h-2.5" />
-          </button>
-        )}
-      </div>
+      {/* Unified AoH3 Horizontal Action / War Toast Ribbon (sits directly above Minimap, always under open menus) */}
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          onClick={() => onDismissToast?.()}
+          className="hud-toast-banner pointer-events-auto w-full rounded-lg bg-[#14110e]/95 border border-[#caa15a]/65 shadow-xl px-2.5 py-1.5 text-[10px] font-semibold text-[#f5ecd9] flex items-center gap-1.5 cursor-pointer backdrop-blur-sm"
+        >
+          <Bell className="w-3 h-3 text-amber-400 shrink-0" />
+          <span className="flex-1 min-w-0 leading-tight line-clamp-2 break-words">
+            {toastMessage}
+          </span>
+          {onDismissToast && (
+            <button
+              type="button"
+              aria-label="Bildirimi kapat"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDismissToast();
+              }}
+              className="w-4 h-4 rounded text-[#c5b79e] hover:text-white hover:bg-black/50 flex items-center justify-center shrink-0 cursor-pointer"
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Compact AoH3 Horizontal World Event Ribbon */}
       {visibleNewsToasts.map(({ event }) => {

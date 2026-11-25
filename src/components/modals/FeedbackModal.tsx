@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
   Copy,
@@ -50,9 +50,18 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<number | null>(null);
 
   const dialogRef = useAccessibleDialog(isOpen, onClose);
   const hardwareTier = useMemo(() => detectHardwareProfile().label, []);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -114,7 +123,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       setCopied(true);
       setErrorMsg(null);
       setStatusMsg('Geri bildirim metni panoya kopyalandı; istediğin yere yapıştırıp gönderebilirsin.');
-      setTimeout(() => setCopied(false), 2600);
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+      copiedTimerRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copiedTimerRef.current = null;
+      }, 2600);
     } catch {
       setErrorMsg('Pano izni alınamadı; lütfen taslağı kaydedip e-posta seçeneğini kullan.');
     }

@@ -67,6 +67,7 @@ function extractFullTextFromTarget(
 export const FullTextTooltipOverlay: React.FC = () => {
   const [popup, setPopup] = useState<TooltipPopupState | null>(null);
   const timerRef = useRef<number | null>(null);
+  const suppressTimerRef = useRef<number | null>(null);
   const startPtRef = useRef<{ x: number; y: number } | null>(null);
   const suppressNextClickRef = useRef(false);
 
@@ -75,6 +76,13 @@ export const FullTextTooltipOverlay: React.FC = () => {
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
+      }
+    };
+
+    const clearSuppressTimer = () => {
+      if (suppressTimerRef.current !== null) {
+        window.clearTimeout(suppressTimerRef.current);
+        suppressTimerRef.current = null;
       }
     };
 
@@ -106,8 +114,10 @@ export const FullTextTooltipOverlay: React.FC = () => {
           x: px,
           y: py,
         });
-        window.setTimeout(() => {
+        clearSuppressTimer();
+        suppressTimerRef.current = window.setTimeout(() => {
           suppressNextClickRef.current = false;
+          suppressTimerRef.current = null;
         }, 400);
       }, LONG_PRESS_MS);
     };
@@ -133,6 +143,7 @@ export const FullTextTooltipOverlay: React.FC = () => {
         e.preventDefault();
         e.stopPropagation();
         suppressNextClickRef.current = false;
+        clearSuppressTimer();
       }
     };
 
@@ -149,6 +160,7 @@ export const FullTextTooltipOverlay: React.FC = () => {
 
     return () => {
       clearTimer();
+      clearSuppressTimer();
       window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerEnd);

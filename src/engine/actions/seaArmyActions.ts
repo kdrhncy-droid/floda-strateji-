@@ -7,6 +7,7 @@ import {
   SeaArmy,
   SpeedLevel,
   Territory,
+  WarAnnouncement,
   WorldNewsEvent,
 } from '../../types/game';
 import {
@@ -332,6 +333,7 @@ export function executeDisembarkFromSeaDomain(params: {
   let nextWars = wars;
   let nextNews = newsEvents;
   let toast = `${fleet.name}, ${toT.name} kıyısına çıkarma harekatı başlattı.`;
+  let warAnnouncement: WarAnnouncement | undefined;
 
   if (
     isForeign &&
@@ -359,6 +361,22 @@ export function executeDisembarkFromSeaDomain(params: {
       casualtiesDefender: 0,
     };
     nextWars = [...wars, newWar];
+    if (targetNation) {
+      warAnnouncement = {
+        id: newWar.id,
+        warName: newWar.name,
+        attackerId: playerNationId,
+        attackerName: playerNation.name,
+        attackerFlagCode: playerNation.flagCode,
+        attackerColor: playerNation.color,
+        defenderId: targetNation.id,
+        defenderName: targetNation.name,
+        defenderFlagCode: targetNation.flagCode,
+        defenderColor: targetNation.color,
+        isPlayerDefender: false,
+        createdAtMs: Date.now(),
+      };
+    }
     nextNews = [
       {
         id: `news_${Date.now()}_war`,
@@ -407,6 +425,7 @@ export function executeDisembarkFromSeaDomain(params: {
     seaArmyOrderSourceId: null,
     armyOrderSourceId: null,
     ...(speed === 0 ? { speed: 1 as SpeedLevel } : {}),
+    ...(warAnnouncement ? { warAnnouncement } : {}),
     toastMessage: toast,
   };
 }

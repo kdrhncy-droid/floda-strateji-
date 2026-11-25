@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { MapPin } from 'lucide-react';
-import { BuildingType } from '../../types/game';
 import { CommandDrawersProps } from './drawerTypes';
-import { BUILDINGS, RESOURCE_INFO } from '../../data/world2026Data';
+import { RESOURCE_INFO } from '../../data/world2026Data';
 import { calculateProvinceDevelopment } from '../../engine/simulationEngine';
-import { isTerritoryCoastal } from '../../engine/worldBuilder';
 import {
   evaluateActiveStraits,
   TRADE_RAID_INFLUENCE_COST,
@@ -33,13 +31,11 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
   onRaidEnemyTradeRoutes,
   onBatchAssimilate,
   onBatchStabilityFestival,
-  onBatchUpgradeBuilding,
   onBatchBorderMobilization,
   onSelectTerritory,
   gameMode = 'EMPIRES_1440',
 }) => {
   const [activeTab, setActiveTab] = useState<EconomyTab>('BUDGET');
-  const [batchBuilding, setBatchBuilding] = useState<BuildingType>('factory');
   const is1440 = gameMode === 'EMPIRES_1440';
   const tradeDetails = playerEconomy.tradeDetails;
   const domesticTrade = Math.max(
@@ -82,19 +78,6 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
     })
   ).length;
 
-  const batchBldDef =
-    BUILDINGS.find((b) => b.id === batchBuilding) || BUILDINGS[0];
-  const eligibleBatchBuildCities = ownedTerritories.filter((t) => {
-    if (batchBldDef.requiresCoastal && !isTerritoryCoastal(t)) return false;
-    if ((t.buildings?.[batchBuilding] || 0) >= batchBldDef.maxLevel) return false;
-    if ((t.constructionQueue || []).some((q) => q.building === batchBuilding))
-      return false;
-    return true;
-  });
-  const totalBatchBuildCost = eligibleBatchBuildCities.reduce((sum, t) => {
-    const lvl = t.buildings?.[batchBuilding] || 0;
-    return sum + Math.round(batchBldDef.baseCost * Math.pow(1.35, lvl));
-  }, 0);
   const borderMobUnitGold = playerNation.enactedReforms.includes(
     'ref_national_defense_industry'
   )
@@ -117,7 +100,6 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
   const hasBatchActions = Boolean(
     onBatchAssimilate ||
       onBatchStabilityFestival ||
-      onBatchUpgradeBuilding ||
       onBatchBorderMobilization
   );
 
@@ -500,7 +482,7 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
           </div>
 
           {hasBatchActions ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {onBatchAssimilate && (
                 <button
                   type="button"
@@ -580,52 +562,6 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
                       : 'Sınır Yok'}
                   </div>
                 </button>
-              )}
-
-              {onBatchUpgradeBuilding && (
-                <div className="p-3 rounded-xl bg-[#1b1510] border border-[#caa15a]/35 flex flex-col justify-between gap-2">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-1.5">
-                      <span className="text-xs font-bold text-[#f3ead7] flex items-center gap-1.5">
-                        <AoH3GlyphSvg name="hammer" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
-                        <span>Toplu İnşa</span>
-                      </span>
-                      <span className="font-mono-num text-[11px] font-bold text-[#e0b86e] shrink-0">
-                        {eligibleBatchBuildCities.length} Uygun
-                      </span>
-                    </div>
-                    <select
-                      aria-label="Toplu inşa edilecek bina türü"
-                      data-testid="batch-building-select"
-                      value={batchBuilding}
-                      onChange={(e) =>
-                        setBatchBuilding(e.target.value as BuildingType)
-                      }
-                      className="w-full min-h-[38px] px-2 py-1 rounded-lg bg-[#0f0c09] border border-[#caa15a]/35 text-xs text-[#f3ead7] font-medium focus:outline-none focus:border-[#e0b86e]"
-                    >
-                      {BUILDINGS.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                          {b.requiresCoastal ? ' (Kıyı)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <button
-                    type="button"
-                    data-testid="batch-build-btn"
-                    disabled={eligibleBatchBuildCities.length === 0}
-                    onClick={() => onBatchUpgradeBuilding(batchBuilding)}
-                    className="w-full min-h-[44px] px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#caa15a] to-[#e0b86e] hover:from-[#d8b16b] hover:to-[#ecc77e] text-[#14100c] text-[11px] font-extrabold transition-colors disabled:bg-[#120e0a] disabled:from-[#120e0a] disabled:to-[#120e0a] disabled:text-[#6e624f] disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {eligibleBatchBuildCities.length > 0
-                      ? `Başlat (${eligibleBatchBuildCities.length}Ş · ${totalBatchBuildCost.toLocaleString('tr-TR')}A)`
-                      : batchBldDef.requiresCoastal
-                      ? 'Kıyı Şehri Yok'
-                      : 'Uygun Şehir Yok'}
-                  </button>
-                </div>
               )}
             </div>
           ) : null}

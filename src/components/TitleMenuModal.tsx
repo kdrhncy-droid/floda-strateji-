@@ -1,8 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   BookOpen,
-  Calendar,
   Coins,
   FolderOpen,
   Globe,
@@ -30,10 +29,21 @@ import { useAccessibleDialog } from '../hooks/useAccessibleDialog';
 import { sound } from '../utils/soundEngine';
 import { PWAInstallButton } from './PWAInstallButton';
 import { TerrainPanoramaSvg } from './illustrations/AoH3Illustrations';
-import { FeedbackModal } from './modals/FeedbackModal';
-import { SaveManagerModal } from './modals/SaveManagerModal';
-import { StrategyTipsModal } from './modals/StrategyTipsModal';
-import { MainMenuSettingsModal } from './modals/MainMenuSettingsModal';
+
+const FeedbackModal = lazy(() =>
+  import('./modals/FeedbackModal').then((m) => ({ default: m.FeedbackModal }))
+);
+const SaveManagerModal = lazy(() =>
+  import('./modals/SaveManagerModal').then((m) => ({ default: m.SaveManagerModal }))
+);
+const StrategyTipsModal = lazy(() =>
+  import('./modals/StrategyTipsModal').then((m) => ({ default: m.StrategyTipsModal }))
+);
+const MainMenuSettingsModal = lazy(() =>
+  import('./modals/MainMenuSettingsModal').then((m) => ({
+    default: m.MainMenuSettingsModal,
+  }))
+);
 
 import menuLandscapeArt from '../assets/images/floda_menu_landscape_1795461163428.jpg';
 import menuPortraitArt from '../assets/images/floda_menu_portrait_1795461162475.jpg';
@@ -874,41 +884,47 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
         </div>
       )}
 
-      {/* Main Menu Settings Modal */}
-      <MainMenuSettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        settings={settings}
-        onUpdateSettings={onUpdateSettings}
-      />
+      <Suspense fallback={null}>
+        {showSettingsModal && (
+          <MainMenuSettingsModal
+            isOpen={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
+            settings={settings}
+            onUpdateSettings={onUpdateSettings}
+          />
+        )}
 
-      {/* Strategy Tips & Controls Modal */}
-      <StrategyTipsModal
-        isOpen={showTipsModal}
-        onClose={() => setShowTipsModal(false)}
-      />
+        {showTipsModal && (
+          <StrategyTipsModal
+            isOpen={showTipsModal}
+            onClose={() => setShowTipsModal(false)}
+          />
+        )}
 
-      {/* Offline Feedback & Suggestion Modal */}
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => setShowFeedbackModal(false)}
-        activeScenarioName={activeScenarioDef.name}
-        uiScale={settings.uiScale || 'STANDARD'}
-      />
+        {showFeedbackModal && (
+          <FeedbackModal
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+            activeScenarioName={activeScenarioDef.name}
+            uiScale={settings.uiScale || 'STANDARD'}
+          />
+        )}
 
-      {/* Main Menu Save Manager Modal */}
-      <SaveManagerModal
-        isOpen={showSaveManager}
-        onClose={() => setShowSaveManager(false)}
-        onLoadRecord={(rec) => {
-          if (onLoadSaveRecord) {
-            onLoadSaveRecord(rec);
-          } else {
-            onLoadSavedGame();
-          }
-        }}
-        onShowToast={onShowToast}
-      />
+        {showSaveManager && (
+          <SaveManagerModal
+            isOpen={showSaveManager}
+            onClose={() => setShowSaveManager(false)}
+            onLoadRecord={(rec) => {
+              if (onLoadSaveRecord) {
+                onLoadSaveRecord(rec);
+              } else {
+                onLoadSavedGame();
+              }
+            }}
+            onShowToast={onShowToast}
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

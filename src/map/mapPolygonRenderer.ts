@@ -199,7 +199,6 @@ export function renderOceanAndPolygons(params: {
     nations,
     relations,
     wars,
-    movements,
     projection,
     mapMode,
     playerNationId,

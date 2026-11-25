@@ -1,13 +1,33 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { CommandDrawersProps } from './drawers/drawerTypes';
-import { ProvinceDrawer } from './drawers/ProvinceDrawer';
-import { EconomyDrawer } from './drawers/EconomyDrawer';
-import { DiplomacyDrawer } from './drawers/DiplomacyDrawer';
-import { GovernmentTechDrawer } from './drawers/GovernmentTechDrawer';
-import { MilitaryDrawer } from './drawers/MilitaryDrawer';
 import { AoH3GlyphSvg } from './illustrations/AoH3Illustrations';
 import { sound } from '../utils/soundEngine';
+
+const ProvinceDrawer = lazy(() =>
+  import('./drawers/ProvinceDrawer').then((m) => ({ default: m.ProvinceDrawer }))
+);
+const EconomyDrawer = lazy(() =>
+  import('./drawers/EconomyDrawer').then((m) => ({ default: m.EconomyDrawer }))
+);
+const ConstructionDrawer = lazy(() =>
+  import('./drawers/ConstructionDrawer').then((m) => ({ default: m.ConstructionDrawer }))
+);
+const DiplomacyDrawer = lazy(() =>
+  import('./drawers/DiplomacyDrawer').then((m) => ({ default: m.DiplomacyDrawer }))
+);
+const GovernmentTechDrawer = lazy(() =>
+  import('./drawers/GovernmentTechDrawer').then((m) => ({ default: m.GovernmentTechDrawer }))
+);
+const MilitaryDrawer = lazy(() =>
+  import('./drawers/MilitaryDrawer').then((m) => ({ default: m.MilitaryDrawer }))
+);
+
+const DrawerChunkFallback: React.FC = () => (
+  <div className="py-10 flex items-center justify-center text-xs font-semibold text-[#c5b79e]">
+    Panel hazırlanıyor...
+  </div>
+);
 
 export type { CommandDrawersProps } from './drawers/drawerTypes';
 
@@ -93,7 +113,18 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
                   className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
                 />
                 <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
-                  Genelkurmay, Paşalar ve Güç Sıralaması
+                  Birlik Ağacı, Ordularım &amp; Güç Sıralaması
+                </h2>
+              </>
+            )}
+            {activeTab === 'CONSTRUCTION' && (
+              <>
+                <AoH3GlyphSvg
+                  name="hammer"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
+                />
+                <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
+                  İnşaat &amp; Yatırım Atölyesi
                 </h2>
               </>
             )}
@@ -137,11 +168,14 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
         {/* Scrollable Body */}
         {drawerSizeMode !== 'MINIMIZED' && (
           <div className="p-3 sm:p-4 overflow-y-auto flex-1 space-y-4">
-            {activeTab === 'TERRITORY' && <ProvinceDrawer {...props} />}
-            {activeTab === 'ECONOMY' && <EconomyDrawer {...props} />}
-            {activeTab === 'DIPLOMACY' && <DiplomacyDrawer {...props} />}
-            {activeTab === 'GOVERNMENT' && <GovernmentTechDrawer {...props} />}
-            {activeTab === 'MILITARY' && <MilitaryDrawer {...props} />}
+            <Suspense fallback={<DrawerChunkFallback />}>
+              {activeTab === 'TERRITORY' && <ProvinceDrawer {...props} />}
+              {activeTab === 'ECONOMY' && <EconomyDrawer {...props} />}
+              {activeTab === 'CONSTRUCTION' && <ConstructionDrawer {...props} />}
+              {activeTab === 'DIPLOMACY' && <DiplomacyDrawer {...props} />}
+              {activeTab === 'GOVERNMENT' && <GovernmentTechDrawer {...props} />}
+              {activeTab === 'MILITARY' && <MilitaryDrawer {...props} />}
+            </Suspense>
           </div>
         )}
       </div>

@@ -277,6 +277,42 @@ class SoundEngine {
       osc.stop(now + idx * 0.09 + 0.26);
     });
   }
+
+  public playRecruit() {
+    if (!this.enabled) return;
+    this.vibrate([12, 18, 16]);
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const filter = this.createWarmFilter(580);
+    // Crisp martial snare-drum thud + ascending fifth bugle chime
+    const drumOsc = this.ctx.createOscillator();
+    const drumGain = this.ctx.createGain();
+    drumOsc.type = 'triangle';
+    drumOsc.frequency.setValueAtTime(145, now);
+    drumOsc.frequency.exponentialRampToValueAtTime(68, now + 0.09);
+    drumGain.gain.setValueAtTime(0.065, now);
+    drumGain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+    drumOsc.connect(drumGain);
+    drumGain.connect(filter || this.ctx.destination);
+    drumOsc.start(now);
+    drumOsc.stop(now + 0.12);
+
+    [293.66, 440.0].forEach((freq, idx) => {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + 0.03 + idx * 0.055);
+      gain.gain.setValueAtTime(0.042, now + 0.03 + idx * 0.055);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03 + idx * 0.055 + 0.16);
+      osc.connect(gain);
+      gain.connect(filter || this.ctx.destination);
+      osc.start(now + 0.03 + idx * 0.055);
+      osc.stop(now + 0.03 + idx * 0.055 + 0.18);
+    });
+  }
 }
 
 export const sound = new SoundEngine();

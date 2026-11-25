@@ -5,9 +5,11 @@ import {
   DiplomaticRelation,
   Nation,
   PendingWarMoveRequest,
+  RecruitFeedbackEvent,
   SeaArmy,
   SpeedLevel,
   Territory,
+  WarAnnouncement,
   WorldNewsEvent,
 } from '../../types/game';
 
@@ -25,5 +27,7 @@ export interface EmpireActionPatch {
   seaArmyOrderSourceId?: string | null;
   pendingWarMove?: PendingWarMoveRequest | null;
   speed?: SpeedLevel;
+  recruitFeedback?: RecruitFeedbackEvent;
+  warAnnouncement?: WarAnnouncement;
   toastMessage?: string;
 }

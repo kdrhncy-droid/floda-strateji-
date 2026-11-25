@@ -1,5 +1,7 @@
 import {
+  ActiveBattle,
   ActiveWar,
+  AiCommanderStance,
   ArmyMovement,
   BottomDrawerTab,
   BuildingType,
@@ -9,6 +11,7 @@ import {
   IdeologyId,
   Nation,
   PeaceDealType,
+  SeaArmy,
   Territory,
   UnitType,
 } from '../../types/game';
@@ -16,6 +19,7 @@ import { NationEconomyBreakdown } from '../../engine/simulationEngine';
 import {
   BatchRecruitScope,
   BatchRecruitUnitMode,
+  SpecialtyProductionId,
 } from '../../engine/empireAndArmyActions';
 
 export type { DiplomaticActionType, PeaceDealType };
@@ -30,10 +34,20 @@ export interface CommandDrawersProps {
   nations: Record<string, Nation>;
   relations: Record<string, DiplomaticRelation>;
   wars: ActiveWar[];
+  battles?: ActiveBattle[];
   movements: ArmyMovement[];
+  seaArmies?: SeaArmy[];
+  selectedSeaArmyId?: string | null;
+  aiCommanderEnabled?: boolean;
+  aiCommanderStance?: AiCommanderStance;
   moveRatio: number;
   onSetMoveRatio: (ratio: number) => void;
   onStartArmyOrderMode: (sourceTerritoryId: string) => void;
+  onSelectSeaArmy?: (id: string) => void;
+  onStartSeaArmyOrder?: (id: string) => void;
+  onStartBatchMarch?: () => void;
+  onToggleAiCommander?: () => void;
+  onSetAiCommanderStance?: (stance: AiCommanderStance) => void;
   onExecuteArmyMove: (fromId: string, toId: string) => void;
   onRecruitUnit: (
     territoryId: string,
@@ -50,6 +64,10 @@ export interface CommandDrawersProps {
   onHireMercenary?: (territoryId: string, companyId: string) => void;
   onRecruitOrAssignGeneral: (generalId: string) => void;
   onUpgradeBuilding: (territoryId: string, building: BuildingType) => void;
+  onInvestSpecialtyProduction?: (
+    territoryIds: string[],
+    specialtyId: SpecialtyProductionId
+  ) => void;
   onAssimilateTerritory: (territoryId: string) => void;
   onBatchAssimilate?: () => void;
   onBatchStabilityFestival?: () => void;
@@ -91,6 +109,7 @@ export interface CommandDrawersProps {
     territoryId: string,
     method: 'ARTILLERY' | 'DRONE_RAID'
   ) => void;
+  onLaunchNuclearStrike?: (territoryId: string) => void;
   tick?: number;
   gameMode?: GameModeId;
   fogOfWarEnabled?: boolean;

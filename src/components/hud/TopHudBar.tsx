@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Coins,
   Flag,
@@ -16,6 +16,7 @@ import {
   BottomDrawerTab,
   GameModeId,
   Nation,
+  RecruitFeedbackEvent,
   SpeedLevel,
 } from '../../types/game';
 import { formatGameDate, NationEconomyBreakdown } from '../../engine/simulationEngine';
@@ -28,6 +29,7 @@ interface TopHudBarProps {
   playerNation: Nation;
   playerEconomy: NationEconomyBreakdown;
   playerManpowerCap?: number;
+  recentRecruitFeedback?: RecruitFeedbackEvent | null;
   activeTab: BottomDrawerTab;
   tick: number;
   hour?: number;
@@ -66,6 +68,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
   playerNation,
   playerEconomy,
   playerManpowerCap,
+  recentRecruitFeedback,
   activeTab,
   tick,
   hour = 8,
@@ -84,6 +87,16 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
   onFocusCapital,
   onInspectNation,
 }) => {
+  const [visibleRecruitBadge, setVisibleRecruitBadge] =
+    useState<RecruitFeedbackEvent | null>(null);
+
+  useEffect(() => {
+    if (!recentRecruitFeedback) return;
+    setVisibleRecruitBadge(recentRecruitFeedback);
+    const t = window.setTimeout(() => setVisibleRecruitBadge(null), 2400);
+    return () => window.clearTimeout(t);
+  }, [recentRecruitFeedback?.id]);
+
   const nationTitle = cleanNationName(playerNation.name);
   const dateLabel = formatGameDate(tick, gameMode);
   const hourLabel = `${String(hour % 24).padStart(2, '0')}:00`;
@@ -320,6 +333,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
 
         <button
           type="button"
+          data-testid="hud-military-btn"
           onClick={() => {
             sound.playClick();
             onSetActiveTab(activeTab === 'MILITARY' ? 'NONE' : 'MILITARY');
@@ -329,12 +343,26 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
           ).toLocaleString('tr-TR')} asker · Günlük bakım ${signed(
             -playerEconomy.militaryUpkeep,
             1
-          )}`}
-          className={cellClass('MILITARY')}
+          )} · Ordularım ve Birlik Ağacı için dokun`}
+          className={`${cellClass('MILITARY')} aoh3-stat-army ${
+            visibleRecruitBadge
+              ? 'ring-1 ring-emerald-400/70 bg-emerald-500/15 animate-pulse'
+              : ''
+          }`}
         >
           <Shield className="aoh3-stat-icon" />
           <span className="aoh3-stat-body">
-            <span className="aoh3-stat-value">{armyLabel}</span>
+            <span className="aoh3-stat-value inline-flex items-center gap-1">
+              <span>{armyLabel}</span>
+              {visibleRecruitBadge && (
+                <span
+                  data-testid="recruit-feedback-badge"
+                  className="px-1 py-0 rounded bg-emerald-500/25 border border-emerald-400/60 text-emerald-300 text-[9px] font-mono-num font-extrabold"
+                >
+                  +{(visibleRecruitBadge.troopsAdded / 1000).toFixed(1)}B
+                </span>
+              )}
+            </span>
             <span className="aoh3-stat-sub is-down">
               {signed(-playerEconomy.militaryUpkeep, 1)}
             </span>
