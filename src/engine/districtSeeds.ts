@@ -73,6 +73,16 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('YAK', 'Yakutsk', 129.73, 62.03, 0.016, 'Yakutsk'),
     d('MGD', 'Magadan', 150.8, 59.56, 0.012, 'Magadan'),
     d('KAM', 'Petropavlovsk', 158.65, 53.02, 0.012, 'Kamçatka'),
+    // Sibirya / Uzak Doğu tundra sancakları: Moskova-Perm hattındaki il
+    // tohumlarının kutuplara doğru açtığı ince kamaları böler.
+    d('SLH', 'Salekhard', 66.6, 66.53, 0.008, 'Yugra'),
+    d('MNG', 'Mangazeya', 82.2, 66.6, 0.006, 'Mangazeya'),
+    d('NRK', 'Norilsk', 88.2, 69.35, 0.006, 'Pyasina'),
+    d('KHT', 'Khatanga', 102.47, 71.98, 0.004, 'Taymyr'),
+    d('TUR', 'Tura', 100.22, 64.28, 0.006, 'Evenk'),
+    d('VKH', 'Verkhoyansk', 133.39, 67.55, 0.004, 'Yakut'),
+    d('CKD', 'Chokurdakh', 147.9, 70.62, 0.004, 'Indigir'),
+    d('AND', 'Anadyr', 177.51, 64.73, 0.004, 'Çukçi'),
   ],
 
   // ── ABD: 16 → 34 ────────────────────────────────────────────────────────
@@ -95,6 +105,8 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('OMA', 'Omaha', -95.94, 41.26, 0.022, 'Omaha'),
     d('ANC', 'Anchorage', -149.9, 61.22, 0.018, 'Anchorage'),
     d('HNL', 'Honolulu', -157.86, 21.31, 0.022, 'Honolulu'),
+    d('OME', 'Nome', -165.41, 64.5, 0.008, 'Inupiat'),
+    d('BTT', 'Utqiagvik', -156.79, 71.29, 0.004, 'Inupiaq'),
   ],
 
   // ── Çin: 15 → 34 ────────────────────────────────────────────────────────
@@ -204,6 +216,15 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('YQT', 'Thunder Bay', -89.25, 48.38, 0.04, 'Thunder Bay'),
     d('YSB', 'Sudbury', -81.0, 46.49, 0.038, 'Sudbury'),
     d('YQG', 'Windsor', -83.04, 42.32, 0.042, 'Windsor'),
+    // Kuzey Kanada tundra/kutup sancakları: arktik adalardaki dev hücreleri böler.
+    d('YXY', 'Whitehorse', -135.05, 60.72, 0.012, 'Yukon'),
+    d('YEV', 'Inuvik', -133.72, 68.36, 0.006, 'Inuvialuit'),
+    d('YZF', 'Yellowknife', -114.37, 62.45, 0.012, 'Slave'),
+    d('YCB', 'Cambridge Bay', -105.06, 69.12, 0.006, 'Kitikmeot'),
+    d('YRT', 'Rankin Inlet', -92.08, 62.81, 0.01, 'Kivalliq'),
+    d('YFB', 'Iqaluit', -68.52, 63.75, 0.008, 'Nunavut'),
+    d('YYQ', 'Churchill', -94.17, 58.77, 0.01, 'Rupert'),
+    d('YYR', 'Goose Bay', -60.4, 53.3, 0.01, 'Naskapi'),
   ],
 
   // ── Birleşik Krallık: 8 → 15 ────────────────────────────────────────────
@@ -251,6 +272,8 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('ASP', 'Alice Springs', 133.88, -23.7, 0.038, 'Alice Springs'),
     d('KGI', 'Kalgoorlie', 121.47, -30.75, 0.04, 'Kalgoorlie'),
     d('TSV', 'Townsville', 146.82, -19.26, 0.042, 'Townsville'),
+    d('BME', 'Broome', 122.24, -17.96, 0.036, 'Yawuru'),
+    d('LRE', 'Longreach', 144.25, -23.44, 0.03, 'Iningai'),
   ],
 
   // ── Meksika: 3 → 13 ─────────────────────────────────────────────────────
@@ -279,6 +302,8 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('SLZ', 'São Luís', -44.3, -2.53, 0.042, 'São Luís'),
     d('NAT', 'Natal', -35.21, -5.79, 0.042, 'Natal'),
     d('VIX', 'Vitória', -40.34, -20.32, 0.044, 'Vitória'),
+    d('MAO', 'Manaus', -60.02, -3.12, 0.03, 'Manao'),
+    d('RBR', 'Rio Branco', -67.81, -9.97, 0.02, 'Akwawa'),
   ],
 
   // ── Güney Kore: 3 → 12 ──────────────────────────────────────────────────

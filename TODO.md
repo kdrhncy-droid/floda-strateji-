@@ -2,7 +2,7 @@
 
 ## Tamamlanmış çıktılar
 
-- [x] Dünya haritası 448 → 895 eyalete genişletildi (880–920 hedef bandı); eski 448 eyalet kimliği, başkent yuvaları ve kayıt uyumu korunuyor. Ayrıntılar: `GENISLETILMIS_DUNYA_HARITASI.md`.
+- [x] Dünya haritası 448 → 916 eyalete genişletildi (880–920 hedef bandı; 21 tundra/çöl sancağı sonradan eklendi); eski 448 eyalet kimliği, başkent yuvaları ve kayıt uyumu korunuyor. Ayrıntılar: `GENISLETILMIS_DUNYA_HARITASI.md`.
 - [x] 3 kademeli etiket LOD'u: uzakta devlet adları, orta zoom'da başkent + ana şehirler, ≥2.4x (mobil ≥2.8x) ilçe/sancak adları; seçili eyalet her zoom'da görünür.
 - [x] 1444 senaryosunda yeni ilçeler dönem adlarıyla (Saruhan, Ruha, Ayıntab, Pskov, Echigo, Flandre) ve tarihî sahiplerle gösteriliyor; 2026 modern adları koruyor.
 - [x] Nüfus/GSYİH/ordu payları ülke başına 1.00'a normalleştirildi; ilçeler bina kapasitesi ve manpower tavanını şişirmiyor.
@@ -59,4 +59,4 @@
 
 - Seçilen tek AOH3 videosunda gözlenmemiş olması, özelliğin AOH3'te bulunmadığının kanıtı değildir. Kaynak kodunda ayrı eyalet finans listesi, başkent bonusu veya army split/merge yolu bulunması bu özelliklerin AOH3'te kesin var olduğunu tek başına göstermez. Bu maddeler ancak metinsel/oyun içi kanıtla doğrulanınca uygulama gereksinimine dönüşür.
 - Bağımlılık kaldırma kararı, doğrudan kaynak ve proje script referanslarının aranmasıyla sınırlandırıldı; başka çalışma ortamlarındaki harici araç/CI kullanımına ilişkin varsayım yapılmadı.
-- Bilinen veri kısıtı (sınır çizimi değil): Sibirya ve Kanada'da il sayısı çok az olduğu için Voronoi hücreleri kutuplara doğru ince kamalar oluşturuyor (ör. Tomsk–Yenisey arasında 27° enlem boyu düz kenar). Çözümü çizim katmanı değil, il tohumu yoğunluğu: bu bölgelere yeni sancak eklendiğinde veya tohumlar Lloyd gevşetmesiyle dengelendiğinde kamalar kaybolur.
+- Bilinen veri kısıtı (sınır çizimi değil): Sibirya ve Kanada'da il sayısı çok az olduğu için Voronoi hücreleri kutuplara doğru ince kamalar oluşturuyor (ör. Tomsk–Yenisey arasında 27° enlem boyu düz kenar). Kısmen giderildi: Sibirya, Kuzey Kanada, Alaska, Amazon ve Avustralya içine 21 yeni sancak eklendi (895 → 916), en uzun düz kenar 28,7° → 25,9° indi. Tam AoH3 görünümü için bu bölgelerde daha yoğun bir sancak ızgarası (yaklaşık iki katı) gerekir.
