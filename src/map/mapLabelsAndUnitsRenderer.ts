@@ -81,30 +81,34 @@ export function getMapLabelThresholds(
   density: MapLabelDensityOption,
   isMobileViewport: boolean
 ): MapLabelThresholds {
+  // With ~918 provinces on the board the overview stage has to cover a wider
+  // zoom band: AoH3 also paints only realm names there, and keeping hundreds of
+  // province labels out of every pan frame is the single biggest frame-cost
+  // saving we found in Chromium (label pass 10.4ms -> 2.6ms median at 1.55x).
   if (density === 'COMPACT') {
-    const capitalNameMinZoom = isMobileViewport ? 1.85 : 1.7;
+    const capitalNameMinZoom = isMobileViewport ? 2.05 : 1.95;
     return {
       nationNameMaxZoom: capitalNameMinZoom,
       capitalNameMinZoom,
-      provinceNameMinZoom: isMobileViewport ? 2.35 : 2.2,
-      districtNameMinZoom: isMobileViewport ? 2.95 : 2.75,
+      provinceNameMinZoom: isMobileViewport ? 2.6 : 2.45,
+      districtNameMinZoom: isMobileViewport ? 3.2 : 3.0,
     };
   }
   if (density === 'DETAILED') {
-    const capitalNameMinZoom = isMobileViewport ? 1.35 : 1.25;
+    const capitalNameMinZoom = isMobileViewport ? 1.6 : 1.5;
     return {
       nationNameMaxZoom: capitalNameMinZoom,
       capitalNameMinZoom,
-      provinceNameMinZoom: isMobileViewport ? 1.65 : 1.55,
-      districtNameMinZoom: isMobileViewport ? 2.45 : 2.15,
+      provinceNameMinZoom: isMobileViewport ? 1.9 : 1.8,
+      districtNameMinZoom: isMobileViewport ? 2.6 : 2.3,
     };
   }
-  const capitalNameMinZoom = isMobileViewport ? 1.5 : 1.4;
+  const capitalNameMinZoom = isMobileViewport ? 1.75 : 1.65;
   return {
     nationNameMaxZoom: capitalNameMinZoom,
     capitalNameMinZoom,
-    provinceNameMinZoom: isMobileViewport ? 1.95 : 1.8,
-    districtNameMinZoom: isMobileViewport ? 2.8 : 2.4,
+    provinceNameMinZoom: isMobileViewport ? 2.25 : 2.1,
+    districtNameMinZoom: isMobileViewport ? 2.95 : 2.6,
   };
 }
 

@@ -8013,8 +8013,20 @@ test('three-stage label LOD keeps distant maps clean and reveals districts only 
     true
   );
   assert.equal(shouldRenderProvinceLabel('city', 2.5, desktop, false), true);
-  assert.equal(shouldRenderProvinceLabel('capital', 1.45, desktop, false), true);
-  assert.equal(shouldRenderProvinceLabel('capital', 1.3, desktop, false), false);
+  // The default 1.55x world view must stay realm-name only (AoH3 overview look),
+  // so capitals now start a little later than the old 1.4x.
+  assert.ok(
+    desktop.capitalNameMinZoom > 1.55,
+    `Capital labels must stay out of the world overview, got ${desktop.capitalNameMinZoom}`
+  );
+  assert.equal(
+    shouldRenderProvinceLabel('capital', desktop.capitalNameMinZoom, desktop, false),
+    true
+  );
+  assert.equal(
+    shouldRenderProvinceLabel('capital', desktop.capitalNameMinZoom - 0.05, desktop, false),
+    false
+  );
 
   // Density setting still shifts the thresholds (COMPACT later, DETAILED earlier).
   const compact = getMapLabelThresholds('COMPACT', false);

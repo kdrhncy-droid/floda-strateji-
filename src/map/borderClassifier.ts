@@ -117,6 +117,33 @@ function pointInProjectedFeature(
   return false;
 }
 
+
+/** Shortest distance from a point to any edge of the projected feature. */
+function distanceToFeatureBoundary(
+  px: number,
+  py: number,
+  pf: ProjectedFeatureRings,
+  maxDistance: number
+): number {
+  let best = maxDistance;
+  for (const ring of pf.rings) {
+    for (let i = 0; i < ring.length; i++) {
+      const [ax, ay] = ring[i];
+      const [bx, by] = ring[(i + 1) % ring.length];
+      if (Math.abs(ax - px) > best && Math.abs(bx - px) > best) continue;
+      if (Math.abs(ay - py) > best && Math.abs(by - py) > best) continue;
+      const dx = bx - ax;
+      const dy = by - ay;
+      const len2 = dx * dx + dy * dy;
+      let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const d = Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+      if (d < best) best = d;
+    }
+  }
+  return best;
+}
+
 /**
  * Classifies each province's edge segments into per-province Path2D buckets so the renderer
  * can leverage RBush viewport culling and draw ONLY on-screen borders at 60 FPS even at 28x zoom!
@@ -137,6 +164,12 @@ export function buildClassifiedBorderPaths(params: {
   // far-away neighbour happens to sit within a generous sampling radius.
   const probeDistances = [0.32, 0.85];
   const bboxPad = 1.5;
+  // A real land neighbour shares (or nearly shares) this segment's line. A
+  // country across a gulf or strait can still fall inside the probe radius —
+  // 0.85 projected units is ~15 km — and used to paint thick "frontier" ink
+  // right through the water. Anything further than this from the segment is
+  // therefore treated as coastline, not as a border.
+  const edgeTolerance = 0.22;
 
   // Pre-compute candidate neighbour lists once (bbox pre-filter, O(n^2) but only
   // during cache builds) so the per-segment loop stays lean.
@@ -248,10 +281,14 @@ export function buildClassifiedBorderPaths(params: {
           const px = mx + outUx * dist;
           const py = my + outUy * dist;
           for (const cand of candidates) {
-            if (pointInProjectedFeature(px, py, cand)) {
-              otherOwnerId = territories[cand.id]?.ownerId ?? null;
-              break;
+            if (!pointInProjectedFeature(px, py, cand)) continue;
+            // Only accept the candidate when its own outline runs along this
+            // segment; otherwise we are looking across a stretch of water.
+            if (distanceToFeatureBoundary(mx, my, cand, edgeTolerance) >= edgeTolerance) {
+              continue;
             }
+            otherOwnerId = territories[cand.id]?.ownerId ?? null;
+            break;
           }
           if (otherOwnerId !== null) break;
         }
@@ -259,10 +296,12 @@ export function buildClassifiedBorderPaths(params: {
         // Fallback: polygons that barely overlap at the midpoint.
         if (otherOwnerId === null) {
           for (const cand of candidates) {
-            if (pointInProjectedFeature(mx, my, cand)) {
-              otherOwnerId = territories[cand.id]?.ownerId ?? null;
-              break;
+            if (!pointInProjectedFeature(mx, my, cand)) continue;
+            if (distanceToFeatureBoundary(mx, my, cand, edgeTolerance) >= edgeTolerance) {
+              continue;
             }
+            otherOwnerId = territories[cand.id]?.ownerId ?? null;
+            break;
           }
         }
 

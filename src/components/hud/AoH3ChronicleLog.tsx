@@ -1,5 +1,5 @@
 import React from 'react';
-import { Coins, Handshake, Landmark, ScrollText, Swords } from 'lucide-react';
+import { Coins, Handshake, Landmark, ScrollText, Swords, X } from 'lucide-react';
 import { WorldNewsEvent } from '../../types/game';
 import { sound } from '../../utils/soundEngine';
 
@@ -23,12 +23,14 @@ const TYPE_META: Record<
 interface AoH3ChronicleLogProps {
   newsEvents: WorldNewsEvent[];
   onOpenNewsFeed: () => void;
+  onClose?: () => void;
   hidden?: boolean;
 }
 
 export const AoH3ChronicleLog: React.FC<AoH3ChronicleLogProps> = ({
   newsEvents,
   onOpenNewsFeed,
+  onClose,
   hidden = false,
 }) => {
   if (hidden) return null;
@@ -38,21 +40,37 @@ export const AoH3ChronicleLog: React.FC<AoH3ChronicleLogProps> = ({
   return (
     <div className="pointer-events-auto hidden xl:block w-[248px]">
       <div className="aoh3-panel aoh3-chamfer rounded-lg overflow-hidden">
-        <button
-          type="button"
-          onClick={() => {
-            sound.playClick();
-            onOpenNewsFeed();
-          }}
-          className="aoh3-panel-title w-full cursor-pointer text-left"
-          title="Tüm dünya haberlerini aç"
-        >
-          <span className="aoh3-panel-title-text">Dünya Gazetesi</span>
-          <span className="aoh3-panel-title-rule" />
-          <span className="font-mono-num text-[9px] font-bold text-[#e0b86e] shrink-0">
-            {newsEvents.length}
-          </span>
-        </button>
+        <div className="aoh3-panel-title flex w-full items-center">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              onOpenNewsFeed();
+            }}
+            className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"
+            title="Tüm dünya haberlerini aç"
+          >
+            <span className="aoh3-panel-title-text">Dünya Gazetesi</span>
+            <span className="aoh3-panel-title-rule" />
+            <span className="font-mono-num text-[9px] font-bold text-[#e0b86e] shrink-0">
+              {newsEvents.length}
+            </span>
+          </button>
+          {onClose && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                onClose();
+              }}
+              aria-label="Dünya Gazetesi panelini kapat"
+              title="Gazeteyi kapat"
+              className="ml-1 grid h-4 w-4 shrink-0 cursor-pointer place-items-center rounded-[2px] text-[#c8543c] transition-colors hover:bg-[#3a1d18] hover:text-[#f0603c]"
+            >
+              <X className="h-3 w-3" strokeWidth={3} />
+            </button>
+          )}
+        </div>
 
         <ul className="divide-y divide-[#caa15a]/12">
           {latest.map((evt) => {

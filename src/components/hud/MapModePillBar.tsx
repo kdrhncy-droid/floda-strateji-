@@ -7,7 +7,6 @@ import {
   UserPlus,
   MousePointerClick,
   Info,
-  Layers3,
   ChevronDown,
   ChevronUp,
   X,
@@ -84,24 +83,6 @@ interface MapModePillBarProps {
   onDismissToast?: () => void;
 }
 
-const MAP_MODES: ReadonlyArray<{
-  id: MapMode;
-  label: string;
-  glyph: AoH3GlyphName;
-  tone: string;
-}> = [
-  { id: 'POLITICAL', label: 'Siyasi', glyph: 'crown', tone: 'text-[#e0b86e]' },
-  { id: 'ECONOMIC', label: 'Ekonomi', glyph: 'gold', tone: 'text-[#e0b86e]' },
-  { id: 'RESOURCES', label: 'Kaynaklar', glyph: 'hammer', tone: 'text-[#e0b86e]' },
-  { id: 'DIPLOMATIC', label: 'Diplomasi', glyph: 'scale', tone: 'text-[#e0b86e]' },
-  { id: 'MILITARY', label: 'Askeri', glyph: 'sword', tone: 'text-rose-300' },
-  { id: 'RELIGION', label: 'Din', glyph: 'fleur', tone: 'text-[#e0b86e]' },
-  { id: 'CULTURE', label: 'Kültür', glyph: 'flag', tone: 'text-[#e0b86e]' },
-  { id: 'ASSIMILATION', label: 'Asimilasyon', glyph: 'globe', tone: 'text-[#e0b86e]' },
-  { id: 'TERRAIN', label: 'Arazi', glyph: 'compass', tone: 'text-[#e0b86e]' },
-  { id: 'IDEOLOGY', label: 'İdeoloji', glyph: 'star', tone: 'text-[#e0b86e]' },
-];
-
 export const MapModePillBar: React.FC<MapModePillBarProps> = ({
   mapMode,
   macroMode = 'NONE',
@@ -142,7 +123,6 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
     mapMode === 'RELIGION' ||
     mapMode === 'CULTURE' ||
     mapMode === 'ASSIMILATION';
-  const activeModeMeta = MAP_MODES.find((m) => m.id === mapMode) || MAP_MODES[0];
   const showMacroTray = openTray === 'MACRO' || macroMode !== 'NONE';
 
   return (
@@ -155,32 +135,6 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
         {/* Unified Non-Overlapping Top Row: [Map Lenses + Macro] on Left, [Ordular] on Right */}
         <div className="flex flex-wrap items-start justify-between gap-1.5 w-full">
           <div className="flex items-center gap-1 sm:gap-1.5 pointer-events-auto flex-wrap">
-            <button
-              type="button"
-              onClick={() => {
-                sound.playClick();
-                setOpenTray((prev) => (prev === 'MODES' ? 'NONE' : 'MODES'));
-              }}
-              className={`hud-mapmode-shell hud-surface min-h-[32px] sm:min-h-[34px] flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl border text-[10.5px] sm:text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
-                openTray === 'MODES'
-                  ? 'border-[#e0b86e] text-[#f3ead7]'
-                  : 'border-[#caa15a]/40 text-[#f3ead7] hover:border-[#e0b86e]'
-              }`}
-              aria-expanded={openTray === 'MODES'}
-              aria-label="Harita katmanlarını aç veya kapat"
-            >
-              <Layers3 className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
-              <span className="whitespace-nowrap inline-flex items-center gap-1">
-                <AoH3GlyphSvg name={activeModeMeta.glyph} className={`w-3 h-3 shrink-0 ${activeModeMeta.tone}`} />
-                <span>{activeModeMeta.label}</span>
-              </span>
-              {openTray === 'MODES' ? (
-                <ChevronUp className="w-3 h-3 text-[#b8a990] shrink-0" />
-              ) : (
-                <ChevronDown className="w-3 h-3 text-[#b8a990] shrink-0" />
-              )}
-            </button>
-
             {onSetMacroMode && (
               <button
                 type="button"
@@ -230,35 +184,6 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
         {selectionChipsSlot ? (
           <div className="pointer-events-auto max-w-full">{selectionChipsSlot}</div>
         ) : null}
-
-        {/* Expandable Row: AoH3 Map Lenses */}
-        {openTray === 'MODES' && (
-          <div className="hud-mapmode-shell hud-surface pointer-events-auto rounded-xl border border-[#caa15a]/45 shadow-xl overflow-hidden max-w-full sm:max-w-[640px]">
-            <div className="flex flex-nowrap items-center gap-1 p-1 overflow-x-auto no-scrollbar">
-              {MAP_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => {
-                    sound.playClick();
-                    onSetMapMode(m.id);
-                    setOpenTray('NONE');
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 border ${
-                    mapMode === m.id
-                      ? 'bg-[#caa15a] text-[#14100c] font-bold shadow-sm border-[#f3ead7]'
-                      : `border-transparent text-[#d8cbb5] hover:text-[#faf3e3] hover:bg-[#241c13]`
-                  }`}
-                >
-                  <AoH3GlyphSvg
-                    name={m.glyph}
-                    className={`w-3.5 h-3.5 shrink-0 ${mapMode === m.id ? 'text-[#14100c]' : m.tone}`}
-                  />
-                  <span>{m.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Expandable Row: AoH3 Mobile Macro-Builder & Compact Non-Blocking Multi-City Production Builder */}
         {onSetMacroMode && showMacroTray && (
