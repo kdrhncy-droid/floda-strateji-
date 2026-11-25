@@ -16,6 +16,7 @@ import {
 } from '../types/game';
 import {
   COUNTRY_PROVINCE_SEEDS,
+  getNormalizedProvinceShares,
   sanitizeGeoGeometry,
   subdivideCountryGeometry,
 } from './polygonSubdivider';
@@ -489,6 +490,133 @@ export function computeCoastalTerritoryIds(
   return coastalIds;
 }
 
+
+/**
+ * Splits a country-level total (e.g. starting garrison) across provinces by
+ * normalized share so the sum stays equal to the country total. The minimum is
+ * applied first and then corrected back, preventing small districts from
+ * inflating a country's global army weight.
+ */
+function allocateProportionalTotal(
+  total: number,
+  shares: number[],
+  minimumPerProvince: number
+): number[] {
+  const raw = shares.map((share) =>
+    Math.max(minimumPerProvince, Math.round(total * share))
+  );
+  const rawSum = raw.reduce((sum, v) => sum + v, 0);
+  if (rawSum <= 0) return raw;
+  const factor = total / rawSum;
+  return raw.map((v) =>
+    Math.max(minimumPerProvince, Math.round(v * factor))
+  );
+}
+
+function pointInOuterRing(
+  lon: number,
+  lat: number,
+  ring: number[][]
+): boolean {
+  const n = ring.length;
+  if (n < 3) return false;
+  let inside = false;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    if (
+      yi > lat !== yj > lat &&
+      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/**
+ * Locks a multi-polygon province's label anchor (centroid) to the polygon that
+ * actually contains its seed — i.e. the nearest mainland polygon — so a
+ * district name can never drift into the ocean or onto a far-away island.
+ */
+function resolveProvinceCentroid(
+  provFeature: GeoCountryFeature,
+  seedLon: number,
+  seedLat: number
+): [number, number] {
+  const geometry = provFeature.geometry;
+  if (geometry.type === 'Polygon') {
+    const c = geoCentroid(provFeature) as [number, number];
+    return Number.isFinite(c[0]) && Number.isFinite(c[1])
+      ? c
+      : [seedLon, seedLat];
+  }
+  if (geometry.type !== 'MultiPolygon') {
+    return [seedLon, seedLat];
+  }
+
+  const polys = geometry.coordinates;
+  const candidates: {
+    centroid: [number, number];
+    area: number;
+    dist: number;
+    contains: boolean;
+  }[] = [];
+
+  polys.forEach((polyCoords) => {
+    if (!polyCoords[0]) return;
+    const subFeat: GeoCountryFeature = {
+      type: 'Feature',
+      id: provFeature.id,
+      properties: provFeature.properties,
+      geometry: { type: 'Polygon', coordinates: polyCoords },
+    };
+    const c = geoCentroid(subFeat) as [number, number];
+    if (!Number.isFinite(c[0]) || !Number.isFinite(c[1])) return;
+    candidates.push({
+      centroid: c,
+      area: geoArea(subFeat),
+      dist: Math.hypot(c[0] - seedLon, c[1] - seedLat),
+      contains: pointInOuterRing(seedLon, seedLat, polyCoords[0]),
+    });
+  });
+
+  if (candidates.length === 0) return [seedLon, seedLat];
+
+  const containing = candidates.filter((c) => c.contains);
+  if (containing.length > 0) {
+    // Mainland = largest polygon containing the seed (ignores tiny islets).
+    containing.sort((a, b) => b.area - a.area);
+    return containing[0].centroid;
+  }
+
+  const maxArea = Math.max(...candidates.map((c) => c.area));
+  const mainland = candidates.filter((c) => c.area >= maxArea * 0.05);
+  const pool = mainland.length > 0 ? mainland : candidates;
+  pool.sort((a, b) => a.dist - b.dist);
+  return pool[0].centroid;
+}
+
+function isPointInGeometry(
+  geometry: Geometry,
+  lon: number,
+  lat: number
+): boolean {
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates[0]
+      ? pointInOuterRing(lon, lat, geometry.coordinates[0])
+      : false;
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates.some(
+      (poly) => poly[0] && pointInOuterRing(lon, lat, poly[0])
+    );
+  }
+  return false;
+}
+
 export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
   const mode = GAME_MODES.find((m) => m.id === modeId) || GAME_MODES[0];
 
@@ -579,9 +707,17 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
     const subSeeds = COUNTRY_PROVINCE_SEEDS[cf.id];
     if (subSeeds && subSeeds.length > 1) {
       const pieces = subdivideCountryGeometry(cf.geometry, subSeeds);
+      // Normalize shares to 1.00 so adding districts never changes the
+      // country's total population, GDP or starting army.
+      const normalizedShares = getNormalizedProvinceShares(subSeeds);
+      const garrisonAllocations = allocateProportionalTotal(
+        totalCountryGarrison,
+        normalizedShares,
+        500
+      );
       countryToProvinces[cf.id] = [];
 
-      pieces.forEach((piece) => {
+      pieces.forEach((piece, pieceIndex) => {
         const provId = piece.seed.isCapital
           ? cf.id
           : `${cf.id}_${piece.seed.suffixId}`;
@@ -595,11 +731,9 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
         };
         provinceFeatures.push(provFeature);
 
-        const share = piece.seed.gdpShare || 1 / pieces.length;
-        const provGarrison = Math.max(
-          3000,
-          Math.round(totalCountryGarrison * share)
-        );
+        const share = normalizedShares[pieceIndex] ?? 1 / pieces.length;
+        const provGarrison =
+          garrisonAllocations[pieceIndex] ?? Math.round(totalCountryGarrison * share);
         const armorCount = Math.round(
           provGarrison * (isMajorPower ? 0.22 : 0.15)
         );
@@ -607,53 +741,26 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
           provGarrison * (isMajorPower ? 0.1 : 0.05)
         );
         const infantryCount = Math.max(
-          1000,
+          300,
           provGarrison - armorCount - airDroneCount
         );
 
-        let computedCentroid = geoCentroid(provFeature) as [number, number];
-        if (provFeature.geometry.type === 'MultiPolygon' && provFeature.geometry.coordinates.length > 1) {
-          let bestNearArea = -1;
-          let bestNearCentroid: [number, number] | null = null;
-          let bestArea = -1;
-          let bestPolyCentroid: [number, number] | null = null;
-          for (const polyCoords of provFeature.geometry.coordinates) {
-            const subFeat: GeoCountryFeature = {
-              type: 'Feature',
-              id: provFeature.id,
-              properties: provFeature.properties,
-              geometry: { type: 'Polygon', coordinates: polyCoords },
-            };
-            const area = geoArea(subFeat);
-            const subC = geoCentroid(subFeat) as [number, number];
-            if (Number.isFinite(subC[0]) && Number.isFinite(subC[1])) {
-              const distToSeed = Math.hypot(
-                subC[0] - piece.seed.lon,
-                subC[1] - piece.seed.lat
-              );
-              if (distToSeed <= 25 && area > bestNearArea) {
-                bestNearArea = area;
-                bestNearCentroid = subC;
-              }
-              if (area > bestArea) {
-                bestArea = area;
-                bestPolyCentroid = subC;
-              }
-            }
-          }
-          if (bestNearCentroid) {
-            computedCentroid = bestNearCentroid;
-          } else if (bestPolyCentroid) {
-            computedCentroid = bestPolyCentroid;
-          }
-        }
-        const validCentroid: [number, number] =
+        const computedCentroid = resolveProvinceCentroid(
+          provFeature,
+          piece.seed.lon,
+          piece.seed.lat
+        );
+        let validCentroid: [number, number] =
           Number.isFinite(computedCentroid[0]) &&
           Number.isFinite(computedCentroid[1])
             ? computedCentroid
             : [piece.seed.lon, piece.seed.lat];
+        // Guarantee the label anchor sits on land (never in a bay/ocean).
+        if (!isPointInGeometry(provFeature.geometry, validCentroid[0], validCentroid[1])) {
+          validCentroid = [piece.seed.lon, piece.seed.lat];
+        }
 
-        const provGdp = Math.max(25, Math.round(seed.baseGdp * share * 1.15));
+        const provGdp = Math.max(2, Math.round(seed.baseGdp * share * 1.15));
         const terrain = determineProvinceTerrain(
           provId,
           piece.seed.name,
@@ -673,25 +780,33 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
           piece.seed.resource !== undefined
         );
 
+        const isCapitalProvince = Boolean(piece.seed.isCapital);
+        // Tier-3 districts are rural admin units: they hold no factories,
+        // barracks or depots, so doubling the province count does not double
+        // the country's building capacity or manpower ceiling.
+        const isDistrictProvince = Boolean(piece.seed.isDistrict) && !isCapitalProvince;
+
         territories[provId] = {
           id: provId,
           name: piece.seed.name,
           ownerId: cf.id,
           coreOwnerId: cf.id,
-          isCapital: Boolean(piece.seed.isCapital),
+          isCapital: isCapitalProvince,
+          isDistrict: isDistrictProvince,
           terrain,
           fiefLordId: null,
-          castleWallHp: 100,
+          castleWallHp: isDistrictProvince ? 45 : 100,
           population: Math.round(seed.population * share),
           baseGdp: provGdp,
           resource: resolvedResource,
           buildings: {
-            factory: piece.seed.isCapital && isMajorPower ? 2 : 1,
-            barracks: piece.seed.isCapital ? 2 : 1,
-            fortress: 1,
-            university: piece.seed.isCapital && isMajorPower ? 1 : 0,
-            tradeHub: piece.seed.isCapital ? 1 : 0,
-            supplyDepot: 1,
+            factory: isDistrictProvince ? 0 : isCapitalProvince && isMajorPower ? 2 : 1,
+            barracks: isDistrictProvince ? 0 : isCapitalProvince ? 2 : 1,
+            fortress: isDistrictProvince ? 0 : 1,
+            university:
+              !isDistrictProvince && isCapitalProvince && isMajorPower ? 1 : 0,
+            tradeHub: isDistrictProvince ? 0 : isCapitalProvince ? 1 : 0,
+            supplyDepot: isDistrictProvince ? 0 : 1,
             shipyard: 0,
             mint: 0,
             granary: 0,
@@ -753,6 +868,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
         ownerId: cf.id,
         coreOwnerId: cf.id,
         isCapital: true,
+        isDistrict: false,
         terrain,
         fiefLordId: null,
         castleWallHp: 100,

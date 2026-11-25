@@ -17,6 +17,7 @@ import {
   queryVisibleFeatures,
 } from '../map/spatialIndex';
 import { useMapGestures } from '../map/useMapGestures';
+import { AoH3Minimap } from './hud/AoH3Minimap';
 import { performanceTelemetry } from '../utils/performanceTelemetry';
 import {
   BorderThicknessOption,
@@ -74,6 +75,10 @@ interface WorldMapCanvasProps {
   speed?: SpeedLevel;
   focusCapitalSignal?: number;
   focusCoordsSignal?: { coords: [number, number]; seq: number } | null;
+  /** Imperative zoom from the AoH3 top-bar `-` / `+` plaque. */
+  zoomCommand?: { factor: number; seq: number } | null;
+  /** Bottom-right AoH3 world plate. Hidden on portrait phones by default. */
+  showMinimap?: boolean;
   onSelectTerritory: (territoryId: string | null) => void;
   onSelectSeaArmy?: (seaArmyId: string | null) => void;
   onExecuteArmyMove: (fromId: string, toId: string) => void;
@@ -113,6 +118,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   speed = 1,
   focusCapitalSignal = 0,
   focusCoordsSignal = null,
+  zoomCommand = null,
+  showMinimap = true,
   onSelectTerritory,
   onSelectSeaArmy,
   onExecuteArmyMove,
@@ -127,6 +134,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   const movementTweensRef = useRef<MovementTweenMap>(new Map());
   const borderCacheRef = useRef<{
     dimsKey: string;
+    /** Owner-only signature: borders do not change while a tick mutates units. */
+    signature: string;
     territories: Record<string, Territory>;
     playerNationId: string;
     paths: ClassifiedBorderMap;
@@ -288,6 +297,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     centerOnTerritory,
     centerOnCoords,
     reprojectOnResize,
+    zoomBy,
     handlers,
   } = useMapGestures({
     canvasRef,
@@ -296,6 +306,14 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     onTapClientPoint: handleCanvasTap,
   });
   const lastPerfTransformRef = useRef(transform);
+
+  // AoH3 top-bar zoom plaque -> imperative zoom around the viewport centre.
+  const lastZoomSeqRef = useRef(0);
+  useEffect(() => {
+    if (!zoomCommand || zoomCommand.seq === lastZoomSeqRef.current) return;
+    lastZoomSeqRef.current = zoomCommand.seq;
+    zoomBy(zoomCommand.factor);
+  }, [zoomCommand, zoomBy]);
 
   clickContextRef.current = {
     features,
@@ -461,15 +479,30 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     const nowMs = performance.now();
     syncMovementTweens(movementTweensRef.current, movements, speed, nowMs);
 
-    // Cache classified sovereign/internal/coastal border paths per (dimsKey, territories ref, playerNationId)
+    // Cache classified sovereign/internal/coastal border paths. The classifier only
+    // reads ownerId, so the cache survives simulation ticks (which replace the
+    // territories object every tick) and is rebuilt only when a province changes
+    // hands or the projection resizes.
     let classifiedBorders: ClassifiedBorderMap | null = null;
+    const borderCache = borderCacheRef.current;
+    let ownershipSignature = borderCache?.signature ?? '';
+    if (!borderCache || borderCache.territories !== territories) {
+      const parts: string[] = [];
+      for (const id in territories) {
+        parts.push(`${id}:${territories[id].ownerId}`);
+      }
+      ownershipSignature = parts.join(';');
+    }
     if (
-      borderCacheRef.current &&
-      borderCacheRef.current.dimsKey === dimsKey &&
-      borderCacheRef.current.territories === territories &&
-      borderCacheRef.current.playerNationId === playerNationId
+      borderCache &&
+      borderCache.dimsKey === dimsKey &&
+      borderCache.signature === ownershipSignature &&
+      borderCache.playerNationId === playerNationId
     ) {
-      classifiedBorders = borderCacheRef.current.paths;
+      classifiedBorders = borderCache.paths;
+      // Ownership is unchanged, so keep the fresh territories reference to skip
+      // rebuilding the signature string on every following frame.
+      borderCache.territories = territories;
     } else if (features.length > 0) {
       classifiedBorders = buildClassifiedBorderPaths({
         features,
@@ -479,6 +512,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       });
       borderCacheRef.current = {
         dimsKey,
+        signature: ownershipSignature,
         territories,
         playerNationId,
         paths: classifiedBorders,
@@ -660,8 +694,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       />
 
       {armyOrderSourceId && territories[armyOrderSourceId] && !selectedTerritoryId && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-amber-950/95 border border-amber-500/50 text-amber-100 shadow-xl max-w-[calc(100vw-1.5rem)]">
-          <Crosshair className="w-4 h-4 text-amber-400 shrink-0" />
+        <div className="aoh3-hint absolute bottom-3 left-1/2 -translate-x-1/2 z-20 max-w-[calc(100vw-1.5rem)]">
+          <Crosshair className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
           <span className="text-xs font-medium truncate">
             <strong>{territories[armyOrderSourceId].name}</strong> ordusu için{' '}
             {territories[armyOrderSourceId].isCoastal
@@ -670,7 +704,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           </span>
           <button
             onClick={onCancelArmyOrder}
-            className="px-2.5 py-1 text-xs font-semibold bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-lg border border-slate-700 whitespace-nowrap shrink-0"
+            className="px-2 py-0.5 text-[10.5px] font-bold bg-[#2a1512] hover:bg-[#3a1d18] text-[#f6e6c6] rounded-[2px] border border-[#caa15a]/45 whitespace-nowrap shrink-0"
           >
             İptal
           </button>
@@ -680,8 +714,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       {seaArmyOrderSourceId &&
         !selectedSeaArmyId &&
         seaArmies.some((s) => s.id === seaArmyOrderSourceId) && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#14100c]/95 border border-[#caa15a]/55 text-[#f3ead7] shadow-xl max-w-[calc(100vw-1.5rem)]">
-            <Crosshair className="w-4 h-4 text-[#e0b86e] shrink-0" />
+          <div className="aoh3-hint absolute bottom-3 left-1/2 -translate-x-1/2 z-20 max-w-[calc(100vw-1.5rem)]">
+            <Crosshair className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
             <span className="text-xs font-medium truncate">
               <strong>
                 {seaArmies.find((s) => s.id === seaArmyOrderSourceId)?.name ||
@@ -691,12 +725,38 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
             </span>
             <button
               onClick={onCancelArmyOrder}
-              className="px-2.5 py-1 text-xs font-semibold bg-[#1b1510] hover:bg-[#2a2117] text-[#f3ead7] rounded-lg border border-[#caa15a]/35 whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-2 py-0.5 text-[10.5px] font-bold bg-[#2a1512] hover:bg-[#3a1d18] text-[#f6e6c6] rounded-[2px] border border-[#caa15a]/45 whitespace-nowrap shrink-0 cursor-pointer"
             >
               İptal
             </button>
           </div>
         )}
+
+      {showMinimap && (
+        <div className="absolute bottom-2.5 right-2.5 z-20 hidden lg:block">
+          <AoH3Minimap
+            features={features}
+            territories={territories}
+            nations={nations}
+            playerNationId={playerNationId}
+            transform={transform}
+            viewportWidth={containerRef.current?.clientWidth || 1024}
+            viewportHeight={containerRef.current?.clientHeight || 640}
+            onJumpToCoords={(coords) =>
+              centerOnCoords(coords, Math.max(2.1, Math.min(6, transform.k)))
+            }
+            onZoom={(factor) => zoomBy(factor)}
+            onFocusCapital={() =>
+              centerOnCoords(
+                territories[
+                  nations[playerNationId]?.capitalTerritoryId || playerNationId
+                ]?.centroid || [28.97, 41.01],
+                2.6
+              )
+            }
+          />
+        </div>
+      )}
 
     </div>
   );

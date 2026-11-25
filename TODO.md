@@ -2,6 +2,10 @@
 
 ## Tamamlanmış çıktılar
 
+- [x] Dünya haritası 448 → 916 eyalete genişletildi (880–920 hedef bandı; 21 tundra/çöl sancağı sonradan eklendi); eski 448 eyalet kimliği, başkent yuvaları ve kayıt uyumu korunuyor. Ayrıntılar: `GENISLETILMIS_DUNYA_HARITASI.md`.
+- [x] 3 kademeli etiket LOD'u: uzakta devlet adları, orta zoom'da başkent + ana şehirler, ≥2.4x (mobil ≥2.8x) ilçe/sancak adları; seçili eyalet her zoom'da görünür.
+- [x] 1444 senaryosunda yeni ilçeler dönem adlarıyla (Saruhan, Ruha, Ayıntab, Pskov, Echigo, Flandre) ve tarihî sahiplerle gösteriliyor; 2026 modern adları koruyor.
+- [x] Nüfus/GSYİH/ordu payları ülke başına 1.00'a normalleştirildi; ilçeler bina kapasitesi ve manpower tavanını şişirmiyor.
 - [x] Dar-yatay drawer 667×375, 800×400 ve 896×414 viewportlarında haritanın çoğunluğunu görünür bırakıyor; açık panelin üstüne sabit müzik widget'ı binmiyor.
 - [x] Ambargo yönü uygulayan ülkeyi kaydediyor; yalnız hedefin ticaret geliri etkileniyor, iki tarafın ambargoları bağımsız açılıp kapanıyor ve eski yönsüz kayıt tek deterministik yöne eşleniyor.
 - [x] Küçük garnizonda bombardıman asker sayısını artırmıyor; taktik ve kuşatma metinleri gerçek sur/asker etkilerini bildiriyor.
@@ -48,8 +52,11 @@
 - [x] `npm test` depodaki tüm test dosyalarını çalıştırıyor ve herhangi bir başarısızlıkta non-zero çıkıyor.
 - [x] `package.json` temizleme komutu depoda bulunmayan `server.js` yolunu içermiyor. Kaynak ve `public/` taramasında yüksek güvenle kullanılmayan dosya bulunmadı; referans, save-compatibility veya dinamik yüklenen dosyalar silinmiyor.
 - [x] Kaynak/build yapılandırmasında kullanılmayan `@google/genai`, `dotenv`, `express`, `@types/express`, `motion` ve `autoprefixer` bağımlılıkları kaldırıldı; taramada referans kalmadı ve `bun.lock` eşitlendi.
+- [x] AoH3 referans ekran görüntülerindeki HUD dili uygulandı: pirinç kaynak hücreleri, bayrak kalkanı + ★ şeridi, tarih plakası ve −/+ zoom, seçim bayrak çipleri, bordo-altın ordu paneli, AoH3 eyalet kartı çerçevesi ve yeni **dünya mini haritası** (görüntü alanı dikdörtgeni + tıkla-odakla). Ayrıntı: `AOH3_HUD_UYGULAMASI.md`.
+- [x] Harita sınırları AoH3 diline çekildi: sınıflandırıcı her halkayı tek bağlı polyline olarak üretiyor (kopukluk yok), komşu iki il aynı paylaşılan kenarı iki taraftan da çiziyor, birleşim noktaları `round`; kıyı çizgisi mürekkep halesi + keskin kenar, kara sınırı üç geçişli gravür (hale + çekirdek + iç ışık), oyuncu sınırı altın vurgu. Keşfedilmiş kara opak, sadece sis yarı saydam; her dolgu kendi rengiyle 1 px dikiş kapatma yapıyor. Sınır yolları sahiplik imzasıyla önbellekleniyor, simülasyon tick'lerinde yeniden hesaplanmıyor. Ayrıntı/ölçüm: `src/map/borderClassifier.ts`.
 
 ## Kapsam dışı bırakılmış varsayımlar
 
 - Seçilen tek AOH3 videosunda gözlenmemiş olması, özelliğin AOH3'te bulunmadığının kanıtı değildir. Kaynak kodunda ayrı eyalet finans listesi, başkent bonusu veya army split/merge yolu bulunması bu özelliklerin AOH3'te kesin var olduğunu tek başına göstermez. Bu maddeler ancak metinsel/oyun içi kanıtla doğrulanınca uygulama gereksinimine dönüşür.
 - Bağımlılık kaldırma kararı, doğrudan kaynak ve proje script referanslarının aranmasıyla sınırlandırıldı; başka çalışma ortamlarındaki harici araç/CI kullanımına ilişkin varsayım yapılmadı.
+- Bilinen veri kısıtı (sınır çizimi değil): Sibirya ve Kanada'da il sayısı çok az olduğu için Voronoi hücreleri kutuplara doğru ince kamalar oluşturuyor (ör. Tomsk–Yenisey arasında 27° enlem boyu düz kenar). Kısmen giderildi: Sibirya, Kuzey Kanada, Alaska, Amazon ve Avustralya içine 21 yeni sancak eklendi (895 → 916), en uzun düz kenar 28,7° → 25,9° indi. Tam AoH3 görünümü için bu bölgelerde daha yoğun bir sancak ızgarası (yaklaşık iki katı) gerekir.

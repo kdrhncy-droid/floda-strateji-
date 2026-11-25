@@ -2,6 +2,7 @@ import { DiplomaticRelation, IdeologyId, Nation, Territory } from '../types/game
 import { STRATEGIC_STRAITS } from './straitsAndTradeEngine';
 import { GeoCountryFeature, InitialWorldBundle } from './core/worldTypes';
 import { relationKey } from './core/diplomacyHelpers';
+import { getHistoricProvinceNames } from './polygonSubdivider';
 
 interface Empire1440Def {
   id: string;
@@ -35,15 +36,15 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '792': 'Ankara',
       '792_EDR': '★ Edirne',
       '792_GLB': 'Gelibolu',
-      '792_BUR': 'Bursa',
+      '792_BUR': 'Hüdavendigar',
       '792_IZM': 'İzmir',
       '792_MUG': 'Muğla',
       '792_KUT': 'Kütahya',
       '792_ANT': 'Antalya',
-      '792_KNY': 'Konya',
-      '792_KYS': 'Sivas',
+      '792_KNY': 'Karaman',
+      '792_KYS': 'Rum',
       '792_KST': 'Kastamonu',
-      '792_SAM': 'Amasya',
+      '792_SAM': 'Canik',
       '100': 'Sofya',
       '100_PDV': 'Filibe',
       '100_VAR': 'Varna',
@@ -66,7 +67,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     manpower: 42000,
     absorbedCountryIds: ['300'],
     provinceRenames: {
-      '792_IST': '★ İstanbul',
+      '792_IST': '★ Konstantinopolis',
       '300': 'Mora & Atina',
     },
   },
@@ -92,7 +93,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '400': 'Kerek',
       '376': 'Kudüs',
       '792_ADA': 'Adana',
-      '792_GZP': 'Maraş',
+      '792_GZP': 'Ayıntab',
       '682_JED': 'Mekke',
       '682_MED': 'Medine',
     },
@@ -168,7 +169,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '368_EBL': 'Musul',
       '368_KIK': 'Kerkük',
       '792_ERZ': 'Erzurum',
-      '792_DYB': 'Diyarbakır',
+      '792_DYB': 'Amid',
       '792_VAN': 'Van',
       '792_MLT': 'Malatya',
     },
@@ -244,7 +245,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     absorbedCountryIds: ['643'],
     provinceRenames: {
       '643': '★ Moskova',
-      '643_LED': 'Novgorod',
+      '643_LED': 'Nevan',
       '643_GOJ': 'Nijni Novgorod',
       '643_ARH': 'Arhangelsk',
     },
@@ -1418,8 +1419,20 @@ const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
   '792_DYB': '031',
   '792_MLT': '031',
   '792_TRB': '268', // Trebizond / Caucasus sphere
+  '792_ORD': '268', // Kotyora / Ordu within Trebizond sphere
   '792_GZP': '818', // Dulkadir / Maras under Mamluk sphere
   '792_ADA': '818', // Ramazanoglu / Adana under Mamluk sphere
+  '792_HTY': '818', // Antakya held by the Mamluks until 1516
+  // New tier-3 sancaks assigned to their 1444 rulers
+  '792_MRD': '031', // Mardin under Akkoyunlu
+  '792_KAR': '031', // Kars under Karakoyunlu sphere
+  '792_URF': '031', // Ruha (Şanlıurfa) under Akkoyunlu
+  '792_ELZ': '031', // Harput under Akkoyunlu
+  // Flandre under Burgundy, Sardinia/Sicily under Aragon, Trieste under Habsburgs
+  '250_LIL': '528',
+  '380_CAG': '724',
+  '380_CTA': '724',
+  '380_TRS': '040',
   '682_JED': '818', // Hejaz under Mamluk protectorate
   '682_MED': '818',
   '364_TBZ': '031', // Tabriz: Karakoyunlu capital in 1444
@@ -1460,6 +1473,9 @@ export function transformBundleTo1440Scenario(
 
   const allRenames1440: Record<string, string> = {};
   EMPIRES_1440_DEFS.forEach((emp) => Object.assign(allRenames1440, emp.provinceRenames));
+  // Data-driven period names (Saruhan, Ruha, Ayıntab, Pskov, Echigo, Flandre...).
+  // Explicit scenario renames above still take priority (e.g. "★ Edirne").
+  const historicNames1440 = getHistoricProvinceNames();
   const nations: Record<string, Nation> = {};
   const territories: Record<string, Territory> = {};
   const features: GeoCountryFeature[] = [];
@@ -1559,6 +1575,7 @@ export function transformBundleTo1440Scenario(
       renames[feat.id] ||
       renames[feat.id.toLowerCase()] ||
       renames[feat.id.toUpperCase()] ||
+      historicNames1440[feat.id] ||
       baseT.name;
     const resolvedCapId =
       empDef?.capitalTerritoryId &&

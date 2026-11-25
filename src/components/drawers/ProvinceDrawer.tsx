@@ -186,6 +186,11 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                           <div className="text-[11px] text-[#e0b86e] truncate">
                             {cleanNationName(selectedOwner.name)} ·{' '}
                             {IDEOLOGIES[selectedOwner.ideology]?.name ?? 'Monarşi'}
+                            {selectedTerritory.isDistrict && (
+                              <span className="ml-1.5 rounded border border-[#cbd5e1]/40 px-1 py-px text-[9.5px] font-semibold uppercase tracking-wide text-[#cbd5e1]">
+                                {gameMode === 'EMPIRES_1440' ? 'Sancak' : 'İlçe'}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

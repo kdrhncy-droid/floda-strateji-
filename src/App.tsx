@@ -18,6 +18,8 @@ import {
 import { music } from './engine/musicEngine';
 import { sound } from './utils/soundEngine';
 import { TopHudBar } from './components/hud/TopHudBar';
+import { AoH3ChronicleLog } from './components/hud/AoH3ChronicleLog';
+import { AoH3SelectionChips } from './components/hud/AoH3SelectionChips';
 import { DiplomaticOfferBanner } from './components/hud/DiplomaticOfferBanner';
 import { MapMacroMode, MapModePillBar } from './components/hud/MapModePillBar';
 import { SelectedProvinceBar } from './components/hud/SelectedProvinceBar';
@@ -178,6 +180,13 @@ function GameAppInner() {
     return params.get('autostart') !== '1';
   });
   const [macroMode, setMacroMode] = useState<MapMacroMode>('NONE');
+  // AoH3 top-bar `-` / `+` plaque -> imperative zoom command for the world map.
+  const [zoomCommand, setZoomCommand] = useState<{
+    factor: number;
+    seq: number;
+  } | null>(null);
+  const handleMapZoom = (factor: number) =>
+    setZoomCommand((prev) => ({ factor, seq: (prev?.seq ?? 0) + 1 }));
   const [macroRecruitUnitMode, setMacroRecruitUnitMode] =
     useState<BatchRecruitUnitMode>('infantry');
   const [economySelectedIds, setEconomySelectedIds] = useState<string[]>([]);
@@ -995,6 +1004,9 @@ function GameAppInner() {
         onOpenNewsDrawer={() => store.setShowNewsDrawer(true)}
         onFocusCapital={() => setFocusCapitalSignal((v) => v + 1)}
         onInspectNation={(nId) => setInspectedNationId(nId)}
+        showZoomControls={settings.showZoomControls}
+        onZoomIn={() => handleMapZoom(1.3)}
+        onZoomOut={() => handleMapZoom(0.77)}
       />
 
       <div className="relative flex-1 w-full overflow-hidden">
@@ -1016,6 +1028,7 @@ function GameAppInner() {
             seaArmyOrderSourceId={seaArmyOrderSourceId}
             mapMode={mapMode}
             mapLabelDensity={settings.mapLabelDensity}
+            zoomCommand={zoomCommand}
             fogOfWarEnabled={settings.fogOfWarEnabled}
             graphicsQuality={settings.graphicsQuality}
             smoothArmyAnimations={settings.smoothArmyAnimations}
@@ -1035,6 +1048,14 @@ function GameAppInner() {
             }}
           />
         )}
+
+        <div className="absolute bottom-[9.9rem] right-2.5 z-10 pointer-events-none">
+          <AoH3ChronicleLog
+            newsEvents={newsEvents}
+            onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
+            hidden={activeTab !== 'NONE'}
+          />
+        </div>
 
         <WorldEventToastStack
           newsEvents={newsEvents}
@@ -1131,6 +1152,27 @@ function GameAppInner() {
                 onToggleAiCommander={store.toggleAiCommander}
                 onSetAiCommanderStance={store.setAiCommanderStance}
                 onOpenWarModal={(warId) => store.setActiveWarModalId(warId)}
+              />
+            ) : null
+          }
+          selectionChipsSlot={
+            screenState === 'PLAYING' && multiSelectedIds && multiSelectedIds.length > 0 ? (
+              <AoH3SelectionChips
+                territoryIds={multiSelectedIds}
+                territories={territories}
+                nations={nations}
+                playerNationId={playerNationId}
+                label={macroMode === 'BUILD_ECONOMY' ? 'EKONOMİ' : 'SEVK'}
+                onRemove={(id) =>
+                  macroMode === 'BUILD_ECONOMY'
+                    ? toggleEconomyCity(id)
+                    : toggleBatchCity(id)
+                }
+                onClear={() =>
+                  macroMode === 'BUILD_ECONOMY'
+                    ? setEconomySelectedIds([])
+                    : setBatchMarchSourceIds([])
+                }
               />
             ) : null
           }

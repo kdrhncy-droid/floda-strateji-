@@ -212,7 +212,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   const isOverSupply = hasIntel && territory.garrison > supplyLimit;
 
   return (
-    <div className="hud-province-quickbar absolute bottom-2.5 left-2.5 right-2.5 sm:right-auto sm:w-[560px] sm:max-w-[calc(100vw-8rem)] z-20 rounded-2xl bg-[#14100c]/96 border border-[#caa15a]/50 shadow-2xl px-2.5 sm:px-3 py-2 flex flex-col gap-2">
+    <div className="hud-province-quickbar aoh3-quickbar absolute bottom-2.5 left-2.5 right-2.5 sm:right-auto sm:w-[560px] sm:max-w-[calc(100vw-8rem)] z-20 rounded-2xl bg-[#14100c]/96 border border-[#caa15a]/50 shadow-2xl px-2.5 sm:px-3 py-2 flex flex-col gap-2">
       {/* Direct Movement Prompt Banner (No Forced Percentage Split!) */}
       {isOrderActive && (
         <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-[#1b1510]/95 border border-[#caa15a]/55 text-[11px]">

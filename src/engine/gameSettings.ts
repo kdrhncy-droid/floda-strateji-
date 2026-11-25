@@ -189,7 +189,7 @@ const SETTINGS_STORAGE_KEY = 'IMPERIUM_2026_SETTINGS_V1';
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
   autoSaveIntervalDays: 90,
   fogOfWarEnabled: true,
-  showZoomControls: false,
+  showZoomControls: true,
   aiAggressiveness: 'NORMAL',
   crisisFrequencyDays: 90,
   mapLabelDensity: 'BALANCED',
