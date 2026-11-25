@@ -22,6 +22,7 @@ import { sound } from '../../utils/soundEngine';
 
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
 import { calculateWarPeaceBudget } from '../../engine/diplomacyAndWarActions';
+import { AoH3GlyphSvg } from '../illustrations/AoH3Illustrations';
 
 interface AoH3OutlinerWidgetProps {
   playerNationId: string;
@@ -184,9 +185,10 @@ export const LiveWarHudBadges: React.FC<{
                 width={24}
                 height={16}
               />
-              <span className="text-[11px] font-bold text-amber-400 drop-shadow">
-                ⚔
-              </span>
+              <AoH3GlyphSvg
+                name="sword"
+                className="w-3 h-3 text-[#e0b86e] drop-shadow shrink-0"
+              />
               <NationFlagCanvasBadge
                 nationId={enemy.id}
                 flagCode={enemy.flagCode}
@@ -301,15 +303,15 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
         }`}
         title="Ordu ve Filo Menüsü (Tüm Kara Orduları, Deniz Filoları ve Hızlı Sevk)"
       >
-        <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+        <Shield className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
         <span className="whitespace-nowrap">
           Ordular ({totalArmyUnitsCount})
         </span>
-        <span className="px-1 sm:px-1.5 py-0.2 rounded bg-black/45 border border-[#caa15a]/35 text-[9.5px] sm:text-[10px] font-mono-num text-amber-300">
+        <span className="px-1 sm:px-1.5 py-0.2 rounded bg-black/45 border border-[#caa15a]/35 text-[9.5px] sm:text-[10px] font-mono-num text-[#e0b86e]">
           {(totalStandingArmy / 1000).toFixed(1)}B
         </span>
         {relevantMovements.length > 0 && (
-          <span className="hidden sm:inline-flex px-1.5 py-0.2 rounded bg-sky-500/25 border border-sky-400/50 text-[10px] font-mono-num text-sky-200">
+          <span className="hidden sm:inline-flex px-1.5 py-0.2 rounded bg-[#caa15a]/20 border border-[#caa15a]/50 text-[10px] font-mono-num text-[#f3ead7]">
             {relevantMovements.length} Yürüyüş
           </span>
         )}
@@ -326,7 +328,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
           {/* Header Summary */}
           <div className="flex items-center justify-between gap-2 px-1 pb-1.5 border-b border-[#caa15a]/25">
             <div className="min-w-0">
-              <div className="text-[11px] font-display font-bold text-amber-300 truncate">
+              <div className="text-[11px] font-display font-bold text-[#e0b86e] truncate">
                 ORDULARIM
               </div>
               <div className="text-[10px] text-[#c5b79e] truncate">
@@ -347,7 +349,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                     setIsOpen(false);
                     onStartBatchMarch();
                   }}
-                  className="px-2 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/35 border border-sky-400/55 text-sky-200 text-[10px] font-bold shrink-0 cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-[#241c13] hover:bg-[#32271b] border border-[#caa15a]/55 text-[#f3ead7] text-[10px] font-bold shrink-0 cursor-pointer"
                 >
                   Toplu Sevk
                 </button>
@@ -359,7 +361,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                   setIsOpen(false);
                   onSetActiveTab('MILITARY');
                 }}
-                className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/50 text-amber-200 text-[10px] font-bold shrink-0 cursor-pointer"
+                className="px-2 py-1 rounded-lg bg-[#caa15a]/20 hover:bg-[#caa15a]/35 border border-[#caa15a]/50 text-[#e0b86e] text-[10px] font-bold shrink-0 cursor-pointer"
               >
                 Ordu Bas →
               </button>
@@ -373,10 +375,10 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Bot
                     className={`w-3.5 h-3.5 shrink-0 ${
-                      aiCommanderEnabled ? 'text-emerald-400' : 'text-amber-400'
+                      aiCommanderEnabled ? 'text-emerald-400' : 'text-[#e0b86e]'
                     }`}
                   />
-                  <span className="text-[10px] font-bold text-amber-100 truncate">
+                  <span className="text-[10px] font-bold text-[#f3ead7] truncate">
                     YZ Cephe Komutanı
                   </span>
                 </div>
@@ -388,8 +390,8 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                     aria-pressed={aiCommanderEnabled}
                     className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
                       aiCommanderEnabled
-                        ? 'bg-emerald-500 text-slate-950 border-emerald-300'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-600'
+                        ? 'bg-emerald-500 text-[#14100c] border-emerald-300'
+                        : 'bg-[#1b1510] hover:bg-[#261e16] text-[#d8cbb5] border-[#3a2f22]'
                     }`}
                   >
                     {aiCommanderEnabled ? 'Açık' : 'Kapalı'}
@@ -416,8 +418,8 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                         onClick={() => onSetAiCommanderStance(st.id)}
                         className={`py-1 px-1.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
                           active
-                            ? 'bg-amber-500 text-slate-950 border-amber-300'
-                            : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-slate-700'
+                            ? 'bg-[#caa15a] text-[#14100c] border-[#f3ead7]'
+                            : 'bg-[#1b1510] hover:bg-[#261e16] text-[#d8cbb5] border-[#3a2f22]'
                         }`}
                       >
                         {st.label}
@@ -432,8 +434,9 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
             {/* Section 0: Live On-Map Battles */}
             {relevantBattles.length > 0 && (
               <div>
-                <div className="px-1 pb-1 border-b border-[#caa15a]/20 text-[10px] font-bold text-amber-300">
-                  ⚔️ SÜREN MUHAREBELER ({relevantBattles.length})
+                <div className="px-1 pb-1 border-b border-[#caa15a]/20 text-[10px] font-bold text-[#e0b86e] flex items-center gap-1">
+                  <AoH3GlyphSvg name="sword" className="w-3 h-3 shrink-0" />
+                  <span>SÜREN MUHAREBELER ({relevantBattles.length})</span>
                 </div>
                 <div className="space-y-1.5 mt-1.5">
                   {relevantBattles.map((btl) => {
@@ -453,18 +456,21 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                           setIsOpen(false);
                           onSelectTerritory(btl.territoryId);
                         }}
-                        className="w-full p-2 rounded-lg bg-amber-950/50 border border-amber-500/60 text-left cursor-pointer"
+                        className="w-full p-2 rounded-lg bg-[#241c13]/75 border border-[#caa15a]/55 text-left cursor-pointer"
                       >
-                        <div className="flex items-center justify-between text-[11px] font-bold text-amber-200">
-                          <span className="truncate">⚔️ {terrName}</span>
-                          <span className="font-mono-num text-[10px]">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-[#f3ead7]">
+                          <span className="truncate flex items-center gap-1">
+                            <AoH3GlyphSvg name="sword" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                            <span className="truncate">{terrName}</span>
+                          </span>
+                          <span className="font-mono-num text-[10px] text-[#e0b86e]">
                             {(btl.attackerTroops / 1000).toFixed(1)}B vs{' '}
                             {(btl.defenderTroops / 1000).toFixed(1)}B
                           </span>
                         </div>
-                        <div className="mt-1 w-full h-1.5 rounded-full bg-blue-600 overflow-hidden">
+                        <div className="mt-1 w-full h-1.5 rounded-full bg-[#caa15a] overflow-hidden">
                           <div
-                            className="h-full bg-rose-500"
+                            className="h-full bg-rose-600"
                             style={{ width: `${attPct}%` }}
                           />
                         </div>
@@ -478,7 +484,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
             {/* Section 1: Marching Armies */}
             {relevantMovements.length > 0 && (
               <div>
-                <div className="px-1 pb-1 border-b border-[#caa15a]/20 text-[10px] font-bold text-sky-300">
+                <div className="px-1 pb-1 border-b border-[#caa15a]/20 text-[10px] font-bold text-[#e0b86e]">
                   HAREKET HALİNDEKİ ORDULAR ({relevantMovements.length})
                 </div>
                 <div className="space-y-1.5 mt-1.5">
@@ -511,33 +517,33 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                         }}
                         className={`w-full p-2 rounded-lg border text-left transition-colors cursor-pointer ${
                           isOwn
-                            ? 'bg-black/55 border-sky-500/40 hover:border-sky-400'
+                            ? 'bg-black/55 border-[#caa15a]/40 hover:border-[#e0b86e]'
                             : 'bg-rose-950/50 border-rose-500/60 hover:border-rose-400'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1">
                           <span
                             className={`text-[10px] font-bold flex items-center gap-1 truncate ${
-                              isOwn ? 'text-sky-300' : 'text-rose-300'
+                              isOwn ? 'text-[#f3ead7]' : 'text-rose-300'
                             }`}
                           >
                             {mv.isNaval ? (
-                              <Anchor className="w-3 h-3 shrink-0" />
+                              <Anchor className="w-3 h-3 text-[#e0b86e] shrink-0" />
                             ) : (
-                              <Navigation className="w-3 h-3 shrink-0" />
+                              <Navigation className="w-3 h-3 text-[#e0b86e] shrink-0" />
                             )}
                             <span className="truncate">
                               {fromName} → {toName}
                             </span>
                           </span>
-                          <span className="font-mono-num text-[10px] font-bold text-amber-300 shrink-0">
+                          <span className="font-mono-num text-[10px] font-bold text-[#e0b86e] shrink-0">
                             {(mv.troops / 1000).toFixed(1)}B
                           </span>
                         </div>
-                        <div className="mt-1 w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                        <div className="mt-1 w-full h-1.5 rounded-full bg-[#2a2117] overflow-hidden">
                           <div
                             className={`h-full ${
-                              isOwn ? 'bg-sky-400' : 'bg-rose-500'
+                              isOwn ? 'bg-[#e0b86e]' : 'bg-rose-500'
                             }`}
                             style={{ width: `${Math.min(100, mv.progress)}%` }}
                           />
@@ -552,7 +558,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
             {/* Section 1.5: Stationed Naval Fleets (SeaArmies) */}
             {playerSeaArmies.length > 0 && (
               <div>
-                <div className="px-1 pb-1 border-b border-[#caa15a]/20 text-[10px] font-bold text-sky-300 flex items-center justify-between">
+                <div className="px-1 pb-1 border-b border-[#caa15a]/20 text-[10px] font-bold text-[#e0b86e] flex items-center justify-between">
                   <span>DENİZ FİLOLARIMIZ ({playerSeaArmies.length})</span>
                   <span className="text-[9px] text-[#c5b79e] font-normal">
                     Açık Deniz & Abluka
@@ -572,8 +578,8 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                         key={fleet.id}
                         className={`p-1.5 rounded-lg border flex items-center justify-between gap-1.5 ${
                           isSelected
-                            ? 'bg-sky-500/20 border-sky-400'
-                            : 'bg-black/45 border-sky-500/25 hover:border-sky-400/55'
+                            ? 'bg-[#caa15a]/20 border-[#e0b86e]'
+                            : 'bg-black/45 border-[#caa15a]/25 hover:border-[#caa15a]/55'
                         }`}
                       >
                         <button
@@ -585,25 +591,25 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                           }}
                           className="flex items-center gap-1.5 min-w-0 text-left flex-1 cursor-pointer"
                         >
-                          <span className="w-5 h-5 rounded bg-sky-950/90 border border-sky-400/45 flex items-center justify-center text-sky-300 shrink-0">
+                          <span className="w-5 h-5 rounded bg-[#1b1510] border border-[#caa15a]/45 flex items-center justify-center text-[#e0b86e] shrink-0">
                             <Anchor className="w-3 h-3" />
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-1">
-                              <span className="text-[11px] font-bold text-white truncate">
+                              <span className="text-[11px] font-bold text-[#faf3e3] truncate">
                                 {fleet.name}
                               </span>
-                              <span className="text-[10px] font-mono-num font-extrabold text-sky-300 shrink-0">
+                              <span className="text-[10px] font-mono-num font-extrabold text-[#e0b86e] shrink-0">
                                 {(fleet.troops / 1000).toFixed(1)}B
                               </span>
                             </div>
-                            <div className="mt-1 w-full h-1 rounded-full bg-sky-500/70 overflow-hidden flex">
+                            <div className="mt-1 w-full h-1 rounded-full bg-[#4a3a26] overflow-hidden flex">
                               <div
-                                className="h-full bg-emerald-400"
+                                className="h-full bg-[#e0b86e]"
                                 style={{ width: `${infPct}%` }}
                               />
                               <div
-                                className="h-full bg-amber-400"
+                                className="h-full bg-[#b89146]"
                                 style={{ width: `${armPct}%` }}
                               />
                             </div>
@@ -618,7 +624,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                               onStartSeaArmyOrder(fleet.id);
                             }}
                             title="Bu Deniz Filosuna Kıyı Çıkarması veya Deniz Sevk Emri Ver"
-                            className="px-2 py-1 rounded-md bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-[10px] flex items-center gap-1 shrink-0 cursor-pointer"
+                            className="px-2 py-1 rounded-md bg-[#caa15a] hover:bg-[#e0b86e] text-[#14100c] font-bold text-[10px] flex items-center gap-1 shrink-0 cursor-pointer"
                           >
                             <Crosshair className="w-3 h-3" />
                             <span>Sevk</span>
@@ -633,7 +639,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
 
             {/* Section 2: All Stationed Player Armies (AoH3 Army Roster) */}
             <div>
-              <div className="px-1 pb-1 border-b border-[#caa15a]/20 text-[10px] font-bold text-emerald-400 flex items-center justify-between">
+              <div className="px-1 pb-1 border-b border-[#caa15a]/20 text-[10px] font-bold text-[#e0b86e] flex items-center justify-between">
                 <span>KONUŞLU ORDULARIMIZ ({allPlayerArmies.length})</span>
                 <span className="text-[9px] text-[#c5b79e] font-normal">
                   Piyade / Süvari / Topçu
@@ -653,7 +659,7 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                       key={terr.id}
                       className={`p-1.5 rounded-lg border flex items-center justify-between gap-1.5 ${
                         isSelected
-                          ? 'bg-amber-500/20 border-amber-400'
+                          ? 'bg-[#caa15a]/20 border-[#e0b86e]'
                           : 'bg-black/45 border-[#caa15a]/20 hover:border-[#caa15a]/45'
                       }`}
                     >
@@ -664,26 +670,26 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
                         }}
                         className="flex items-center gap-1.5 min-w-0 text-left flex-1 cursor-pointer"
                       >
-                        <span className="w-5 h-5 rounded bg-emerald-950/90 border border-emerald-500/40 flex items-center justify-center text-[10px] font-mono-num font-bold text-emerald-300 shrink-0">
+                        <span className="w-5 h-5 rounded bg-[#1b1510] border border-[#caa15a]/40 flex items-center justify-center text-[10px] font-mono-num font-bold text-[#e0b86e] shrink-0">
                           {idx + 1}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="text-[11px] font-bold text-white truncate">
+                            <span className="text-[11px] font-bold text-[#faf3e3] truncate">
                               {terr.name.replace(/^★\s*/, '')}
                             </span>
-                            <span className="text-[10px] font-mono-num font-extrabold text-amber-300 shrink-0">
+                            <span className="text-[10px] font-mono-num font-extrabold text-[#e0b86e] shrink-0">
                               {(terr.garrison / 1000).toFixed(1)}B
                             </span>
                           </div>
                           {/* Unit composition bar */}
-                          <div className="mt-1 w-full h-1 rounded-full bg-sky-500/70 overflow-hidden flex">
+                          <div className="mt-1 w-full h-1 rounded-full bg-[#4a3a26] overflow-hidden flex">
                             <div
-                              className="h-full bg-emerald-400"
+                              className="h-full bg-[#e0b86e]"
                               style={{ width: `${infPct}%` }}
                             />
                             <div
-                              className="h-full bg-amber-400"
+                              className="h-full bg-[#b89146]"
                               style={{ width: `${armPct}%` }}
                             />
                           </div>

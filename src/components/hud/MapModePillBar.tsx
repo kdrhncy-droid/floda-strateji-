@@ -25,6 +25,12 @@ import { isTerritoryCoastal } from '../../engine/worldBuilder';
 import { sound } from '../../utils/soundEngine';
 import { CULTURES, RELIGIONS } from '../../data/religionAndCultureData';
 import { BUILDINGS, RESOURCE_INFO } from '../../data/world2026Data';
+import {
+  AoH3GlyphName,
+  AoH3GlyphSvg,
+  ReligionSvg,
+  ResourceSvg,
+} from '../illustrations/AoH3Illustrations';
 
 export type MapMacroMode =
   | 'NONE'
@@ -76,17 +82,22 @@ interface MapModePillBarProps {
   onDismissToast?: () => void;
 }
 
-const MAP_MODES: ReadonlyArray<{ id: MapMode; label: string; glyph: string; tone: string }> = [
-  { id: 'POLITICAL', label: 'Siyasi', glyph: '◈', tone: 'text-amber-300' },
-  { id: 'ECONOMIC', label: 'Ekonomi', glyph: '◉', tone: 'text-emerald-300' },
-  { id: 'RESOURCES', label: 'Kaynaklar', glyph: '⛏', tone: 'text-yellow-300' },
-  { id: 'DIPLOMATIC', label: 'Diplomasi', glyph: '⚖', tone: 'text-sky-300' },
-  { id: 'MILITARY', label: 'Askeri', glyph: '⚔', tone: 'text-rose-300' },
-  { id: 'RELIGION', label: 'Din', glyph: '☪', tone: 'text-emerald-300' },
-  { id: 'CULTURE', label: 'Kültür', glyph: '🏹', tone: 'text-violet-300' },
-  { id: 'ASSIMILATION', label: 'Asimilasyon', glyph: '✦', tone: 'text-orange-300' },
-  { id: 'TERRAIN', label: 'Arazi', glyph: '⌁', tone: 'text-lime-300' },
-  { id: 'IDEOLOGY', label: 'İdeoloji', glyph: '◆', tone: 'text-fuchsia-300' },
+const MAP_MODES: ReadonlyArray<{
+  id: MapMode;
+  label: string;
+  glyph: AoH3GlyphName;
+  tone: string;
+}> = [
+  { id: 'POLITICAL', label: 'Siyasi', glyph: 'crown', tone: 'text-[#e0b86e]' },
+  { id: 'ECONOMIC', label: 'Ekonomi', glyph: 'gold', tone: 'text-[#e0b86e]' },
+  { id: 'RESOURCES', label: 'Kaynaklar', glyph: 'hammer', tone: 'text-[#e0b86e]' },
+  { id: 'DIPLOMATIC', label: 'Diplomasi', glyph: 'scale', tone: 'text-[#e0b86e]' },
+  { id: 'MILITARY', label: 'Askeri', glyph: 'sword', tone: 'text-rose-300' },
+  { id: 'RELIGION', label: 'Din', glyph: 'fleur', tone: 'text-[#e0b86e]' },
+  { id: 'CULTURE', label: 'Kültür', glyph: 'flag', tone: 'text-[#e0b86e]' },
+  { id: 'ASSIMILATION', label: 'Asimilasyon', glyph: 'globe', tone: 'text-[#e0b86e]' },
+  { id: 'TERRAIN', label: 'Arazi', glyph: 'compass', tone: 'text-[#e0b86e]' },
+  { id: 'IDEOLOGY', label: 'İdeoloji', glyph: 'star', tone: 'text-[#e0b86e]' },
 ];
 
 export const MapModePillBar: React.FC<MapModePillBarProps> = ({
@@ -149,20 +160,21 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
               }}
               className={`hud-mapmode-shell hud-surface min-h-[32px] sm:min-h-[34px] flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl border text-[10.5px] sm:text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
                 openTray === 'MODES'
-                  ? 'border-amber-400 text-amber-200'
-                  : 'border-amber-500/35 text-slate-200 hover:border-amber-400/70'
+                  ? 'border-[#e0b86e] text-[#f3ead7]'
+                  : 'border-[#caa15a]/40 text-[#f3ead7] hover:border-[#e0b86e]'
               }`}
               aria-expanded={openTray === 'MODES'}
               aria-label="Harita katmanlarını aç veya kapat"
             >
-              <Layers3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="whitespace-nowrap">
-                {activeModeMeta.glyph} {activeModeMeta.label}
+              <Layers3 className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+              <span className="whitespace-nowrap inline-flex items-center gap-1">
+                <AoH3GlyphSvg name={activeModeMeta.glyph} className={`w-3 h-3 shrink-0 ${activeModeMeta.tone}`} />
+                <span>{activeModeMeta.label}</span>
               </span>
               {openTray === 'MODES' ? (
-                <ChevronUp className="w-3 h-3 text-slate-400 shrink-0" />
+                <ChevronUp className="w-3 h-3 text-[#b8a990] shrink-0" />
               ) : (
-                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                <ChevronDown className="w-3 h-3 text-[#b8a990] shrink-0" />
               )}
             </button>
 
@@ -181,28 +193,29 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 }}
                 className={`hud-macro-bar hud-surface min-h-[32px] sm:min-h-[34px] flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl border text-[10.5px] sm:text-[11px] font-bold shadow-lg transition-colors whitespace-nowrap shrink-0 ${
                   macroMode !== 'NONE'
-                    ? 'border-emerald-400 bg-emerald-950/90 text-emerald-200'
+                    ? 'border-[#e0b86e] bg-[#2a2117] text-[#f3ead7]'
                     : openTray === 'MACRO'
-                    ? 'border-sky-400 text-sky-200'
-                    : 'border-slate-700/90 text-slate-300 hover:border-slate-500'
+                    ? 'border-[#e0b86e] text-[#e0b86e]'
+                    : 'border-[#caa15a]/35 text-[#d8cbb5] hover:border-[#e0b86e]'
                 }`}
                 aria-expanded={showMacroTray}
                 aria-label="Hızlı işlemleri aç veya kapat"
               >
-                <MousePointerClick className="w-3.5 h-3.5 text-sky-300 shrink-0" />
-                <span className="whitespace-nowrap">
+                <MousePointerClick className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                <span className="whitespace-nowrap inline-flex items-center gap-1">
                   {macroMode === 'NONE'
                     ? 'Hızlı İşlem'
                     : macroMode === 'BUILD_ECONOMY'
-                    ? `Ekonomi (${economySelectedIds.length}) ✕`
+                    ? `Ekonomi (${economySelectedIds.length})`
                     : macroMode === 'BATCH_MARCH'
-                    ? `Toplu Sevk (${batchMarchSourceIds.length}) ✕`
-                    : 'Aktif İşlem ✕'}
+                    ? `Toplu Sevk (${batchMarchSourceIds.length})`
+                    : 'Aktif İşlem'}
+                  {macroMode !== 'NONE' && <X className="w-3 h-3 shrink-0" />}
                 </span>
                 {showMacroTray ? (
-                  <ChevronUp className="w-3 h-3 text-slate-400 shrink-0" />
+                  <ChevronUp className="w-3 h-3 text-[#b8a990] shrink-0" />
                 ) : (
-                  <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                  <ChevronDown className="w-3 h-3 text-[#b8a990] shrink-0" />
                 )}
               </button>
             )}
@@ -213,7 +226,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
 
         {/* Expandable Row: AoH3 Map Lenses */}
         {openTray === 'MODES' && (
-          <div className="hud-mapmode-shell hud-surface pointer-events-auto rounded-xl border border-amber-500/40 shadow-xl overflow-hidden max-w-full sm:max-w-[640px]">
+          <div className="hud-mapmode-shell hud-surface pointer-events-auto rounded-xl border border-[#caa15a]/45 shadow-xl overflow-hidden max-w-full sm:max-w-[640px]">
             <div className="flex flex-nowrap items-center gap-1 p-1 overflow-x-auto no-scrollbar">
               {MAP_MODES.map((m) => (
                 <button
@@ -223,13 +236,16 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                     onSetMapMode(m.id);
                     setOpenTray('NONE');
                   }}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 border border-transparent ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 border ${
                     mapMode === m.id
-                      ? 'bg-amber-500 text-slate-950 font-bold shadow-sm border-amber-300'
-                      : `text-slate-300 hover:text-white hover:bg-slate-800/80 ${m.tone}`
+                      ? 'bg-[#caa15a] text-[#14100c] font-bold shadow-sm border-[#f3ead7]'
+                      : `border-transparent text-[#d8cbb5] hover:text-[#faf3e3] hover:bg-[#241c13]`
                   }`}
                 >
-                  <span aria-hidden="true" className="text-sm leading-none">{m.glyph}</span>
+                  <AoH3GlyphSvg
+                    name={m.glyph}
+                    className={`w-3.5 h-3.5 shrink-0 ${mapMode === m.id ? 'text-[#14100c]' : m.tone}`}
+                  />
                   <span>{m.label}</span>
                 </button>
               ))}
@@ -239,7 +255,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
 
         {/* Expandable Row: AoH3 Mobile Macro-Builder & Compact Non-Blocking Multi-City Production Builder */}
         {onSetMacroMode && showMacroTray && (
-          <div className="hud-macro-bar hud-macro-tray hud-surface pointer-events-auto rounded-xl border border-slate-700/90 shadow-lg overflow-hidden flex flex-col gap-1 p-1.5 max-w-[min(430px,calc(100vw-1rem))] max-h-[calc(100dvh-9.5rem)] overflow-y-auto">
+          <div className="hud-macro-bar hud-macro-tray hud-surface pointer-events-auto rounded-xl border border-[#caa15a]/45 shadow-lg overflow-hidden flex flex-col gap-1 p-1.5 max-w-[min(560px,calc(100vw-1rem))] max-h-[calc(100dvh-9.5rem)] overflow-y-auto">
             <div className="flex items-center justify-between gap-1">
               <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0">
                 <button
@@ -252,8 +268,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   title="Normal Eyalet Seçim Modu"
                   className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                     macroMode === 'NONE'
-                      ? 'bg-slate-800 text-amber-300 border border-amber-500/40'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-[#241c13] text-[#e0b86e] border border-[#caa15a]/45'
+                      : 'text-[#b8a990] hover:text-[#f3ead7]'
                   }`}
                 >
                   <MousePointerClick className="w-3 h-3 shrink-0" />
@@ -271,8 +287,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   title="Asker Bas & Toplu Seferberlik: Birlik sınıfı seçip haritadan şehirlerinize dokunun veya sınırlara/tüm ülkeye toplu asker basın"
                   className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                     macroMode === 'RECRUIT_INFANTRY'
-                      ? 'bg-emerald-500 text-slate-950 shadow'
-                      : 'text-emerald-300/90 hover:bg-emerald-500/15'
+                      ? 'bg-[#caa15a] text-[#14100c] shadow'
+                      : 'text-[#d8cbb5] hover:bg-[#caa15a]/15 hover:text-[#f3ead7]'
                   }`}
                 >
                   <UserPlus className="w-3 h-3 shrink-0" />
@@ -293,8 +309,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   title="Şehirleri haritadan seçip İnek Çiftliği, Pamuk Tarlası, Kereste Ocağı veya Maden kurun"
                   className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                     macroMode === 'BUILD_ECONOMY'
-                      ? 'bg-amber-500 text-slate-950 shadow'
-                      : 'text-amber-300/90 hover:bg-amber-500/15'
+                      ? 'bg-[#caa15a] text-[#14100c] shadow'
+                      : 'text-[#d8cbb5] hover:bg-[#caa15a]/15 hover:text-[#f3ead7]'
                   }`}
                 >
                   <Hammer className="w-3 h-3 shrink-0" />
@@ -315,8 +331,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   title="Makro Tahkimat: Haritada kendi eyaletinize dokunarak Kale/Hisar yükseltin"
                   className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                     macroMode === 'BUILD_FORT'
-                      ? 'bg-sky-500 text-slate-950 shadow'
-                      : 'text-sky-300/90 hover:bg-sky-500/15'
+                      ? 'bg-[#caa15a] text-[#14100c] shadow'
+                      : 'text-[#d8cbb5] hover:bg-[#caa15a]/15 hover:text-[#f3ead7]'
                   }`}
                 >
                   <ShieldPlus className="w-3 h-3 shrink-0" />
@@ -339,8 +355,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   title="Çoklu Şehir Ordu Sevk: Birden fazla şehri seçip aynı hedefe tek komutla yürütün"
                   className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors ${
                     macroMode === 'BATCH_MARCH'
-                      ? 'bg-amber-400 text-slate-950 shadow'
-                      : 'text-amber-200 hover:bg-amber-500/15'
+                      ? 'bg-[#caa15a] text-[#14100c] shadow'
+                      : 'text-[#d8cbb5] hover:bg-[#caa15a]/15 hover:text-[#f3ead7]'
                   }`}
                 >
                   <Navigation className="w-3 h-3 shrink-0" />
@@ -356,11 +372,12 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
             {macroMode === 'RECRUIT_INFANTRY' && !macroBodyCollapsed && (
               <div
                 data-testid="recruit-macro-panel"
-                className="rounded-lg bg-[#14110e]/95 border border-emerald-500/50 p-1.5 flex flex-col gap-1.5 shadow-xl"
+                className="rounded-lg bg-[#14110e]/95 border border-[#caa15a]/50 p-1.5 flex flex-col gap-1.5 shadow-xl"
               >
                 <div className="flex items-center justify-between gap-1 text-[10px]">
-                  <span className="text-emerald-200 font-bold truncate">
-                    ⚔️ Haritadan şehrinize dokunarak asker basın:
+                  <span className="text-[#e0b86e] font-bold truncate flex items-center gap-1">
+                    <AoH3GlyphSvg name="sword" className="w-3 h-3 shrink-0" />
+                    <span className="truncate">Haritadan şehrinize dokunarak asker basın:</span>
                   </span>
                   <button
                     type="button"
@@ -368,7 +385,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                       sound.playClick();
                       setMacroBodyCollapsed(true);
                     }}
-                    className="px-1.5 py-0.5 rounded bg-slate-900/90 hover:bg-slate-800 border border-emerald-500/40 text-emerald-200 font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
+                    className="px-1.5 py-0.5 rounded bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/40 text-[#e0b86e] font-bold flex items-center gap-0.5 cursor-pointer shrink-0"
                   >
                     <span>Haritayı Gör</span>
                     <ChevronUp className="w-3 h-3" />
@@ -380,63 +397,68 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   {[
                     {
                       id: 'infantry' as const,
-                      label: '🛡 Piyade',
+                      glyph: 'shield' as const,
+                      label: 'Piyade',
                       sub: '120A / 1B',
-                      active: 'bg-emerald-500 text-slate-950 border-emerald-300',
-                      idle: 'bg-slate-900 text-emerald-200 border-emerald-500/40',
                     },
                     {
                       id: 'armor' as const,
-                      label: '🐎 Süvari',
+                      glyph: 'cavalry' as const,
+                      label: 'Süvari',
                       sub: '180A / 1B',
-                      active: 'bg-amber-500 text-slate-950 border-amber-300',
-                      idle: 'bg-slate-900 text-amber-200 border-amber-500/40',
                     },
                     {
                       id: 'airDrone' as const,
-                      label: '💣 Topçu',
+                      glyph: 'artillery' as const,
+                      label: 'Topçu',
                       sub: '500A / 1B',
-                      active: 'bg-sky-400 text-slate-950 border-sky-200',
-                      idle: 'bg-slate-900 text-sky-200 border-sky-500/40',
                     },
                     {
                       id: 'MIXED' as const,
-                      label: '⚔️ Karma',
+                      glyph: 'sword' as const,
+                      label: 'Karma',
                       sub: '3 Sınıf',
-                      active: 'bg-purple-500 text-white border-purple-300',
-                      idle: 'bg-slate-900 text-purple-200 border-purple-500/40',
                     },
-                  ].map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      data-testid={`macro-unit-mode-${u.id}`}
-                      onClick={() => {
-                        sound.playClick();
-                        onSetMacroRecruitUnitMode?.(u.id);
-                      }}
-                      className={`px-1.5 py-1 rounded-lg border text-center transition-colors cursor-pointer ${
-                        macroRecruitUnitMode === u.id ? u.active : u.idle
-                      }`}
-                    >
-                      <div className="text-[10px] font-extrabold truncate">{u.label}</div>
-                      <div className="text-[8.5px] font-mono-num opacity-85">{u.sub}</div>
-                    </button>
-                  ))}
+                  ].map((u) => {
+                    const isActive = macroRecruitUnitMode === u.id;
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        data-testid={`macro-unit-mode-${u.id}`}
+                        onClick={() => {
+                          sound.playClick();
+                          onSetMacroRecruitUnitMode?.(u.id);
+                        }}
+                        className={`px-1.5 py-1 rounded-lg border text-center transition-colors cursor-pointer ${
+                          isActive
+                            ? 'bg-[#caa15a] text-[#14100c] border-[#f3ead7]'
+                            : 'bg-[#1b1510] text-[#d8cbb5] border-[#caa15a]/35 hover:border-[#e0b86e]'
+                        }`}
+                      >
+                        <div className="text-[10px] font-extrabold truncate flex items-center justify-center gap-1">
+                          <AoH3GlyphSvg name={u.glyph} className="w-3 h-3 shrink-0" />
+                          <span>{u.label}</span>
+                        </div>
+                        <div className="text-[8.5px] font-mono-num opacity-85">{u.sub}</div>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* One-Click Batch Recruitment Buttons */}
                 {onBatchRecruitUnits && (
-                  <div className="grid grid-cols-3 gap-1 pt-0.5 border-t border-slate-800/80">
+                  <div className="grid grid-cols-3 gap-1 pt-0.5 border-t border-[#3a2f22]">
                     <button
                       type="button"
                       data-testid="macro-batch-recruit-border"
                       onClick={() =>
                         onBatchRecruitUnits('BORDER', macroRecruitUnitMode, undefined, 1)
                       }
-                      className="px-1.5 py-1 rounded-lg bg-emerald-600/85 hover:bg-emerald-500 text-white text-[9.5px] font-extrabold text-center cursor-pointer"
+                      className="px-1.5 py-1 rounded-lg bg-[#241c13] hover:bg-[#32271b] border border-[#caa15a]/45 text-[#f3ead7] text-[9.5px] font-extrabold text-center cursor-pointer flex items-center justify-center gap-1"
                     >
-                      🛡 Sınırlara Toplu Bas
+                      <AoH3GlyphSvg name="shield" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                      <span>Sınırlara Toplu</span>
                     </button>
                     <button
                       type="button"
@@ -444,9 +466,10 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                       onClick={() =>
                         onBatchRecruitUnits('BARRACKS', macroRecruitUnitMode, undefined, 1)
                       }
-                      className="px-1.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[9.5px] font-extrabold text-center cursor-pointer"
+                      className="px-1.5 py-1 rounded-lg bg-[#caa15a] hover:bg-[#e0b86e] text-[#14100c] text-[9.5px] font-extrabold text-center cursor-pointer flex items-center justify-center gap-1"
                     >
-                      🏰 Kışlalara Toplu Bas
+                      <AoH3GlyphSvg name="fortress" className="w-3 h-3 shrink-0" />
+                      <span>Kışlalara Toplu</span>
                     </button>
                     <button
                       type="button"
@@ -454,9 +477,10 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                       onClick={() =>
                         onBatchRecruitUnits('ALL', macroRecruitUnitMode, undefined, 1)
                       }
-                      className="px-1.5 py-1 rounded-lg bg-sky-600/85 hover:bg-sky-500 text-white text-[9.5px] font-extrabold text-center cursor-pointer"
+                      className="px-1.5 py-1 rounded-lg bg-[#241c13] hover:bg-[#32271b] border border-[#caa15a]/45 text-[#e0b86e] text-[9.5px] font-extrabold text-center cursor-pointer flex items-center justify-center gap-1"
                     >
-                      🌍 Tüm Ülkeye Toplu Bas
+                      <AoH3GlyphSvg name="globe" className="w-3 h-3 shrink-0" />
+                      <span>Tüm Ülkeye</span>
                     </button>
                   </div>
                 )}
@@ -465,11 +489,14 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
 
             {/* Collapsed Mini Status Strip (keeps 85%+ of map open for tapping cities!) */}
             {macroBodyCollapsed && (macroMode === 'BUILD_ECONOMY' || macroMode === 'BATCH_MARCH') && (
-              <div className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-black/50 border border-slate-800 text-[10px] text-amber-200">
-                <span className="truncate font-semibold">
-                  {macroMode === 'BUILD_ECONOMY'
-                    ? `📍 Haritadan şehir dokunun (${economySelectedIds.length} seçili)`
-                    : `🎯 Haritadan ordu şehri dokunun (${batchMarchSourceIds.length} seçili)`}
+              <div className="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-black/50 border border-[#3a2f22] text-[10px] text-[#f3ead7]">
+                <span className="truncate font-semibold flex items-center gap-1">
+                  <AoH3GlyphSvg name={macroMode === 'BUILD_ECONOMY' ? 'pin' : 'compass'} className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                  <span className="truncate">
+                    {macroMode === 'BUILD_ECONOMY'
+                      ? `Haritadan şehir dokunun (${economySelectedIds.length} seçili)`
+                      : `Haritadan ordu şehri dokunun (${batchMarchSourceIds.length} seçili)`}
+                  </span>
                 </span>
                 <button
                   type="button"
@@ -478,7 +505,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                     sound.playClick();
                     setMacroBodyCollapsed(false);
                   }}
-                  className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-extrabold flex items-center gap-1 shrink-0 cursor-pointer"
+                  className="px-2 py-0.5 rounded bg-[#caa15a] text-[#14100c] font-extrabold flex items-center gap-1 shrink-0 cursor-pointer"
                 >
                   <span>Paneli Aç ({macroMode === 'BUILD_ECONOMY' ? economySelectedIds.length : batchMarchSourceIds.length})</span>
                   <ChevronDown className="w-3 h-3" />
@@ -541,7 +568,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   className="rounded-lg bg-[#14110e]/95 border border-[#caa15a]/50 p-1.5 flex flex-col gap-1.5 shadow-xl"
                 >
                   <div className="flex items-center justify-between gap-1.5 text-[10px]">
-                    <span className="text-amber-200 font-bold truncate">
+                    <span className="text-[#e0b86e] font-bold truncate">
                       {selectedTerrs.length === 0
                         ? 'Haritada şehirlerinize dokunun'
                         : `${selectedTerrs.length} şehir · Süreli & Sv.5`}
@@ -567,7 +594,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                           setMacroBodyCollapsed(true);
                         }}
                         title="Haritadan rahat şehir seçmek için menüyü küçült"
-                        className="px-1.5 py-0.5 rounded bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 text-amber-200 font-bold flex items-center gap-0.5 cursor-pointer"
+                        className="px-1.5 py-0.5 rounded bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/40 text-[#e0b86e] font-bold flex items-center gap-0.5 cursor-pointer"
                       >
                         <span>Haritayı Gör</span>
                         <ChevronUp className="w-3 h-3" />
@@ -578,7 +605,6 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                   {selectedTerrs.length > 0 && (
                     <div className="flex flex-nowrap items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
                       {selectedTerrs.map((t) => {
-                        const resMeta = RESOURCE_INFO[t.resource];
                         const opt = getSpecialtyOptionForResource(t.resource);
                         const elig = getSpecialtyTerritoryEligibility(t, opt);
                         return (
@@ -588,20 +614,22 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                             onClick={() => onToggleEconomyCity?.(t.id)}
                             className={`px-1.5 py-0.5 rounded-md border text-[10px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer ${
                               elig.reason === 'MAXED'
-                                ? 'bg-slate-900/80 border-slate-700 text-slate-400'
+                                ? 'bg-[#1b1510] border-[#3a2f22] text-[#9b8d77]'
                                 : elig.reason === 'IN_PROGRESS'
-                                ? 'bg-sky-950/70 border-sky-500/50 text-sky-200'
-                                : 'bg-amber-500/20 hover:bg-amber-500/35 border-amber-500/50 text-amber-100'
+                                ? 'bg-[#241c13] border-[#caa15a]/60 text-[#e0b86e]'
+                                : 'bg-[#caa15a]/20 hover:bg-[#caa15a]/35 border-[#caa15a]/50 text-[#f3ead7]'
                             }`}
                           >
-                            <span>{resMeta?.icon || '🏭'}</span>
+                            <ResourceSvg resource={t.resource} className="w-3 h-3 text-[#e0b86e] shrink-0" />
                             <span>{t.name.replace(/^★\s*/, '')}</span>
-                            <span className="font-mono-num text-[9px] opacity-80">
-                              {elig.reason === 'IN_PROGRESS'
-                                ? '⏳'
-                                : `${elig.currentLvl}/${elig.maxLvl}`}
+                            <span className="font-mono-num text-[9px] opacity-80 inline-flex items-center gap-0.5">
+                              {elig.reason === 'IN_PROGRESS' ? (
+                                <AoH3GlyphSvg name="hammer" className="w-2.5 h-2.5 shrink-0" />
+                              ) : (
+                                `${elig.currentLvl}/${elig.maxLvl}`
+                              )}
                             </span>
-                            <span className="text-amber-300/80">✕</span>
+                            <X className="w-2.5 h-2.5 text-[#e0b86e] shrink-0" />
                           </button>
                         );
                       })}
@@ -622,12 +650,12 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                           }}
                           className={`w-full px-2 py-1 rounded-lg border text-left transition-colors flex items-center justify-between gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                             canAffordAuto
-                              ? 'bg-gradient-to-r from-amber-600/30 to-emerald-600/25 hover:from-amber-500/40 hover:to-emerald-500/35 border-amber-400/70 text-amber-100'
+                              ? 'bg-[#2a2117] hover:bg-[#382b1d] border-[#caa15a]/70 text-[#f3ead7]'
                               : 'bg-black/45 border-rose-500/40 text-rose-300'
                           }`}
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-xs shrink-0">⚡</span>
+                            <AoH3GlyphSvg name="bolt" className="w-3 h-3 text-[#e0b86e] shrink-0" />
                             <span className="text-[10px] font-extrabold truncate">
                               {autoEligiblePairs.length > 0
                                 ? `Uygun Tesisleri Başlat (${autoEligiblePairs.length}/${selectedTerrs.length} Şehir)`
@@ -635,7 +663,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                             </span>
                           </div>
                           {autoEligiblePairs.length > 0 && (
-                            <span className="text-[10px] font-mono-num font-extrabold text-amber-300 shrink-0">
+                            <span className="text-[10px] font-mono-num font-extrabold text-[#e0b86e] shrink-0">
                               {autoNaturalCost}A
                             </span>
                           )}
@@ -668,29 +696,39 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                               title={opt.description}
                               className={`px-2 py-1 rounded-lg border text-left transition-colors flex items-center justify-between gap-1 cursor-pointer disabled:opacity-55 disabled:cursor-not-allowed ${
                                 isLocked
-                                  ? 'bg-slate-950/75 border-slate-800 text-slate-400'
+                                  ? 'bg-[#14100c] border-[#3a2f22] text-[#9b8d77]'
                                   : canAfford
-                                  ? 'bg-black/55 hover:bg-amber-500/20 border-[#caa15a]/50 text-amber-100'
+                                  ? 'bg-black/55 hover:bg-[#caa15a]/20 border-[#caa15a]/50 text-[#f3ead7]'
                                   : 'bg-black/40 border-rose-500/35 text-rose-300'
                               }`}
                             >
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs shrink-0">{opt.icon}</span>
+                                  <ResourceSvg resource={opt.resource} className="w-3 h-3 text-[#e0b86e] shrink-0" />
                                   <span className="text-[10px] font-bold truncate">
                                     {opt.shortName} ({eligibleCities.length}/{matchingCities.length})
                                   </span>
                                 </div>
-                                <div className="text-[9px] text-[#c5b79e] truncate font-mono-num">
-                                  {isLocked
-                                    ? queuedCount > 0
-                                      ? '🔨 İnşa Sürüyor'
-                                      : '✓ Azami 5/5'
-                                    : `⏳ ${opt.buildDays}g · +${opt.gdpBonus} GSYİH`}
+                                <div className="text-[9px] text-[#c5b79e] truncate font-mono-num flex items-center gap-1">
+                                  {isLocked ? (
+                                    queuedCount > 0 ? (
+                                      <>
+                                        <AoH3GlyphSvg name="hammer" className="w-2.5 h-2.5 shrink-0" />
+                                        <span>İnşa Sürüyor</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <AoH3GlyphSvg name="check" className="w-2.5 h-2.5 shrink-0" />
+                                        <span>Azami 5/5</span>
+                                      </>
+                                    )
+                                  ) : (
+                                    <span>{`${opt.buildDays}g · +${opt.gdpBonus} GSYİH`}</span>
+                                  )}
                                   {!isLocked && maxedCount > 0 ? ` · ${maxedCount} tam` : ''}
                                 </div>
                               </div>
-                              <span className="text-[10px] font-mono-num font-bold text-amber-300 shrink-0">
+                              <span className="text-[10px] font-mono-num font-bold text-[#e0b86e] shrink-0">
                                 {isLocked ? '—' : `${totalCost}A`}
                               </span>
                             </button>
@@ -709,14 +747,15 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                           }
                           className={`w-full px-2 py-1 rounded-lg border text-left transition-colors flex items-center justify-between gap-2 cursor-pointer ${
                             playerTreasury >= shipyardTotalCost
-                              ? 'bg-sky-950/75 hover:bg-sky-900/80 border-sky-400/55 text-sky-100'
+                              ? 'bg-[#1b1510] hover:bg-[#2a2117] border-[#caa15a]/55 text-[#f3ead7]'
                               : 'bg-black/45 border-rose-500/40 text-rose-300'
                           }`}
                         >
-                          <span className="text-[10px] font-bold truncate">
-                            ⚓ Kıyı Limanı & Tersane ({eligibleShipyardCities.length}/{selectedTerrs.length} Kıyı)
+                          <span className="text-[10px] font-bold truncate flex items-center gap-1">
+                            <AoH3GlyphSvg name="anchor" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                            <span>Kıyı Limanı & Tersane ({eligibleShipyardCities.length}/{selectedTerrs.length} Kıyı)</span>
                           </span>
-                          <span className="text-[10px] font-mono-num font-bold text-amber-300 shrink-0">
+                          <span className="text-[10px] font-mono-num font-bold text-[#e0b86e] shrink-0">
                             {shipyardTotalCost}A
                           </span>
                         </button>
@@ -747,13 +786,18 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
               return (
                 <div
                   data-testid="batch-march-panel"
-                  className="rounded-lg bg-[#14110e]/95 border border-sky-400/50 p-1.5 flex flex-col gap-1.5 shadow-xl"
+                  className="rounded-lg bg-[#14110e]/95 border border-[#caa15a]/50 p-1.5 flex flex-col gap-1.5 shadow-xl"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-1 text-[10px]">
-                    <span className="text-sky-200 font-bold truncate">
-                      {batchMarchTargetPicking
-                        ? '🎯 Haritadan HEDEF şehre dokunun!'
-                        : `Kaynak şehir seçin (${selectedArmies.length})`}
+                    <span className="text-[#f3ead7] font-bold truncate flex items-center gap-1">
+                      {batchMarchTargetPicking ? (
+                        <>
+                          <AoH3GlyphSvg name="compass" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                          <span>Haritadan HEDEF şehre dokunun!</span>
+                        </>
+                      ) : (
+                        <span>{`Kaynak şehir seçin (${selectedArmies.length})`}</span>
+                      )}
                     </span>
                     <div className="flex items-center gap-1">
                       {onSelectReadyBatchCities && (
@@ -764,7 +808,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                             sound.playClick();
                             onSelectReadyBatchCities();
                           }}
-                          className="px-1.5 py-0.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/45 text-emerald-200 font-semibold cursor-pointer"
+                          className="px-1.5 py-0.5 rounded bg-[#241c13] hover:bg-[#32271b] border border-[#caa15a]/45 text-[#e0b86e] font-semibold cursor-pointer"
                         >
                           Hazır
                         </button>
@@ -777,7 +821,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                             sound.playClick();
                             onSelectBorderBatchCities();
                           }}
-                          className="px-1.5 py-0.5 rounded bg-amber-950/70 hover:bg-amber-900/80 border border-amber-500/45 text-amber-200 font-semibold cursor-pointer"
+                          className="px-1.5 py-0.5 rounded bg-[#241c13] hover:bg-[#32271b] border border-[#caa15a]/45 text-[#f3ead7] font-semibold cursor-pointer"
                         >
                           Sınır
                         </button>
@@ -790,7 +834,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                           setMacroBodyCollapsed(true);
                         }}
                         title="Haritadan rahat şehir seçmek için menüyü küçült"
-                        className="px-1.5 py-0.5 rounded bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 text-amber-200 font-bold flex items-center gap-0.5 cursor-pointer"
+                        className="px-1.5 py-0.5 rounded bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/40 text-[#e0b86e] font-bold flex items-center gap-0.5 cursor-pointer"
                       >
                         <span>Haritayı Gör</span>
                         <ChevronUp className="w-3 h-3" />
@@ -802,7 +846,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                             sound.playClick();
                             onClearBatchCities();
                           }}
-                          className="px-1.5 py-0.5 rounded bg-black/60 hover:bg-black/80 border border-slate-700 text-[#d8cbb5] font-semibold cursor-pointer"
+                          className="px-1.5 py-0.5 rounded bg-black/60 hover:bg-black/80 border border-[#3a2f22] text-[#d8cbb5] font-semibold cursor-pointer"
                         >
                           Temizle
                         </button>
@@ -825,22 +869,22 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                             onClick={() => onToggleBatchCity?.(t.id)}
                             className={`px-1.5 py-0.5 rounded-md border text-[10px] font-bold flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer ${
                               sendAmt >= 1000
-                                ? 'bg-sky-500/20 hover:bg-sky-500/35 border-sky-400/55 text-sky-100'
+                                ? 'bg-[#caa15a]/20 hover:bg-[#caa15a]/35 border-[#caa15a]/55 text-[#f3ead7]'
                                 : 'bg-rose-950/50 border-rose-500/45 text-rose-200'
                             }`}
                           >
                             <span>{t.name.replace(/^★\s*/, '')}</span>
-                            <span className="font-mono-num text-amber-300">
+                            <span className="font-mono-num text-[#e0b86e]">
                               {(sendAmt / 1000).toFixed(1)}B
                             </span>
-                            <span className="opacity-75">✕</span>
+                            <X className="w-2.5 h-2.5 opacity-80 shrink-0" />
                           </button>
                         );
                       })}
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-slate-800/80">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-[#3a2f22]">
                     <div className="flex items-center gap-1">
                       {[0.25, 0.5, 0.75, 1].map((r) => {
                         const active = Math.abs(batchMarchRatio - r) < 0.01;
@@ -854,8 +898,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                             }}
                             className={`px-1.5 py-0.5 rounded text-[10px] font-mono-num font-bold border cursor-pointer ${
                               active
-                                ? 'bg-amber-500 text-slate-950 border-amber-300'
-                                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
+                                ? 'bg-[#caa15a] text-[#14100c] border-[#f3ead7]'
+                                : 'bg-[#1b1510] hover:bg-[#2a2117] text-[#d8cbb5] border-[#3a2f22]'
                             }`}
                           >
                             %{Math.round(r * 100)}
@@ -875,7 +919,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                       className={`px-2 py-1 rounded-lg text-[10px] font-extrabold flex items-center gap-1 border transition-colors cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${
                         batchMarchTargetPicking
                           ? 'bg-rose-600 hover:bg-rose-500 border-rose-300 text-white shadow'
-                          : 'bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 border-amber-200 text-slate-950 shadow'
+                          : 'bg-[#caa15a] hover:bg-[#e0b86e] border-[#f3ead7] text-[#14100c] shadow'
                       }`}
                     >
                       <Crosshair className="w-3 h-3 shrink-0" />
@@ -898,16 +942,16 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
 
       {/* Floating AoH3 Map Legend Card — shifts cleanly or yields to SelectedProvinceBar on mobile */}
       {hasLegend && !hasBottomCard && (
-        <div className="absolute bottom-3 left-2.5 z-20 pointer-events-auto max-w-[min(260px,calc(100vw-1.25rem))] sm:max-w-[290px] bg-[#090e1a]/95 rounded-xl border border-amber-500/35 shadow-2xl backdrop-blur-md overflow-hidden text-slate-200">
+        <div className="absolute bottom-3 left-2.5 z-20 pointer-events-auto max-w-[min(260px,calc(100vw-1.25rem))] sm:max-w-[290px] bg-[#14100c]/95 rounded-xl border border-[#caa15a]/45 shadow-2xl backdrop-blur-md overflow-hidden text-[#f3ead7]">
           <button
             type="button"
             onClick={() => setLegendOpen(!legendOpen)}
             aria-expanded={legendOpen}
             aria-controls="map-mode-legend-content"
-            className="w-full min-h-[38px] flex items-center justify-between px-2.5 py-1.5 bg-slate-900/80 cursor-pointer select-none border-b border-slate-800 text-left"
+            className="w-full min-h-[38px] flex items-center justify-between px-2.5 py-1.5 bg-[#1b1510]/90 cursor-pointer select-none border-b border-[#3a2f22] text-left"
           >
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
-              <Info aria-hidden="true" className="w-3.5 h-3.5 text-amber-400" />
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#e0b86e]">
+              <Info aria-hidden="true" className="w-3.5 h-3.5 text-[#e0b86e]" />
               <span>
                 {mapMode === 'ECONOMIC' && 'Şehir Gelişim Puanı & Ekonomi'}
                 {mapMode === 'RESOURCES' && 'Üretim Kaynakları & Değerleri'}
@@ -916,7 +960,7 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 {mapMode === 'ASSIMILATION' && 'Asimilasyon (Core) Lejantı'}
               </span>
             </div>
-            <span aria-hidden="true" className="text-slate-400 hover:text-white p-0.5">
+            <span aria-hidden="true" className="text-[#b8a990] hover:text-[#faf3e3] p-0.5">
               {legendOpen ? (
                 <ChevronDown className="w-3.5 h-3.5" />
               ) : (
@@ -929,8 +973,8 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
             <div id="map-mode-legend-content" className="p-2 flex flex-col gap-1.5 max-h-[min(175px,calc(100dvh-14rem))] sm:max-h-[min(210px,calc(100dvh-14rem))] overflow-y-auto no-scrollbar text-[11px]">
               {mapMode === 'ECONOMIC' && (
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] text-amber-200/90 leading-snug">
-                    Bina ve teknoloji yatırımı arttıkça şehrin <strong>Gelişim Puanı (★P)</strong> yükselir ve harita rengi koyu zümrüte döner:
+                  <p className="text-[10px] text-[#e0b86e] leading-snug">
+                    Bina ve teknoloji yatırımı arttıkça şehrin <strong>Gelişim Puanı</strong> yükselir ve harita rengi koyu zümrüte döner:
                   </p>
                   {[
                     { color: '#042F2E', title: '88+ Puan · İmparatorluk Metropolü', desc: 'Çok koyu zümrüt — en yüksek üretim ve vergi merkezi' },
@@ -939,11 +983,11 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                     { color: '#10B981', title: '28–53 Puan · Orta Ölçekli Eyalet', desc: 'Canlı yeşil — yatırıma açık gelişmekte olan şehir' },
                     { color: '#6EE7B7', title: '<28 Puan · Kırsal Taşra', desc: 'Açık nane — henüz bina yatırımı yapılmamış bölge' },
                   ].map((tier) => (
-                    <div key={tier.title} className="flex items-center gap-2 p-1 rounded bg-slate-800/50 border border-slate-700/50">
+                    <div key={tier.title} className="flex items-center gap-2 p-1 rounded bg-[#1b1510]/80 border border-[#3a2f22]">
                       <span className="w-3.5 h-3.5 rounded-sm shrink-0 border border-white/20" style={{ backgroundColor: tier.color }} />
                       <div className="min-w-0">
-                        <span className="font-bold text-slate-100 block truncate">{tier.title}</span>
-                        <span className="text-[9px] text-slate-400 block truncate">{tier.desc}</span>
+                        <span className="font-bold text-[#faf3e3] block truncate">{tier.title}</span>
+                        <span className="text-[9px] text-[#b8a990] block truncate">{tier.desc}</span>
                       </div>
                     </div>
                   ))}
@@ -952,24 +996,23 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
 
               {mapMode === 'RESOURCES' && (
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] text-amber-200/90 leading-snug">
+                  <p className="text-[10px] text-[#e0b86e] leading-snug">
                     Her kaynağın ham taban değeri vardır; ancak <strong>Sanayi, Liman ve Teknoloji yatırımı</strong> yapılan bir Pamuk/Odun şehri, yatırımsız Petrol/Altın şehrini geçer!
                   </p>
                   {Object.entries(RESOURCE_INFO).map(([resId, r]) => (
                     <div
                       key={resId}
-                      className="flex items-center justify-between gap-1.5 p-1 rounded bg-slate-800/45 border border-slate-700/40"
+                      className="flex items-center justify-between gap-1.5 p-1 rounded bg-[#1b1510]/80 border border-[#3a2f22]"
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span
-                          className="w-4 h-4 rounded flex items-center justify-center text-[10px] shrink-0"
-                          style={{ backgroundColor: `${r.color}33`, border: `1px solid ${r.color}` }}
+                          className="w-5 h-5 rounded flex items-center justify-center shrink-0 text-[#e0b86e] bg-[#14100c] border border-[#caa15a]/40"
                         >
-                          {r.icon}
+                          <ResourceSvg resource={resId} className="w-3 h-3" />
                         </span>
-                        <span className="font-bold text-slate-100 truncate">{r.name}</span>
+                        <span className="font-bold text-[#faf3e3] truncate">{r.name}</span>
                       </div>
-                      <span className="text-[10px] font-mono-num text-amber-300 font-bold shrink-0">
+                      <span className="text-[10px] font-mono-num text-[#e0b86e] font-bold shrink-0">
                         Ham {r.baseValue}A
                       </span>
                     </div>
@@ -980,24 +1023,24 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 Object.values(RELIGIONS).map((r) => (
                   <div
                     key={r.id}
-                    className="flex items-start gap-1.5 p-1 rounded bg-slate-800/40 border border-slate-700/40"
+                    className="flex items-start gap-1.5 p-1 rounded bg-[#1b1510]/80 border border-[#3a2f22]"
                   >
                     <span
-                      className="w-3.5 h-3.5 rounded-full shrink-0 mt-0.5 shadow-sm flex items-center justify-center text-[9px] text-white font-bold"
+                      className="w-4 h-4 rounded-full shrink-0 mt-0.5 shadow-sm flex items-center justify-center text-[#faf3e3] border border-[#caa15a]/45"
                       style={{ backgroundColor: r.color }}
                     >
-                      {r.symbol}
+                      <ReligionSvg religionId={r.id} className="w-2.5 h-2.5" />
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-100 truncate">
+                        <span className="font-bold text-[#faf3e3] truncate">
                           {r.name}
                         </span>
-                        <span className="text-[9px] text-emerald-300 font-mono">
+                        <span className="text-[9px] text-[#e0b86e] font-mono">
                           +{r.moralBonus}% M / +{r.stabilityBonus}% S
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400 line-clamp-1 leading-tight">
+                      <p className="text-[10px] text-[#b8a990] line-clamp-1 leading-tight">
                         {r.description}
                       </p>
                     </div>
@@ -1008,17 +1051,17 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                 Object.values(CULTURES).map((c) => (
                   <div
                     key={c.id}
-                    className="flex items-start gap-1.5 p-1 rounded bg-slate-800/40 border border-slate-700/40"
+                    className="flex items-start gap-1.5 p-1 rounded bg-[#1b1510]/80 border border-[#3a2f22]"
                   >
                     <span
                       className="w-3.5 h-3.5 rounded-sm shrink-0 mt-0.5 shadow-sm"
                       style={{ backgroundColor: c.color }}
                     />
                     <div className="flex-1 min-w-0">
-                      <span className="font-bold text-slate-100 block truncate">
+                      <span className="font-bold text-[#faf3e3] block truncate">
                         {c.name}
                       </span>
-                      <p className="text-[10px] text-slate-400 line-clamp-1 leading-tight">
+                      <p className="text-[10px] text-[#b8a990] line-clamp-1 leading-tight">
                         {c.description}
                       </p>
                     </div>
@@ -1033,29 +1076,29 @@ export const MapModePillBar: React.FC<MapModePillBarProps> = ({
                       <span className="font-bold text-emerald-300 block">
                         Öz Vatan (%100 Core)
                       </span>
-                      <span className="text-[10px] text-slate-300">
+                      <span className="text-[10px] text-[#d8cbb5]">
                         Milli vatan toprağı. Tam vergi ve ordu toplama.
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 p-1.5 rounded bg-amber-950/40 border border-amber-500/40">
-                    <span className="w-3.5 h-3.5 rounded-full bg-amber-500 shrink-0 shadow animate-pulse" />
+                  <div className="flex items-center gap-2 p-1.5 rounded bg-[#241c13] border border-[#caa15a]/45">
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#e0b86e] shrink-0 shadow animate-pulse" />
                     <div>
-                      <span className="font-bold text-amber-300 block">
+                      <span className="font-bold text-[#e0b86e] block">
                         Asimilasyon Sürecinde
                       </span>
-                      <span className="text-[10px] text-slate-300">
+                      <span className="text-[10px] text-[#d8cbb5]">
                         Gün gün idari entegrasyon devam ediyor.
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 p-1.5 rounded bg-red-950/40 border border-red-500/40">
-                    <span className="w-3.5 h-3.5 rounded-full bg-red-500 shrink-0 shadow" />
+                  <div className="flex items-center gap-2 p-1.5 rounded bg-rose-950/40 border border-rose-500/40">
+                    <span className="w-3.5 h-3.5 rounded-full bg-rose-500 shrink-0 shadow" />
                     <div>
-                      <span className="font-bold text-red-300 block">
+                      <span className="font-bold text-rose-300 block">
                         Yabancı / Entegre Değil
                       </span>
-                      <span className="text-[10px] text-slate-300">
+                      <span className="text-[10px] text-[#d8cbb5]">
                         Yüksek isyan riski ve düşük vergi. Eyalet panelinden
                         Asimile Et seçin.
                       </span>

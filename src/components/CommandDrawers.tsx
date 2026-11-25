@@ -1,18 +1,12 @@
 import React, { useState } from 'react';
-import {
-  X,
-  Shield,
-  Coins,
-  Swords,
-  Handshake,
-  Landmark,
-} from 'lucide-react';
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { CommandDrawersProps } from './drawers/drawerTypes';
 import { ProvinceDrawer } from './drawers/ProvinceDrawer';
 import { EconomyDrawer } from './drawers/EconomyDrawer';
 import { DiplomacyDrawer } from './drawers/DiplomacyDrawer';
 import { GovernmentTechDrawer } from './drawers/GovernmentTechDrawer';
 import { MilitaryDrawer } from './drawers/MilitaryDrawer';
+import { AoH3GlyphSvg } from './illustrations/AoH3Illustrations';
 import { sound } from '../utils/soundEngine';
 
 export type { CommandDrawersProps } from './drawers/drawerTypes';
@@ -33,7 +27,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
   return (
     <div className="hud-drawer-wrapper fixed inset-x-0 bottom-16 z-40 mx-auto max-w-6xl px-2 sm:px-4 pointer-events-none">
       <div
-        className={`hud-drawer-card pointer-events-auto bg-slate-900/98 border border-slate-700/90 rounded-t-3xl sm:rounded-2xl shadow-2xl ${
+        className={`hud-drawer-card pointer-events-auto bg-[#14100c]/98 border border-[#caa15a]/45 rounded-t-3xl sm:rounded-2xl shadow-2xl ${
           drawerSizeMode === 'MINIMIZED'
             ? 'max-h-[48px]'
             : drawerSizeMode === 'COMPACT'
@@ -43,47 +37,62 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
             : 'max-h-[76vh] landscape:max-h-[78vh]'
         } flex flex-col overflow-hidden transition-all`}
       >
-        {/* Top Grab Handle & Header (Responsive across Portrait & Landscape) */}
-        <div className="hud-drawer-header flex items-center justify-between px-3.5 sm:px-5 py-2 sm:py-2.5 border-b border-slate-800 shrink-0 gap-2">
+        {/* Top Grab Handle & Header (Unified Obsidian + Antique Gold Frame) */}
+        <div className="hud-drawer-header flex items-center justify-between px-3.5 sm:px-5 py-2 sm:py-2.5 border-b border-[#caa15a]/25 bg-[#100d09] shrink-0 gap-2">
           <div className="hud-drawer-header-title flex items-center gap-2 min-w-0">
             {activeTab === 'TERRITORY' && (
               <>
-                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
-                <h2 className="font-display text-xs sm:text-base font-bold text-white truncate">
+                <AoH3GlyphSvg
+                  name={selectedTerritory?.isCapital ? 'star' : 'shield'}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
+                />
+                <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
                   {selectedTerritory
-                    ? `${selectedTerritory.isCapital ? '★ ' : ''}${selectedTerritory.name.replace(/^★\s*/, '')}`
+                    ? selectedTerritory.name.replace(/^★\s*/, '')
                     : 'Eyalet Komuta Merkezi'}
                 </h2>
               </>
             )}
             {activeTab === 'ECONOMY' && (
               <>
-                <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
-                <h2 className="font-display text-xs sm:text-base font-bold text-white truncate">
+                <AoH3GlyphSvg
+                  name="gold"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
+                />
+                <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
                   İmparatorluk Hazinesi, Vergi ve Bütçe
                 </h2>
               </>
             )}
             {activeTab === 'DIPLOMACY' && (
               <>
-                <Handshake className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 shrink-0" />
-                <h2 className="font-display text-xs sm:text-base font-bold text-white truncate">
+                <AoH3GlyphSvg
+                  name="handshake"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
+                />
+                <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
                   Diplomasi, Koalisyonlar ve Barış Masası
                 </h2>
               </>
             )}
             {activeTab === 'GOVERNMENT' && (
               <>
-                <Landmark className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400 shrink-0" />
-                <h2 className="font-display text-xs sm:text-base font-bold text-white truncate">
+                <AoH3GlyphSvg
+                  name="crown"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
+                />
+                <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
                   İdeoloji, Reformlar ve Teknoloji Ağacı
                 </h2>
               </>
             )}
             {activeTab === 'MILITARY' && (
               <>
-                <Swords className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 shrink-0" />
-                <h2 className="font-display text-xs sm:text-base font-bold text-white truncate">
+                <AoH3GlyphSvg
+                  name="sword"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
+                />
+                <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
                   Genelkurmay, Paşalar ve Güç Sıralaması
                 </h2>
               </>
@@ -92,15 +101,23 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
 
           <div className="hud-drawer-header-controls flex items-center gap-1.5 shrink-0">
             <button
+              type="button"
               onClick={cycleSizeMode}
-              className="px-2.5 min-h-[34px] sm:min-h-[36px] rounded-xl text-[11px] font-semibold bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-slate-700 transition-colors"
+              className="px-2.5 min-h-[34px] sm:min-h-[36px] rounded-xl text-[11px] font-semibold bg-[#1b1510] hover:bg-[#261d14] text-[#e0b86e] border border-[#caa15a]/35 flex items-center gap-1 transition-colors cursor-pointer"
               title="Panel Boyutunu Değiştir (Tam / Yarım / Haritayı Gör)"
             >
-              {drawerSizeMode === 'FULL'
-                ? '▼ Yarım Panel'
-                : drawerSizeMode === 'COMPACT'
-                ? '▼ Haritayı Gör'
-                : '▲ Paneli Aç'}
+              {drawerSizeMode === 'MINIMIZED' ? (
+                <ChevronUp className="w-3.5 h-3.5 shrink-0" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+              )}
+              <span>
+                {drawerSizeMode === 'FULL'
+                  ? 'Yarım Panel'
+                  : drawerSizeMode === 'COMPACT'
+                  ? 'Haritayı Gör'
+                  : 'Paneli Aç'}
+              </span>
             </button>
             <button
               type="button"
@@ -110,7 +127,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
                 sound.playClick();
                 onClose();
               }}
-              className="min-w-[34px] min-h-[34px] sm:min-w-[36px] sm:min-h-[36px] rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="min-w-[34px] min-h-[34px] sm:min-w-[36px] sm:min-h-[36px] rounded-xl flex items-center justify-center text-[#b8a990] hover:text-[#faf3e3] hover:bg-[#1e1812] border border-transparent hover:border-[#caa15a]/30 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>

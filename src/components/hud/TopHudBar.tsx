@@ -82,12 +82,12 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
   const seasonInfo = getGameSeason(tick, gameMode);
   const seasonColorClass =
     seasonInfo.id === 'WINTER'
-      ? 'text-sky-300'
+      ? 'text-[#d8cbb5]'
       : seasonInfo.id === 'SPRING'
-      ? 'text-emerald-300'
+      ? 'text-[#e0b86e]'
       : seasonInfo.id === 'SUMMER'
-      ? 'text-amber-300'
-      : 'text-orange-300';
+      ? 'text-[#f3ead7]'
+      : 'text-[#caa15a]';
   const hourLabel = `${String(hour % 24).padStart(2, '0')}:00`;
   const hourlyRateLabel = getClockSpeedProfile(speed).rateLabel;
   const isManpowerFull =
@@ -120,9 +120,9 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               onOpenSystemModal();
             }}
             title="Sistem Menüsü, UI Ölçeği & Kayıt Merkezi"
-            className="min-w-[32px] min-h-[34px] sm:min-w-[36px] sm:min-h-[38px] px-1.5 sm:px-2 rounded-xl hud-chip hover:bg-slate-800 flex items-center justify-center gap-1.5 text-slate-200 shrink-0"
+            className="min-w-[32px] min-h-[34px] sm:min-w-[36px] sm:min-h-[38px] px-1.5 sm:px-2 rounded-xl hud-chip hover:bg-[#231b13] flex items-center justify-center gap-1.5 text-[#f3ead7] shrink-0"
           >
-            <Menu className="w-4 h-4 text-amber-400 shrink-0" />
+            <Menu className="w-4 h-4 text-[#e0b86e] shrink-0" />
             <span className="hidden lg:inline text-xs font-semibold">Menü</span>
           </button>
 
@@ -141,7 +141,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             aria-label="Ülke diplomasisi ve ittifak özetini aç"
             title="Ülke Diplomasisi, Müttefikler, Paktlar ve Savaş Özeti (Bayrak Menüsü)"
             data-full-text={`${nationTitle} — ${IDEOLOGIES[playerNation.ideology]?.name ?? 'Monarşi'} (İstikrar %${Math.round(playerNation.stability)}). Ülke diplomasisi, müttefikler, savunma paktları ve savaş özetini açmak için dokun.`}
-            className="flex items-center gap-1.5 sm:gap-2 text-left min-w-0 px-1 sm:px-1.5 py-0.5 rounded-xl hover:bg-amber-500/15 border border-transparent hover:border-amber-500/35 transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 text-left min-w-0 px-1 sm:px-1.5 py-0.5 rounded-xl hover:bg-[#caa15a]/15 border border-transparent hover:border-[#caa15a]/35 transition-colors"
           >
             <div className="relative shrink-0">
               <NationFlagCanvasBadge
@@ -151,20 +151,20 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
                 width={34}
                 height={24}
               />
-              <span className="absolute -bottom-1 -right-1 px-0.5 rounded bg-slate-950 border border-amber-400/60 text-[8px] font-mono-num text-amber-300">
+              <span className="absolute -bottom-1 -right-1 px-0.5 rounded bg-[#14100c] border border-[#caa15a]/60 text-[8px] font-mono-num text-[#e0b86e]">
                 %{Math.round(playerNation.stability)}
               </span>
             </div>
             <div className="hud-narrow-landscape-hide min-w-0 overflow-hidden">
-              <div className="font-display text-[11px] sm:text-sm font-bold text-amber-100 truncate max-w-[90px] min-[370px]:max-w-[110px] min-[390px]:max-w-[124px] lg:max-w-[180px]">
+              <div className="font-display text-[11px] sm:text-sm font-bold text-[#f3ead7] truncate max-w-[90px] min-[370px]:max-w-[110px] min-[390px]:max-w-[124px] lg:max-w-[180px]">
                 {nationTitle}
               </div>
-              <div className="hud-landscape-hide text-[9px] sm:text-[10px] text-amber-400 sm:text-slate-400 leading-tight font-mono-num sm:font-sans truncate">
+              <div className="hud-landscape-hide text-[9px] sm:text-[10px] text-[#e0b86e] sm:text-[#b8a990] leading-tight font-mono-num sm:font-sans truncate">
                 <span className="sm:hidden font-semibold truncate block">
                   {dateLabel}
                   <span className="hidden min-[370px]:inline"> · {hourLabel}</span>
                 </span>
-                <span className="hidden sm:inline text-amber-300/90">
+                <span className="hidden sm:inline text-[#caa15a]">
                   {IDEOLOGIES[playerNation.ideology]?.name ?? 'Monarşi'} · Diplomasi
                 </span>
               </div>
@@ -179,7 +179,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               }}
               title="Başkente Odakla"
               aria-label="Başkente Odakla"
-              className="w-7 h-[32px] sm:w-[34px] sm:h-[34px] rounded-xl bg-[#0c1324] hover:bg-slate-800 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0"
+              className="w-7 h-[32px] sm:w-[34px] sm:h-[34px] rounded-xl bg-[#14100c] hover:bg-[#231b13] border border-[#caa15a]/35 flex items-center justify-center text-[#e0b86e] shrink-0"
             >
               <Compass className="w-3.5 h-3.5" />
             </button>
@@ -194,9 +194,9 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               onOpenNewsDrawer();
             }}
             title="Dünya Haberleri & Divan"
-            className="min-w-[30px] h-[32px] px-1 rounded-xl bg-[#0c1324] border border-amber-500/30 flex items-center justify-center gap-0.5 text-[10px] font-mono-num font-bold text-amber-300"
+            className="min-w-[30px] h-[32px] px-1 rounded-xl bg-[#14100c] border border-[#caa15a]/35 flex items-center justify-center gap-0.5 text-[10px] font-mono-num font-bold text-[#e0b86e]"
           >
-            <Newspaper className="w-3 h-3 text-amber-400 shrink-0" />
+            <Newspaper className="w-3 h-3 text-[#e0b86e] shrink-0" />
             <span>{newsCount}</span>
           </button>
 
@@ -208,8 +208,8 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             aria-label={speed === 0 ? 'Oyunu devam ettir' : 'Oyunu duraklat'}
             className={`w-[30px] h-[32px] rounded-xl flex items-center justify-center border transition-colors ${
               speed === 0
-                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                : 'bg-[#0c1324] text-slate-200 border-amber-500/30'
+                ? 'bg-[#caa15a] text-[#14100c] border-[#e0b86e] font-bold'
+                : 'bg-[#14100c] text-[#f3ead7] border-[#caa15a]/35'
             }`}
           >
             {speed === 0 ? (
@@ -222,7 +222,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
           <button
             onClick={cycleSpeed}
             aria-label="Zaman hızını değiştir"
-            className="min-w-[32px] h-[32px] px-1 rounded-xl bg-[#0c1324] border border-amber-500/30 flex items-center justify-center gap-0.5 text-[10px] font-mono-num font-bold text-amber-400"
+            className="min-w-[32px] h-[32px] px-1 rounded-xl bg-[#14100c] border border-[#caa15a]/35 flex items-center justify-center gap-0.5 text-[10px] font-mono-num font-bold text-[#e0b86e]"
           >
             <FastForward className="w-2.5 h-2.5 shrink-0" />
             <span>{speed === 0 ? '1x' : `${speed}x`}</span>
@@ -236,8 +236,8 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             aria-label="Müziği aç veya kapat"
             className={`w-[28px] h-[32px] rounded-xl border flex items-center justify-center ${
               isMusicPlaying
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-                : 'bg-[#0c1324] text-slate-400 border-slate-800'
+                ? 'bg-[#caa15a]/20 text-[#e0b86e] border-[#caa15a]/55'
+                : 'bg-[#14100c] text-[#9b8d77] border-[#3a2f22]'
             }`}
           >
             <Music className="w-3.5 h-3.5" />
@@ -252,10 +252,10 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             onSetActiveTab(activeTab === 'ECONOMY' ? 'NONE' : 'ECONOMY')
           }
           title="Hazine ve Günlük Net Gelir"
-          className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#0c1324] border border-amber-500/35 hover:border-amber-400 shrink-0"
+          className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#14100c] border border-[#caa15a]/40 hover:border-[#e0b86e] shrink-0"
         >
-          <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
-          <span className="font-mono-num text-[11px] sm:text-xs font-bold text-white whitespace-nowrap">
+          <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#e0b86e] shrink-0" />
+          <span className="font-mono-num text-[11px] sm:text-xs font-bold text-[#faf3e3] whitespace-nowrap">
             {playerNation.treasury.toLocaleString('tr-TR')}
           </span>
           <span
@@ -280,15 +280,15 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               ? `İnsan Gücü: ${Math.round(playerNation.manpower).toLocaleString('tr-TR')} / ${playerManpowerCap.toLocaleString('tr-TR')} (${isManpowerFull ? 'Kapasite Dolu' : `+${playerEconomy.dailyManpower.toLocaleString('tr-TR')}/gün`})`
               : `İnsan Gücü (+${playerEconomy.dailyManpower.toLocaleString('tr-TR')}/gün)`
           }
-          className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#0c1324] border border-emerald-500/30 hover:border-emerald-400 shrink-0"
+          className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#14100c] border border-[#caa15a]/35 hover:border-[#e0b86e] shrink-0"
         >
-          <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400 shrink-0" />
-          <span className="font-mono-num text-[11px] sm:text-xs font-bold text-white whitespace-nowrap">
+          <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#e0b86e] shrink-0" />
+          <span className="font-mono-num text-[11px] sm:text-xs font-bold text-[#faf3e3] whitespace-nowrap">
             {(playerNation.manpower / 1000).toFixed(1)}B
           </span>
           <span
             className={`hud-narrow-landscape-hide font-mono-num text-[10px] font-semibold whitespace-nowrap ${
-              isManpowerFull ? 'text-amber-300' : 'text-emerald-400'
+              isManpowerFull ? 'text-[#e0b86e]' : 'text-emerald-400'
             }`}
           >
             (
@@ -306,10 +306,10 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             onSetActiveTab(activeTab === 'MILITARY' ? 'NONE' : 'MILITARY')
           }
           title="Toplam Silah Altındaki Ordu"
-          className="flex sm:hidden lg:flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#0c1324] border border-rose-500/30 hover:border-rose-400 shrink-0"
+          className="flex sm:hidden lg:flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#14100c] border border-[#caa15a]/35 hover:border-[#e0b86e] shrink-0"
         >
-          <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-400 shrink-0" />
-          <span className="font-mono-num text-[11px] sm:text-xs font-bold text-white whitespace-nowrap">
+          <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#e0b86e] shrink-0" />
+          <span className="font-mono-num text-[11px] sm:text-xs font-bold text-[#faf3e3] whitespace-nowrap">
             {(playerEconomy.totalGarrison / 1000).toFixed(0)}B
           </span>
         </button>
@@ -322,18 +322,18 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               onSetActiveTab(activeTab === 'GOVERNMENT' ? 'NONE' : 'GOVERNMENT');
             }}
             title="Aktif Teknoloji Araştırması"
-            className="relative flex items-center justify-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#0c1324] border border-sky-500/50 hover:border-sky-400 shrink-0 shadow-sm"
+            className="relative flex items-center justify-center gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#1b1510] border border-[#caa15a]/55 hover:border-[#e0b86e] shrink-0 shadow-sm"
           >
-            <FlaskConical className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-400 shrink-0" />
-            <span className="font-mono-num text-[11px] sm:text-xs font-bold text-sky-200 whitespace-nowrap">
+            <FlaskConical className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#e0b86e] shrink-0" />
+            <span className="font-mono-num text-[11px] sm:text-xs font-bold text-[#f3ead7] whitespace-nowrap">
               %{Math.min(100, Math.round((playerNation.activeResearch.progress / playerNation.activeResearch.totalCost) * 100))}
             </span>
-            <span className="hidden md:inline font-mono-num text-[10px] text-amber-300 whitespace-nowrap">
+            <span className="hidden md:inline font-mono-num text-[10px] text-[#caa15a] whitespace-nowrap">
               ({Math.max(1, Math.ceil((playerNation.activeResearch.totalCost - playerNation.activeResearch.progress) / Math.max(0.4, playerEconomy.dailyResearch)))}g)
             </span>
-            <div className="absolute bottom-0 left-1 right-1 h-[2px] bg-slate-800 rounded-full overflow-hidden">
+            <div className="absolute bottom-0 left-1 right-1 h-[2px] bg-[#2a2117] rounded-full overflow-hidden">
               <div
-                className="h-full bg-sky-400 transition-all"
+                className="h-full bg-[#e0b86e] transition-all"
                 style={{
                   width: `${Math.min(100, Math.round((playerNation.activeResearch.progress / playerNation.activeResearch.totalCost) * 100))}%`,
                 }}
@@ -348,10 +348,10 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
               onSetActiveTab(activeTab === 'GOVERNMENT' ? 'NONE' : 'GOVERNMENT');
             }}
             title="Teknoloji Araştırması Başlat (Bilim Boşta)"
-            className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-amber-950/40 border border-amber-500/50 hover:border-amber-400 shrink-0"
+            className="flex items-center justify-center gap-1 px-2 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-[#261d13] border border-[#caa15a]/50 hover:border-[#e0b86e] shrink-0"
           >
-            <FlaskConical className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
-            <span className="font-mono-num text-[10px] sm:text-[11px] font-extrabold text-amber-200 whitespace-nowrap">
+            <FlaskConical className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#e0b86e] shrink-0" />
+            <span className="font-mono-num text-[10px] sm:text-[11px] font-extrabold text-[#f3ead7] whitespace-nowrap">
               +Araştır
             </span>
           </button>
@@ -361,7 +361,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
       {/* Landscape / Desktop Right: AoH3 Clock & 5-Pip Speed Gauge */}
       <div className="hidden sm:flex items-center gap-1.5 shrink-0">
         <div className="text-right mr-0.5">
-          <div className="font-mono-num text-[11px] sm:text-xs font-bold text-amber-400 leading-tight whitespace-nowrap flex items-center justify-end gap-1">
+          <div className="font-mono-num text-[11px] sm:text-xs font-bold text-[#e0b86e] leading-tight whitespace-nowrap flex items-center justify-end gap-1">
             <span>{dateLabel}</span>
             <span
               className={`hidden md:inline font-sans text-[10px] font-semibold ${seasonColorClass}`}
@@ -370,13 +370,13 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             >
               · {seasonInfo.name}
             </span>
-            <span className="hud-landscape-hide text-amber-200/90 text-[10px] font-mono-num">
+            <span className="hud-landscape-hide text-[#d8cbb5] text-[10px] font-mono-num">
               · {hourLabel}
             </span>
           </div>
           {/* AoH3 Speed Pips */}
           <div className="hud-landscape-hide flex items-center justify-end gap-1 mt-0.5">
-            <span className="text-[9px] text-slate-400 whitespace-nowrap">
+            <span className="text-[9px] text-[#b8a990] whitespace-nowrap">
               {hourlyRateLabel}
             </span>
             <div className="hidden lg:flex items-center gap-0.5 ml-1">
@@ -392,8 +392,8 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
                     title={`Hız: ${st.label}`}
                     className={`w-3.5 h-2 rounded-xs transition-colors ${
                       active
-                        ? 'bg-amber-400'
-                        : 'bg-slate-800 hover:bg-slate-700'
+                        ? 'bg-[#e0b86e]'
+                        : 'bg-[#2a2117] hover:bg-[#3d3022]'
                     }`}
                   />
                 );
@@ -410,8 +410,8 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
           title="Duraklat / Devam Et (Boşluk)"
           className={`min-w-[36px] min-h-[36px] rounded-xl flex items-center justify-center border transition-colors shrink-0 ${
             speed === 0
-              ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-              : 'bg-[#0c1324] text-slate-200 border-amber-500/35 hover:bg-slate-800'
+              ? 'bg-[#caa15a] text-[#14100c] border-[#e0b86e] font-bold'
+              : 'bg-[#14100c] text-[#f3ead7] border-[#caa15a]/35 hover:bg-[#231b13]'
           }`}
         >
           {speed === 0 ? (
@@ -424,7 +424,7 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
         <button
           onClick={cycleSpeed}
           title="Zaman Hızını Değiştir"
-          className="min-w-[40px] min-h-[36px] px-2 rounded-xl bg-[#0c1324] hover:bg-slate-800 border border-amber-500/35 flex items-center justify-center gap-1 text-xs font-mono-num font-bold text-amber-400 shrink-0"
+          className="min-w-[40px] min-h-[36px] px-2 rounded-xl bg-[#14100c] hover:bg-[#231b13] border border-[#caa15a]/35 flex items-center justify-center gap-1 text-xs font-mono-num font-bold text-[#e0b86e] shrink-0"
         >
           <FastForward className="w-3.5 h-3.5 shrink-0" />
           <span>{speed === 0 ? '1x' : `${speed}x`}</span>
@@ -439,8 +439,8 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
           aria-label="Ulusal marşı aç veya kapat"
           className={`min-w-[34px] min-h-[36px] px-2 rounded-xl border flex items-center justify-center gap-1 transition-colors shrink-0 ${
             isMusicPlaying
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-              : 'bg-[#0c1324] text-slate-400 border-slate-800 hover:text-slate-200'
+              ? 'bg-[#caa15a]/20 text-[#e0b86e] border-[#caa15a]/55'
+              : 'bg-[#14100c] text-[#9b8d77] border-[#3a2f22] hover:text-[#f3ead7]'
           }`}
         >
           <Music className="w-3.5 h-3.5" />
@@ -452,9 +452,9 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
             onOpenNewsDrawer();
           }}
           title="Canlı Dünya Haber Akışı & Divan"
-          className="min-w-[36px] min-h-[36px] px-2 rounded-xl bg-[#0c1324] hover:bg-slate-800 border border-amber-500/30 flex items-center justify-center gap-1 text-xs font-semibold text-amber-300 shrink-0"
+          className="min-w-[36px] min-h-[36px] px-2 rounded-xl bg-[#14100c] hover:bg-[#231b13] border border-[#caa15a]/35 flex items-center justify-center gap-1 text-xs font-semibold text-[#e0b86e] shrink-0"
         >
-          <Newspaper className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <Newspaper className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
           <span className="hidden lg:inline font-mono-num">{newsCount}</span>
         </button>
       </div>

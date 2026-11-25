@@ -7589,4 +7589,63 @@ test('covert espionage operations (sabotage fort, incite revolt, siphon treasury
   );
 });
 
+test('1444 scenario distributes historical city counts, borders, and capitals accurately across all realms', () => {
+  const world1440 = initializeWorld2026('EMPIRES_1440');
+  const countByOwner = (ownerId: string) =>
+    Object.values(world1440.territories).filter((t) => t.ownerId === ownerId);
+
+  // Every nation must own its capital territory and mark it isCapital
+  for (const nation of Object.values(world1440.nations)) {
+    const cap = world1440.territories[nation.capitalTerritoryId];
+    assert.ok(cap, `Nation ${nation.id} (${nation.name}) must have a valid capitalTerritoryId`);
+    assert.equal(
+      cap.ownerId,
+      nation.id,
+      `Capital ${nation.capitalTerritoryId} of ${nation.name} must be owned by ${nation.id}, got ${cap.ownerId}`
+    );
+    assert.equal(cap.isCapital, true, `Capital ${nation.capitalTerritoryId} must have isCapital=true`);
+  }
+
+  // No ahistorical 25-32 province continent blobs
+  const ownerCounts = Object.keys(world1440.nations).map((id) => ({
+    id,
+    count: countByOwner(id).length,
+  }));
+  const maxCityCount = Math.max(...ownerCounts.map((x) => x.count));
+  assert.ok(
+    maxCityCount <= 22,
+    `No 1444 realm should exceed 22 cities, found ${maxCityCount}`
+  );
+
+  // Key Eurasian historical city counts & borders
+  assert.equal(countByOwner('792').length, 20, 'Ottoman Empire (1444) should have 20 cities');
+  assert.equal(world1440.territories['300_SKG'].ownerId, '792', 'Selanik should be Ottoman in 1444');
+  assert.equal(world1440.territories['300_IOA'].ownerId, '792', 'Yanya should be Ottoman in 1444');
+  assert.equal(world1440.territories['642_CND'].ownerId, '792', 'Dobruca/Silistre should be Ottoman in 1444');
+
+  assert.equal(countByOwner('300').length, 2, 'Byzantium & Morea (1444) should have 2 cities');
+  assert.equal(world1440.territories['792_IST'].ownerId, '300', 'Constantinople must belong to Byzantium');
+  assert.equal(world1440.territories['300_CRT'].ownerId, '380', 'Crete must belong to Venice');
+
+  assert.equal(countByOwner('818').length, 16, 'Mamluk Sultanate should have 16 cities');
+  assert.equal(countByOwner('156').length, 15, 'Ming Dynasty should have 15 cities');
+  assert.equal(countByOwner('276').length, 11, 'Holy Roman Empire should have 11 cities');
+  assert.equal(countByOwner('250').length, 10, 'Kingdom of France should have 10 cities');
+  assert.equal(countByOwner('724').length, 9, 'Castile & Aragon should have 9 cities');
+  assert.equal(countByOwner('348').length, 8, 'Kingdom of Hungary should have 8 cities');
+  assert.equal(world1440.territories['642_CLJ'].ownerId, '348', 'Transylvania should belong to Hungary');
+  assert.equal(countByOwner('392').length, 7, 'Ashikaga Japan should have 7 cities');
+  assert.equal(countByOwner('826').length, 6, 'Kingdom of England should have 6 cities');
+  assert.equal(countByOwner('905').length, 2, 'Kingdom of Scotland should have 2 cities');
+  assert.equal(world1440.territories['826_EDI'].ownerId, '905', 'Edinburgh should belong to Scotland');
+  assert.equal(countByOwner('616').length, 6, 'Kingdom of Poland should have 6 cities');
+  assert.equal(world1440.territories['616_GDN'].ownerId, '428', 'Marienburg/Danzig should belong to Teutonic Order');
+  assert.equal(countByOwner('440').length, 6, 'Grand Duchy of Lithuania should have 6 cities');
+  assert.equal(world1440.territories['804'].ownerId, '440', 'Kiev should belong to Lithuania');
+  assert.equal(countByOwner('642').length, 2, 'Wallachia should have 2 cities');
+  assert.equal(countByOwner('498').length, 2, 'Moldavia should have 2 cities');
+  assert.equal(world1440.territories['642_IAS'].ownerId, '498', 'Iasi should belong to Moldavia');
+  assert.equal(world1440.nations['031'].capitalTerritoryId, '364_TBZ', 'Karakoyunlu capital should be Tabriz');
+  assert.equal(world1440.nations['364'].capitalTerritoryId, '860_SKD', 'Timurid capital should be Samarkand');
+});
 

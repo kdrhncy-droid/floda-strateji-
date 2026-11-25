@@ -1,4 +1,4 @@
-import { geoCentroid } from 'd3-geo';
+import { geoArea, geoCentroid } from 'd3-geo';
 import { feature, neighbors } from 'topojson-client';
 import type { FeatureCollection, Geometry } from 'geojson';
 import worldData from 'world-atlas/countries-110m.json';
@@ -363,6 +363,8 @@ const INLAND_VORONOI_OVERRIDES = new Set<string>([
   '250',     // Paris
   '276',     // Berlin
   '724',     // Madrid / Toledo
+  '724_ZAZ', // Zaragoza
+  '724_VLL', // Valladolid
   '380_MIL', // Milano
   '616_POZ', // Poznań
   '804_HRK', // Harkiv
@@ -609,7 +611,42 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
           provGarrison - armorCount - airDroneCount
         );
 
-        const computedCentroid = geoCentroid(provFeature) as [number, number];
+        let computedCentroid = geoCentroid(provFeature) as [number, number];
+        if (provFeature.geometry.type === 'MultiPolygon' && provFeature.geometry.coordinates.length > 1) {
+          let bestNearArea = -1;
+          let bestNearCentroid: [number, number] | null = null;
+          let bestArea = -1;
+          let bestPolyCentroid: [number, number] | null = null;
+          for (const polyCoords of provFeature.geometry.coordinates) {
+            const subFeat: GeoCountryFeature = {
+              type: 'Feature',
+              id: provFeature.id,
+              properties: provFeature.properties,
+              geometry: { type: 'Polygon', coordinates: polyCoords },
+            };
+            const area = geoArea(subFeat);
+            const subC = geoCentroid(subFeat) as [number, number];
+            if (Number.isFinite(subC[0]) && Number.isFinite(subC[1])) {
+              const distToSeed = Math.hypot(
+                subC[0] - piece.seed.lon,
+                subC[1] - piece.seed.lat
+              );
+              if (distToSeed <= 25 && area > bestNearArea) {
+                bestNearArea = area;
+                bestNearCentroid = subC;
+              }
+              if (area > bestArea) {
+                bestArea = area;
+                bestPolyCentroid = subC;
+              }
+            }
+          }
+          if (bestNearCentroid) {
+            computedCentroid = bestNearCentroid;
+          } else if (bestPolyCentroid) {
+            computedCentroid = bestPolyCentroid;
+          }
+        }
         const validCentroid: [number, number] =
           Number.isFinite(computedCentroid[0]) &&
           Number.isFinite(computedCentroid[1])

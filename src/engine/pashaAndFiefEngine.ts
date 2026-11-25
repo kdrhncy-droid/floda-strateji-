@@ -129,37 +129,67 @@ export function getNationRulerName(
       case '792':
         return 'Sultan II. Murad Han';
       case '300':
-        return 'İmparator XI. Konstantinos Paleologos';
+        return 'İmparator VIII. İoannis Paleologos';
       case '818':
         return 'Sultan Seyfeddin Çakmak';
+      case '031':
+        return 'Cihan Şah (Karakoyunlu)';
+      case '682':
+        return 'Emir Seyfeddin (Necid & Hürmüz)';
       case '348':
         return 'Kral I. Ulászló & János Hunyadi';
       case '364':
         return 'Sultan Şahruh Mirza';
+      case '860':
+        return 'Ebu’l-Hayr Han (Özbek & Çağatay)';
       case '643':
-        return 'Büyük Knez II. Vasili & Seyid Han';
+        return 'Büyük Knez II. Vasili (Moskova)';
+      case '902':
+        return 'Uluğ Muhammed Han (Büyük Orda & Kazan)';
+      case '903':
+        return 'Hacı Muhammed Han (Sibir)';
+      case '804':
+        return 'Hacı I. Giray Han (Kırım)';
       case '380':
         return 'Dük Francesco Foscari (Venedik)';
       case '276':
         return 'İmparator III. Friedrich (Habsburg)';
+      case '040':
+        return 'Arşidük III. Friedrich (Avusturya)';
       case '616':
-        return 'Kral III. Władysław & Kazimir';
+        return 'Kral III. Władysław (Lehistan)';
+      case '440':
+        return 'Büyük Dük IV. Kazimir (Litvanya)';
+      case '428':
+        return 'Üstat Konrad von Erlichshausen (Töton)';
       case '250':
         return 'Kral VII. Charles (Valois)';
       case '826':
         return 'Kral VI. Henry (Lancaster)';
+      case '905':
+        return 'Kral II. James (Stuart)';
       case '724':
-        return 'Kral II. Juan (Kastilya & Leon)';
+        return 'Kral II. Juan (Kastilya & Aragon)';
+      case '620':
+        return 'Kral V. Afonso (Portekiz)';
       case '012':
         return 'Sultan Ebu Said Osman (Mağrip)';
       case '752':
         return 'Kral Bavyeralı Christopher (Kalmar)';
       case '356':
-        return 'Sultan Muhammed Şah (Delhi)';
+        return 'Sultan Alaaddin Alem Şah (Delhi)';
+      case '904':
+        return 'İmparator II. Deva Raya (Vijayanagara)';
+      case '050':
+        return 'Sultan Nasiruddin Mahmud (Bengal)';
       case '156':
         return 'İmparator Zhengtong (Büyük Ming)';
       case '392':
         return 'Şogun Ashikaga Yoshinori';
+      case '410':
+        return 'Kral Büyük Sejong (Joseon)';
+      case '076':
+        return 'Sapa İnka Pachacuti';
       default:
         return 'Hükümdar';
     }
@@ -172,29 +202,37 @@ const HISTORICAL_AI_LORDS: Record<string, string[]> = {
   '300': [
     'Megas Doux Loukas Notaras',
     'Giovanni Giustiniani',
-    'Teofilo Paleologo',
+    'Konstantinos Paleologos',
   ],
   '818': ['Emir Seyfeddin İnal (Atabey)', 'Emir Canbulat', 'Emir Hoşkadem'],
+  '031': ['Uzun Hasan Bey', 'Pir Budak', 'Hasan Ali'],
   '348': ['János Hunyadi (Naib & Komutan)', 'Mihály Szilágyi', 'Pál Kinizsi'],
-  '364': ['Uluğ Bey (Semerkant Valisi)', 'Abdüllatif Mirza', 'Babür Mirza'],
-  '643': ['Knez Dmitri Şemyaka', 'Daniil Holmski', 'Seyid Ahmed Han'],
+  '364': ['Uluğ Bey (Semerkant)', 'Abdüllatif Mirza', 'Babür Mirza'],
+  '643': ['Knez Dmitri Şemyaka', 'Daniil Holmski', 'İvan Vasilyeviç'],
+  '902': ['Mahmudek Han', 'Seyid Ahmed Han', 'Kasım Han'],
+  '903': ['İbak Han', 'Mahmud Hoca', 'Mar Han'],
+  '804': ['Nur Devlet Giray', 'Mengli Giray', 'Şirin Beyi Eminek'],
   '380': ['Amiral Luigi Loredan', 'Komutan Alvise Diedo', 'Francesco Sforza'],
   '276': [
     'Albrecht von Brandenburg',
     'Friedrich von Sachsen',
     'Kont Ulrich von Cilli',
   ],
-  '616': ['Zbigniew Oleśnicki', 'Jan Tarnowski', 'Jonas Goštautas'],
+  '616': ['Zbigniew Oleśnicki', 'Jan Tarnowski', 'Piotr Odrowąż'],
+  '440': ['Jonas Goštautas', 'Mykolas Kęsgaila', 'Radvila Astikas'],
   '250': ['Arthur de Richemont', 'Jean de Dunois', 'Kont Jean Bureau'],
   '826': [
     'Richard Plantagenet (York)',
     'Edmund Beaufort (Somerset)',
     'John Talbot',
   ],
+  '905': ['William Douglas', 'Alexander Livingston', 'Lord James Hamilton'],
   '724': ['Don Álvaro de Luna', 'İnfante Enrique', 'Rodrigo Manrique'],
+  '620': ['Prens Denizci Henrique', 'Dük Pedro de Coimbra'],
   '012': ['Emir Abdülhak el-Merînî', 'Abu Faris Abdülaziz'],
   '752': ['Karl Knutsson Bonde', 'Sten Sture'],
   '356': ['Behlül Han Lûdî', 'Mahmud Şah Şarkî'],
+  '904': ['Mallikarjuna Raya', 'Alauddin II. Bahmani'],
   '156': ['General Yu Qian', 'Mareşal Zhang Fu', 'Amiral Wang Jinghong'],
   '392': ['Hosokawa Katsumoto', 'Yamana Sōzen'],
 };

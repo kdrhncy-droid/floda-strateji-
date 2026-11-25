@@ -533,7 +533,7 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
                               onClick={() => handleExportClick(def.id)}
                               title="JSON Yedeği İndir"
                               aria-label="JSON yedeği indir"
-                              className="min-w-[40px] min-h-[40px] rounded-xl bg-[#211d18] hover:bg-[#2b251e] border border-[#3a3228] flex items-center justify-center text-sky-300 cursor-pointer"
+                              className="min-w-[40px] min-h-[40px] rounded-xl bg-[#211d18] hover:bg-[#2b251e] border border-[#3a3228] flex items-center justify-center text-[#e0b86e] cursor-pointer"
                             >
                               <Download className="w-4 h-4" />
                             </button>

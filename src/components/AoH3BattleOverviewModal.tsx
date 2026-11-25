@@ -5,7 +5,6 @@ import {
   X,
   Zap,
   Target,
-  Flame,
   Castle,
   ArrowRight,
   Handshake,
@@ -38,6 +37,8 @@ import {
 } from '../engine/diplomacyAndWarActions';
 import { sound } from '../utils/soundEngine';
 import { useAccessibleDialog } from '../hooks/useAccessibleDialog';
+import { getTechArtwork } from './drawers/techArtwork';
+import { AoH3GlyphSvg, AoH3MenuBanner } from './illustrations/AoH3Illustrations';
 
 interface AoH3BattleOverviewModalProps {
   battle?: ActiveBattle | null;
@@ -96,23 +97,51 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
   const attMorale = battle ? (battle.attackerMorale ?? 100) : 100;
   const defMorale = battle ? (battle.defenderMorale ?? 100) : 100;
 
-  const attFront = battle
+  const attFrontTotal = battle
     ? (battle.attackerFrontline ?? Math.round(attTroops * 0.8))
     : Math.round(attTroops * 0.75);
   const attBack = battle
     ? (battle.attackerBackline ?? Math.round(attTroops * 0.2))
     : Math.round(attTroops * 0.25);
 
-  const defFront = battle
+  const defFrontTotal = battle
     ? (battle.defenderFrontline ?? Math.round(defTroops * 0.85))
     : Math.round(defTroops * 0.85);
   const defBack = battle
     ? (battle.defenderBackline ?? Math.round(defTroops * 0.15))
     : Math.round(defTroops * 0.15);
 
+  // Split frontline into Ön Hat (Infantry) & Kanat (Cavalry/Armor) for AoH3 visual grid
+  const attFrontCenter = Math.round(attFrontTotal * 0.72);
+  const attFlank = Math.max(0, attFrontTotal - attFrontCenter);
+  const defInfRatio = territory.garrison > 0
+    ? Math.max(0.55, Math.min(0.85, (territory.units?.infantry ?? territory.garrison * 0.7) / Math.max(1, territory.garrison)))
+    : 0.72;
+  const defFrontCenter = Math.round(defFrontTotal * defInfRatio);
+  const defFlank = Math.max(0, defFrontTotal - defFrontCenter);
+
+  const REGIMENT_SLOTS = 10;
+  const slotCapacity = Math.max(1000, Math.round(combatWidth / 1.8));
+  const computeFilledCells = (count: number, cap: number) =>
+    count <= 0 ? 0 : Math.max(1, Math.min(REGIMENT_SLOTS, Math.round((count / Math.max(1, cap)) * REGIMENT_SLOTS)));
+
+  const attBackCells = computeFilledCells(attBack, slotCapacity * 0.45);
+  const attFrontCells = computeFilledCells(attFrontCenter, slotCapacity * 0.75);
+  const attFlankCells = computeFilledCells(attFlank, slotCapacity * 0.35);
+
+  const defFrontCells = computeFilledCells(defFrontCenter, slotCapacity * 0.75);
+  const defFlankCells = computeFilledCells(defFlank, slotCapacity * 0.35);
+  const defBackCells = battle
+    ? computeFilledCells(defBack, slotCapacity * 0.45)
+    : computeFilledCells(((territory.castleWallHp ?? 100) / 100) * slotCapacity * 0.45, slotCapacity * 0.45);
+
+  const wallHp = territory.castleWallHp ?? 100;
+
+  const headerArt = getTechArtwork(battle ? 'INFANTRY' : 'FORTRESS', 'MILITARY');
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
@@ -121,268 +150,395 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
         aria-modal="true"
         aria-labelledby="battle-overview-title"
         tabIndex={-1}
-        className="relative w-full max-w-3xl bg-slate-950/95 border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-3xl bg-[#14100c] border border-[#caa15a]/50 rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header Banner */}
-        <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-amber-950/50 to-slate-900 border-b border-amber-500/30 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
-              {battle ? <Swords className="w-5 h-5 animate-pulse" /> : <Castle className="w-5 h-5 text-amber-400" />}
+        {/* Top Illustrated Oil-Painting Header Banner */}
+        <div
+          className="relative px-4 sm:px-5 py-3.5 border-b border-[#caa15a]/35 flex items-center justify-between gap-3 overflow-hidden"
+          style={{ background: headerArt.fallbackGradient }}
+        >
+          <img
+            src={headerArt.src}
+            alt={territory.name}
+            loading="eager"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            style={{ objectPosition: headerArt.objectPosition }}
+            className="absolute inset-0 w-full h-full object-cover brightness-75"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0e0b08]/95 via-[#14100c]/80 to-[#0e0b08]/92" />
+
+          <div className="relative flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#14100c]/85 border border-[#caa15a]/50 flex items-center justify-center text-[#e0b86e] shrink-0 shadow">
+              {battle ? <Swords className="w-5 h-5" /> : <Castle className="w-5 h-5" />}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 id="battle-overview-title" className="text-base sm:text-lg font-bold font-serif text-amber-200 uppercase tracking-wide">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2
+                  id="battle-overview-title"
+                  className="text-sm sm:text-base font-display font-bold text-[#faf3e3] uppercase tracking-wide truncate drop-shadow"
+                >
                   {battle
-                    ? `${territory.name} Muharebesi (Canlı Meydan)`
-                    : `${territory.name} Kuşatması & Sur Direnişi`}
+                    ? `${territory.name} Muharebesi`
+                    : `${territory.name} Kuşatması`}
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  {battle ? `Tur ${battle.round || 1}` : `%${Math.round(siege?.progress || 0)} Kuşatma`}
+                <span className="font-mono-num text-[11px] font-bold text-[#e0b86e] shrink-0">
+                  {battle ? `Tur ${battle.round || 1}` : `%${Math.round(siege?.progress || 0)}`}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 flex items-center gap-2">
+              <div className="text-[11px] font-mono-num text-[#c5b79e] flex items-center gap-2 truncate">
                 <span>{terrainMeta.name}</span>
-                <span>•</span>
-                <span>Savaş Genişliği: {(combatWidth / 1000).toFixed(0)}B Asker</span>
-                <span>•</span>
-                <span>Sur Sağlığı: %{territory.castleWallHp ?? 100}</span>
-              </p>
+                <span>·</span>
+                <span>Genişlik {(combatWidth / 1000).toFixed(0)}B</span>
+                <span>·</span>
+                <span>Sur %{wallHp}</span>
+              </div>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Muharebe veya kuşatma özetini kapat"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
+            className="relative min-w-[44px] min-h-[44px] rounded-xl bg-[#14100c]/75 border border-[#caa15a]/35 text-[#d8cbb5] hover:text-white hover:bg-[#241c13] flex items-center justify-center transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tug of War Dynamic Balance Bar */}
-        <div className="w-full bg-slate-900 h-2.5 relative flex overflow-hidden">
+        {/* 2-Faction Tug of War Balance Bar (Antique Gold vs Crimson) */}
+        <div className="w-full bg-[#0d0a07] h-2.5 relative flex overflow-hidden border-b border-[#caa15a]/20">
           <div
-            className="h-full transition-all duration-300 bg-gradient-to-r from-red-600 to-rose-500"
+            className={`h-full transition-all duration-300 ${
+              isPlayerAttacker
+                ? 'bg-gradient-to-r from-[#8f6a34] to-[#e0b86e]'
+                : 'bg-gradient-to-r from-rose-800 to-rose-500'
+            }`}
             style={{ width: `${attRatio * 100}%` }}
           />
           <div
-            className="h-full transition-all duration-300 bg-gradient-to-r from-sky-500 to-blue-600"
+            className={`h-full transition-all duration-300 ${
+              isPlayerAttacker
+                ? 'bg-gradient-to-r from-rose-700 to-rose-500'
+                : 'bg-gradient-to-r from-[#8f6a34] to-[#e0b86e]'
+            }`}
             style={{ width: `${(1 - attRatio) * 100}%` }}
           />
           <div
-            className="absolute top-0 bottom-0 w-1 bg-amber-300 shadow-[0_0_8px_#FBBF24]"
+            className="absolute top-0 bottom-0 w-1 bg-[#f3ead7] shadow-[0_0_8px_#e0b86e]"
             style={{ left: `${attRatio * 100}%` }}
           />
         </div>
 
-        {/* Content Body: Two Armies Facing Each Other */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Attacker Panel */}
+        {/* Content Body */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
+          {/* Two Armies Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Attacker Card */}
             <div
-              className={`p-4 rounded-xl border transition-all ${
+              className={`p-3 rounded-xl border ${
                 isPlayerAttacker
-                  ? 'bg-emerald-950/25 border-emerald-500/40 shadow-emerald-950/50'
-                  : 'bg-red-950/25 border-red-500/40 shadow-red-950/50'
+                  ? 'bg-[#1d1710] border-[#e0b86e]/60'
+                  : 'bg-[#1b1510] border-rose-500/45'
               }`}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <NationFlagCanvasBadge
                     nationId={attackerId}
                     flagCode={attackerNation.flagCode}
                     color={attackerNation.color}
-                    width={28}
-                    height={19}
+                    width={30}
+                    height={20}
                   />
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-100 flex items-center gap-1.5">
+                  <div className="min-w-0">
+                    <div className="font-display font-bold text-sm text-[#f3ead7] truncate">
                       {attackerNation.name}
-                      {isPlayerAttacker && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                          BİZİM ORDU
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-[11px] text-slate-400">
-                      Saldıran Taraf • {battle?.attackerCommanderName || 'Hükümdar Sancağı'}
-                    </p>
+                    </div>
+                    <div className="text-[10.5px] text-[#b8a990] truncate">
+                      Saldıran · {battle?.attackerCommanderName || 'Hükümdar'}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-base font-extrabold font-mono text-amber-300">
+                <div className="text-right font-mono-num shrink-0">
+                  <div
+                    className={`text-base font-extrabold ${
+                      isPlayerAttacker ? 'text-[#e0b86e]' : 'text-rose-300'
+                    }`}
+                  >
                     {(attTroops / 1000).toFixed(1)}B
                   </div>
-                  <div className="text-[10px] text-slate-400">Aktif Muharip</div>
+                  <div className="text-[10px] text-[#b8a990]">
+                    Moral %{attMorale}
+                  </div>
                 </div>
               </div>
 
-              {/* Morale Bar */}
-              <div className="space-y-1 mb-3.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 flex items-center gap-1">
-                    <Flame className="w-3.5 h-3.5 text-amber-400" /> Ordu Morali
-                  </span>
-                  <span className="font-bold font-mono text-amber-300">%{attMorale}</span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400 transition-all duration-300"
-                    style={{ width: `${Math.max(5, attMorale)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* AoH3 Tactical Lines: Frontline & Backline */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800/80">
-                  <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mb-0.5">
-                    🛡️ Ön Hat (Piyade/Süvari)
-                  </div>
-                  <div className="text-sm font-bold font-mono text-slate-100">
-                    {(attFront / 1000).toFixed(1)}B
-                  </div>
-                  <div className="text-[10px] text-slate-400">Göğüs Göğüse Çarpışma</div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800/80">
-                  <div className="text-[10px] font-semibold text-sky-400 uppercase tracking-wider mb-0.5">
-                    🏹 Arka Hat (Topçu/Şahi)
-                  </div>
-                  <div className="text-sm font-bold font-mono text-slate-100">
-                    {(attBack / 1000).toFixed(1)}B
-                  </div>
-                  <div className="text-[10px] text-slate-400">Menzilli Bombardıman</div>
-                </div>
+              <div className="w-full h-1.5 rounded-full bg-[#0d0a07] overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    isPlayerAttacker
+                      ? 'bg-gradient-to-r from-[#8f6a34] to-[#e0b86e]'
+                      : 'bg-gradient-to-r from-rose-700 to-rose-400'
+                  }`}
+                  style={{ width: `${Math.max(5, attMorale)}%` }}
+                />
               </div>
             </div>
 
-            {/* Defender Panel */}
+            {/* Defender Card */}
             <div
-              className={`p-4 rounded-xl border transition-all ${
-                isPlayerDefender
-                  ? 'bg-emerald-950/25 border-emerald-500/40 shadow-emerald-950/50'
-                  : 'bg-blue-950/25 border-blue-500/40 shadow-blue-950/50'
+              className={`p-3 rounded-xl border ${
+                !isPlayerAttacker
+                  ? 'bg-[#1d1710] border-[#e0b86e]/60'
+                  : 'bg-[#1b1510] border-rose-500/45'
               }`}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <NationFlagCanvasBadge
                     nationId={defenderId}
                     flagCode={defenderNation.flagCode}
                     color={defenderNation.color}
-                    width={28}
-                    height={19}
+                    width={30}
+                    height={20}
                   />
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-100 flex items-center gap-1.5">
+                  <div className="min-w-0">
+                    <div className="font-display font-bold text-sm text-[#f3ead7] truncate">
                       {defenderNation.name}
-                      {isPlayerDefender && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                          BİZİM EYALET
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-[11px] text-slate-400">
-                      Savunan Taraf • {battle?.defenderCommanderName || 'Müstahkem Garnizon'}
-                    </p>
+                    </div>
+                    <div className="text-[10.5px] text-[#b8a990] truncate">
+                      Savunan · {battle?.defenderCommanderName || 'Garnizon'}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-base font-extrabold font-mono text-amber-300">
+                <div className="text-right font-mono-num shrink-0">
+                  <div
+                    className={`text-base font-extrabold ${
+                      !isPlayerAttacker ? 'text-[#e0b86e]' : 'text-rose-300'
+                    }`}
+                  >
                     {(defTroops / 1000).toFixed(1)}B
                   </div>
-                  <div className="text-[10px] text-slate-400">Savunan Kuvvet</div>
+                  <div className="text-[10px] text-[#b8a990]">
+                    Moral %{defMorale}
+                  </div>
                 </div>
               </div>
 
-              {/* Morale Bar */}
-              <div className="space-y-1 mb-3.5">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 flex items-center gap-1">
-                    <Flame className="w-3.5 h-3.5 text-amber-400" /> Savunma Azmi
-                  </span>
-                  <span className="font-bold font-mono text-amber-300">%{defMorale}</span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div className="w-full h-1.5 rounded-full bg-[#0d0a07] overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    !isPlayerAttacker
+                      ? 'bg-gradient-to-r from-[#8f6a34] to-[#e0b86e]'
+                      : 'bg-gradient-to-r from-rose-700 to-rose-400'
+                  }`}
+                  style={{ width: `${Math.max(5, defMorale)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* AoH3 Visual Checkered Battlefield Grid (Ön Hat / Kanat / Arka Hat) */}
+          <div
+            data-testid="aoh3-battle-formation-grid"
+            className="rounded-xl bg-[#0e0b08] border border-[#caa15a]/35 p-3 space-y-2.5"
+          >
+            <div className="flex items-center justify-between text-[11px] font-display font-bold text-[#e0b86e] border-b border-[#caa15a]/20 pb-1.5">
+              <span className="inline-flex items-center gap-1.5">
+                <AoH3GlyphSvg name="sword" className="w-3.5 h-3.5 shrink-0" />
+                <span>Savaş Meydanı Dizilimi</span>
+              </span>
+              <span className="font-mono-num text-[10px] text-[#b8a990]">
+                Ön Hat · Kanat · Arka Hat
+              </span>
+            </div>
+
+            {/* Attacker Lines */}
+            <div className="space-y-1.5">
+              {[
+                {
+                  label: 'Arka Hat',
+                  sub: 'Topçu',
+                  count: attBack,
+                  filled: attBackCells,
+                  fillClass: isPlayerAttacker
+                    ? 'bg-[#b38945]/85 border-[#e0b86e]/85'
+                    : 'bg-rose-800/85 border-rose-500/80',
+                },
+                {
+                  label: 'Kanat',
+                  sub: 'Süvari',
+                  count: attFlank,
+                  filled: attFlankCells,
+                  fillClass: isPlayerAttacker
+                    ? 'bg-[#caa15a]/85 border-[#f0cf8e]/85'
+                    : 'bg-rose-700/85 border-rose-400/80',
+                },
+                {
+                  label: 'Ön Hat',
+                  sub: 'Piyade',
+                  count: attFrontCenter,
+                  filled: attFrontCells,
+                  fillClass: isPlayerAttacker
+                    ? 'bg-[#e0b86e]/90 border-[#f7e1b2]/90'
+                    : 'bg-rose-500/85 border-rose-300/85',
+                },
+              ].map((line) => (
+                <div
+                  key={`att-${line.label}`}
+                  className="grid grid-cols-[76px_minmax(0,1fr)_52px] items-center gap-2 text-[10.5px]"
+                >
                   <div
-                    className="h-full bg-gradient-to-r from-red-500 via-amber-400 to-sky-400 transition-all duration-300"
-                    style={{ width: `${Math.max(5, defMorale)}%` }}
-                  />
+                    className={`truncate font-semibold ${
+                      isPlayerAttacker ? 'text-[#f3ead7]' : 'text-rose-200'
+                    }`}
+                  >
+                    {line.label}{' '}
+                    <span className="text-[9px] text-[#a79880]">({line.sub})</span>
+                  </div>
+                  <div className="grid grid-cols-10 gap-1">
+                    {Array.from({ length: REGIMENT_SLOTS }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`h-4 rounded-[3px] border transition-colors ${
+                          i < line.filled
+                            ? line.fillClass
+                            : 'bg-[#19140f] border-[#caa15a]/15'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div
+                    className={`text-right font-mono-num font-bold ${
+                      isPlayerAttacker ? 'text-[#e0b86e]' : 'text-rose-300'
+                    }`}
+                  >
+                    {(line.count / 1000).toFixed(1)}B
+                  </div>
                 </div>
-              </div>
+              ))}
+            </div>
 
-              {/* AoH3 Tactical Lines: Frontline & Backline */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800/80">
-                  <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider mb-0.5">
-                    🛡️ Ön Hat (Garnizon)
+            {/* Clash Divider */}
+            <div className="flex items-center gap-2 py-0.5">
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-[#caa15a]/60 to-transparent" />
+              <span className="text-[10px] font-display font-extrabold tracking-widest text-[#e0b86e] uppercase">
+                CEPHEDE TEMAS
+              </span>
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-[#caa15a]/60 to-transparent" />
+            </div>
+
+            {/* Defender Lines */}
+            <div className="space-y-1.5">
+              {[
+                {
+                  label: 'Ön Hat',
+                  sub: 'Piyade',
+                  countLabel: `${(defFrontCenter / 1000).toFixed(1)}B`,
+                  filled: defFrontCells,
+                  fillClass: !isPlayerAttacker
+                    ? 'bg-[#e0b86e]/90 border-[#f7e1b2]/90'
+                    : 'bg-rose-500/85 border-rose-300/85',
+                },
+                {
+                  label: 'Kanat',
+                  sub: 'Süvari',
+                  countLabel: `${(defFlank / 1000).toFixed(1)}B`,
+                  filled: defFlankCells,
+                  fillClass: !isPlayerAttacker
+                    ? 'bg-[#caa15a]/85 border-[#f0cf8e]/85'
+                    : 'bg-rose-700/85 border-rose-400/80',
+                },
+                {
+                  label: battle ? 'Arka Hat' : 'Surlar',
+                  sub: battle ? 'Destek' : 'Kale',
+                  countLabel: battle ? `${(defBack / 1000).toFixed(1)}B` : `%${wallHp}`,
+                  filled: defBackCells,
+                  fillClass: !isPlayerAttacker
+                    ? 'bg-[#b38945]/85 border-[#e0b86e]/85'
+                    : 'bg-rose-800/85 border-rose-500/80',
+                },
+              ].map((line) => (
+                <div
+                  key={`def-${line.label}`}
+                  className="grid grid-cols-[76px_minmax(0,1fr)_52px] items-center gap-2 text-[10.5px]"
+                >
+                  <div
+                    className={`truncate font-semibold ${
+                      !isPlayerAttacker ? 'text-[#f3ead7]' : 'text-rose-200'
+                    }`}
+                  >
+                    {line.label}{' '}
+                    <span className="text-[9px] text-[#a79880]">({line.sub})</span>
                   </div>
-                  <div className="text-sm font-bold font-mono text-slate-100">
-                    {(defFront / 1000).toFixed(1)}B
+                  <div className="grid grid-cols-10 gap-1">
+                    {Array.from({ length: REGIMENT_SLOTS }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`h-4 rounded-[3px] border transition-colors ${
+                          i < line.filled
+                            ? line.fillClass
+                            : 'bg-[#19140f] border-[#caa15a]/15'
+                        }`}
+                      />
+                    ))}
                   </div>
-                  <div className="text-[10px] text-slate-400">Siper ve Barikatlar</div>
+                  <div
+                    className={`text-right font-mono-num font-bold ${
+                      !isPlayerAttacker ? 'text-[#e0b86e]' : 'text-rose-300'
+                    }`}
+                  >
+                    {line.countLabel}
+                  </div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800/80">
-                  <div className="text-[10px] font-semibold text-sky-400 uppercase tracking-wider mb-0.5">
-                    ♜ Sur & Savunma Kuleleri
-                  </div>
-                  <div className="text-sm font-bold font-mono text-slate-100">
-                    %{territory.castleWallHp ?? 100}
-                  </div>
-                  <div className="text-[10px] text-slate-400">Fortress Savunması</div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
           {/* Siege Status Banner if territory has active siege */}
           {siege && (
-            <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/40 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Castle className="w-6 h-6 text-amber-400 shrink-0" />
-                <div>
-                  <div className="text-sm font-bold text-amber-200">
-                    Kuşatma Çemberi: %{Math.round(siege.progress)} Tamamlandı
-                  </div>
-                  <div className="text-xs text-slate-300">
-                    Surlar zayıflıyor. Kuşatma %100'e ulaştığında kale teslim olacak ve eyalet işgal edilecek.
-                  </div>
+            <div className="p-3 rounded-xl bg-[#1b1510] border border-[#caa15a]/45 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Castle className="w-5 h-5 text-[#e0b86e] shrink-0" />
+                <div className="text-xs font-bold text-[#f3ead7] truncate">
+                  Kuşatma: %{Math.round(siege.progress)} · Sur: %{wallHp}
                 </div>
               </div>
-              <div className="w-24 text-right">
-                <span className="text-xs font-mono font-bold text-amber-300">
-                  {(siege.attackerTroops / 1000).toFixed(1)}B Kuşatmacı
-                </span>
-              </div>
+              <span className="text-xs font-mono-num font-bold text-[#e0b86e] shrink-0">
+                {(siege.attackerTroops / 1000).toFixed(1)}B Kuşatmacı
+              </span>
             </div>
           )}
 
-          {/* Tactical Command Action Buttons (Available for Player) */}
+          {/* Tactical Command Action Buttons */}
           {hasTacticalOrders && onApplyTacticalOrder && (
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-xs text-slate-300 font-medium">
-                Komutan Müdahalesi:
-              </div>
+            <div className="p-3 rounded-xl bg-[#1b1510] border border-[#caa15a]/30 flex flex-wrap items-center justify-between gap-2.5">
+              <span className="text-xs font-display font-bold text-[#e0b86e]">
+                Komutan Emri:
+              </span>
               <div className="flex flex-wrap items-center gap-2">
                 {battle && (
-                  <>
-                    <button
-                      disabled={turanAlreadyUsed}
-                      onClick={() => {
-                        sound.playWarHorn();
-                        onApplyTacticalOrder('TURAN');
-                      }}
-                      className="min-h-[40px] px-3.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/40 text-amber-300 text-xs font-bold transition-all flex items-center gap-1.5"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
+                  <button
+                    type="button"
+                    disabled={turanAlreadyUsed}
+                    onClick={() => {
+                      sound.playWarHorn();
+                      onApplyTacticalOrder('TURAN');
+                    }}
+                    className="min-h-[44px] px-3.5 py-1.5 rounded-lg bg-[#241c13] hover:bg-[#32261a] disabled:opacity-50 disabled:cursor-not-allowed border border-[#caa15a]/50 text-[#f3ead7] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-[#e0b86e]" />
+                    <span>
                       {turanAlreadyUsed
                         ? 'Hilal & Turan (Kullanıldı)'
-                        : 'Hilal & Turan Taktiği (+%18 güç)'}
-                    </button>
-                  </>
+                        : 'Hilal & Turan (+%18)'}
+                    </span>
+                  </button>
                 )}
                 {(battle || canBombardSiegeWalls) && (
                   <button
+                    type="button"
                     onClick={() => {
                       sound.playWarHorn();
                       onApplyTacticalOrder('BOMBARD');
@@ -392,33 +548,29 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
                       (!battle &&
                         (territory.castleWallHp ?? siege?.wallIntegrity ?? 100) <= 0)
                     }
-                    title={
-                      bombardmentBelowFloor
-                        ? 'Hedef kuvvet 200 askerin altında; ilave kayıp oluşturulamaz.'
-                        : battle
-                        ? 'Düşman askerlerine topçu ateşi uygular; surlara hasar vermez.'
-                        : 'Kuşatma surlarının dayanıklılığını azaltır.'
-                    }
-                    className="min-h-[40px] px-3.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed border border-sky-500/40 text-sky-300 text-xs font-bold transition-all flex items-center gap-1.5"
+                    className="min-h-[44px] px-3.5 py-1.5 rounded-lg bg-[#241c13] hover:bg-[#32261a] disabled:opacity-50 disabled:cursor-not-allowed border border-[#caa15a]/45 text-[#f3ead7] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Target className="w-3.5 h-3.5" />
-                    {battle
-                      ? bombardmentBelowFloor
-                        ? 'Bombardıman eşiği (200)'
-                        : 'Düşman Kuvvetlerini Bombala'
-                      : 'Surları Bombala (−20)'}
+                    <Target className="w-3.5 h-3.5 text-[#e0b86e]" />
+                    <span>
+                      {battle
+                        ? bombardmentBelowFloor
+                          ? 'Eşik (200)'
+                          : 'Topçu Ateşi'
+                        : 'Surları Bombala (−20)'}
+                    </span>
                   </button>
                 )}
                 {battle && (
                   <button
+                    type="button"
                     onClick={() => {
                       sound.playMarch();
                       onApplyTacticalOrder('RETREAT');
                     }}
-                    className="min-h-[40px] px-3.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-bold transition-all flex items-center gap-1.5"
+                    className="min-h-[44px] px-3.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/70 border border-rose-500/45 text-rose-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <ArrowRight className="w-3.5 h-3.5" />
-                    Düzenli Geri Çekil
+                    <span>Geri Çekil</span>
                   </button>
                 )}
               </div>
@@ -427,10 +579,11 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 bg-slate-900/80 border-t border-slate-800 text-right">
+        <div className="px-5 py-3 bg-[#100d09] border-t border-[#caa15a]/25 text-right">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all"
+            className="min-h-[44px] px-5 py-2 rounded-xl bg-[#241c14] hover:bg-[#31261b] border border-[#caa15a]/40 text-[#f3ead7] text-xs font-bold transition-all cursor-pointer"
           >
             Haritaya Dön
           </button>
@@ -683,9 +836,9 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
         className="w-full max-w-4xl max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] bg-[#14110e] border border-[#caa15a]/50 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#f3ead7]"
       >
         {/* Top Header + Active War Switcher */}
-        <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-[#221a14] via-[#2c1f16] to-[#1a1511] border-b border-[#caa15a]/35 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-[#17120d] border-b border-[#caa15a]/35 flex flex-wrap items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-black/45 border border-[#caa15a]/35">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[#100d09] border border-[#caa15a]/35">
               <NationFlagCanvasBadge
                 nationId={playerNation.id}
                 flagCode={playerNation.flagCode}
@@ -693,7 +846,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                 width={26}
                 height={18}
               />
-              <span className="text-xs font-bold text-amber-400">⚔</span>
+              <AoH3GlyphSvg name="sword" className="w-3.5 h-3.5 text-[#e0b86e]" />
               <NationFlagCanvasBadge
                 nationId={enemyNation.id}
                 flagCode={enemyNation.flagCode}
@@ -705,7 +858,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
             <div className="min-w-0">
               <h2
                 id="unified-war-modal-title"
-                className="font-display font-bold text-sm sm:text-base text-amber-100 truncate"
+                className="font-display font-bold text-sm sm:text-base text-[#faf3e3] truncate"
               >
                 {war.name.replace(/\s*\((1440|2026)\)\s*/g, '')}
               </h2>
@@ -724,7 +877,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                   onSelectWar(e.target.value);
                 }}
                 aria-label="Aktif savaş seç"
-                className="px-2.5 py-1.5 rounded-xl bg-black/50 border border-[#caa15a]/40 text-xs font-bold text-amber-200"
+                className="px-2.5 py-1.5 rounded-xl bg-[#100d09] border border-[#caa15a]/40 text-xs font-bold text-[#e0b86e]"
               >
                 {playerWars.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -737,7 +890,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
               type="button"
               onClick={onClose}
               aria-label="Savaş masasını kapat"
-              className="w-8 h-8 rounded-xl bg-black/45 hover:bg-black/70 border border-[#caa15a]/30 flex items-center justify-center text-[#d8cbb5] hover:text-white cursor-pointer"
+              className="w-8 h-8 rounded-xl bg-[#100d09] hover:bg-[#241c13] border border-[#caa15a]/30 flex items-center justify-center text-[#d8cbb5] hover:text-white cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -745,40 +898,42 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
         </div>
 
         {/* Live Power Balance & War Score Strip */}
-        <div className="px-4 py-2.5 bg-[#1b1612] border-b border-[#caa15a]/25 space-y-1.5 shrink-0">
+        <div className="px-4 py-2.5 bg-[#1b1510] border-b border-[#caa15a]/25 space-y-1.5 shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="font-bold text-emerald-300">
-              🛡️ Bizim Cephe: {(ourTotalArmy / 1000).toFixed(1)}B Asker · Kayıp:{' '}
-              {(ourCasualties / 1000).toFixed(1)}B
+            <span className="font-bold text-[#e0b86e] inline-flex items-center gap-1.5">
+              <AoH3GlyphSvg name="shield" className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                Bizim Cephe: {(ourTotalArmy / 1000).toFixed(1)}B Asker · Kayıp:{' '}
+                {(ourCasualties / 1000).toFixed(1)}B
+              </span>
             </span>
             <span
               className={`px-2.5 py-0.5 rounded-lg font-mono-num font-extrabold text-xs border ${
-                displayScore >= 20
-                  ? 'bg-emerald-950/90 border-emerald-500/60 text-emerald-300'
-                  : displayScore > 0
-                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200'
-                  : displayScore <= -20
-                  ? 'bg-rose-950/90 border-rose-500/60 text-rose-300'
+                displayScore > 0
+                  ? 'bg-[#241c13] border-[#caa15a]/55 text-[#e0b86e]'
                   : displayScore < 0
-                  ? 'bg-rose-950/60 border-rose-500/40 text-rose-200'
-                  : 'bg-amber-950/60 border-amber-500/40 text-amber-200'
+                  ? 'bg-rose-950/75 border-rose-500/55 text-rose-200'
+                  : 'bg-[#14100c] border-[#caa15a]/40 text-[#f3ead7]'
               }`}
             >
               Savaş Skoru: {displayScore > 0 ? `+${displayScore}%` : `${displayScore}%`} · İşgalimiz:{' '}
               {occupiedEnemyProvinces.length}/{claimableEnemyProvinces.length} Şehir
             </span>
-            <span className="font-bold text-rose-300">
-              ⚔️ Karşı Cephe: {(enemyTotalArmy / 1000).toFixed(1)}B Asker · Kayıp:{' '}
-              {(enemyCasualties / 1000).toFixed(1)}B
+            <span className="font-bold text-rose-300 inline-flex items-center gap-1.5">
+              <AoH3GlyphSvg name="sword" className="w-3.5 h-3.5 shrink-0" />
+              <span>
+                Karşı Cephe: {(enemyTotalArmy / 1000).toFixed(1)}B Asker · Kayıp:{' '}
+                {(enemyCasualties / 1000).toFixed(1)}B
+              </span>
             </span>
           </div>
-          <div className="w-full h-2.5 rounded-full bg-rose-900/80 overflow-hidden flex border border-black/50">
+          <div className="w-full h-2.5 rounded-full bg-rose-900/70 overflow-hidden flex border border-black/50">
             <div
-              className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-300"
+              className="h-full bg-gradient-to-r from-[#8f6a34] to-[#e0b86e] transition-all duration-300"
               style={{ width: `${ourPowerPct}%` }}
             />
             <div
-              className="h-full bg-gradient-to-r from-rose-500 to-red-700 transition-all duration-300"
+              className="h-full bg-gradient-to-r from-rose-600 to-rose-800 transition-all duration-300"
               style={{ width: `${100 - ourPowerPct}%` }}
             />
           </div>
@@ -786,16 +941,24 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
 
         {/* Scrollable Content: Coalitions, Call Allies, and Point-Budget Peace Conference */}
         <div className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 text-xs">
+          <AoH3MenuBanner
+            artKey="FORTRESS"
+            branch="MILITARY"
+            title={war.name.replace(/\s*\((1440|2026)\)\s*/g, '')}
+            subtitle={`Savaş Skoru ${displayScore > 0 ? `+${displayScore}%` : `${displayScore}%`} · İşgal ${occupiedEnemyProvinces.length}/${claimableEnemyProvinces.length}`}
+            icon="sword"
+          />
+
           {/* 1. War Coalitions & Call Ally Bar */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Our Coalition + Call Ally */}
-            <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/35 space-y-2.5">
+            <div className="p-3 rounded-xl bg-[#1b1510] border border-[#caa15a]/40 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-emerald-300 flex items-center gap-1.5">
+                <span className="font-bold text-[#e0b86e] flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5" />
                   <span>Bizim Cephe & Müttefikler ({playerSideIds.length})</span>
                 </span>
-                <span className="text-[11px] font-mono-num text-emerald-200">
+                <span className="text-[11px] font-mono-num text-[#f3ead7]">
                   Güç Oranı: %{ourPowerPct}
                 </span>
               </div>
@@ -806,7 +969,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                   return (
                     <div
                       key={nId}
-                      className="px-2 py-1 rounded-lg bg-black/45 border border-emerald-500/30 flex items-center gap-1.5"
+                      className="px-2 py-1 rounded-lg bg-[#120e0b] border border-[#caa15a]/30 flex items-center gap-1.5"
                     >
                       <NationFlagCanvasBadge
                         nationId={nat.id}
@@ -815,10 +978,10 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                         width={18}
                         height={12}
                       />
-                      <span className="font-bold text-white text-[11px]">
+                      <span className="font-bold text-[#f3ead7] text-[11px]">
                         {nat.name.replace(/\s*\((1440|2026)\)\s*$/, '')}
                       </span>
-                      <span className="text-[10px] font-mono-num text-emerald-300">
+                      <span className="text-[10px] font-mono-num text-[#e0b86e]">
                         {((armyByNation[nId] || 0) / 1000).toFixed(1)}B
                       </span>
                     </div>
@@ -827,8 +990,8 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
               </div>
 
               {callableAllies.length > 0 && (
-                <div className="pt-1.5 border-t border-emerald-500/20 space-y-1.5">
-                  <div className="text-[11px] font-bold text-amber-300 flex items-center gap-1">
+                <div className="pt-1.5 border-t border-[#caa15a]/20 space-y-1.5">
+                  <div className="text-[11px] font-bold text-[#e0b86e] flex items-center gap-1">
                     <Users className="w-3.5 h-3.5" />
                     <span>Savaşa Çağrılabilir Müttefikler ({callableAllies.length}):</span>
                   </div>
@@ -838,7 +1001,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                         key={ally.id}
                         type="button"
                         onClick={() => onCallAllyToWar(war.id, ally.id)}
-                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/50 text-amber-200 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#241c13] hover:bg-[#31261a] border border-[#caa15a]/50 text-[#f3ead7] text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
                       >
                         <NationFlagCanvasBadge
                           nationId={ally.id}
@@ -847,7 +1010,8 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                           width={16}
                           height={11}
                         />
-                        <span>📣 {ally.name.replace(/\s*\((1440|2026)\)\s*$/, '')} Çağır</span>
+                        <AoH3GlyphSvg name="horn" className="w-3 h-3 text-[#e0b86e]" />
+                        <span>{ally.name.replace(/\s*\((1440|2026)\)\s*$/, '')} Çağır</span>
                       </button>
                     ))}
                   </div>
@@ -896,11 +1060,11 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
           </div>
 
           {/* 2. Point-Budget Peace Conference Builder */}
-          <div className="p-3.5 rounded-2xl bg-[#1c1713] border border-[#caa15a]/40 space-y-3">
+          <div className="p-3.5 rounded-2xl bg-[#1b1510] border border-[#caa15a]/40 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="font-display font-bold text-sm text-amber-200 flex items-center gap-1.5">
-                  <Handshake className="w-4 h-4 text-amber-400" />
+                <h3 className="font-display font-bold text-sm text-[#e0b86e] flex items-center gap-1.5">
+                  <Handshake className="w-4 h-4 text-[#caa15a]" />
                   <span>Savaş Puanı Bütçeli Barış Konferansı</span>
                 </h3>
                 <p className="text-[11px] text-[#c5b79e]">
@@ -914,8 +1078,8 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                   isOverBudget
                     ? 'bg-rose-950/90 border-rose-500 text-rose-200'
                     : totalSpentPoints > 0
-                    ? 'bg-emerald-950/90 border-emerald-500 text-emerald-200'
-                    : 'bg-black/50 border-[#caa15a]/40 text-amber-200'
+                    ? 'bg-[#251d14] border-[#e0b86e] text-[#e0b86e]'
+                    : 'bg-[#120e0b] border-[#caa15a]/40 text-[#f3ead7]'
                 }`}
               >
                 <span>
@@ -929,23 +1093,25 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
             <div
               className={`px-3 py-2 rounded-xl border flex items-center justify-between gap-2 text-xs ${
                 displayScore < 25
-                  ? 'bg-amber-950/65 border-amber-500/60 text-amber-200'
+                  ? 'bg-[#14100c] border-[#caa15a]/45 text-[#e0b86e]'
                   : isOverBudget
                   ? 'bg-rose-950/60 border-rose-500/60 text-rose-200'
                   : totalSpentPoints > 0
-                  ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-200'
-                  : 'bg-black/35 border-[#caa15a]/25 text-[#d8cbb5]'
+                  ? 'bg-[#221a12] border-[#e0b86e]/60 text-[#f3ead7]'
+                  : 'bg-[#120e0b] border-[#caa15a]/25 text-[#d8cbb5]'
               }`}
             >
               <div className="flex items-center gap-2">
-                {displayScore < 25 || isOverBudget ? (
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                {displayScore < 25 ? (
+                  <AoH3GlyphSvg name="lock" className="w-4 h-4 text-[#e0b86e] shrink-0" />
+                ) : isOverBudget ? (
+                  <AlertTriangle className="w-4 h-4 text-rose-300 shrink-0" />
                 ) : (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-[#e0b86e] shrink-0" />
                 )}
                 <span>
                   {displayScore < 25
-                    ? `🔒 Savaş ilan edildikten hemen sonra barış yapılamaz! Barış antlaşması imzalayabilmek için Savaş Skorunda en az +25% önde olmalısınız (Mevcut: ${displayScore > 0 ? `+${displayScore}%` : `${displayScore}%`}).`
+                    ? `Savaş ilan edildikten hemen sonra barış yapılamaz! Barış antlaşması imzalayabilmek için Savaş Skorunda en az +25% önde olmalısınız (Mevcut: ${displayScore > 0 ? `+${displayScore}%` : `${displayScore}%`}).`
                     : isOverBudget
                     ? `Puan Bütçesi Aşıldı (+${totalSpentPoints - availableBudget} Puan fazla). Daha fazla şehir işgal edin veya talepleri azaltın.`
                     : totalSpentPoints > 0
@@ -958,27 +1124,32 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
             {/* Territory Demand Section with Quick Buttons (Select Occupied / Full Annexation / Clear) */}
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-bold text-amber-100">
-                  📍 Şehir & Toprak Talepleri ({validSelectedIds.length}/{provinceEntries.length} Şehir Seçili · {rawTerritoryCost} Puan)
+                <span className="font-bold text-[#f3ead7] inline-flex items-center gap-1.5">
+                  <AoH3GlyphSvg name="pin" className="w-3.5 h-3.5 text-[#e0b86e]" />
+                  <span>
+                    Şehir & Toprak Talepleri ({validSelectedIds.length}/{provinceEntries.length} Şehir Seçili · {rawTerritoryCost} Puan)
+                  </span>
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
                     onClick={selectAllOccupied}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/50 text-emerald-200 text-[11px] font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-[#241c13] hover:bg-[#31261a] border border-[#caa15a]/55 text-[#e0b86e] text-[11px] font-bold cursor-pointer inline-flex items-center gap-1"
                   >
-                    ⚡ İşgal Edilenleri Seç ({occupiedEnemyProvinces.length})
+                    <AoH3GlyphSvg name="bolt" className="w-3 h-3" />
+                    <span>İşgal Edilenleri Seç ({occupiedEnemyProvinces.length})</span>
                   </button>
                   <button
                     type="button"
                     onClick={selectFullAnnexation}
-                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold cursor-pointer inline-flex items-center gap-1 ${
                       isFullAnnexSelected
-                        ? 'bg-amber-500 text-slate-950 border-amber-300'
-                        : 'bg-amber-500/20 hover:bg-amber-500/35 border-amber-500/50 text-amber-200'
+                        ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] border-[#f3ead7]/60'
+                        : 'bg-[#1d1710] hover:bg-[#2a2117] border-[#caa15a]/45 text-[#f3ead7]'
                     }`}
                   >
-                    🏴 Komple İlhak Et (Tüm Şehirler)
+                    <AoH3GlyphSvg name="flag" className="w-3 h-3" />
+                    <span>Komple İlhak Et (Tüm Şehirler)</span>
                   </button>
                   {validSelectedIds.length > 0 && (
                     <button
@@ -987,7 +1158,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                         sound.playClick();
                         setSelectedTerritoryIds([]);
                       }}
-                      className="px-2 py-1 rounded-lg bg-black/50 hover:bg-black/70 border border-slate-700 text-slate-300 text-[11px] font-semibold cursor-pointer"
+                      className="px-2 py-1 rounded-lg bg-[#120e0b] hover:bg-[#1e1813] border border-[#caa15a]/25 text-[#c5b79e] text-[11px] font-semibold cursor-pointer"
                     >
                       Temizle
                     </button>
@@ -995,7 +1166,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 max-h-44 overflow-y-auto p-1 rounded-xl bg-black/35 border border-[#caa15a]/20">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 max-h-44 overflow-y-auto p-1 rounded-xl bg-[#0e0b08] border border-[#caa15a]/20">
                 {provinceEntries.map(({ territory, isOccupiedByUs, devScore, pointCost }) => {
                   const isSelected = validSelectedIds.includes(territory.id);
                   return (
@@ -1005,10 +1176,10 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                       onClick={() => toggleProvinceDemand(territory.id)}
                       className={`p-2 rounded-lg border text-left transition-all flex items-center justify-between gap-1.5 cursor-pointer ${
                         isSelected
-                          ? 'bg-amber-500/25 border-amber-400 text-amber-100 shadow'
+                          ? 'bg-[#2a2013] border-[#e0b86e] text-[#f3ead7] shadow'
                           : isOccupiedByUs
-                          ? 'bg-emerald-950/35 border-emerald-500/40 text-emerald-100 hover:border-emerald-400'
-                          : 'bg-black/45 border-slate-800 text-slate-300 hover:border-slate-600'
+                          ? 'bg-[#1d1710] border-[#caa15a]/50 text-[#f3ead7] hover:border-[#e0b86e]'
+                          : 'bg-[#120e0b] border-[#caa15a]/20 text-[#c5b79e] hover:border-[#caa15a]/45'
                       }`}
                     >
                       <div className="min-w-0">
@@ -1016,17 +1187,20 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                           {territory.name.replace(/^★\s*/, '')}
                         </div>
                         <div className="text-[10px] text-[#c5b79e] flex items-center gap-1">
-                          <span>★{devScore}</span>
+                          <span className="inline-flex items-center gap-0.5">
+                            <AoH3GlyphSvg name="star" className="w-2.5 h-2.5 text-[#caa15a]" />
+                            <span>{devScore}</span>
+                          </span>
                           {isOccupiedByUs && (
-                            <span className="text-emerald-400 font-semibold">· İşgalde</span>
+                            <span className="text-[#e0b86e] font-semibold">· İşgalde</span>
                           )}
                         </div>
                       </div>
                       <span
                         className={`px-1.5 py-0.5 rounded text-[10px] font-mono-num font-extrabold shrink-0 ${
                           isSelected
-                            ? 'bg-amber-400 text-slate-950'
-                            : 'bg-black/60 text-amber-300 border border-[#caa15a]/30'
+                            ? 'bg-[#e0b86e] text-[#14100c]'
+                            : 'bg-[#14100c] text-[#e0b86e] border border-[#caa15a]/30'
                         }`}
                       >
                         {pointCost}P
@@ -1048,20 +1222,20 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                 }}
                 className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   demandVassal && !isFullAnnexSelected
-                    ? 'bg-purple-950/60 border-purple-400 text-purple-100'
-                    : 'bg-black/40 border-[#caa15a]/25 text-[#d8cbb5] hover:border-[#caa15a]/50'
+                    ? 'bg-[#281f13] border-[#e0b86e] text-[#f3ead7]'
+                    : 'bg-[#120e0b] border-[#caa15a]/25 text-[#d8cbb5] hover:border-[#caa15a]/50'
                 }`}
               >
                 <div className="min-w-0">
                   <div className="font-bold text-xs flex items-center gap-1.5">
-                    <Crown className="w-3.5 h-3.5 text-purple-300 shrink-0" />
+                    <Crown className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
                     <span>Vasal Yap</span>
                   </div>
                   <div className="text-[10px] text-[#b8a990]">
                     Kalan topraklarıyla bağlı devlet olur
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-purple-500/25 border border-purple-400/40 font-mono-num font-bold text-[11px] text-purple-200 shrink-0">
+                <span className="px-2 py-0.5 rounded bg-[#caa15a]/20 border border-[#caa15a]/45 font-mono-num font-bold text-[11px] text-[#e0b86e] shrink-0">
                   {remainingProvincesCount <= 3 ? '35P' : '45P'}
                 </span>
               </button>
@@ -1074,20 +1248,20 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                 }}
                 className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                   demandTribute
-                    ? 'bg-amber-950/60 border-amber-400 text-amber-100'
-                    : 'bg-black/40 border-[#caa15a]/25 text-[#d8cbb5] hover:border-[#caa15a]/50'
+                    ? 'bg-[#281f13] border-[#e0b86e] text-[#f3ead7]'
+                    : 'bg-[#120e0b] border-[#caa15a]/25 text-[#d8cbb5] hover:border-[#caa15a]/50'
                 }`}
               >
                 <div className="min-w-0">
                   <div className="font-bold text-xs flex items-center gap-1.5">
-                    <Flag className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                    <Flag className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
                     <span>Haraca Bağla</span>
                   </div>
                   <div className="text-[10px] text-[#b8a990]">
                     Düzenli haraç ve gelir payı öder
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-amber-500/25 border border-amber-400/40 font-mono-num font-bold text-[11px] text-amber-200 shrink-0">
+                <span className="px-2 py-0.5 rounded bg-[#caa15a]/20 border border-[#caa15a]/45 font-mono-num font-bold text-[11px] text-[#e0b86e] shrink-0">
                   20P
                 </span>
               </button>
@@ -1100,20 +1274,20 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                 }}
                 className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
                   demandReparations
-                    ? 'bg-emerald-950/60 border-emerald-400 text-emerald-100'
-                    : 'bg-black/40 border-[#caa15a]/25 text-[#d8cbb5] hover:border-[#caa15a]/50'
+                    ? 'bg-[#281f13] border-[#e0b86e] text-[#f3ead7]'
+                    : 'bg-[#120e0b] border-[#caa15a]/25 text-[#d8cbb5] hover:border-[#caa15a]/50'
                 }`}
               >
                 <div className="min-w-0">
                   <div className="font-bold text-xs flex items-center gap-1.5">
-                    <Coins className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                    <Coins className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
                     <span>Savaş Tazminatı</span>
                   </div>
                   <div className="text-[10px] text-[#b8a990]">
                     Hazineden nakit altın tazminatı
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/25 border border-emerald-400/40 font-mono-num font-bold text-[11px] text-emerald-200 shrink-0">
+                <span className="px-2 py-0.5 rounded bg-[#caa15a]/20 border border-[#caa15a]/45 font-mono-num font-bold text-[11px] text-[#e0b86e] shrink-0">
                   15P
                 </span>
               </button>
@@ -1122,7 +1296,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
         </div>
 
         {/* Bottom Unified Action Bar: Peace Demand / White Peace / Surrender */}
-        <div className="px-3.5 sm:px-5 py-3 bg-[#1a1511] border-t border-[#caa15a]/35 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="px-3.5 sm:px-5 py-3 bg-[#17120d] border-t border-[#caa15a]/35 flex flex-wrap items-center justify-between gap-2 shrink-0">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -1142,13 +1316,16 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                   demandReparations,
                 })
               }
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-45 disabled:cursor-not-allowed text-slate-950 font-extrabold text-xs shadow-lg flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-gradient-to-r from-[#caa15a] to-[#e0b86e] hover:from-[#d9b26b] hover:to-[#ecc77f] disabled:opacity-45 disabled:cursor-not-allowed text-[#14110e] font-extrabold text-xs shadow-lg flex items-center gap-1.5 cursor-pointer"
             >
-              <Handshake className="w-4 h-4" />
+              <AoH3GlyphSvg
+                name={displayScore < 25 ? 'lock' : 'scroll'}
+                className="w-3.5 h-3.5 shrink-0"
+              />
               <span>
                 {displayScore < 25
-                  ? `🔒 Barış İmzala (+25% Skor Şartı)`
-                  : `📜 Barış Talebini İmzala (${totalSpentPoints}/${availableBudget} Puan)`}
+                  ? 'Barış İmzala (+25% Skor Şartı)'
+                  : `Barış Talebini İmzala (${totalSpentPoints}/${availableBudget} Puan)`}
               </span>
             </button>
 
@@ -1166,12 +1343,16 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                   mode: 'WHITE_PEACE',
                 })
               }
-              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-45 disabled:cursor-not-allowed border border-slate-600 text-slate-100 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#211a12] hover:bg-[#2c2318] disabled:opacity-45 disabled:cursor-not-allowed border border-[#caa15a]/35 text-[#f3ead7] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
             >
+              <AoH3GlyphSvg
+                name={displayScore < 25 ? 'lock' : 'dove'}
+                className="w-3.5 h-3.5 text-[#e0b86e] shrink-0"
+              />
               <span>
                 {displayScore < 25
-                  ? '🔒 Galipsiz Barış (+25% Şart)'
-                  : '🕊️ Galipsiz Barış (Beyaz Barış)'}
+                  ? 'Galipsiz Barış (+25% Şart)'
+                  : 'Galipsiz Barış (Beyaz Barış)'}
               </span>
             </button>
 
@@ -1185,14 +1366,15 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
               }
               className="min-h-[40px] px-3.5 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
             >
-              <span>🏳️ Teslim Ol</span>
+              <AoH3GlyphSvg name="flag" className="w-3.5 h-3.5 shrink-0" />
+              <span>Teslim Ol</span>
             </button>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[40px] px-3.5 py-2 rounded-xl bg-black/50 hover:bg-black/70 border border-[#caa15a]/30 text-[#d8cbb5] font-semibold text-xs cursor-pointer"
+            className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#120e0b] hover:bg-[#1e1813] border border-[#caa15a]/30 text-[#d8cbb5] font-semibold text-xs cursor-pointer"
           >
             Haritaya Dön
           </button>

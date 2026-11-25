@@ -17,8 +17,8 @@ interface Empire1440Def {
   provinceRenames?: Record<string, string>;
 }
 
-// 36 Major Historical Empires & Kingdoms of the 1440/1444 World
-// Covers every continent with zero missing land gaps and 360+ rich provinces
+// Historical Empires, Kingdoms & Realms of the 1444 World
+// Balanced province counts across Eurasia, Africa, Americas & Oceania with zero missing land gaps
 export const EMPIRES_1440_DEFS: Empire1440Def[] = [
   {
     id: '792',
@@ -28,14 +28,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     ideology: 'MONARCHY',
     capitalName: '★ Edirne',
     capitalTerritoryId: '792_EDR',
-    treasury: 3200,
-    manpower: 165000,
-    absorbedCountryIds: ['792', '100', '807'],
+    treasury: 3400,
+    manpower: 175000,
+    absorbedCountryIds: ['792', '100', '807', '008'],
     provinceRenames: {
       '792': 'Ankara',
       '792_EDR': '★ Edirne',
       '792_GLB': 'Gelibolu',
-      '792_IST': '★ İstanbul',
       '792_BUR': 'Bursa',
       '792_IZM': 'İzmir',
       '792_MUG': 'Muğla',
@@ -45,18 +44,14 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '792_KYS': 'Sivas',
       '792_KST': 'Kastamonu',
       '792_SAM': 'Amasya',
-      '792_ADA': 'Adana',
-      '792_GZP': 'Maraş',
-      '792_MLT': 'Malatya',
-      '792_TRB': 'Trabzon',
-      '792_ERZ': 'Erzurum',
-      '792_DYB': 'Diyarbakır',
-      '792_VAN': 'Van',
       '100': 'Sofya',
       '100_PDV': 'Filibe',
       '100_VAR': 'Varna',
       '807': 'Üsküp',
       '008': 'Avlonya',
+      '300_SKG': 'Selanik',
+      '300_IOA': 'Yanya',
+      '642_CND': 'Silistre',
     },
   },
   {
@@ -67,14 +62,12 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     ideology: 'MONARCHY',
     capitalName: '★ İstanbul',
     capitalTerritoryId: '792_IST',
-    treasury: 1950,
-    manpower: 75000,
+    treasury: 1450,
+    manpower: 42000,
     absorbedCountryIds: ['300'],
     provinceRenames: {
-      '300': 'Atina',
-      '300_SKG': 'Selanik',
-      '300_IOA': 'Yanya',
-      '300_CRT': 'Girit',
+      '792_IST': '★ İstanbul',
+      '300': 'Mora & Atina',
     },
   },
   {
@@ -84,9 +77,9 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#C88A32',
     ideology: 'MONARCHY',
     capitalName: '★ Kahire',
-    treasury: 2800,
-    manpower: 140000,
-    absorbedCountryIds: ['818', '760', '400', '376', '275', '422', '682', '434'],
+    treasury: 2900,
+    manpower: 145000,
+    absorbedCountryIds: ['818', '760', '400', '376', '275', '422'],
     provinceRenames: {
       '818': '★ Kahire',
       '818_ALY': 'İskenderiye',
@@ -98,12 +91,28 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '760_DEZ': 'Rakka',
       '400': 'Kerek',
       '376': 'Kudüs',
-      '682': 'Riyad',
+      '792_ADA': 'Adana',
+      '792_GZP': 'Maraş',
       '682_JED': 'Mekke',
       '682_MED': 'Medine',
+    },
+  },
+  {
+    id: '682',
+    name: 'Necid & Hürmüz Emirliği',
+    flagCode: 'NEC',
+    color: '#B58938',
+    ideology: 'MONARCHY',
+    capitalName: '★ Riyad',
+    treasury: 1650,
+    manpower: 56000,
+    absorbedCountryIds: ['682', '414', '634', '784'],
+    provinceRenames: {
+      '682': '★ Riyad',
       '682_DMM': 'Lahsa',
-      '434': 'Trablus',
-      '434_BEN': 'Bingazi',
+      '414': 'Kuveyt',
+      '634': 'Katar',
+      '784': 'Hürmüz',
     },
   },
   {
@@ -115,10 +124,11 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     capitalName: '★ Sana',
     treasury: 1450,
     manpower: 52000,
-    absorbedCountryIds: ['887'],
+    absorbedCountryIds: ['887', '512'],
     provinceRenames: {
       '887': '★ Sana',
       '887_ADE': 'Aden',
+      '512': 'Maskat',
     },
   },
   {
@@ -143,34 +153,41 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     flagCode: 'AKK',
     color: '#2A7B9B',
     ideology: 'MONARCHY',
-    capitalName: '★ Bakü',
-    treasury: 2350,
-    manpower: 118000,
+    capitalName: '★ Tebriz',
+    capitalTerritoryId: '364_TBZ',
+    treasury: 2450,
+    manpower: 120000,
     absorbedCountryIds: ['031', '368'],
     provinceRenames: {
-      '031': '★ Bakü',
+      '364_TBZ': '★ Tebriz',
+      '031': 'Bakü',
       '031_GNJ': 'Gence',
       '031_SKX': 'Şuşa',
       '368': 'Bağdat',
       '368_BSR': 'Basra',
       '368_EBL': 'Musul',
       '368_KIK': 'Kerkük',
+      '792_ERZ': 'Erzurum',
+      '792_DYB': 'Diyarbakır',
+      '792_VAN': 'Van',
+      '792_MLT': 'Malatya',
     },
   },
   {
     id: '268',
-    name: 'Gürcistan Krallığı',
+    name: 'Gürcistan & Trabzon',
     flagCode: 'GUR',
     color: '#A64D6B',
     ideology: 'MONARCHY',
     capitalName: '★ Tiflis',
-    treasury: 1450,
-    manpower: 54000,
+    treasury: 1500,
+    manpower: 56000,
     absorbedCountryIds: ['268', '051'],
     provinceRenames: {
       '268': '★ Tiflis',
       '268_BUS': 'Batum',
       '051': 'Erivan',
+      '792_TRB': 'Trabzon',
     },
   },
   {
@@ -180,13 +197,14 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#8E2430',
     ideology: 'MONARCHY',
     capitalName: '★ Semerkant',
+    capitalTerritoryId: '860_SKD',
     treasury: 2950,
     manpower: 160000,
     absorbedCountryIds: ['364', '795', '004'],
     provinceRenames: {
-      '364': '★ Tahran',
+      '860_SKD': '★ Semerkant',
+      '364': 'Tahran',
       '364_ISF': 'İsfahan',
-      '364_TBZ': 'Tebriz',
       '364_AWZ': 'Ahvaz',
       '364_SYZ': 'Şiraz',
       '364_KER': 'Kirman',
@@ -204,62 +222,88 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     flagCode: 'ÖZB',
     color: '#2A9D8F',
     ideology: 'MONARCHY',
-    capitalName: '★ Semerkant',
+    capitalName: '★ Taşkent',
     treasury: 1950,
     manpower: 92000,
     absorbedCountryIds: ['860', '417', '762'],
     provinceRenames: {
       '860': '★ Taşkent',
-      '860_SKD': 'Semerkant',
       '860_UGC': 'Hive',
+      '156_URC': 'Kaşgar',
     },
   },
   {
     id: '643',
-    name: 'Altın Orda & Moskova',
-    flagCode: 'ORD',
-    color: '#2E6F40',
+    name: 'Moskova & Novgorod Knezliği',
+    flagCode: 'MOS',
+    color: '#346E3D',
     ideology: 'MONARCHY',
     capitalName: '★ Moskova',
-    treasury: 2650,
-    manpower: 175000,
+    treasury: 2250,
+    manpower: 112000,
     absorbedCountryIds: ['643'],
     provinceRenames: {
       '643': '★ Moskova',
       '643_LED': 'Novgorod',
-      '643_SMO': 'Smolensk',
       '643_GOJ': 'Nijni Novgorod',
-      '643_KRR': 'Kırım',
-      '643_ROV': 'Azak',
-      '643_VOG': 'Saray',
+      '643_ARH': 'Arhangelsk',
+    },
+  },
+  {
+    id: '902',
+    name: 'Büyük Orda & Kazan Hanlığı',
+    flagCode: 'ORD',
+    color: '#B57C28',
+    ideology: 'MONARCHY',
+    capitalName: '★ Saray',
+    capitalTerritoryId: '643_VOG',
+    treasury: 2050,
+    manpower: 108000,
+    absorbedCountryIds: [],
+    provinceRenames: {
+      '643_VOG': '★ Saray',
       '643_ASF': 'Astrahan',
       '643_KZN': 'Kazan',
       '643_KUF': 'Samara',
-      '643_ARH': 'Arhangelsk',
       '643_SVX': 'Perm',
-      '643_OMS': 'Sibir',
+    },
+  },
+  {
+    id: '903',
+    name: 'Sibir & Mançurya Hanlığı',
+    flagCode: 'SİB',
+    color: '#46697A',
+    ideology: 'MONARCHY',
+    capitalName: '★ Sibir',
+    capitalTerritoryId: '643_OMS',
+    treasury: 1650,
+    manpower: 78000,
+    absorbedCountryIds: [],
+    provinceRenames: {
+      '643_OMS': '★ Sibir',
       '643_OVB': 'Tümen',
       '643_KJA': 'Yenisey',
       '643_IKT': 'İrkutsk',
       '643_KHV': 'Amur',
-      '643_VVO': 'Vladivostok',
+      '643_VVO': 'Curçen',
     },
   },
   {
     id: '804',
-    name: 'Kırım & Kiev Hanlığı',
+    name: 'Kırım Hanlığı',
     flagCode: 'KIR',
     color: '#248277',
     ideology: 'MONARCHY',
-    capitalName: '★ Kefe',
+    capitalName: '★ Bahçesaray',
+    capitalTerritoryId: '643_KRR',
     treasury: 1850,
     manpower: 88000,
     absorbedCountryIds: ['804'],
     provinceRenames: {
-      '804': '★ Kiev',
-      '804_LVV': 'Lviv',
+      '643_KRR': '★ Bahçesaray',
       '804_ODS': 'Kefe',
-      '804_HRK': 'Harkiv',
+      '804_HRK': 'Yedisan',
+      '643_ROV': 'Azak',
     },
   },
   {
@@ -269,14 +313,15 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#2C8CB8',
     ideology: 'MONARCHY',
     capitalName: '★ Türkistan',
+    capitalTerritoryId: '398_CIT',
     treasury: 1750,
     manpower: 86000,
     absorbedCountryIds: ['398'],
     provinceRenames: {
-      '398': '★ Astana',
+      '398': 'Astana',
       '398_ALA': 'Almatı',
       '398_SCO': 'Aktau',
-      '398_CIT': 'Türkistan',
+      '398_CIT': '★ Türkistan',
     },
   },
   {
@@ -286,14 +331,17 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#4A7C59',
     ideology: 'MONARCHY',
     capitalName: '★ Budin',
-    treasury: 2350,
-    manpower: 112000,
+    treasury: 2450,
+    manpower: 118000,
     absorbedCountryIds: ['348', '703'],
     provinceRenames: {
       '348': '★ Budin',
       '348_DEB': 'Debrecen',
       '348_PEC': 'Peçuy',
+      '348_QGY': 'Győr',
       '703': 'Estergon',
+      '642_CLJ': 'Kaloşvar',
+      '642_TSR': 'Temeşvar',
     },
   },
   {
@@ -318,15 +366,12 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#9C6B30',
     ideology: 'MONARCHY',
     capitalName: '★ Bükreş',
-    treasury: 1750,
-    manpower: 72000,
+    treasury: 1450,
+    manpower: 50000,
     absorbedCountryIds: ['642'],
     provinceRenames: {
       '642': '★ Bükreş',
-      '642_CLJ': 'Kaloşvar',
-      '642_TSR': 'Temeşvar',
-      '642_IAS': 'Yaş',
-      '642_CND': 'Köstence',
+      '642_CRA': 'Krayova',
     },
   },
   {
@@ -336,11 +381,12 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#648244',
     ideology: 'MONARCHY',
     capitalName: '★ Suceava',
-    treasury: 1350,
-    manpower: 46000,
+    treasury: 1450,
+    manpower: 50000,
     absorbedCountryIds: ['498'],
     provinceRenames: {
       '498': '★ Suceava',
+      '642_IAS': 'Yaş',
     },
   },
   {
@@ -380,16 +426,22 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#C6922C',
     ideology: 'MONARCHY',
     capitalName: '★ Frankfurt',
+    capitalTerritoryId: '276_FRA',
     treasury: 3250,
     manpower: 150000,
     absorbedCountryIds: ['276'],
     provinceRenames: {
-      '276': '★ Berlin',
+      '276': 'Berlin',
       '276_MUC': 'Münih',
       '276_STR': 'Stuttgart',
-      '276_FRA': 'Frankfurt',
+      '276_FRA': '★ Frankfurt',
       '276_HAM': 'Hamburg',
       '276_DRS': 'Dresden',
+      '276_CGN': 'Köln',
+      '276_NUE': 'Nürnberg',
+      '276_HAJ': 'Hannover',
+      '276_RLG': 'Lübeck',
+      '276_AGB': 'Augsburg',
     },
   },
   {
@@ -431,13 +483,14 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#CFC5B4',
     ideology: 'MONARCHY',
     capitalName: '★ Viyana',
-    treasury: 2250,
-    manpower: 90000,
-    absorbedCountryIds: ['040'],
+    treasury: 2350,
+    manpower: 96000,
+    absorbedCountryIds: ['040', '705'],
     provinceRenames: {
       '040': '★ Viyana',
       '040_GRZ': 'Graz',
       '040_INN': 'Innsbruck',
+      '705': 'Ljubljana',
     },
   },
   {
@@ -462,17 +515,22 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#2E778D',
     ideology: 'DEMOCRACY',
     capitalName: '★ Venedik',
+    capitalTerritoryId: '380_VCE',
     treasury: 3100,
     manpower: 120000,
-    absorbedCountryIds: ['380', '705'],
+    absorbedCountryIds: ['380'],
     provinceRenames: {
-      '380': '★ Roma',
+      '380': 'Roma',
       '380_FLR': 'Floransa',
       '380_MIL': 'Milano',
-      '380_VCE': 'Venedik',
+      '380_VCE': '★ Venedik',
       '380_NAP': 'Napoli',
       '380_PMO': 'Palermo',
-      '705': 'Ljubljana',
+      '380_GOA': 'Cenova',
+      '380_TRN': 'Torino',
+      '380_BRI': 'Bari',
+      '300_CRT': 'Girit',
+      '008_SHK': 'İşkodra',
     },
   },
   {
@@ -496,14 +554,17 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#D1495B',
     ideology: 'MONARCHY',
     capitalName: '★ Krakow',
+    capitalTerritoryId: '616_KRK',
     treasury: 2450,
     manpower: 115000,
     absorbedCountryIds: ['616'],
     provinceRenames: {
-      '616': '★ Varşova',
+      '616': 'Varşova',
       '616_POZ': 'Poznań',
-      '616_KRK': 'Krakow',
-      '616_GDN': 'Gdansk',
+      '616_KRK': '★ Krakow',
+      '616_LUZ': 'Lublin',
+      '616_WRO': 'Wrocław',
+      '804_LVV': 'Lviv',
     },
   },
   {
@@ -513,29 +574,32 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#6D2E46',
     ideology: 'MONARCHY',
     capitalName: '★ Vilnius',
-    treasury: 2100,
-    manpower: 94000,
+    treasury: 2300,
+    manpower: 108000,
     absorbedCountryIds: ['440', '112'],
     provinceRenames: {
       '440': '★ Vilnius',
       '440_KUN': 'Kaunas',
       '112': 'Minsk',
       '112_BQT': 'Brest',
+      '804': 'Kiev',
+      '643_SMO': 'Smolensk',
     },
   },
   {
     id: '428',
-    name: 'Livonya & Töton Şövalyeleri',
+    name: 'Töton & Livonya Şövalyeleri',
     flagCode: 'TOT',
     color: '#5C6773',
     ideology: 'MONARCHY',
     capitalName: '★ Riga',
-    treasury: 1650,
-    manpower: 64000,
+    treasury: 1750,
+    manpower: 72000,
     absorbedCountryIds: ['428', '233'],
     provinceRenames: {
       '428': '★ Riga',
       '233': 'Reval',
+      '616_GDN': 'Marienburg',
     },
   },
   {
@@ -555,6 +619,10 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '250_TLS': 'Toulouse',
       '250_BDX': 'Bordeaux',
       '250_NTE': 'Nantes',
+      '250_URO': 'Rouen',
+      '250_DIJ': 'Dijon',
+      '250_RNS': 'Reims',
+      '250_ORY': 'Orléans',
     },
   },
   {
@@ -564,28 +632,47 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#A63A3A',
     ideology: 'MONARCHY',
     capitalName: '★ Londra',
-    treasury: 2900,
-    manpower: 130000,
+    treasury: 2800,
+    manpower: 122000,
     absorbedCountryIds: ['826'],
     provinceRenames: {
       '826': '★ Londra',
       '826_MAN': 'York',
       '826_CWL': 'Cardiff',
-      '826_EDI': 'Edinburgh',
+      '826_BRS': 'Bristol',
+      '826_NWI': 'Norwich',
+      '826_NCL': 'Newcastle',
+    },
+  },
+  {
+    id: '905',
+    name: 'İskoçya Krallığı',
+    flagCode: 'İSK',
+    color: '#1D4ED8',
+    ideology: 'MONARCHY',
+    capitalName: '★ Edinburgh',
+    capitalTerritoryId: '826_EDI',
+    treasury: 1550,
+    manpower: 54000,
+    absorbedCountryIds: [],
+    provinceRenames: {
+      '826_EDI': '★ Edinburgh',
+      '826_GLA': 'Glasgow',
     },
   },
   {
     id: '372',
-    name: 'İskoçya & İrlanda Krallığı',
-    flagCode: 'İSK',
-    color: '#2D6A7E',
+    name: 'İrlanda Klanları',
+    flagCode: 'İRL',
+    color: '#2D7A5A',
     ideology: 'MONARCHY',
     capitalName: '★ Dublin',
-    treasury: 1750,
-    manpower: 68000,
-    absorbedCountryIds: ['372', '352'],
+    treasury: 1350,
+    manpower: 44000,
+    absorbedCountryIds: ['372'],
     provinceRenames: {
       '372': '★ Dublin',
+      '372_ORK': 'Cork',
     },
   },
   {
@@ -595,8 +682,8 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#D4A024',
     ideology: 'MONARCHY',
     capitalName: '★ Toledo',
-    treasury: 2700,
-    manpower: 125000,
+    treasury: 2750,
+    manpower: 128000,
     absorbedCountryIds: ['724'],
     provinceRenames: {
       '724': '★ Toledo',
@@ -605,6 +692,9 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '724_SEV': 'Sevilla',
       '724_GRX': 'Gırnata',
       '724_BIO': 'Bilbao',
+      '724_ZAZ': 'Zaragoza',
+      '724_VLL': 'Valladolid',
+      '724_MJV': 'Murcia',
     },
   },
   {
@@ -620,6 +710,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     provinceRenames: {
       '620': '★ Lizbon',
       '620_OPO': 'Porto',
+      '620_FAO': 'Faro',
     },
   },
   {
@@ -629,12 +720,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#2E7052',
     ideology: 'MONARCHY',
     capitalName: '★ Tilimsan',
+    capitalTerritoryId: '012_ORN',
     treasury: 1950,
     manpower: 88000,
     absorbedCountryIds: ['012'],
     provinceRenames: {
-      '012': '★ Cezayir',
-      '012_ORN': 'Tilimsan',
+      '012': 'Cezayir',
+      '012_ORN': '★ Tilimsan',
       '012_HME': 'Tamanrasset',
     },
   },
@@ -645,12 +737,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#8E3535',
     ideology: 'MONARCHY',
     capitalName: '★ Fes',
+    capitalTerritoryId: '504_FEZ',
     treasury: 2050,
     manpower: 92000,
     absorbedCountryIds: ['504', '732', '478'],
     provinceRenames: {
-      '504': '★ Rabat',
-      '504_FEZ': 'Fes',
+      '504': 'Rabat',
+      '504_FEZ': '★ Fes',
       '504_RAK': 'Marakeş',
     },
   },
@@ -661,12 +754,14 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#A8732A',
     ideology: 'MONARCHY',
     capitalName: '★ Tunus',
-    treasury: 1900,
-    manpower: 78000,
-    absorbedCountryIds: ['788'],
+    treasury: 2000,
+    manpower: 84000,
+    absorbedCountryIds: ['788', '434'],
     provinceRenames: {
       '788': '★ Tunus',
       '788_SFA': 'Kayrevan',
+      '434': 'Trablus',
+      '434_BEN': 'Bingazi',
     },
   },
   {
@@ -704,18 +799,19 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
   },
   {
     id: '578',
-    name: 'Norveç Krallığı',
+    name: 'Norveç & İzlanda Krallığı',
     flagCode: 'NOR',
     color: '#6E5A8A',
     ideology: 'MONARCHY',
     capitalName: '★ Oslo',
-    treasury: 1650,
-    manpower: 58000,
-    absorbedCountryIds: ['578', '304'],
+    treasury: 1700,
+    manpower: 62000,
+    absorbedCountryIds: ['578', '304', '352'],
     provinceRenames: {
       '578': '★ Oslo',
       '578_BGO': 'Bergen',
       '578_TOS': 'Tromsø',
+      '352': 'Reykjavik',
     },
   },
   {
@@ -772,30 +868,45 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#C89B2B',
     ideology: 'MONARCHY',
     capitalName: '★ Timbuktu',
+    capitalTerritoryId: '466_TOM',
     treasury: 2250,
     manpower: 96000,
     absorbedCountryIds: [
       '466', '686', '288', '384', '324', '694', '430', '270', '624', '854',
     ],
     provinceRenames: {
-      '466': '★ Bamako',
-      '466_TOM': 'Timbuktu',
+      '466': 'Bamako',
+      '466_TOM': '★ Timbuktu',
     },
   },
   {
     id: '710',
+    name: 'Güney Afrika & Khoisan Klanları',
+    flagCode: 'KHO',
+    color: '#4F775A',
+    ideology: 'MONARCHY',
+    capitalName: '★ Mapungubve',
+    treasury: 1550,
+    manpower: 62000,
+    absorbedCountryIds: ['710', '426', '748', '516', '260'],
+    provinceRenames: {
+      '710': '★ Mapungubve',
+      '710_CPT': 'Ümit Burnu',
+    },
+  },
+  {
+    id: '716',
     name: 'Büyük Zimbabve & Mutapa',
     flagCode: 'ZİM',
     color: '#356B43',
     ideology: 'MONARCHY',
     capitalName: '★ Zimbabve',
-    treasury: 1750,
-    manpower: 78000,
-    absorbedCountryIds: ['710', '716', '894', '454', '516', '072'],
+    treasury: 1650,
+    manpower: 68000,
+    absorbedCountryIds: ['716', '894', '454', '072'],
     provinceRenames: {
-      '710': '★ Mapungubve',
-      '710_CPT': 'Ümit Burnu',
-      '716': 'Zimbabve',
+      '716': '★ Zimbabve',
+      '716_BUQ': 'Bulawayo',
     },
   },
   {
@@ -807,7 +918,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     capitalName: '★ Kilva',
     treasury: 1650,
     manpower: 68000,
-    absorbedCountryIds: ['834', '508', '450'],
+    absorbedCountryIds: ['834', '508', '450', '108', '646'],
     provinceRenames: {
       '834': '★ Kilva',
       '450': 'Antananarivo',
@@ -822,35 +933,48 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     capitalName: '★ Mbanza',
     treasury: 1650,
     manpower: 74000,
-    absorbedCountryIds: ['180', '024', '178', '266'],
+    absorbedCountryIds: ['180', '024', '178', '266', '140', '226'],
     provinceRenames: {
       '180': '★ Mbanza',
     },
   },
   {
     id: '356',
-    name: 'Delhi & Behmenî Sultanlığı',
+    name: 'Delhi Sultanlığı',
     flagCode: 'DEL',
     color: '#3D7A5A',
     ideology: 'MONARCHY',
     capitalName: '★ Delhi',
-    treasury: 3100,
-    manpower: 185000,
+    treasury: 2700,
+    manpower: 145000,
     absorbedCountryIds: ['356', '586'],
     provinceRenames: {
       '356': '★ Delhi',
       '356_JAI': 'Jaipur',
       '356_LKO': 'Luknov',
       '356_AMD': 'Ahmedabad',
-      '356_BOM': 'Mumbai',
-      '356_HYD': 'Haydarabad',
       '356_PAT': 'Patna',
-      '356_CCU': 'Kalküta',
-      '356_BLR': 'Vijayanagara',
-      '356_MAA': 'Madras',
       '586': 'Lahor',
       '586_KHI': 'Karaçi',
       '586_PEW': 'Peşaver',
+    },
+  },
+  {
+    id: '904',
+    name: 'Vijayanagara & Behmenî',
+    flagCode: 'VİJ',
+    color: '#D97706',
+    ideology: 'MONARCHY',
+    capitalName: '★ Vijayanagara',
+    capitalTerritoryId: '356_BLR',
+    treasury: 2250,
+    manpower: 108000,
+    absorbedCountryIds: [],
+    provinceRenames: {
+      '356_BLR': '★ Vijayanagara',
+      '356_HYD': 'Haydarabad',
+      '356_BOM': 'Mumbai',
+      '356_MAA': 'Madras',
     },
   },
   {
@@ -860,12 +984,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#2A8C6A',
     ideology: 'MONARCHY',
     capitalName: '★ Dakka',
-    treasury: 1850,
-    manpower: 84000,
-    absorbedCountryIds: ['050', '524'],
+    treasury: 1950,
+    manpower: 88000,
+    absorbedCountryIds: ['050', '524', '064'],
     provinceRenames: {
       '050': '★ Dakka',
       '050_CGP': 'Çittagong',
+      '356_CCU': 'Kalküta',
     },
   },
   {
@@ -889,14 +1014,31 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     flagCode: 'MAJ',
     color: '#B85A32',
     ideology: 'MONARCHY',
-    capitalName: '★ Cava',
-    treasury: 2050,
-    manpower: 92000,
-    absorbedCountryIds: ['360', '036', '554', '598'],
+    capitalName: '★ Cakarta',
+    treasury: 1950,
+    manpower: 82000,
+    absorbedCountryIds: ['360', '626'],
     provinceRenames: {
       '360': '★ Cakarta',
       '360_MES': 'Açe',
-      '360_BPN': 'Brunei',
+      '360_BPN': 'Bandar',
+    },
+  },
+  {
+    id: '036',
+    name: 'Avustralya & Pasifik Klanları',
+    flagCode: 'OKY',
+    color: '#9F6B46',
+    ideology: 'MONARCHY',
+    capitalName: '★ Eora',
+    treasury: 1450,
+    manpower: 52000,
+    absorbedCountryIds: ['036', '554', '598', '242', '540', '548', '090'],
+    provinceRenames: {
+      '036': '★ Eora',
+      '036_MEL': 'Kulin',
+      '036_PER': 'Noongar',
+      '554': 'Aotearoa',
     },
   },
   {
@@ -908,10 +1050,11 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     capitalName: '★ Malakka',
     treasury: 1750,
     manpower: 56000,
-    absorbedCountryIds: ['458'],
+    absorbedCountryIds: ['458', '096'],
     provinceRenames: {
       '458': '★ Malakka',
-      '458_KCH': 'Brunei',
+      '458_KCH': 'Saravak',
+      '096': 'Brunei',
     },
   },
   {
@@ -984,12 +1127,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#C47D3B',
     ideology: 'MONARCHY',
     capitalName: '★ Angkor',
+    capitalTerritoryId: '116_REP',
     treasury: 1450,
     manpower: 52000,
     absorbedCountryIds: ['116'],
     provinceRenames: {
-      '116': '★ Phnom Penh',
-      '116_REP': 'Angkor',
+      '116': 'Phnom Penh',
+      '116_REP': '★ Angkor',
     },
   },
   {
@@ -1017,7 +1161,6 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '156_KMG': 'Kunming',
       '156_LHW': 'Lanzhou',
       '156_LXA': 'Lhasa',
-      '156_URC': 'Kaşgar',
     },
   },
   {
@@ -1027,12 +1170,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#5C6F82',
     ideology: 'MONARCHY',
     capitalName: '★ Karakurum',
+    capitalTerritoryId: '496_Kov',
     treasury: 1650,
     manpower: 86000,
     absorbedCountryIds: ['496'],
     provinceRenames: {
-      '496': '★ Ulanbator',
-      '496_Kov': 'Karakurum',
+      '496': 'Ulanbator',
+      '496_Kov': '★ Karakurum',
     },
   },
   {
@@ -1048,6 +1192,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     provinceRenames: {
       '410': '★ Hanseong (Seul)',
       '410_PUS': 'Busan',
+      '410_KUV': 'Gwangju',
     },
   },
   {
@@ -1057,13 +1202,18 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#9E3B4B',
     ideology: 'MILITARY_JUNTA',
     capitalName: '★ Kyoto',
+    capitalTerritoryId: '392_OSA',
     treasury: 2600,
     manpower: 130000,
     absorbedCountryIds: ['392'],
     provinceRenames: {
-      '392': '★ Edo',
-      '392_OSA': 'Kyoto',
-      '392_SPK': 'Sapporo',
+      '392': 'Edo',
+      '392_OSA': '★ Kyoto',
+      '392_SPK': 'Ezo',
+      '392_FUK': 'Hakata',
+      '392_HIJ': 'Hiroşima',
+      '392_NGO': 'Owari',
+      '392_SDJ': 'Sendai',
     },
   },
   {
@@ -1073,9 +1223,9 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#2A7A68',
     ideology: 'MONARCHY',
     capitalName: '★ Tenochtitlan',
-    treasury: 2150,
-    manpower: 110000,
-    absorbedCountryIds: ['484', '320', '340', '558', '188', '591', '192', '214', '332'],
+    treasury: 2050,
+    manpower: 98000,
+    absorbedCountryIds: ['484', '320', '340', '558', '188', '591', '084', '222'],
     provinceRenames: {
       '484': '★ Tenochtitlan',
       '484_MTY': 'Monterrey',
@@ -1083,28 +1233,76 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     },
   },
   {
+    id: '192',
+    name: 'Taíno & Karayip Kabileleri',
+    flagCode: 'KAR',
+    color: '#1E8278',
+    ideology: 'MONARCHY',
+    capitalName: '★ Havana',
+    treasury: 1350,
+    manpower: 46000,
+    absorbedCountryIds: ['192', '214', '332', '388', '044', '630', '780'],
+    provinceRenames: {
+      '192': '★ Havana',
+      '192_SCU': 'Guama',
+    },
+  },
+  {
     id: '840',
-    name: 'Kuzey Amerika İrokua Konfederasyonu',
+    name: 'İrokua Konfederasyonu',
     flagCode: 'İRO',
     color: '#6C584C',
     ideology: 'MONARCHY',
     capitalName: '★ Onondaga',
-    treasury: 1950,
-    manpower: 96000,
-    absorbedCountryIds: ['840', '124'],
+    treasury: 1750,
+    manpower: 72000,
+    absorbedCountryIds: ['840'],
     provinceRenames: {
       '840': '★ Onondaga',
       '840_NYC': 'Mohawk',
       '840_BOS': 'Massachusett',
       '840_PHI': 'Lenape',
-      '840_CHI': 'İllinois',
       '840_DET': 'Huron',
-      '840_MSP': 'Dakota',
       '840_ATL': 'Çeroki',
       '840_MIA': 'Seminol',
+    },
+  },
+  {
+    id: '124',
+    name: 'Algonkin & Kuzey Orman Klanları',
+    flagCode: 'ALG',
+    color: '#5B7065',
+    ideology: 'MONARCHY',
+    capitalName: '★ Algonkin',
+    treasury: 1550,
+    manpower: 62000,
+    absorbedCountryIds: ['124'],
+    provinceRenames: {
+      '124': '★ Algonkin',
+      '124_YYZ': 'Tkaronto',
+      '124_YUL': 'Hochelaga',
+      '124_YWG': 'Cree',
+      '124_YYC': 'Karaayak',
+      '124_YVR': 'Haida',
+    },
+  },
+  {
+    id: '906',
+    name: 'Bozkır & Apaçi Klanları',
+    flagCode: 'APA',
+    color: '#9C5C38',
+    ideology: 'MONARCHY',
+    capitalName: '★ Arapaho',
+    capitalTerritoryId: '840_DEN',
+    treasury: 1650,
+    manpower: 68000,
+    absorbedCountryIds: [],
+    provinceRenames: {
+      '840_DEN': '★ Arapaho',
+      '840_CHI': 'İllinois',
+      '840_MSP': 'Dakota',
       '840_HOU': 'Komançi',
       '840_DAL': 'Kiowa',
-      '840_DEN': 'Arapaho',
       '840_PHX': 'Apaçi',
       '840_LAX': 'Çumaş',
       '840_SFO': 'Miwok',
@@ -1118,40 +1316,133 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     color: '#704A82',
     ideology: 'MONARCHY',
     capitalName: '★ Cusco',
+    capitalTerritoryId: '604_CUZ',
     treasury: 2250,
-    manpower: 120000,
-    absorbedCountryIds: ['076', '604', '068', '152', '032', '170', '862', '218', '600', '858'],
+    manpower: 112000,
+    absorbedCountryIds: ['604', '068', '152', '218'],
     provinceRenames: {
-      '604': '★ Cusco',
+      '604_CUZ': '★ Cusco',
+      '604': 'Lima',
       '068': 'La Paz',
       '218': 'Quito',
       '152': 'Santiago',
-      '076': 'Brasilia',
-      '076_GRU': 'Sao Paulo',
-      '076_MAO': 'Manaus',
-      '032': 'Buenos Aires',
+    },
+  },
+  {
+    id: '170',
+    name: 'Muisca & Karib Konfederasyonu',
+    flagCode: 'MUI',
+    color: '#8C6D2E',
+    ideology: 'MONARCHY',
+    capitalName: '★ Bogota',
+    treasury: 1600,
+    manpower: 64000,
+    absorbedCountryIds: ['170', '862', '328', '740'],
+    provinceRenames: {
+      '170': '★ Bogota',
+    },
+  },
+  {
+    id: '907',
+    name: 'Tupinambá (Brezilya Kabileleri)',
+    flagCode: 'TUP',
+    color: '#3D7A47',
+    ideology: 'MONARCHY',
+    capitalName: '★ Bahia',
+    capitalTerritoryId: '076_SSA',
+    treasury: 1550,
+    manpower: 62000,
+    absorbedCountryIds: ['076'],
+    provinceRenames: {
+      '076_SSA': '★ Bahia',
+      '076': 'Cerrado',
+      '076_GRU': 'Tupi',
+      '076_GIG': 'Guanabara',
+      '076_REC': 'Pernambuco',
+      '076_MAO': 'Amazon',
+    },
+  },
+  {
+    id: '032',
+    name: 'Guaraní & Patagonya Kabileleri',
+    flagCode: 'GUA',
+    color: '#5C768D',
+    ideology: 'MONARCHY',
+    capitalName: '★ Pampas',
+    treasury: 1500,
+    manpower: 58000,
+    absorbedCountryIds: ['032', '600', '858', '238'],
+    provinceRenames: {
+      '032': '★ Pampas',
     },
   },
 ];
 
 // Province-level historical corrections for 1444 (applied over country-level absorption)
 const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
+  // Byzantium & Ottoman & Balkans
   '792_IST': '300', // Constantinople stays Byzantine until 1453
-  '792_ERZ': '031',
+  '300_SKG': '792', // Selanik conquered by Murad II in 1430
+  '300_IOA': '792', // Yanya conquered by Murad II in 1430
+  '300_CRT': '380', // Crete held by Venice
+  '008_SHK': '380', // Venetian Albania (Shkodra)
+  '642_CND': '792', // Dobruca / Silistre held by Ottomans
+  '642_CLJ': '348', // Transylvania (Kolozsvar) held by Hungary
+  '642_TSR': '348', // Banat (Temesvar) held by Hungary
+  '642_IAS': '498', // Moldavia (Iasi)
+  // Poland, Lithuania, Teutonic Order & Crimea
+  '804_LVV': '616', // Red Ruthenia / Lviv held by Poland
+  '616_GDN': '428', // Prussia / Danzig held by Teutonic Order in 1444
+  '804': '440',     // Kiev held by Lithuania
+  '643_SMO': '440', // Smolensk held by Lithuania
+  '643_KRR': '804', // Crimea / Kuban held by Crimean Khanate
+  '643_ROV': '804', // Azov steppe held by Crimean Khanate
+  // Muscovy vs Great Horde & Sibir
+  '643_VOG': '902', // Sarai
+  '643_ASF': '902', // Astrakhan
+  '643_KZN': '902', // Kazan
+  '643_KUF': '902', // Samara
+  '643_SVX': '902', // Perm / Ural
+  '643_OMS': '903', // Sibir Khanate
+  '643_OVB': '903',
+  '643_KJA': '903',
+  '643_IKT': '903',
+  '643_KHV': '903',
+  '643_VVO': '903',
+  // Britain
+  '826_EDI': '905', // Scotland
+  '826_GLA': '905', // Scotland
+  // Anatolia, Persia, Central Asia & Levant
+  '792_ERZ': '031', // Karakoyunlu / Akkoyunlu
   '792_VAN': '031',
   '792_DYB': '031',
   '792_MLT': '031',
-  '792_TRB': '268', // Trebizond: nearest Christian Caucasian realm
+  '792_TRB': '268', // Trebizond / Caucasus sphere
   '792_GZP': '818', // Dulkadir / Maras under Mamluk sphere
   '792_ADA': '818', // Ramazanoglu / Adana under Mamluk sphere
+  '682_JED': '818', // Hejaz under Mamluk protectorate
+  '682_MED': '818',
+  '364_TBZ': '031', // Tabriz: Karakoyunlu capital in 1444
+  '860_SKD': '364', // Samarkand: Timurid capital in 1444
+  '156_URC': '860', // Kashgar / Moghulistan
+  // India
+  '356_BLR': '904', // Vijayanagara
+  '356_HYD': '904', // Bahmani / Golconda
+  '356_BOM': '904', // Konkan / Bahmani coast
+  '356_MAA': '904', // Coromandel / Vijayanagara
+  '356_CCU': '050', // Bengal delta
+  // North America Plains split
+  '840_CHI': '906',
+  '840_MSP': '906',
+  '840_HOU': '906',
+  '840_DAL': '906',
+  '840_DEN': '906',
+  '840_PHX': '906',
+  '840_LAX': '906',
+  '840_SFO': '906',
+  '840_SEA': '906',
 };
-const COUNTRY_OWNER_OVERRIDES_1440: Record<string, string> = {
-  '008': '380', // Albania: Venice / Italian states coast, not Ottoman in 1444
-  '512': '887',
-  '784': '887',
-  '634': '887',
-  '414': '031',
-};
+const COUNTRY_OWNER_OVERRIDES_1440: Record<string, string> = {};
 
 export function transformBundleTo1440Scenario(
   baseBundle: InitialWorldBundle
@@ -1173,7 +1464,7 @@ export function transformBundleTo1440Scenario(
   const territories: Record<string, Territory> = {};
   const features: GeoCountryFeature[] = [];
 
-  // 1. Create the 36 Historical Empires & Kingdoms
+  // 1. Create Historical Empires & Kingdoms
   EMPIRES_1440_DEFS.forEach((emp) => {
     const baseN = baseBundle.nations[emp.id];
     const isOttoman = emp.id === '792';
@@ -1236,7 +1527,7 @@ export function transformBundleTo1440Scenario(
       };
     });
 
-  // 2. Reassign all world provinces to the 36 Historical Empires so 100% of world landmasses are rendered!
+  // 2. Reassign all world provinces to the Historical Empires so 100% of world landmasses are rendered!
   baseBundle.features.forEach((feat) => {
     const baseCountryId = feat.id.split('_')[0];
     const baseT = baseBundle.territories[feat.id];
@@ -1294,75 +1585,87 @@ export function transformBundleTo1440Scenario(
     };
   });
 
-  // 2B. Balance 1440 starting armies and GDP historically so major Eurasian powers (Ming, Ottoman, Timurid, Mamluk, HRE) lead the world
+  // 2B. Balance 1440 starting armies and GDP historically so major Eurasian powers (Ming, Ottoman, Mamluk, Timurid, HRE) lead the world
   const TARGET_1440_EMPIRE_SCALE: Record<
     string,
     { targetArmy: number; targetGdp: number }
   > = {
     '156': { targetArmy: 235000, targetGdp: 1380 }, // Ming Hanedanı
-    '792': { targetArmy: 175000, targetGdp: 1080 }, // Osmanlı Devleti
-    '364': { targetArmy: 155000, targetGdp: 980 },  // Timur İmparatorluğu
-    '818': { targetArmy: 150000, targetGdp: 980 },  // Memlük Sultanlığı
-    '276': { targetArmy: 138000, targetGdp: 960 },  // Kutsal Roma İmparatorluğu
-    '643': { targetArmy: 135000, targetGdp: 840 },  // Altın Orda & Moskova
-    '356': { targetArmy: 130000, targetGdp: 920 },  // Delhi & Behmenî
-    '250': { targetArmy: 95000, targetGdp: 740 },   // Fransa Krallığı
-    '392': { targetArmy: 92000, targetGdp: 680 },   // Ashikaga Şogunluğu
-    '348': { targetArmy: 88000, targetGdp: 620 },   // Macaristan Krallığı
-    '616': { targetArmy: 84000, targetGdp: 590 },   // Lehistan Krallığı
-    '031': { targetArmy: 85000, targetGdp: 560 },   // Karakoyunlu & Akkoyunlu
-    '724': { targetArmy: 82000, targetGdp: 610 },   // Kastilya & Aragon
-    '826': { targetArmy: 80000, targetGdp: 610 },   // İngiltere Krallığı
-    '040': { targetArmy: 74000, targetGdp: 540 },   // Avusturya & Bohemya
-    '380': { targetArmy: 72000, targetGdp: 690 },   // Venedik & İtalya
-    '076': { targetArmy: 72000, targetGdp: 590 },   // İnka İmparatorluğu
-    '440': { targetArmy: 70000, targetGdp: 510 },   // Litvanya Büyük Dükalığı
-    '860': { targetArmy: 68000, targetGdp: 490 },   // Özbek & Çağatay Hanlığı
-    '566': { targetArmy: 68000, targetGdp: 580 },   // Mali & Songhay
-    '840': { targetArmy: 66000, targetGdp: 520 },   // Kuzey Amerika İrokua
-    '484': { targetArmy: 65000, targetGdp: 520 },   // Aztek & Maya
-    '752': { targetArmy: 64000, targetGdp: 520 },   // Kalmar Birliği
-    '764': { targetArmy: 62000, targetGdp: 480 },   // Ayutthaya & Dai Viet
-    '360': { targetArmy: 60000, targetGdp: 490 },   // Majapahit & Malakka
-    '410': { targetArmy: 58000, targetGdp: 460 },   // Joseon Krallığı (Kore)
-    '231': { targetArmy: 58000, targetGdp: 460 },   // Habeşistan & Adal
-    '620': { targetArmy: 54000, targetGdp: 450 },   // Portekiz Krallığı
+    '792': { targetArmy: 185000, targetGdp: 1140 }, // Osmanlı Devleti
+    '818': { targetArmy: 152000, targetGdp: 990 },  // Memlük Sultanlığı
+    '364': { targetArmy: 148000, targetGdp: 940 },  // Timur İmparatorluğu
+    '276': { targetArmy: 138000, targetGdp: 980 },  // Kutsal Roma İmparatorluğu
+    '031': { targetArmy: 112000, targetGdp: 690 },  // Karakoyunlu & Akkoyunlu
+    '250': { targetArmy: 108000, targetGdp: 810 },  // Fransa Krallığı
+    '356': { targetArmy: 104000, targetGdp: 760 },  // Delhi Sultanlığı
+    '380': { targetArmy: 96000, targetGdp: 790 },   // Venedik & İtalya Devletleri
+    '724': { targetArmy: 92000, targetGdp: 680 },   // Kastilya & Aragon
+    '348': { targetArmy: 90000, targetGdp: 640 },   // Macaristan Krallığı
+    '392': { targetArmy: 88000, targetGdp: 660 },   // Ashikaga Şogunluğu
+    '616': { targetArmy: 86000, targetGdp: 620 },   // Lehistan Krallığı
+    '826': { targetArmy: 84000, targetGdp: 640 },   // İngiltere Krallığı
+    '440': { targetArmy: 80000, targetGdp: 540 },   // Litvanya Büyük Dükalığı
+    '902': { targetArmy: 78000, targetGdp: 500 },   // Büyük Orda & Kazan
+    '643': { targetArmy: 76000, targetGdp: 520 },   // Moskova & Novgorod
+    '040': { targetArmy: 74000, targetGdp: 550 },   // Avusturya Arşidüklüğü
+    '860': { targetArmy: 72000, targetGdp: 490 },   // Özbek & Çağatay Hanlığı
+    '076': { targetArmy: 70000, targetGdp: 540 },   // İnka İmparatorluğu
+    '566': { targetArmy: 68000, targetGdp: 540 },   // Songhay & Bornu
+    '904': { targetArmy: 66000, targetGdp: 560 },   // Vijayanagara & Behmenî
+    '528': { targetArmy: 64000, targetGdp: 560 },   // Burgonya & Felemenk
+    '752': { targetArmy: 64000, targetGdp: 520 },   // İsveç & Finlandiya
+    '484': { targetArmy: 62000, targetGdp: 490 },   // Aztek & Maya
+    '804': { targetArmy: 60000, targetGdp: 440 },   // Kırım Hanlığı
+    '410': { targetArmy: 58000, targetGdp: 470 },   // Joseon Krallığı
+    '231': { targetArmy: 58000, targetGdp: 460 },   // Habeşistan
+    '050': { targetArmy: 58000, targetGdp: 470 },   // Bengal Sultanlığı
+    '620': { targetArmy: 56000, targetGdp: 470 },   // Portekiz Krallığı
+    '398': { targetArmy: 56000, targetGdp: 390 },   // Kazak Hanlığı
+    '466': { targetArmy: 56000, targetGdp: 460 },   // Mali İmparatorluğu
+    '903': { targetArmy: 54000, targetGdp: 380 },   // Sibir & Mançurya
     '504': { targetArmy: 54000, targetGdp: 430 },   // Merînî Fas Sultanlığı
-    '642': { targetArmy: 52000, targetGdp: 410 },   // Eflak & Boğdan
-    '710': { targetArmy: 52000, targetGdp: 440 },   // Kilva & Büyük Zimbabve
-    '012': { targetArmy: 50000, targetGdp: 400 },   // Tilimsan & Cezayir
-    '688': { targetArmy: 48000, targetGdp: 390 },   // Sırbistan & Bosna
-    '788': { targetArmy: 46000, targetGdp: 380 },   // Tunus Hafsî Sultanlığı
-    '372': { targetArmy: 44000, targetGdp: 360 },   // İskoçya & İrlanda
-    '300': { targetArmy: 42000, targetGdp: 320 },   // Bizans & Mora
-    // Newly split 1440 historical realms (historically balanced below great powers)
-    '528': { targetArmy: 62000, targetGdp: 540 },   // Burgonya & Felemenk Dükalığı
-    '804': { targetArmy: 58000, targetGdp: 420 },   // Kırım & Kiev Hanlığı
-    '398': { targetArmy: 56000, targetGdp: 390 },   // Kazak & Deşt-i Kıpçak Hanlığı
-    '466': { targetArmy: 54000, targetGdp: 450 },   // Mali İmparatorluğu
-    '050': { targetArmy: 52000, targetGdp: 430 },   // Bengal Sultanlığı
-    '704': { targetArmy: 50000, targetGdp: 410 },   // Dai Viet İmparatorluğu
+    '788': { targetArmy: 52000, targetGdp: 420 },   // Tunus Hafsî Sultanlığı
+    '840': { targetArmy: 50000, targetGdp: 410 },   // İrokua Konfederasyonu
+    '906': { targetArmy: 50000, targetGdp: 400 },   // Bozkır & Apaçi Klanları
+    '764': { targetArmy: 50000, targetGdp: 430 },   // Ayutthaya Krallığı
+    '704': { targetArmy: 50000, targetGdp: 410 },   // Dai Viet
+    '682': { targetArmy: 48000, targetGdp: 390 },   // Necid & Hürmüz
+    '428': { targetArmy: 48000, targetGdp: 390 },   // Töton & Livonya Şövalyeleri
     '208': { targetArmy: 48000, targetGdp: 420 },   // Danimarka Krallığı
     '203': { targetArmy: 48000, targetGdp: 410 },   // Bohemya Krallığı
-    '496': { targetArmy: 48000, targetGdp: 340 },   // Oyrat & Moğol Hanlığı
-    '104': { targetArmy: 46000, targetGdp: 370 },   // Ava (Burma) Krallığı
-    '180': { targetArmy: 44000, targetGdp: 350 },   // Kongo Krallığı
-    '834': { targetArmy: 42000, targetGdp: 360 },   // Kilva Sultanlığı
-    '428': { targetArmy: 42000, targetGdp: 350 },   // Livonya & Töton Şövalyeleri
-    '458': { targetArmy: 40000, targetGdp: 390 },   // Malakka Sultanlığı
-    '578': { targetArmy: 40000, targetGdp: 350 },   // Norveç Krallığı
-    '756': { targetArmy: 38000, targetGdp: 380 },   // İsviçre Konfederasyonu
-    '268': { targetArmy: 38000, targetGdp: 330 },   // Gürcistan Krallığı
-    '070': { targetArmy: 36000, targetGdp: 310 },   // Bosna Krallığı
-    '706': { targetArmy: 36000, targetGdp: 310 },   // Adal Sultanlığı
-    '608': { targetArmy: 36000, targetGdp: 320 },   // Tondo & Sulu Sultanlığı
-    '116': { targetArmy: 36000, targetGdp: 310 },   // Khmer (Angkor) Krallığı
-    '729': { targetArmy: 35000, targetGdp: 300 },   // Funj & Nubya Sultanlığı
-    '887': { targetArmy: 34000, targetGdp: 310 },   // Yemen Resûlî Sultanlığı
-    '191': { targetArmy: 34000, targetGdp: 310 },   // Hırvatistan Banlığı
-    '498': { targetArmy: 32000, targetGdp: 290 },   // Boğdan Voyvodalığı
-    '144': { targetArmy: 30000, targetGdp: 280 },   // Kotte (Seylan) Krallığı
-    '196': { targetArmy: 26000, targetGdp: 260 },   // Kıbrıs Lüzinyan Krallığı
+    '496': { targetArmy: 48000, targetGdp: 340 },   // Oyrat & Moğol
+    '012': { targetArmy: 48000, targetGdp: 390 },   // Tilimsan & Cezayir
+    '360': { targetArmy: 48000, targetGdp: 420 },   // Majapahit
+    '578': { targetArmy: 46000, targetGdp: 380 },   // Norveç & İzlanda
+    '104': { targetArmy: 46000, targetGdp: 370 },   // Ava (Burma)
+    '716': { targetArmy: 46000, targetGdp: 380 },   // Büyük Zimbabve & Mutapa
+    '170': { targetArmy: 44000, targetGdp: 360 },   // Muisca & Karib
+    '907': { targetArmy: 42000, targetGdp: 350 },   // Tupinambá
+    '124': { targetArmy: 42000, targetGdp: 340 },   // Algonkin
+    '180': { targetArmy: 44000, targetGdp: 350 },   // Kongo
+    '834': { targetArmy: 42000, targetGdp: 360 },   // Kilva
+    '710': { targetArmy: 40000, targetGdp: 340 },   // Güney Afrika & Khoisan
+    '032': { targetArmy: 40000, targetGdp: 330 },   // Guaraní & Patagonya
+    '458': { targetArmy: 42000, targetGdp: 400 },   // Malakka
+    '905': { targetArmy: 40000, targetGdp: 330 },   // İskoçya
+    '688': { targetArmy: 42000, targetGdp: 350 },   // Sırbistan
+    '268': { targetArmy: 40000, targetGdp: 340 },   // Gürcistan & Trabzon
+    '756': { targetArmy: 38000, targetGdp: 380 },   // İsviçre
+    '036': { targetArmy: 38000, targetGdp: 330 },   // Avustralya & Pasifik
+    '192': { targetArmy: 36000, targetGdp: 310 },   // Taíno & Karayipler
+    '070': { targetArmy: 36000, targetGdp: 310 },   // Bosna
+    '706': { targetArmy: 36000, targetGdp: 310 },   // Adal
+    '608': { targetArmy: 36000, targetGdp: 320 },   // Tondo & Sulu
+    '887': { targetArmy: 36000, targetGdp: 320 },   // Yemen
+    '729': { targetArmy: 35000, targetGdp: 300 },   // Funj & Nubya
+    '642': { targetArmy: 34000, targetGdp: 300 },   // Eflak
+    '498': { targetArmy: 34000, targetGdp: 300 },   // Boğdan
+    '191': { targetArmy: 34000, targetGdp: 310 },   // Hırvatistan
+    '372': { targetArmy: 34000, targetGdp: 290 },   // İrlanda
+    '116': { targetArmy: 34000, targetGdp: 300 },   // Khmer
+    '300': { targetArmy: 32000, targetGdp: 290 },   // Bizans & Mora (2 şehir)
+    '144': { targetArmy: 30000, targetGdp: 280 },   // Kotte (Seylan)
+    '196': { targetArmy: 26000, targetGdp: 260 },   // Kıbrıs
   };
 
   const provsByEmpire: Record<string, Territory[]> = {};
@@ -1426,6 +1729,9 @@ export function transformBundleTo1440Scenario(
   link1440('792', '300');
   link1440('792', '100');
   link1440('100', '642');
+  link1440('100', '642_CND');
+  link1440('642_CND', '498');
+  link1440('642_IAS', '498');
   link1440('100', '688');
   link1440('688', '348');
   link1440('348', '040');
@@ -1496,8 +1802,18 @@ export function transformBundleTo1440Scenario(
     allianceType: 'OFFENSIVE',
     hasMilitaryAccess: true,
   });
-  // France - England Hundred Years' War tension
+  // Poland - Lithuania personal union
+  setRel('616', '440', {
+    score: 90,
+    isAllied: true,
+    allianceType: 'OFFENSIVE',
+    hasMilitaryAccess: true,
+  });
+  // France - England Hundred Years' War tension; France - Scotland Auld Alliance
   setRel('250', '826', { score: -65 });
+  setRel('250', '905', { score: 75, isAllied: true, allianceType: 'DEFENSIVE' });
+  // England - Portugal (Treaty of Windsor)
+  setRel('826', '620', { score: 75, isAllied: true, allianceType: 'DEFENSIVE' });
   // Ottoman - Mamluk & Karakoyunlu/Timurid balance
   setRel('792', '818', { score: 25, hasTradeAgreement: true });
   setRel('792', '031', { score: 35, hasTradeAgreement: true });

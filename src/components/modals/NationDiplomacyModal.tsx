@@ -61,6 +61,7 @@ import {
   formatTroopsShort,
 } from '../../utils/formatters';
 import { DiplomaticActionType, PeaceDealType } from '../drawers/drawerTypes';
+import { AoH3GlyphSvg, AoH3MenuBanner } from '../illustrations/AoH3Illustrations';
 
 type ModalTabId = 'OVERVIEW' | 'DIPLOMACY' | 'ECONOMY';
 
@@ -125,7 +126,7 @@ const DiplomacySectionCard: React.FC<SectionProps> = ({
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-[11px] text-slate-500 italic">{emptyText}</p>
+        <p className="text-[11px] text-[#8e806a] italic">{emptyText}</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {entries.map((entry) => {
@@ -148,7 +149,7 @@ const DiplomacySectionCard: React.FC<SectionProps> = ({
                   width={22}
                   height={15}
                 />
-                <span className="text-[11px] font-semibold text-slate-100 group-hover:text-amber-200 max-w-[130px] truncate">
+                <span className="text-[11px] font-semibold text-[#f3ead7] group-hover:text-[#e0b86e] max-w-[130px] truncate">
                   {name}
                 </span>
                 {renderBadge ? (
@@ -157,10 +158,10 @@ const DiplomacySectionCard: React.FC<SectionProps> = ({
                   <span
                     className={`font-mono-num text-[10px] font-bold ${
                       entry.relationScore >= 25
-                        ? 'text-emerald-400'
+                        ? 'text-[#e0b86e]'
                         : entry.relationScore <= -25
                         ? 'text-rose-400'
-                        : 'text-slate-400'
+                        : 'text-[#b8a990]'
                     }`}
                   >
                     {entry.relationScore > 0
@@ -401,7 +402,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
     }
   };
 
-  // Sections for Tab 2 (Diplomacy Web)
+  // Sections for Tab 2 (Diplomacy Web) — Unified Obsidian + Antique Gold (+ Crimson for War/Hostile)
   const diplomacyCards = [
     {
       key: 'wars',
@@ -413,7 +414,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
       renderBadge: (entry: DiplomacyPeerEntry) => (
         <span
           className={`font-mono-num text-[10px] font-bold ${
-            (entry.warScore || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'
+            (entry.warScore || 0) >= 0 ? 'text-[#e0b86e]' : 'text-rose-300'
           }`}
         >
           {(entry.warScore || 0) > 0 ? `+${entry.warScore}` : entry.warScore}%
@@ -423,36 +424,36 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
     {
       key: 'offensive',
       title: 'Saldırı Paktı & Tam İttifak',
-      icon: <Swords className="w-3.5 h-3.5 text-emerald-400" />,
+      icon: <Swords className="w-3.5 h-3.5 text-[#e0b86e]" />,
       entries: summary.offensiveAllies,
-      accentClass: 'text-emerald-300',
+      accentClass: 'text-[#e0b86e]',
       emptyText: 'Tam ittifak yok.',
     },
     {
       key: 'defensive',
       title: 'Savunma Paktları',
-      icon: <Shield className="w-3.5 h-3.5 text-sky-400" />,
+      icon: <Shield className="w-3.5 h-3.5 text-[#e0b86e]" />,
       entries: summary.defensivePacts,
-      accentClass: 'text-sky-300',
+      accentClass: 'text-[#e0b86e]',
       emptyText: 'Savunma paktı yok.',
     },
     {
       key: 'trade',
       title: 'Ticaret Anlaşmaları',
-      icon: <Coins className="w-3.5 h-3.5 text-amber-400" />,
+      icon: <Coins className="w-3.5 h-3.5 text-[#e0b86e]" />,
       entries: summary.tradePartners,
-      accentClass: 'text-amber-300',
+      accentClass: 'text-[#e0b86e]',
       emptyText: 'Ticaret anlaşması yok.',
     },
     {
       key: 'truce',
       title: 'Aktif Barış & Ateşkesler',
-      icon: <Timer className="w-3.5 h-3.5 text-teal-400" />,
+      icon: <Timer className="w-3.5 h-3.5 text-[#e0b86e]" />,
       entries: summary.activeTruces,
-      accentClass: 'text-teal-300',
+      accentClass: 'text-[#d8cbb5]',
       emptyText: 'Aktif ateşkes yok.',
       renderBadge: (entry: DiplomacyPeerEntry) => (
-        <span className="font-mono-num text-[10px] font-bold text-teal-300">
+        <span className="font-mono-num text-[10px] font-bold text-[#e0b86e]">
           {entry.truceDaysRemaining}g
         </span>
       ),
@@ -460,33 +461,33 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
     {
       key: 'nap',
       title: 'Saldırmazlık Paktları',
-      icon: <Handshake className="w-3.5 h-3.5 text-cyan-400" />,
+      icon: <Handshake className="w-3.5 h-3.5 text-[#e0b86e]" />,
       entries: summary.nonAggressionPacts,
-      accentClass: 'text-cyan-300',
+      accentClass: 'text-[#d8cbb5]',
       emptyText: 'Saldırmazlık paktı yok.',
     },
     {
       key: 'access',
       title: 'Askerî Geçiş İzinleri',
-      icon: <Compass className="w-3.5 h-3.5 text-indigo-400" />,
+      icon: <Compass className="w-3.5 h-3.5 text-[#e0b86e]" />,
       entries: summary.militaryAccess,
-      accentClass: 'text-indigo-300',
+      accentClass: 'text-[#d8cbb5]',
       emptyText: 'Askerî geçiş izni yok.',
     },
     {
       key: 'vassals',
       title: 'Vasal Devletler',
-      icon: <Crown className="w-3.5 h-3.5 text-purple-400" />,
+      icon: <Crown className="w-3.5 h-3.5 text-[#e0b86e]" />,
       entries: summary.vassals,
-      accentClass: 'text-purple-300',
+      accentClass: 'text-[#e0b86e]',
       emptyText: 'Bağlı vasal yok.',
     },
     {
       key: 'friendly',
       title: 'Dost Ülkeler (≥ +25)',
-      icon: <Handshake className="w-3.5 h-3.5 text-emerald-400" />,
+      icon: <Handshake className="w-3.5 h-3.5 text-[#e0b86e]" />,
       entries: summary.friendlyNations,
-      accentClass: 'text-emerald-300',
+      accentClass: 'text-[#f3ead7]',
       emptyText: 'Dost ülke yok.',
     },
     {
@@ -513,31 +514,31 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
     {
       key: 'offensive',
       label: 'Tam İttifak',
-      colorClass: 'border-emerald-500/45 bg-emerald-950/35 text-emerald-200',
+      colorClass: 'border-[#caa15a]/50 bg-[#1b1510] text-[#f3ead7]',
       entries: summary.offensiveAllies,
     },
     {
       key: 'defensive',
       label: 'Savunma Paktı',
-      colorClass: 'border-sky-500/45 bg-sky-950/35 text-sky-200',
+      colorClass: 'border-[#caa15a]/45 bg-[#1b1510] text-[#f3ead7]',
       entries: summary.defensivePacts,
     },
     {
       key: 'trade',
       label: 'Ticaret',
-      colorClass: 'border-amber-500/45 bg-amber-950/35 text-amber-200',
+      colorClass: 'border-[#caa15a]/45 bg-[#1b1510] text-[#e0b86e]',
       entries: summary.tradePartners,
     },
     {
       key: 'nap',
       label: 'Saldırmazlık',
-      colorClass: 'border-teal-500/45 bg-teal-950/35 text-teal-200',
+      colorClass: 'border-[#caa15a]/35 bg-[#1b1510] text-[#d8cbb5]',
       entries: summary.nonAggressionPacts,
     },
     {
       key: 'vassals',
       label: 'Vasal',
-      colorClass: 'border-purple-500/45 bg-purple-950/35 text-purple-200',
+      colorClass: 'border-[#caa15a]/50 bg-[#1b1510] text-[#e0b86e]',
       entries: summary.vassals,
     },
   ].filter((g) => g.entries.length > 0);
@@ -553,10 +554,8 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
 
   const stabilityPct = Math.max(0, Math.min(100, Math.round(summary.nation.stability)));
   const stabilityBarColor =
-    stabilityPct >= 65
-      ? 'bg-emerald-400'
-      : stabilityPct >= 40
-      ? 'bg-amber-400'
+    stabilityPct >= 40
+      ? 'bg-gradient-to-r from-[#8f6a34] to-[#e0b86e]'
       : 'bg-rose-500';
   const aePct = Math.max(
     0,
@@ -569,7 +568,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 overscroll-contain"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 overscroll-contain"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -616,7 +615,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     <span
                       className={`px-1.5 py-0.5 rounded-md border font-mono-num text-[10px] font-bold ${
                         playerRel.score >= 25
-                          ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                          ? 'bg-[#211a11] border-[#e0b86e]/50 text-[#e0b86e]'
                           : playerRel.score <= -25
                           ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
                           : 'bg-[#221c15] border-[#42382b] text-[#cfc3ae]'
@@ -640,7 +639,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     <>
                       <span className="text-[#5d5243]">·</span>
                       <span
-                        className="text-sky-300 font-semibold"
+                        className="text-[#e0b86e] font-semibold"
                         title={inspectedPersonalityMeta.description}
                         data-testid="modal-ai-personality"
                       >
@@ -661,7 +660,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     sound.playClick();
                     onSelectInspectedNation(playerNationId);
                   }}
-                  className="min-h-[38px] px-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-200 text-[11px] font-bold cursor-pointer whitespace-nowrap"
+                  className="min-h-[38px] px-2.5 rounded-xl bg-[#241c13] hover:bg-[#312619] border border-[#caa15a]/50 text-[#e0b86e] text-[11px] font-bold cursor-pointer whitespace-nowrap"
                 >
                   Ülkem
                 </button>
@@ -678,7 +677,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
               >
                 {livingNations.map((nat) => (
                   <option key={nat.id} value={nat.id}>
-                    {nat.id === playerNationId ? '★ ' : ''}
+                    {nat.id === playerNationId ? '[Devletim] ' : ''}
                     {cleanNationName(nat.name)}
                   </option>
                 ))}
@@ -711,7 +710,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
             >
               {livingNations.map((nat) => (
                 <option key={nat.id} value={nat.id}>
-                  {nat.id === playerNationId ? '★ ' : ''}
+                  {nat.id === playerNationId ? '[Devletim] ' : ''}
                   {cleanNationName(nat.name)}
                 </option>
               ))}
@@ -763,14 +762,23 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
 
         {/* Single Unified Scrollable Body (keeps portrait AND landscape phones roomy) */}
         <div className="p-3 sm:p-4 overflow-y-auto overscroll-contain flex-1 space-y-3">
+          <AoH3MenuBanner
+            artKey={activePlayerWar ? 'FORTRESS' : 'COURT'}
+            branch={activePlayerWar ? 'MILITARY' : 'ADMINISTRATION'}
+            icon={activePlayerWar ? 'sword' : 'crown'}
+            title={`${cleanName} · ${summary.rulerName}`}
+            subtitle={`${IDEOLOGIES[summary.nation.ideology]?.name ?? 'Monarşi'} · ${summary.provinceCount} Eyalet · #${worldRank} Güç Sırası`}
+            className="h-14 sm:h-16"
+          />
+
           {/* Overlord Banner if vassal */}
           {summary.overlord && (
-            <div className="rounded-xl bg-purple-950/40 border border-purple-500/45 px-3 py-2 flex items-center justify-between gap-2 text-xs">
-              <span className="text-purple-200 font-semibold flex items-center gap-1.5 min-w-0">
-                <Crown className="w-4 h-4 text-purple-300 shrink-0" />
+            <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/50 px-3 py-2 flex items-center justify-between gap-2 text-xs">
+              <span className="text-[#e0b86e] font-semibold flex items-center gap-1.5 min-w-0">
+                <Crown className="w-4 h-4 text-[#e0b86e] shrink-0" />
                 <span className="truncate">
                   Hami:{' '}
-                  <strong className="text-white">
+                  <strong className="text-[#f3ead7]">
                     {cleanNationName(summary.overlord.name)}
                   </strong>
                 </span>
@@ -781,7 +789,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                   sound.playClick();
                   onSelectInspectedNation(summary.overlord!.id);
                 }}
-                className="min-h-[34px] px-2.5 py-1 rounded-lg bg-purple-600/40 hover:bg-purple-600/60 border border-purple-400/50 text-purple-100 text-[11px] font-bold shrink-0 cursor-pointer"
+                className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#251d14] hover:bg-[#31261a] border border-[#caa15a]/50 text-[#e0b86e] text-[11px] font-bold shrink-0 cursor-pointer"
               >
                 İncele
               </button>
@@ -796,7 +804,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 <div className="rounded-xl bg-[#1e1a15] border border-[#3a3126] p-2.5 flex flex-col justify-between gap-1">
                   <div className="flex items-center justify-between text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
-                      <Coins className="w-3.5 h-3.5 text-amber-400" />
+                      <Coins className="w-3.5 h-3.5 text-[#e0b86e]" />
                       <span>Hazine</span>
                     </span>
                     <span
@@ -807,7 +815,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                       {netGoldLabel}/g
                     </span>
                   </div>
-                  <div className="font-mono-num text-base font-extrabold text-amber-300 leading-none">
+                  <div className="font-mono-num text-base font-extrabold text-[#e0b86e] leading-none">
                     {Math.round(summary.nation.treasury).toLocaleString('tr-TR')}
                   </div>
                 </div>
@@ -816,7 +824,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 <div className="rounded-xl bg-[#1e1a15] border border-[#3a3126] p-2.5 flex flex-col justify-between gap-1.5">
                   <div className="flex items-center justify-between text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
-                      <Scale className="w-3.5 h-3.5 text-sky-400" />
+                      <Scale className="w-3.5 h-3.5 text-[#e0b86e]" />
                       <span>İstikrar</span>
                     </span>
                     <span
@@ -845,10 +853,10 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 <div className="rounded-xl bg-[#1e1a15] border border-[#3a3126] p-2.5 flex flex-col justify-between gap-1">
                   <div className="flex items-center justify-between text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
-                      <Swords className="w-3.5 h-3.5 text-rose-400" />
+                      <Swords className="w-3.5 h-3.5 text-[#e0b86e]" />
                       <span>Ordu</span>
                     </span>
-                    <span className="font-mono-num text-emerald-300/90 font-semibold">
+                    <span className="font-mono-num text-[#d8cbb5] font-semibold">
                       +{econ.dailyManpower}/g
                     </span>
                   </div>
@@ -866,11 +874,11 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 <div className="rounded-xl bg-[#1e1a15] border border-[#3a3126] p-2.5 flex flex-col justify-between gap-1">
                   <div className="flex items-center justify-between text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
-                      <Users className="w-3.5 h-3.5 text-emerald-400" />
+                      <Users className="w-3.5 h-3.5 text-[#e0b86e]" />
                       <span>Nüfus</span>
                     </span>
-                    <span className="font-mono-num font-bold text-emerald-400">
-                      ▲ +%{monthlyPopGrowthPct}/ay
+                    <span className="font-mono-num font-bold text-[#e0b86e]">
+                      +%{monthlyPopGrowthPct}/ay
                     </span>
                   </div>
                   <div className="font-mono-num text-base font-extrabold text-[#f6ecd7] leading-none">
@@ -882,25 +890,25 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 <div className="rounded-xl bg-[#1e1a15] border border-[#3a3126] p-2.5 flex flex-col justify-between gap-1.5">
                   <div className="flex items-center justify-between text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
-                      <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+                      <BookOpen className="w-3.5 h-3.5 text-[#e0b86e]" />
                       <span>Teknoloji</span>
                     </span>
-                    <span className="font-mono-num font-bold text-cyan-300">
+                    <span className="font-mono-num font-bold text-[#e0b86e]">
                       {techCount} Tek
                     </span>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-baseline justify-between">
-                      <span className="font-mono-num text-sm font-extrabold text-cyan-200 leading-none">
+                      <span className="font-mono-num text-sm font-extrabold text-[#f6ecd7] leading-none">
                         Sv. {techMetrics.techLevel}
                       </span>
-                      <span className="font-mono-num text-[10px] text-cyan-400/90">
+                      <span className="font-mono-num text-[10px] text-[#d8cbb5]">
                         +{techMetrics.monthlyTechGrowth}/ay
                       </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-black/40 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-cyan-400 transition-all"
+                        className="h-full rounded-full bg-gradient-to-r from-[#8f6a34] to-[#e0b86e] transition-all"
                         style={{ width: `${techProgressPct}%` }}
                       />
                     </div>
@@ -916,7 +924,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 >
                   <div className="flex items-center justify-between w-full text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
-                      <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                      <MapPin className="w-3.5 h-3.5 text-[#e0b86e]" />
                       <span>Başkent</span>
                     </span>
                     <span className="font-mono-num font-bold text-[#e0bc78]">
@@ -927,7 +935,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     <span className="text-sm font-bold text-[#f6ecd7] truncate leading-tight">
                       {capitalName}
                     </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <ChevronRight className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
                   </div>
                 </button>
 
@@ -943,10 +951,10 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 >
                   <div className="flex items-center justify-between w-full text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
-                      <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                      <TrendingUp className="w-3.5 h-3.5 text-[#e0b86e]" />
                       <span>Ekonomi</span>
                     </span>
-                    <span className="font-mono-num text-amber-300/90">
+                    <span className="font-mono-num text-[#d8cbb5]">
                       Enf %{summary.nation.inflation.toFixed(1)}
                     </span>
                   </div>
@@ -972,16 +980,16 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 >
                   <div className="flex items-center justify-between w-full text-[10px] text-[#b2a58f]">
                     <span className="inline-flex items-center gap-1 font-semibold">
-                      <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+                      <Trophy className="w-3.5 h-3.5 text-[#e0b86e]" />
                       <span>Güç Sırası</span>
                     </span>
-                    <span className="inline-flex items-center gap-0.5 text-amber-300 font-mono-num">
+                    <span className="inline-flex items-center gap-0.5 text-[#e0b86e] font-mono-num">
                       <Sparkles className="w-3 h-3" />
                       {techMetrics.prestige}
                     </span>
                   </div>
                   <div className="flex items-baseline justify-between w-full">
-                    <span className="font-mono-num text-base font-extrabold text-yellow-300 leading-none">
+                    <span className="font-mono-num text-base font-extrabold text-[#e0b86e] leading-none">
                       #{worldRank}
                     </span>
                     <span className="text-[10px] text-[#b2a58f] font-mono-num">
@@ -999,17 +1007,21 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     <span>Aktif Paktlar & Savaşlar</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono-num font-bold">
-                    <span className="px-2 py-0.5 rounded-md bg-rose-950/50 border border-rose-500/30 text-rose-300">
-                      ⚔️ {summary.activeWars.length}
+                    <span className="px-2 py-0.5 rounded-md bg-rose-950/50 border border-rose-500/30 text-rose-300 inline-flex items-center gap-1">
+                      <AoH3GlyphSvg name="sword" className="w-3 h-3 shrink-0" />
+                      <span>{summary.activeWars.length}</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-950/50 border border-emerald-500/30 text-emerald-300">
-                      🤝 {summary.offensiveAllies.length}
+                    <span className="px-2 py-0.5 rounded-md bg-[#1b1510] border border-[#caa15a]/35 text-[#e0b86e] inline-flex items-center gap-1">
+                      <AoH3GlyphSvg name="handshake" className="w-3 h-3 shrink-0" />
+                      <span>{summary.offensiveAllies.length}</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-sky-950/50 border border-sky-500/30 text-sky-300">
-                      🛡️ {summary.defensivePacts.length}
+                    <span className="px-2 py-0.5 rounded-md bg-[#1b1510] border border-[#caa15a]/35 text-[#d8cbb5] inline-flex items-center gap-1">
+                      <AoH3GlyphSvg name="shield" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                      <span>{summary.defensivePacts.length}</span>
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-amber-950/50 border border-amber-500/30 text-amber-300">
-                      🪙 {summary.tradePartners.length}
+                    <span className="px-2 py-0.5 rounded-md bg-[#1b1510] border border-[#caa15a]/35 text-[#e0b86e] inline-flex items-center gap-1">
+                      <AoH3GlyphSvg name="gold" className="w-3 h-3 shrink-0" />
+                      <span>{summary.tradePartners.length}</span>
                     </span>
                   </div>
                 </div>
@@ -1023,7 +1035,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                         sound.playClick();
                         setModalTab('DIPLOMACY');
                       }}
-                      className="text-amber-300 font-bold hover:underline shrink-0 cursor-pointer"
+                      className="text-[#e0b86e] font-bold hover:underline shrink-0 cursor-pointer"
                     >
                       İlişkiler →
                     </button>
@@ -1090,9 +1102,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                       <Bot
                         className={`w-4 h-4 ${
                           aiCommanderEnabled
-                            ? isPlayerAtWar
-                              ? 'text-emerald-400'
-                              : 'text-amber-400'
+                            ? 'text-[#e0b86e]'
                             : 'text-[#c89d54]'
                         }`}
                       />
@@ -1116,9 +1126,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                         aria-pressed={aiCommanderEnabled}
                         className={`min-h-[42px] px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
                           aiCommanderEnabled
-                            ? isPlayerAtWar
-                              ? 'border-emerald-400 bg-emerald-950/90 text-emerald-200'
-                              : 'border-amber-400 bg-amber-950/80 text-amber-200'
+                            ? 'border-[#e0b86e] bg-[#251d13] text-[#e0b86e]'
                             : 'border-[#c89d54]/45 bg-[#211d18] hover:bg-[#2b251e] text-[#f0e6d2]'
                         }`}
                       >
@@ -1154,7 +1162,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                             }}
                             className={`min-h-[38px] px-2 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                               active
-                                ? 'bg-amber-500 text-slate-950 shadow'
+                                ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow'
                                 : 'text-[#cfc3ae] hover:text-white hover:bg-[#272019]'
                             }`}
                           >
@@ -1168,9 +1176,9 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
               ) : (
                 <section className="rounded-xl bg-[#120f0c] border border-[#c89d54]/30 p-3 space-y-2.5">
                   {warBlockReason && (
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-amber-950/55 border border-amber-500/40 text-[11px] text-amber-200">
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#1d1710] border border-[#caa15a]/45 text-[11px] text-[#f3ead7]">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <AlertTriangle className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
                         <span className="leading-snug">{warBlockReason}</span>
                       </div>
                       {playerRel && playerRel.score > -30 && (
@@ -1186,8 +1194,8 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                     </div>
                   )}
 
-                  {/* Row 1: War & Diplomacy Core */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* AoH3-Style Icon + Short Label Diplomatic Actions Grid */}
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
                     {activePlayerWar ? (
                       <button
                         type="button"
@@ -1200,10 +1208,10 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                             onPeaceDeal(activePlayerWar.id, 'WHITE_PEACE');
                           }
                         }}
-                        className="min-h-[44px] px-3 py-2 rounded-xl bg-[#c89d54] hover:bg-[#d8b26e] text-[#110f0d] text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="min-h-[54px] px-2 py-1.5 rounded-xl bg-[#c89d54] hover:bg-[#d8b26e] text-[#110f0d] text-[11px] font-extrabold flex flex-col items-center justify-center gap-1 text-center cursor-pointer"
                       >
                         <Swords className="w-4 h-4 shrink-0" />
-                        <span>Barış Masası</span>
+                        <span className="leading-tight truncate max-w-full">Barış Masası</span>
                       </button>
                     ) : (
                       <button
@@ -1211,68 +1219,68 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                         onClick={() =>
                           onDiplomaticAction(summary.nation.id, 'DECLARE_WAR')
                         }
-                        className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`min-h-[54px] px-2 py-1.5 rounded-xl text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer ${
                           warBlockReason
                             ? 'bg-rose-950/75 border border-rose-500/40 text-rose-200 hover:bg-rose-900/80'
-                            : 'bg-rose-600 hover:bg-rose-500 text-white shadow'
+                            : 'bg-rose-700 hover:bg-rose-600 text-white shadow'
                         }`}
                       >
                         <Swords className="w-4 h-4 shrink-0" />
-                        <span>Savaş İlan Et</span>
+                        <span className="leading-tight truncate max-w-full">Savaş İlanı</span>
                       </button>
                     )}
 
                     <button
                       type="button"
                       onClick={() => onDiplomaticAction(summary.nation.id, 'IMPROVE')}
-                      className="min-h-[44px] px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/45 text-emerald-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="min-h-[54px] px-2 py-1.5 rounded-xl bg-[#1b1510] hover:bg-[#271f17] border border-[#caa15a]/40 text-[#f3ead7] text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer"
                     >
-                      <Handshake className="w-4 h-4 shrink-0" />
-                      <span>+İlişki</span>
+                      <Handshake className="w-4 h-4 shrink-0 text-[#e0b86e]" />
+                      <span className="leading-tight truncate max-w-full">+İlişki</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => onDiplomaticAction(summary.nation.id, 'INSULT')}
-                      className="min-h-[44px] px-3 py-2 rounded-xl bg-orange-600/20 hover:bg-orange-600/35 border border-orange-500/45 text-orange-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="min-h-[54px] px-2 py-1.5 rounded-xl bg-rose-950/45 hover:bg-rose-900/55 border border-rose-500/40 text-rose-200 text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer"
                     >
-                      <Flame className="w-4 h-4 shrink-0" />
-                      <span>Hakaret (-25)</span>
+                      <Flame className="w-4 h-4 shrink-0 text-rose-300" />
+                      <span className="leading-tight truncate max-w-full">Hakaret</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => onDiplomaticAction(summary.nation.id, 'TRADE')}
-                      className={`min-h-[44px] px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`min-h-[54px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer ${
                         playerRel?.hasTradeAgreement
-                          ? 'bg-amber-500 text-[#120f0c] border-amber-400'
-                          : 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/45 text-amber-200'
+                          ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] border-[#e0b86e]'
+                          : 'bg-[#1b1510] hover:bg-[#271f17] border-[#caa15a]/40 text-[#f3ead7]'
                       }`}
                     >
-                      <Coins className="w-4 h-4 shrink-0" />
-                      <span>{playerRel?.hasTradeAgreement ? 'Ticaret Aktif' : 'Ticaret'}</span>
+                      <Coins className={`w-4 h-4 shrink-0 ${playerRel?.hasTradeAgreement ? 'text-[#14100c]' : 'text-[#e0b86e]'}`} />
+                      <span className="leading-tight truncate max-w-full inline-flex items-center gap-0.5">
+                        <span>Ticaret</span>
+                        {playerRel?.hasTradeAgreement && (
+                          <AoH3GlyphSvg name="check" className="w-3 h-3 shrink-0" />
+                        )}
+                      </span>
                     </button>
-                  </div>
 
-                  {/* Row 2: Pacts, Vassalage & Map Focus */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     <button
                       type="button"
                       data-testid="modal-offensive-pact-btn"
                       onClick={() =>
                         onDiplomaticAction(summary.nation.id, 'OFFENSIVE_PACT')
                       }
-                      className={`min-h-[44px] px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`min-h-[54px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer ${
                         playerRel?.allianceType === 'OFFENSIVE'
-                          ? 'bg-emerald-500/30 border-emerald-400 text-emerald-100'
-                          : 'bg-emerald-600/15 hover:bg-emerald-600/30 border-emerald-500/40 text-emerald-200'
+                          ? 'bg-[#251d14] border-[#e0b86e] text-[#e0b86e]'
+                          : 'bg-[#1b1510] hover:bg-[#271f17] border-[#caa15a]/40 text-[#f3ead7]'
                       }`}
                     >
-                      <Swords className="w-3.5 h-3.5 shrink-0" />
-                      <span>
-                        {playerRel?.allianceType === 'OFFENSIVE'
-                          ? 'İttifak Feshet'
-                          : 'Tam İttifak'}
+                      <Swords className="w-4 h-4 shrink-0 text-[#e0b86e]" />
+                      <span className="leading-tight truncate max-w-full">
+                        {playerRel?.allianceType === 'OFFENSIVE' ? 'İttifak Feshi' : 'Tam İttifak'}
                       </span>
                     </button>
 
@@ -1281,17 +1289,15 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                       onClick={() =>
                         onDiplomaticAction(summary.nation.id, 'DEFENSIVE_PACT')
                       }
-                      className={`min-h-[44px] px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`min-h-[54px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer ${
                         playerRel?.allianceType === 'DEFENSIVE'
-                          ? 'bg-sky-500/30 border-sky-400 text-sky-100'
-                          : 'bg-sky-600/15 hover:bg-sky-600/30 border-sky-500/40 text-sky-200'
+                          ? 'bg-[#251d14] border-[#e0b86e] text-[#e0b86e]'
+                          : 'bg-[#1b1510] hover:bg-[#271f17] border-[#caa15a]/40 text-[#f3ead7]'
                       }`}
                     >
-                      <Shield className="w-3.5 h-3.5 shrink-0" />
-                      <span>
-                        {playerRel?.allianceType === 'DEFENSIVE'
-                          ? 'Savunma Feshet'
-                          : 'Savunma Paktı'}
+                      <Shield className="w-4 h-4 shrink-0 text-[#e0b86e]" />
+                      <span className="leading-tight truncate max-w-full">
+                        {playerRel?.allianceType === 'DEFENSIVE' ? 'Savunma Feshi' : 'Savunma'}
                       </span>
                     </button>
 
@@ -1300,15 +1306,18 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                       onClick={() =>
                         onDiplomaticAction(summary.nation.id, 'NON_AGGRESSION')
                       }
-                      className={`min-h-[44px] px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`min-h-[54px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer ${
                         playerRel?.hasNonAggression
-                          ? 'bg-teal-500/30 border-teal-400 text-teal-100'
-                          : 'bg-teal-600/15 hover:bg-teal-600/30 border-teal-500/40 text-teal-200'
+                          ? 'bg-[#251d14] border-[#e0b86e] text-[#e0b86e]'
+                          : 'bg-[#1b1510] hover:bg-[#271f17] border-[#caa15a]/40 text-[#f3ead7]'
                       }`}
                     >
-                      <Timer className="w-3.5 h-3.5 shrink-0" />
-                      <span>
-                        {playerRel?.hasNonAggression ? 'Saldırmazlık Aktif' : 'Saldırmazlık'}
+                      <Timer className="w-4 h-4 shrink-0 text-[#e0b86e]" />
+                      <span className="leading-tight truncate max-w-full inline-flex items-center gap-0.5">
+                        <span>{playerRel?.hasNonAggression ? 'Saldırmaz' : 'Saldırmazlık'}</span>
+                        {playerRel?.hasNonAggression && (
+                          <AoH3GlyphSvg name="check" className="w-3 h-3 shrink-0" />
+                        )}
                       </span>
                     </button>
 
@@ -1317,15 +1326,18 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                       onClick={() =>
                         onDiplomaticAction(summary.nation.id, 'MILITARY_ACCESS')
                       }
-                      className={`min-h-[44px] px-3 py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`min-h-[54px] px-2 py-1.5 rounded-xl border text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer ${
                         playerRel?.hasMilitaryAccess
-                          ? 'bg-indigo-500/30 border-indigo-400 text-indigo-100'
-                          : 'bg-indigo-600/15 hover:bg-indigo-600/30 border-indigo-500/40 text-indigo-200'
+                          ? 'bg-[#251d14] border-[#e0b86e] text-[#e0b86e]'
+                          : 'bg-[#1b1510] hover:bg-[#271f17] border-[#caa15a]/40 text-[#f3ead7]'
                       }`}
                     >
-                      <Compass className="w-3.5 h-3.5 shrink-0" />
-                      <span>
-                        {playerRel?.hasMilitaryAccess ? 'Geçiş Aktif' : 'Askerî Geçiş'}
+                      <Compass className="w-4 h-4 shrink-0 text-[#e0b86e]" />
+                      <span className="leading-tight truncate max-w-full inline-flex items-center gap-0.5">
+                        <span>{playerRel?.hasMilitaryAccess ? 'Geçiş' : 'Askerî Geçiş'}</span>
+                        {playerRel?.hasMilitaryAccess && (
+                          <AoH3GlyphSvg name="check" className="w-3 h-3 shrink-0" />
+                        )}
                       </span>
                     </button>
 
@@ -1337,10 +1349,12 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                           onDiplomaticAction(summary.nation.id, 'ANNEX_VASSAL')
                         }
                         title="Vasal devleti ilhak et (+20 İlişki gerekir)"
-                        className="min-h-[44px] px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/50 text-amber-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="min-h-[54px] px-2 py-1.5 rounded-xl bg-[#241c13] hover:bg-[#31261a] border border-[#e0b86e]/60 text-[#e0b86e] text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer"
                       >
-                        <Crown className="w-3.5 h-3.5 shrink-0" />
-                        <span>Vasal İlhak ({vassalAnnexCost}A)</span>
+                        <Crown className="w-4 h-4 shrink-0" />
+                        <span className="leading-tight truncate max-w-full">
+                          İlhak ({vassalAnnexCost}A)
+                        </span>
                       </button>
                     ) : !activePlayerWar ? (
                       <button
@@ -1350,20 +1364,69 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                           onDiplomaticAction(summary.nation.id, 'ULTIMATUM_VASSAL')
                         }
                         title="20 DP · Vasallık ültimatomu gönder"
-                        className="min-h-[44px] px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/45 text-purple-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="min-h-[54px] px-2 py-1.5 rounded-xl bg-[#1b1510] hover:bg-[#271f17] border border-[#caa15a]/45 text-[#e0b86e] text-[11px] font-bold flex flex-col items-center justify-center gap-1 text-center cursor-pointer"
                       >
-                        <Crown className="w-3.5 h-3.5 shrink-0" />
-                        <span>Vasallık Talebi</span>
+                        <Crown className="w-4 h-4 shrink-0" />
+                        <span className="leading-tight truncate max-w-full">Vasallık</span>
                       </button>
                     ) : null}
 
                     <button
                       type="button"
                       onClick={focusNationCapital}
-                      className="min-h-[44px] px-3 py-2 rounded-xl bg-[#211c16] hover:bg-[#2c251d] border border-[#42382b] text-[#f0e6d2] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="min-h-[54px] px-2 py-1.5 rounded-xl bg-[#211c16] hover:bg-[#2c251d] border border-[#42382b] text-[#f0e6d2] text-[11px] font-semibold flex flex-col items-center justify-center gap-1 text-center cursor-pointer"
                     >
-                      <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Haritada Gör</span>
+                      <MapPin className="w-4 h-4 text-[#e0b86e] shrink-0" />
+                      <span className="leading-tight truncate max-w-full">Harita</span>
+                    </button>
+                  </div>
+
+                  {/* Covert Espionage Action Strip (AoH3 Compact 3-Column Grid) */}
+                  <div className="pt-2 border-t border-[#c89d54]/20 grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      data-testid={`diplo-spy-fort-${summary.nation.id}`}
+                      onClick={() =>
+                        onDiplomaticAction(summary.nation.id, 'ESPIONAGE_SABOTAGE_FORT')
+                      }
+                      title="Kale Sabotajı (25 DP · 220 Altın)"
+                      className="min-h-[46px] px-2 py-1.5 rounded-xl bg-[#19130e] hover:bg-[#251c14] border border-[#c89d54]/30 text-[10.5px] font-bold text-[#f3ead7] flex flex-col items-center justify-center gap-0.5 text-center cursor-pointer"
+                    >
+                      <span className="inline-flex items-center gap-1 truncate max-w-full">
+                        <AoH3GlyphSvg name="fortress" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                        <span>Sur Sabotaj</span>
+                      </span>
+                      <span className="font-mono-num text-[9.5px] text-[#e0b86e]">220A</span>
+                    </button>
+                    <button
+                      type="button"
+                      data-testid={`diplo-spy-revolt-${summary.nation.id}`}
+                      onClick={() =>
+                        onDiplomaticAction(summary.nation.id, 'ESPIONAGE_INCITE_REVOLT')
+                      }
+                      title="İsyan Kışkırt (30 DP · 260 Altın)"
+                      className="min-h-[46px] px-2 py-1.5 rounded-xl bg-[#19130e] hover:bg-[#251c14] border border-[#c89d54]/30 text-[10.5px] font-bold text-[#f3ead7] flex flex-col items-center justify-center gap-0.5 text-center cursor-pointer"
+                    >
+                      <span className="inline-flex items-center gap-1 truncate max-w-full">
+                        <AoH3GlyphSvg name="revolt" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                        <span>İsyan Kışkırt</span>
+                      </span>
+                      <span className="font-mono-num text-[9.5px] text-[#e0b86e]">260A</span>
+                    </button>
+                    <button
+                      type="button"
+                      data-testid={`diplo-spy-siphon-${summary.nation.id}`}
+                      onClick={() =>
+                        onDiplomaticAction(summary.nation.id, 'ESPIONAGE_SIPHON_TREASURY')
+                      }
+                      title="Hazine & Bilim Sızdır (20 DP · 150 Altın)"
+                      className="min-h-[46px] px-2 py-1.5 rounded-xl bg-[#19130e] hover:bg-[#251c14] border border-[#c89d54]/30 text-[10.5px] font-bold text-[#e0b86e] flex flex-col items-center justify-center gap-0.5 text-center cursor-pointer"
+                    >
+                      <span className="inline-flex items-center gap-1 truncate max-w-full">
+                        <AoH3GlyphSvg name="scroll" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                        <span>Hazine Sızdır</span>
+                      </span>
+                      <span className="font-mono-num text-[9.5px] text-[#e0b86e]">150A</span>
                     </button>
                   </div>
                 </section>
@@ -1443,13 +1506,13 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
               {summary.embargoes.length > 0 && (
                 <DiplomacySectionCard
                   title="Ticaret Ambargoları"
-                  icon={<Ban className="w-3.5 h-3.5 text-orange-400" />}
+                  icon={<Ban className="w-3.5 h-3.5 text-rose-400" />}
                   entries={summary.embargoes}
-                  accentClass="text-orange-300"
+                  accentClass="text-rose-300"
                   emptyText="Aktif ambargo yok."
                   onSelectNation={onSelectInspectedNation}
                   renderBadge={(entry) => (
-                    <span className="text-[10px] font-bold text-orange-300">
+                    <span className="text-[10px] font-bold text-rose-300">
                       {entry.embargoDirection === 'MUTUAL'
                         ? 'Karşılıklı'
                         : entry.embargoDirection === 'OUTGOING'
@@ -1559,7 +1622,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
               {/* Tech, Population Growth & Infrastructure */}
               <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3 space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-cyan-300 inline-flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-[#e0b86e] inline-flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5" />
                     <span>Bilim, Büyüme & Altyapı</span>
                   </span>
@@ -1571,49 +1634,57 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                   <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] p-2">
                     <div className="text-[10px] text-[#b2a58f]">Teknoloji Seviyesi</div>
-                    <div className="font-mono-num text-xs font-bold text-cyan-300">
+                    <div className="font-mono-num text-xs font-bold text-[#e0b86e]">
                       {techMetrics.techLevel} / {techMetrics.maxTechLevel}
                     </div>
                   </div>
                   <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] p-2">
                     <div className="text-[10px] text-[#b2a58f]">Günlük Araştırma</div>
-                    <div className="font-mono-num text-xs font-bold text-cyan-200">
+                    <div className="font-mono-num text-xs font-bold text-[#f3ead7]">
                       +{econ.dailyResearch.toFixed(1)} AP
                     </div>
                   </div>
                   <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] p-2">
                     <div className="text-[10px] text-[#b2a58f]">Nüfus Büyümesi</div>
-                    <div className="font-mono-num text-xs font-bold text-emerald-300">
+                    <div className="font-mono-num text-xs font-bold text-[#e0b86e]">
                       +%{monthlyPopGrowthPct} /ay
                     </div>
                   </div>
                   <div className="rounded-lg bg-[#1e1a15] border border-[#342d24] p-2">
                     <div className="text-[10px] text-[#b2a58f]">Başkent Seviyesi</div>
-                    <div className="font-mono-num text-xs font-bold text-amber-300">
+                    <div className="font-mono-num text-xs font-bold text-[#e0b86e]">
                       Sv. {techMetrics.capitalLevel} · Saray {techMetrics.capitalPalaceLevel}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 text-[11px] text-[#cfc3ae]">
-                  <span className="px-2 py-1 rounded-lg bg-[#1a1611] border border-[#2f2820]">
-                    🏫 Okul: <strong className="text-white">{techMetrics.schoolCount}</strong>
+                  <span className="px-2 py-1 rounded-lg bg-[#1a1611] border border-[#2f2820] inline-flex items-center gap-1.5">
+                    <AoH3GlyphSvg name="book" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                    <span>Okul:</span>
+                    <strong className="text-[#f3ead7]">{techMetrics.schoolCount}</strong>
                   </span>
-                  <span className="px-2 py-1 rounded-lg bg-[#1a1611] border border-[#2f2820]">
-                    🏛️ Lise: <strong className="text-white">{techMetrics.highSchoolCount}</strong>
+                  <span className="px-2 py-1 rounded-lg bg-[#1a1611] border border-[#2f2820] inline-flex items-center gap-1.5">
+                    <AoH3GlyphSvg name="crown" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                    <span>Lise:</span>
+                    <strong className="text-[#f3ead7]">{techMetrics.highSchoolCount}</strong>
                   </span>
-                  <span className="px-2 py-1 rounded-lg bg-[#1a1611] border border-[#2f2820]">
-                    🎓 Üniversite: <strong className="text-white">{techMetrics.universityCount}</strong>
+                  <span className="px-2 py-1 rounded-lg bg-[#1a1611] border border-[#2f2820] inline-flex items-center gap-1.5">
+                    <AoH3GlyphSvg name="trophy" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                    <span>Üniversite:</span>
+                    <strong className="text-[#f3ead7]">{techMetrics.universityCount}</strong>
                   </span>
-                  <span className="px-2 py-1 rounded-lg bg-[#1a1611] border border-[#2f2820]">
-                    🔬 Açık Teknoloji: <strong className="text-cyan-300">{techCount}</strong>
+                  <span className="px-2 py-1 rounded-lg bg-[#1a1611] border border-[#2f2820] inline-flex items-center gap-1.5">
+                    <AoH3GlyphSvg name="science" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                    <span>Açık Teknoloji:</span>
+                    <strong className="text-[#e0b86e]">{techCount}</strong>
                   </span>
                 </div>
               </section>
 
               {/* Top 5 World Powers Comparison */}
               <section className="rounded-xl bg-[#13110e] border border-[#342d24] p-3 space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold text-yellow-300">
+                <div className="flex items-center justify-between text-xs font-bold text-[#e0b86e]">
                   <span className="inline-flex items-center gap-1.5">
                     <Trophy className="w-3.5 h-3.5" />
                     <span>Dünya Büyük Güçleri (İlk 5)</span>
@@ -1636,12 +1707,12 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                         }}
                         className={`w-full min-h-[38px] px-2.5 py-1.5 rounded-xl border flex items-center justify-between gap-2 text-left transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-amber-500/15 border-amber-400/50 text-amber-100'
+                            ? 'bg-[#251d14] border-[#e0b86e]/65 text-[#f3ead7]'
                             : 'bg-[#1a1611] hover:bg-[#241e18] border-[#2f2820] text-[#e5dac6]'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono-num text-xs font-extrabold text-amber-400 w-5 shrink-0">
+                          <span className="font-mono-num text-xs font-extrabold text-[#e0b86e] w-5 shrink-0">
                             #{idx + 1}
                           </span>
                           <NationFlagCanvasBadge
@@ -1657,7 +1728,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                         </div>
                         <div className="flex items-center gap-3 text-[11px] font-mono-num shrink-0">
                           <span className="text-[#cfc3ae]">{item.provs} Ey.</span>
-                          <span className="text-amber-300 font-bold">
+                          <span className="text-[#e0b86e] font-bold">
                             {formatTroopsShort(item.army)}
                           </span>
                         </div>

@@ -65,19 +65,21 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'ZAG', name: 'Zagreb', lon: 15.98, lat: 45.81, isCapital: true, gdpShare: 0.58, resource: 'TAHIL' },
     { suffixId: 'SPU', name: 'Split', lon: 16.44, lat: 43.50, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
   ],
-  // Romanya (5 Şehir)
+  // Romanya (6 Şehir)
   '642': [
-    { suffixId: 'BUH', name: 'Bükreş', lon: 26.10, lat: 44.42, isCapital: true, gdpShare: 0.32, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'CLJ', name: 'Kaloşvar', lon: 23.60, lat: 46.77, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
-    { suffixId: 'TSR', name: 'Temeşvar', lon: 21.23, lat: 45.75, gdpShare: 0.14, resource: 'TAHIL' },
-    { suffixId: 'IAS', name: 'Yaş', lon: 27.60, lat: 47.16, gdpShare: 0.16, resource: 'TAHIL' },
-    { suffixId: 'CND', name: 'Köstence', lon: 28.63, lat: 44.17, gdpShare: 0.16, resource: 'PETROL' },
+    { suffixId: 'BUH', name: 'Bükreş', lon: 26.10, lat: 44.42, isCapital: true, gdpShare: 0.28, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'CLJ', name: 'Kaloşvar', lon: 23.60, lat: 46.77, gdpShare: 0.20, resource: 'DEMIR_CELIK' },
+    { suffixId: 'TSR', name: 'Temeşvar', lon: 21.23, lat: 45.75, gdpShare: 0.13, resource: 'TAHIL' },
+    { suffixId: 'IAS', name: 'Yaş', lon: 27.60, lat: 47.16, gdpShare: 0.14, resource: 'TAHIL' },
+    { suffixId: 'CND', name: 'Köstence', lon: 28.63, lat: 44.17, gdpShare: 0.13, resource: 'PETROL' },
+    { suffixId: 'CRA', name: 'Krayova', lon: 23.80, lat: 44.32, gdpShare: 0.12, resource: 'TAHIL' },
   ],
-  // Macaristan (3 Şehir)
+  // Macaristan (4 Şehir)
   '348': [
-    { suffixId: 'BUD', name: 'Budin', lon: 19.04, lat: 47.49, isCapital: true, gdpShare: 0.46, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'DEB', name: 'Debrecen', lon: 21.62, lat: 47.53, gdpShare: 0.30, resource: 'TAHIL' },
-    { suffixId: 'PEC', name: 'Peçuy', lon: 18.23, lat: 46.07, gdpShare: 0.24, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BUD', name: 'Budin', lon: 19.04, lat: 47.49, isCapital: true, gdpShare: 0.40, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'DEB', name: 'Debrecen', lon: 21.62, lat: 47.53, gdpShare: 0.24, resource: 'TAHIL' },
+    { suffixId: 'PEC', name: 'Peçuy', lon: 18.23, lat: 46.07, gdpShare: 0.19, resource: 'DEMIR_CELIK' },
+    { suffixId: 'QGY', name: 'Győr', lon: 17.30, lat: 47.45, gdpShare: 0.17, resource: 'TAHIL' },
   ],
   // Avusturya (3 Şehir)
   '040': [
@@ -125,53 +127,73 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'KER', name: 'Kirman', lon: 57.08, lat: 30.28, gdpShare: 0.09, resource: 'NADIR_TOPRAK' },
     { suffixId: 'MHD', name: 'Meşhed', lon: 59.60, lat: 36.29, gdpShare: 0.11, resource: 'DEMIR_CELIK' },
   ],
-  // Almanya (6 Şehir)
+  // Almanya (11 Şehir)
   '276': [
-    { suffixId: 'BER', name: 'Berlin', lon: 13.40, lat: 52.52, isCapital: true, gdpShare: 0.20, resource: 'YARI_ILETKEN' },
-    { suffixId: 'MUC', name: 'Münih', lon: 11.58, lat: 48.13, gdpShare: 0.20, resource: 'YARI_ILETKEN' },
-    { suffixId: 'STR', name: 'Stuttgart', lon: 9.18, lat: 48.78, gdpShare: 0.14, resource: 'YARI_ILETKEN' },
-    { suffixId: 'FRA', name: 'Frankfurt', lon: 7.50, lat: 50.90, gdpShare: 0.20, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'HAM', name: 'Hamburg', lon: 9.99, lat: 53.55, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'DRS', name: 'Dresden', lon: 13.73, lat: 51.05, gdpShare: 0.12, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BER', name: 'Berlin', lon: 13.40, lat: 52.52, isCapital: true, gdpShare: 0.12, resource: 'YARI_ILETKEN' },
+    { suffixId: 'MUC', name: 'Münih', lon: 11.58, lat: 48.13, gdpShare: 0.12, resource: 'YARI_ILETKEN' },
+    { suffixId: 'STR', name: 'Stuttgart', lon: 9.18, lat: 48.78, gdpShare: 0.09, resource: 'YARI_ILETKEN' },
+    { suffixId: 'FRA', name: 'Frankfurt', lon: 8.68, lat: 50.11, gdpShare: 0.12, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'HAM', name: 'Hamburg', lon: 9.99, lat: 53.55, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'DRS', name: 'Dresden', lon: 13.73, lat: 51.05, gdpShare: 0.08, resource: 'DEMIR_CELIK' },
+    { suffixId: 'CGN', name: 'Köln', lon: 6.96, lat: 50.94, gdpShare: 0.10, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'NUE', name: 'Nürnberg', lon: 11.08, lat: 49.45, gdpShare: 0.08, resource: 'DEMIR_CELIK' },
+    { suffixId: 'HAJ', name: 'Hannover', lon: 9.73, lat: 52.37, gdpShare: 0.07, resource: 'TAHIL' },
+    { suffixId: 'RLG', name: 'Lübeck', lon: 12.10, lat: 54.09, gdpShare: 0.07, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'AGB', name: 'Augsburg', lon: 10.40, lat: 48.37, gdpShare: 0.06, resource: 'FINANS_MERKEZI' },
   ],
-  // Fransa (6 Şehir)
+  // Fransa (10 Şehir)
   '250': [
-    { suffixId: 'PAR', name: 'Paris', lon: 2.35, lat: 48.85, isCapital: true, gdpShare: 0.26, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'LYO', name: 'Lyon', lon: 4.83, lat: 45.76, gdpShare: 0.18, resource: 'YARI_ILETKEN' },
-    { suffixId: 'MRS', name: 'Marsilya', lon: 5.36, lat: 43.29, gdpShare: 0.16, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'TLS', name: 'Toulouse', lon: 1.44, lat: 43.60, gdpShare: 0.12, resource: 'TAHIL' },
-    { suffixId: 'BDX', name: 'Bordeaux', lon: -0.57, lat: 44.83, gdpShare: 0.14, resource: 'TAHIL' },
-    { suffixId: 'NTE', name: 'Nantes', lon: -1.55, lat: 47.90, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'PAR', name: 'Paris', lon: 2.35, lat: 48.85, isCapital: true, gdpShare: 0.18, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'LYO', name: 'Lyon', lon: 4.83, lat: 45.76, gdpShare: 0.12, resource: 'YARI_ILETKEN' },
+    { suffixId: 'MRS', name: 'Marsilya', lon: 5.36, lat: 43.29, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'TLS', name: 'Toulouse', lon: 1.44, lat: 43.60, gdpShare: 0.09, resource: 'TAHIL' },
+    { suffixId: 'BDX', name: 'Bordeaux', lon: -0.57, lat: 44.83, gdpShare: 0.10, resource: 'TAHIL' },
+    { suffixId: 'NTE', name: 'Nantes', lon: -1.55, lat: 47.90, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'URO', name: 'Rouen', lon: 1.09, lat: 49.44, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'DIJ', name: 'Dijon', lon: 5.04, lat: 47.32, gdpShare: 0.08, resource: 'TAHIL' },
+    { suffixId: 'RNS', name: 'Reims', lon: 4.03, lat: 49.26, gdpShare: 0.08, resource: 'TAHIL' },
+    { suffixId: 'ORY', name: 'Orléans', lon: 1.90, lat: 47.40, gdpShare: 0.07, resource: 'TAHIL' },
   ],
-  // Birleşik Krallık (4 Şehir)
+  // Birleşik Krallık (8 Şehir: 6 İngiltere/Galler + 2 İskoçya)
   '826': [
-    { suffixId: 'LON', name: 'Londra', lon: -0.12, lat: 51.50, isCapital: true, gdpShare: 0.40, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'MAN', name: 'Manchester', lon: -2.24, lat: 53.48, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
-    { suffixId: 'CWL', name: 'Cardiff', lon: -3.18, lat: 51.48, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
-    { suffixId: 'EDI', name: 'Edinburgh', lon: -3.18, lat: 56.50, gdpShare: 0.20, resource: 'PETROL' },
+    { suffixId: 'LON', name: 'Londra', lon: -0.12, lat: 51.50, isCapital: true, gdpShare: 0.25, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MAN', name: 'Manchester', lon: -2.24, lat: 53.48, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
+    { suffixId: 'CWL', name: 'Cardiff', lon: -3.18, lat: 51.48, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
+    { suffixId: 'EDI', name: 'Edinburgh', lon: -3.18, lat: 56.10, gdpShare: 0.12, resource: 'PETROL' },
+    { suffixId: 'BRS', name: 'Bristol', lon: -2.59, lat: 51.15, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'NWI', name: 'Norwich', lon: 1.10, lat: 52.63, gdpShare: 0.10, resource: 'TAHIL' },
+    { suffixId: 'NCL', name: 'Newcastle', lon: -1.61, lat: 54.97, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
+    { suffixId: 'GLA', name: 'Glasgow', lon: -4.50, lat: 57.30, gdpShare: 0.10, resource: 'KERESTE' },
   ],
-  // İtalya (6 Şehir)
+  // İtalya (9 Şehir)
   '380': [
-    { suffixId: 'ROM', name: 'Roma', lon: 12.49, lat: 41.90, isCapital: true, gdpShare: 0.22, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'FLR', name: 'Floransa', lon: 11.25, lat: 43.77, gdpShare: 0.14, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'MIL', name: 'Milano', lon: 9.19, lat: 45.46, gdpShare: 0.24, resource: 'YARI_ILETKEN' },
-    { suffixId: 'VCE', name: 'Venedik', lon: 12.31, lat: 45.44, gdpShare: 0.16, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'NAP', name: 'Napoli', lon: 14.26, lat: 40.85, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'PMO', name: 'Palermo', lon: 13.80, lat: 37.55, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'ROM', name: 'Roma', lon: 12.49, lat: 41.90, isCapital: true, gdpShare: 0.16, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'FLR', name: 'Floransa', lon: 11.25, lat: 43.77, gdpShare: 0.11, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MIL', name: 'Milano', lon: 9.19, lat: 45.46, gdpShare: 0.16, resource: 'YARI_ILETKEN' },
+    { suffixId: 'VCE', name: 'Venedik', lon: 12.31, lat: 45.44, gdpShare: 0.12, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'NAP', name: 'Napoli', lon: 14.26, lat: 40.85, gdpShare: 0.11, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'PMO', name: 'Palermo', lon: 13.80, lat: 37.55, gdpShare: 0.08, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'GOA', name: 'Cenova', lon: 8.93, lat: 44.41, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'TRN', name: 'Torino', lon: 7.50, lat: 45.10, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
+    { suffixId: 'BRI', name: 'Bari', lon: 16.87, lat: 41.12, gdpShare: 0.07, resource: 'TAHIL' },
   ],
-  // İspanya (6 Şehir)
+  // İspanya (9 Şehir)
   '724': [
-    { suffixId: 'MAD', name: 'Madrid', lon: -3.70, lat: 40.41, isCapital: true, gdpShare: 0.26, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'BCN', name: 'Barselona', lon: 2.17, lat: 41.38, gdpShare: 0.22, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'VLC', name: 'Valensiya', lon: -0.38, lat: 39.47, gdpShare: 0.14, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'SEV', name: 'Sevilla', lon: -5.98, lat: 37.38, gdpShare: 0.14, resource: 'TAHIL' },
-    { suffixId: 'GRX', name: 'Granada', lon: -3.60, lat: 37.18, gdpShare: 0.10, resource: 'TAHIL' },
-    { suffixId: 'BIO', name: 'Bilbao', lon: -5.80, lat: 43.00, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
+    { suffixId: 'MAD', name: 'Madrid', lon: -3.70, lat: 40.41, isCapital: true, gdpShare: 0.18, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'BCN', name: 'Barselona', lon: 2.17, lat: 41.38, gdpShare: 0.15, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'VLC', name: 'Valensiya', lon: -0.38, lat: 39.47, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SEV', name: 'Sevilla', lon: -5.98, lat: 37.38, gdpShare: 0.11, resource: 'TAHIL' },
+    { suffixId: 'GRX', name: 'Granada', lon: -3.60, lat: 37.18, gdpShare: 0.08, resource: 'TAHIL' },
+    { suffixId: 'BIO', name: 'Bilbao', lon: -5.80, lat: 43.00, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
+    { suffixId: 'ZAZ', name: 'Zaragoza', lon: -0.89, lat: 41.65, gdpShare: 0.10, resource: 'TAHIL' },
+    { suffixId: 'VLL', name: 'Valladolid', lon: -4.72, lat: 41.90, gdpShare: 0.10, resource: 'TAHIL' },
+    { suffixId: 'MJV', name: 'Murcia', lon: -1.40, lat: 37.99, gdpShare: 0.08, resource: 'PAMUK' },
   ],
-  // Portekiz (2 Şehir)
+  // Portekiz (3 Şehir)
   '620': [
-    { suffixId: 'LIS', name: 'Lizbon', lon: -9.13, lat: 38.72, isCapital: true, gdpShare: 0.60, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'OPO', name: 'Porto', lon: -8.62, lat: 41.15, gdpShare: 0.40, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'LIS', name: 'Lizbon', lon: -9.13, lat: 38.72, isCapital: true, gdpShare: 0.46, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'OPO', name: 'Porto', lon: -8.62, lat: 41.15, gdpShare: 0.32, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'FAO', name: 'Faro', lon: -7.93, lat: 37.30, gdpShare: 0.22, resource: 'TICARET_BOGAZI' },
   ],
   // Ukrayna (4 Şehir)
   '804': [
@@ -180,12 +202,14 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'ODS', name: 'Odessa', lon: 30.72, lat: 46.48, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
     { suffixId: 'HRK', name: 'Harkiv', lon: 36.23, lat: 49.00, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
   ],
-  // Polonya (4 Şehir)
+  // Polonya (6 Şehir)
   '616': [
-    { suffixId: 'WAW', name: 'Varşova', lon: 21.01, lat: 52.23, isCapital: true, gdpShare: 0.34, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'POZ', name: 'Poznań', lon: 16.92, lat: 52.40, gdpShare: 0.20, resource: 'TAHIL' },
-    { suffixId: 'KRK', name: 'Krakow', lon: 19.94, lat: 50.06, gdpShare: 0.26, resource: 'DEMIR_CELIK' },
-    { suffixId: 'GDN', name: 'Gdansk', lon: 18.64, lat: 54.35, gdpShare: 0.20, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'WAW', name: 'Varşova', lon: 21.01, lat: 52.23, isCapital: true, gdpShare: 0.24, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'POZ', name: 'Poznań', lon: 16.92, lat: 52.40, gdpShare: 0.15, resource: 'TAHIL' },
+    { suffixId: 'KRK', name: 'Krakow', lon: 19.94, lat: 50.06, gdpShare: 0.19, resource: 'DEMIR_CELIK' },
+    { suffixId: 'GDN', name: 'Gdansk', lon: 18.64, lat: 54.35, gdpShare: 0.15, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'LUZ', name: 'Lublin', lon: 22.57, lat: 51.25, gdpShare: 0.13, resource: 'TAHIL' },
+    { suffixId: 'WRO', name: 'Wrocław', lon: 17.03, lat: 51.11, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
   ],
   // Belarus (2 Şehir)
   '112': [
@@ -397,16 +421,21 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'MES', name: 'Medan', lon: 98.67, lat: 3.59, gdpShare: 0.28, resource: 'PETROL' },
     { suffixId: 'BPN', name: 'Balikpapan', lon: 116.83, lat: -1.26, gdpShare: 0.24, resource: 'NADIR_TOPRAK' },
   ],
-  // Güney Kore (2 Şehir)
+  // Güney Kore (3 Şehir)
   '410': [
-    { suffixId: 'SEL', name: 'Seul', lon: 126.97, lat: 37.56, isCapital: true, gdpShare: 0.62, resource: 'YARI_ILETKEN' },
-    { suffixId: 'PUS', name: 'Busan', lon: 129.07, lat: 35.17, gdpShare: 0.38, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SEL', name: 'Seul', lon: 126.97, lat: 37.56, isCapital: true, gdpShare: 0.48, resource: 'YARI_ILETKEN' },
+    { suffixId: 'PUS', name: 'Busan', lon: 129.07, lat: 35.17, gdpShare: 0.30, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'KUV', name: 'Gwangju', lon: 126.90, lat: 35.45, gdpShare: 0.22, resource: 'TAHIL' },
   ],
-  // Japonya (3 Şehir)
+  // Japonya (7 Şehir)
   '392': [
-    { suffixId: 'TYO', name: 'Tokyo', lon: 139.69, lat: 35.68, isCapital: true, gdpShare: 0.46, resource: 'YARI_ILETKEN' },
-    { suffixId: 'OSA', name: 'Osaka', lon: 135.50, lat: 34.69, gdpShare: 0.32, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'SPK', name: 'Sapporo', lon: 141.35, lat: 42.00, gdpShare: 0.22, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'TYO', name: 'Tokyo', lon: 139.69, lat: 35.68, isCapital: true, gdpShare: 0.26, resource: 'YARI_ILETKEN' },
+    { suffixId: 'OSA', name: 'Osaka', lon: 135.50, lat: 34.69, gdpShare: 0.20, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'SPK', name: 'Sapporo', lon: 141.35, lat: 42.00, gdpShare: 0.12, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'FUK', name: 'Fukuoka', lon: 130.60, lat: 33.20, gdpShare: 0.12, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'HIJ', name: 'Hiroşima', lon: 132.45, lat: 34.45, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
+    { suffixId: 'NGO', name: 'Nagoya', lon: 137.10, lat: 35.60, gdpShare: 0.11, resource: 'DEMIR_CELIK' },
+    { suffixId: 'SDJ', name: 'Sendai', lon: 140.70, lat: 38.40, gdpShare: 0.09, resource: 'TAHIL' },
   ],
   // Brezilya (6 Şehir)
   '076': [

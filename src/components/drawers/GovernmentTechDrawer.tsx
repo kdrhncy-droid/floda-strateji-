@@ -4,6 +4,7 @@ import {
   Coins,
   Crown,
   FlaskConical,
+  Info,
   Landmark,
   Lock,
   Pause,
@@ -30,17 +31,25 @@ import {
   getTechTreeForMode,
 } from "../../data/world2026Data";
 import { cleanProvinceName } from "../../utils/formatters";
+import { AoH3GlyphName, AoH3GlyphSvg } from "../illustrations/AoH3Illustrations";
 
-const IDEOLOGY_GLYPHS: Record<string, string> = {
-  DEMOCRACY: "⚖",
-  AUTHORITARIAN: "◈",
-  MONARCHY: "♛",
-  SOCIALIST: "★",
-  MILITARY_JUNTA: "⚔",
-  TECHNO_CORPORATISM: "✦",
+const IDEOLOGY_GLYPHS: Record<string, AoH3GlyphName> = {
+  DEMOCRACY: "scale",
+  AUTHORITARIAN: "shield",
+  MONARCHY: "crown",
+  SOCIALIST: "star",
+  MILITARY_JUNTA: "sword",
+  TECHNO_CORPORATISM: "science",
 };
 
-const REFORM_GLYPHS = ["◉", "⚔", "⚓", "⚒", "✦", "⚖"];
+const REFORM_GLYPHS: AoH3GlyphName[] = [
+  "scroll",
+  "sword",
+  "anchor",
+  "hammer",
+  "science",
+  "scale",
+];
 
 interface BranchConfig {
   id: TechBranch;
@@ -61,9 +70,9 @@ const BRANCH_CONFIGS: BranchConfig[] = [
     shortLabel: "Askerî",
     mainRowLabel: "Kara & Ateş",
     specRowLabel: "Donanma & Lojistik",
-    color: "#e07b7b",
-    borderTint: "rgba(224, 123, 123, 0.45)",
-    surfaceTint: "rgba(224, 123, 123, 0.14)",
+    color: "#e0b86e",
+    borderTint: "rgba(202, 161, 90, 0.42)",
+    surfaceTint: "rgba(202, 161, 90, 0.14)",
     Icon: Swords,
   },
   {
@@ -72,9 +81,9 @@ const BRANCH_CONFIGS: BranchConfig[] = [
     shortLabel: "Ekonomi",
     mainRowLabel: "Hazine & Sanayi",
     specRowLabel: "Tarım & Ticaret",
-    color: "#e0ad52",
-    borderTint: "rgba(224, 173, 82, 0.45)",
-    surfaceTint: "rgba(224, 173, 82, 0.14)",
+    color: "#d4ab62",
+    borderTint: "rgba(202, 161, 90, 0.42)",
+    surfaceTint: "rgba(202, 161, 90, 0.14)",
     Icon: Coins,
   },
   {
@@ -83,9 +92,9 @@ const BRANCH_CONFIGS: BranchConfig[] = [
     shortLabel: "İdare",
     mainRowLabel: "Merkezi Devlet",
     specRowLabel: "Diplomasi & Hukuk",
-    color: "#67c99b",
-    borderTint: "rgba(103, 201, 155, 0.45)",
-    surfaceTint: "rgba(103, 201, 155, 0.14)",
+    color: "#caa15a",
+    borderTint: "rgba(202, 161, 90, 0.42)",
+    surfaceTint: "rgba(202, 161, 90, 0.14)",
     Icon: Landmark,
   },
   {
@@ -94,9 +103,9 @@ const BRANCH_CONFIGS: BranchConfig[] = [
     shortLabel: "Bilim",
     mainRowLabel: "Akademi & Kuram",
     specRowLabel: "Tıp & Mühendislik",
-    color: "#62b7d7",
-    borderTint: "rgba(98, 183, 215, 0.45)",
-    surfaceTint: "rgba(98, 183, 215, 0.14)",
+    color: "#e6c785",
+    borderTint: "rgba(202, 161, 90, 0.42)",
+    surfaceTint: "rgba(202, 161, 90, 0.14)",
     Icon: FlaskConical,
   },
 ];
@@ -129,24 +138,54 @@ const ZOOM_SPECS: Record<
     minCanvasPx: 840,
     railPx: 108,
     colMinPx: 112,
-    cardHeightClass: "h-[66px]",
+    cardHeightClass: "h-[74px]",
     titleClass: "text-[10px]",
   },
   100: {
     minCanvasPx: 1020,
     railPx: 124,
     colMinPx: 138,
-    cardHeightClass: "h-[82px]",
+    cardHeightClass: "h-[88px]",
     titleClass: "text-[11px]",
   },
   115: {
     minCanvasPx: 1170,
     railPx: 136,
     colMinPx: 162,
-    cardHeightClass: "h-[96px]",
+    cardHeightClass: "h-[102px]",
     titleClass: "text-xs",
   },
 };
+
+function formatShortTechBadge(tech: TechDefinition): string {
+  const firstSegment = tech.effectLabel.split("·")[0]?.trim() ?? tech.effectLabel;
+  const compact = firstSegment
+    .replace(/Muharebe Gücü/g, "Güç")
+    .replace(/Ulusal Savunma Gücü/g, "Savunma")
+    .replace(/Ulusal Savunma/g, "Savunma")
+    .replace(/Deniz Muharebe Gücü/g, "Donanma")
+    .replace(/Deniz Gücü/g, "Donanma")
+    .replace(/Vergi Geliri/g, "Vergi")
+    .replace(/Üretim Geliri/g, "Üretim")
+    .replace(/İç Pazar Ticareti/g, "Ticaret")
+    .replace(/Ticaret Geliri/g, "Ticaret")
+    .replace(/Araştırma Hızı/g, "Bilim")
+    .replace(/İnsan Gücü Tavanı/g, "İG Tavanı")
+    .replace(/İnsan Gücü/g, "İG")
+    .replace(/Nüfus Artışı/g, "Nüfus")
+    .replace(/Asimilasyon Hızı/g, "Asim.")
+    .replace(/İkmal Limiti/g, "İkmal")
+    .replace(/Vasal Haraç Geliri/g, "Vasal")
+    .replace(/Vasal Haracı/g, "Vasal")
+    .replace(/Agresif Genişleme Kazanımı/g, "AE")
+    .replace(/Çekirdek Dışı Huzursuzluk Artışı/g, "İsyan")
+    .replace(/Günlük Enflasyon/g, "Enf.")
+    .replace(/Günlük Huzursuzluk/g, "İsyan")
+    .replace(/Günlük Diplomasi Puanı/g, "Dip.")
+    .replace(/İnşa Süresi/g, "İnşa");
+  const unlocksUnit = tech.effectLabel.includes("Nesil");
+  return unlocksUnit ? `${compact} · +Birim` : compact;
+}
 
 export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
   playerNation,
@@ -490,7 +529,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
 
           {/* Popover Gameplay Effect & Full Description */}
           <div className="p-3.5 space-y-2.5">
-            <div className="text-xs font-bold text-emerald-300 leading-snug">
+            <div className="text-xs font-bold text-[#e0b86e] leading-snug">
               {popoverTech.effectLabel}
             </div>
 
@@ -500,16 +539,16 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
 
             <div className="pt-2 border-t border-[#caa15a]/25 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-num text-[#b8a990]">
               <div className="flex items-center gap-2">
-                <span className="text-amber-300 font-bold">
+                <span className="text-[#e0b86e] font-bold">
                   {popoverTech.cost} RP
                 </span>
                 <span>·</span>
                 {popoverState.isUnlocked ? (
-                  <span className="text-emerald-300 font-sans font-bold">
+                  <span className="text-[#e0b86e] font-sans font-bold">
                     Araştırıldı
                   </span>
                 ) : popoverState.isActive ? (
-                  <span className="text-amber-200 font-bold">
+                  <span className="text-[#f3ead7] font-bold">
                     %{popoverState.pct} · ~{popoverState.estDays} Gün
                   </span>
                 ) : (
@@ -519,12 +558,17 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
 
               {popoverState.prereqDef ? (
                 <span
-                  className={`font-sans text-[10.5px] font-semibold truncate max-w-[200px] ${
-                    popoverState.prereqMet ? "text-emerald-300" : "text-rose-300"
+                  className={`font-sans text-[10.5px] font-semibold inline-flex items-center gap-1 truncate max-w-[200px] ${
+                    popoverState.prereqMet ? "text-[#e0b86e]" : "text-rose-300"
                   }`}
                 >
-                  {popoverState.prereqMet ? "✓" : "🔒"}{" "}
-                  {popoverState.prereqDef.shortTitle ?? popoverState.prereqDef.name}
+                  <AoH3GlyphSvg
+                    name={popoverState.prereqMet ? "check" : "lock"}
+                    className="w-3 h-3 shrink-0"
+                  />
+                  <span className="truncate">
+                    {popoverState.prereqDef.shortTitle ?? popoverState.prereqDef.name}
+                  </span>
                 </span>
               ) : (
                 <span className="font-sans text-[10.5px] text-[#a79880]">
@@ -549,7 +593,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={drawerSection === "TECH"}
             data-testid="gov-tab-tech"
             onClick={() => setDrawerSection("TECH")}
-            className={`min-h-[36px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               drawerSection === "TECH"
                 ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
                 : "text-[#d8cbb5] hover:text-white"
@@ -572,7 +616,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={drawerSection === "DIVAN"}
             data-testid="gov-tab-divan"
             onClick={() => setDrawerSection("DIVAN")}
-            className={`min-h-[36px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               drawerSection === "DIVAN"
                 ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
                 : "text-[#d8cbb5] hover:text-white"
@@ -586,7 +630,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             </span>
             <span
               className={`font-mono-num text-[10px] font-extrabold ${
-                drawerSection === "DIVAN" ? "text-[#14110e]/80" : "text-emerald-300"
+                drawerSection === "DIVAN" ? "text-[#14110e]/80" : "text-[#e0b86e]"
               }`}
             >
               Sv.{techMetrics.capitalLevel}
@@ -599,7 +643,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={drawerSection === "STATE"}
             data-testid="gov-tab-state"
             onClick={() => setDrawerSection("STATE")}
-            className={`min-h-[36px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               drawerSection === "STATE"
                 ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
                 : "text-[#d8cbb5] hover:text-white"
@@ -607,7 +651,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
           >
             <ScrollText className="w-3.5 h-3.5 shrink-0" />
             <span className="sm:hidden">Reform</span>
-            <span className="hidden sm:inline">Rejim, Reform &amp; İmparatorluk</span>
+            <span className="hidden sm:inline">Rejim &amp; İmparatorluk</span>
           </button>
         </div>
 
@@ -618,14 +662,14 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
         >
           <span>
             Tek. Düzeyi{" "}
-            <strong className="text-amber-300">
+            <strong className="text-[#e0b86e]">
               {techMetrics.techLevel.toFixed(2)} / Maks {techMetrics.maxTechLevel.toFixed(1)}
             </strong>
           </span>
           <span className="text-[#caa15a]/40">·</span>
           <span>
             Aylık{" "}
-            <strong className="text-emerald-300">
+            <strong className="text-[#e0b86e]">
               +{techMetrics.monthlyTechGrowth.toFixed(2)}
             </strong>
           </span>
@@ -639,7 +683,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
           <span className="text-[#caa15a]/40">·</span>
           <span>
             Günlük{" "}
-            <strong className="text-sky-300">
+            <strong className="text-[#f3ead7]">
               +{playerEconomy.dailyResearch.toFixed(1)} RP
             </strong>
           </span>
@@ -718,7 +762,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     title="Araştırmalar bittiğinde sıradaki teknolojiyi otomatik başlatır"
                     className={`min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 border transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                       isAutoResearchOn
-                        ? "bg-emerald-950/80 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/70"
+                        ? "bg-[#251d14] border-[#e0b86e]/65 text-[#e0b86e] hover:bg-[#31261a]"
                         : "bg-[#1e1914] border-[#caa15a]/30 text-[#c5b79e] hover:text-white"
                     }`}
                   >
@@ -781,7 +825,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             {activeProj && activeTech && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-emerald-300 font-semibold truncate pr-2">
+                  <span className="text-[#e0b86e] font-semibold truncate pr-2">
                     {activeTech.effectLabel}
                   </span>
                   <span className="font-mono-num text-[#d8cbb5] shrink-0">
@@ -790,7 +834,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                 </div>
                 <div className="w-full h-1.5 rounded-full bg-[#0d0b08] border border-[#caa15a]/30 overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#caa15a] via-[#e5c07b] to-sky-400 transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-[#8f6a34] via-[#caa15a] to-[#f3ead7] transition-all duration-300"
                     style={{ width: `${Math.max(3, activePct)}%` }}
                   />
                 </div>
@@ -1051,12 +1095,12 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                       aria-hidden="true"
                                       className={`absolute -left-2.5 top-1/2 -translate-y-1/2 w-2.5 h-[2px] ${
                                         isUnlocked
-                                          ? "bg-emerald-400"
+                                          ? "bg-[#e0b86e]"
                                           : isActive
-                                          ? "bg-amber-400"
+                                          ? "bg-[#f3ead7]"
                                           : prereqMet
-                                          ? "bg-[#caa15a]/85"
-                                          : "bg-slate-700/75"
+                                          ? "bg-[#caa15a]/70"
+                                          : "bg-[#3d3226]/75"
                                       }`}
                                     />
                                   )}
@@ -1107,12 +1151,12 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                     }}
                                     className={`group w-full ${zoomSpec.cardHeightClass} rounded-lg border text-left relative overflow-hidden select-none touch-pan-x touch-pan-y transition-all cursor-pointer ${
                                       isUnlocked
-                                        ? "border-emerald-400/80 shadow-sm shadow-emerald-950/60"
+                                        ? "border-[#e0b86e]/90 shadow-sm shadow-[#caa15a]/15"
                                         : isActive
-                                        ? "border-amber-400 shadow-md shadow-amber-500/25"
+                                        ? "border-[#f3ead7] shadow-md shadow-[#caa15a]/25"
                                         : prereqMet
-                                        ? "border-[#caa15a]/60 hover:border-[#ebd090]"
-                                        : "border-slate-700/80 opacity-65 hover:opacity-90"
+                                        ? "border-[#caa15a]/55 hover:border-[#ebd090]"
+                                        : "border-[#3d3226]/80 opacity-65 hover:opacity-90"
                                     } ${
                                       isSelected || isHeld
                                         ? "ring-2 ring-[#f6ecd7] ring-offset-1 ring-offset-[#0f0c09]"
@@ -1164,12 +1208,12 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                       <span
                                         className={`w-4 h-4 rounded-sm flex items-center justify-center ${
                                           isUnlocked
-                                            ? "bg-emerald-950/85 text-emerald-300"
+                                            ? "bg-[#251d14]/90 text-[#e0b86e]"
                                             : isActive
-                                            ? "bg-amber-950/90 text-amber-300"
+                                            ? "bg-[#2f2314]/90 text-[#f3ead7]"
                                             : prereqMet
                                             ? "bg-black/65 text-[#e8c682]"
-                                            : "bg-black/75 text-slate-400"
+                                            : "bg-black/75 text-[#8e806a]"
                                         }`}
                                       >
                                         {isUnlocked ? (
@@ -1184,30 +1228,35 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                                       </span>
 
                                       <span
-                                        className={`font-mono-num text-[9.5px] font-extrabold px-1 py-0.5 rounded bg-black/65 leading-none ${
+                                        className={`font-mono-num text-[9.5px] font-extrabold px-1 py-0.5 rounded bg-black/65 leading-none inline-flex items-center ${
                                           isUnlocked
-                                            ? "text-emerald-300"
+                                            ? "text-[#e0b86e]"
                                             : isActive
-                                            ? "text-amber-300"
+                                            ? "text-[#f3ead7]"
                                             : prereqMet
                                             ? "text-[#f3ead7]"
-                                            : "text-slate-400"
+                                            : "text-[#8e806a]"
                                         }`}
                                       >
-                                        {isUnlocked
-                                          ? "✓"
-                                          : isActive
-                                          ? `%${pct}`
-                                          : `${tech.cost}`}
+                                        {isUnlocked ? (
+                                          <AoH3GlyphSvg name="check" className="w-2.5 h-2.5" />
+                                        ) : isActive ? (
+                                          `%${pct}`
+                                        ) : (
+                                          `${tech.cost}`
+                                        )}
                                       </span>
                                     </div>
 
-                                    {/* Small Crisp Title Overlay on Bottom of Image */}
-                                    <div className="absolute bottom-1.5 left-1.5 right-1.5 z-10">
+                                    {/* Small Crisp Title + Short Effect Badge Overlay on Bottom of Image */}
+                                    <div className="absolute bottom-1.5 left-1.5 right-1.5 z-10 space-y-0.5">
                                       <div
                                         className={`${zoomSpec.titleClass} font-display font-bold text-[#faf3e3] leading-tight line-clamp-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]`}
                                       >
                                         {tech.shortTitle ?? tech.name}
+                                      </div>
+                                      <div className="text-[9.5px] font-mono-num font-bold text-[#e0b86e] leading-none line-clamp-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+                                        {formatShortTechBadge(tech)}
                                       </div>
                                     </div>
 
@@ -1297,7 +1346,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                         <span
                           className={
                             inspectedState.prereqMet
-                              ? "text-emerald-300"
+                              ? "text-[#e0b86e]"
                               : "text-rose-300"
                           }
                         >
@@ -1313,18 +1362,32 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     <h4 className="text-xs sm:text-sm font-display font-bold text-[#f3ead7]">
                       {inspectedTech.name}
                     </h4>
-                    <span className="text-[11px] font-semibold text-emerald-300">
+                    <span className="text-[11px] font-semibold text-[#e0b86e]">
                       {inspectedTech.effectLabel}
                     </span>
                   </div>
-
-                  <p className="text-[11px] text-[#b8a990] leading-snug line-clamp-2">
-                    {inspectedTech.description}
-                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setHoverPopoverTechId((prev) =>
+                      prev === inspectedTech.id ? null : inspectedTech.id
+                    )
+                  }
+                  aria-label="Teknoloji açıklamasını göster"
+                  title="Basılı tutun veya dokunun: Tam açıklama"
+                  className={`min-h-[44px] px-2.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+                    hoverPopoverTechId === inspectedTech.id
+                      ? "bg-[#caa15a]/25 border-[#caa15a] text-[#f3ead7]"
+                      : "bg-[#1d1711] border-[#caa15a]/30 text-[#d8cbb5] hover:text-white"
+                  }`}
+                >
+                  <Info className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden xs:inline">Detay</span>
+                </button>
                 <button
                   type="button"
                   data-testid="aoh3-inspector-action-btn"
@@ -1334,14 +1397,14 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     !inspectedState.prereqMet
                   }
                   onClick={() => handleStartResearch(inspectedTech.id)}
-                  className={`min-h-[38px] w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`min-h-[44px] flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 cursor-pointer ${
                     inspectedState.isUnlocked
-                      ? "bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 cursor-default"
+                      ? "bg-[#241c13] text-[#e0b86e] border border-[#e0b86e]/45 cursor-default"
                       : inspectedState.isActive
-                      ? "bg-amber-500/20 text-amber-200 border border-amber-400/60 cursor-default"
+                      ? "bg-[#251d14] text-[#f3ead7] border border-[#caa15a]/60 cursor-default"
                       : inspectedState.prereqMet
                       ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] hover:from-[#d9b26b] hover:to-[#ecc77f] text-[#14110e] shadow-md"
-                      : "bg-[#120f0c] text-slate-500 border border-slate-800 cursor-not-allowed"
+                      : "bg-[#120f0c] text-[#7c6f5c] border border-[#352b20] cursor-not-allowed"
                   }`}
                 >
                   {inspectedState.isUnlocked ? (
@@ -1402,10 +1465,10 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-t from-[#15110d] via-[#15110d]/55 to-black/30" />
 
                 <div className="absolute top-2.5 left-3 right-3 flex items-center justify-between gap-2">
-                  <span className="px-2 py-0.5 rounded bg-black/75 border border-[#caa15a]/45 text-[10px] font-bold text-amber-200">
+                  <span className="px-2 py-0.5 rounded bg-black/75 border border-[#caa15a]/45 text-[10px] font-bold text-[#f3ead7]">
                     {techMetrics.eraLabel}
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-950/90 border border-emerald-500/45 font-mono-num text-[11px] font-extrabold text-emerald-300">
+                  <span className="px-2 py-0.5 rounded bg-[#1e1710]/90 border border-[#caa15a]/50 font-mono-num text-[11px] font-extrabold text-[#e0b86e]">
                     Başkent Seviyesi Sv.{techMetrics.capitalLevel}/10
                   </span>
                 </div>
@@ -1417,21 +1480,24 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                         ? "Saray-ı Hümayun & Başkent Külliyesi"
                         : "Başkent Devlet Külliyesi & Merkez Kampüsü"}
                     </h3>
-                    <div className="text-[11px] text-amber-200 font-semibold">
-                      ★{" "}
-                      {capitalTerritory
-                        ? cleanProvinceName(capitalTerritory.name)
-                        : "Payitaht"}{" "}
-                      · Saray Sv.{techMetrics.capitalPalaceLevel}/5
+                    <div className="text-[11px] text-[#e0b86e] font-semibold flex items-center gap-1">
+                      <AoH3GlyphSvg name="star" className="w-3 h-3 shrink-0" />
+                      <span>
+                        {capitalTerritory
+                          ? cleanProvinceName(capitalTerritory.name)
+                          : "Payitaht"}{" "}
+                        · Saray Sv.{techMetrics.capitalPalaceLevel}/5
+                      </span>
                     </div>
                   </div>
                   {capitalTerritory && onSelectTerritory && (
                     <button
                       type="button"
                       onClick={() => onSelectTerritory(capitalTerritory.id)}
-                      className="px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black/90 border border-[#caa15a]/40 text-[11px] font-bold text-amber-200 cursor-pointer shrink-0"
+                      className="px-2.5 py-1 rounded-lg bg-[#14100c]/85 hover:bg-[#241c13] border border-[#caa15a]/45 text-[11px] font-bold text-[#f3ead7] cursor-pointer shrink-0 inline-flex items-center gap-1"
                     >
-                      📍 Başkente Git
+                      <AoH3GlyphSvg name="pin" className="w-3 h-3 text-[#e0b86e]" />
+                      <span>Başkente Git</span>
                     </button>
                   )}
                 </div>
@@ -1444,7 +1510,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     <div className="text-[10px] text-[#b8a990]">
                       Teknoloji Düzeyi
                     </div>
-                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-amber-300">
+                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-[#e0b86e]">
                       {techMetrics.techLevel.toFixed(2)}
                     </div>
                   </div>
@@ -1452,7 +1518,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     <div className="text-[10px] text-[#b8a990]">
                       Maks. Tek. Tavanı
                     </div>
-                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-sky-300">
+                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-[#f3ead7]">
                       {techMetrics.maxTechLevel.toFixed(1)}
                     </div>
                   </div>
@@ -1460,7 +1526,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     <div className="text-[10px] text-[#b8a990]">
                       Aylık Tek. Artışı
                     </div>
-                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-emerald-300">
+                    <div className="font-mono-num text-xs sm:text-sm font-extrabold text-[#e0b86e]">
                       +{techMetrics.monthlyTechGrowth.toFixed(2)}/ay
                     </div>
                   </div>
@@ -1473,12 +1539,6 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     </div>
                   </div>
                 </div>
-
-                <p className="text-[11px] text-[#c5b79e] leading-relaxed">
-                  {gameMode === "EMPIRES_1440"
-                    ? "1440 çağında teknoloji düzeyi tarihsel başlangıç seviyesindedir (1.30 taban). Sıbyan Mektebi, Medrese, Darülfünun ve Saray-ı Hümayun inşa ettikçe maksimum teknoloji tavanınız ve aylık araştırma hızınız yükselir."
-                    : "2026 modern çağında ülkeler ileri teknoloji tabanıyla (7.00+) başlar. İlkokul, Ortaokul-Lise, Üniversite ve Başkent Külliyesi yatırımlarıyla maksimum teknoloji kapasitenizi büyütün."}
-                </p>
 
                 {/* Direct Capital Palace Upgrade Action */}
                 {capitalTerritory &&
@@ -1511,11 +1571,11 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                             {gameMode === "EMPIRES_1440"
                               ? "Saray-ı Hümayun & Divan Külliyesi"
                               : "Başkent Devlet Külliyesi"}{" "}
-                            <span className="text-amber-300 font-mono-num">
+                            <span className="text-[#e0b86e] font-mono-num">
                               (Sv.{curLvl}/{maxLvl})
                             </span>
                           </div>
-                          <div className="text-[10.5px] text-emerald-300">
+                          <div className="text-[10.5px] text-[#e0b86e]">
                             Seviye başına +3.5 Bilim, +%8 Vergi, +300 İG ve +1
                             Başkent Seviyesi
                           </div>
@@ -1531,27 +1591,35 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                               "capitalPalace"
                             )
                           }
-                          className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-colors ${
+                          className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-colors inline-flex items-center gap-1 ${
                             !hasAdm1
                               ? "bg-[#120e0a] text-rose-300 border border-rose-500/35 cursor-not-allowed"
                               : queued
-                              ? "bg-amber-950/60 text-amber-300 border border-amber-500/40 cursor-default"
+                              ? "bg-[#241c13] text-[#e0b86e] border border-[#caa15a]/40 cursor-default"
                               : isMax
-                              ? "bg-emerald-950/50 text-emerald-300 border border-emerald-500/35 cursor-default"
+                              ? "bg-[#241c13] text-[#e0b86e] border border-[#e0b86e]/40 cursor-default"
                               : canUpgrade
                               ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow"
                               : "bg-[#120e0a] text-[#8e806a] border border-[#caa15a]/20 cursor-not-allowed"
                           }`}
                         >
-                          {!hasAdm1
-                            ? "🔒 İdare Çağ I (adm_1) Gerekli"
-                            : queued
-                            ? `İnşa Sürüyor (${
-                                queued.totalDays - queued.progressDays
-                              }g)`
-                            : isMax
-                            ? "✓ Maksimum Seviye"
-                            : `Sarayı Yükselt (${cost} Altın)`}
+                          {!hasAdm1 ? (
+                            <>
+                              <AoH3GlyphSvg name="lock" className="w-3 h-3 shrink-0" />
+                              <span>İdare Çağ I (adm_1) Gerekli</span>
+                            </>
+                          ) : queued ? (
+                            `İnşa Sürüyor (${
+                              queued.totalDays - queued.progressDays
+                            }g)`
+                          ) : isMax ? (
+                            <>
+                              <AoH3GlyphSvg name="check" className="w-3 h-3 shrink-0" />
+                              <span>Maksimum Seviye</span>
+                            </>
+                          ) : (
+                            `Sarayı Yükselt (${cost} Altın)`
+                          )}
                         </button>
                       </div>
                     );
@@ -1563,7 +1631,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             <div className="rounded-2xl bg-[#15110d] border border-[#caa15a]/35 p-3.5 space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
-                  <FlaskConical className="w-4 h-4 text-sky-300" />
+                  <FlaskConical className="w-4 h-4 text-[#e0b86e]" />
                   <span>
                     {gameMode === "EMPIRES_1440"
                       ? "Maarif & Medrese Eğitim Şebekesi"
@@ -1656,21 +1724,23 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                             <span className="text-xs font-bold text-[#f3ead7]">
                               {edu.title}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-500/35 font-mono-num text-[10px] font-bold text-sky-300">
+                            <span className="px-1.5 py-0.5 rounded bg-[#14100c] border border-[#caa15a]/40 font-mono-num text-[10px] font-bold text-[#e0b86e]">
                               Toplam Sv.{edu.count}
                             </span>
                           </div>
-                          <div className="text-[10.5px] text-emerald-300">
+                          <div className="text-[10.5px] text-[#e0b86e]">
                             {edu.bonus}
                           </div>
                           <div className="text-[10px] text-[#b8a990]">
                             {unlocked ? (
-                              <span className="text-emerald-300">
-                                ✓ {edu.reqLabel} Açık
+                              <span className="text-[#e0b86e] inline-flex items-center gap-1">
+                                <AoH3GlyphSvg name="check" className="w-2.5 h-2.5" />
+                                <span>{edu.reqLabel} Açık</span>
                               </span>
                             ) : (
-                              <span className="text-rose-300">
-                                🔒 {edu.reqLabel} Araştırması Gerekli
+                              <span className="text-rose-300 inline-flex items-center gap-1">
+                                <AoH3GlyphSvg name="lock" className="w-2.5 h-2.5" />
+                                <span>{edu.reqLabel} Araştırması Gerekli</span>
                               </span>
                             )}
                           </div>
@@ -1702,7 +1772,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                           <button
                             type="button"
                             onClick={() => onBatchUpgradeBuilding(edu.id)}
-                            className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#241c14] hover:bg-[#2f2419] border border-[#caa15a]/35 text-[11px] font-bold text-amber-200 cursor-pointer"
+                            className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#241c14] hover:bg-[#2f2419] border border-[#caa15a]/35 text-[11px] font-bold text-[#e0b86e] cursor-pointer"
                             title="Hazine yettiğince uygun eyaletlerde toplu inşa başlatır"
                           >
                             Toplu Kur
@@ -1725,13 +1795,10 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     <Landmark className="w-4 h-4 text-[#e0b86e]" />
                     <span>
                       {gameMode === "EMPIRES_1440"
-                        ? "Divan-ı Hümayun Erkânı & Vezirler"
-                        : "Bakanlar Kurulu & Stratejik Konsey"}
+                        ? "Divan-ı Hümayun Erkânı"
+                        : "Bakanlar Kurulu"}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-[#b8a990] mt-0.5">
-                    Bütçe payları ve açılan teknolojiler Divan üyelerinin devletinize sağladığı çarpanları doğrudan güçlendirir.
-                  </p>
                 </div>
               </div>
 
@@ -1882,13 +1949,13 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                         </div>
                       </div>
                       <div className="p-2.5 space-y-1">
-                        <div className="text-[10px] font-semibold text-amber-300">
+                        <div className="text-[10px] font-semibold text-[#caa15a]">
                           {vizier.subtitle}
                         </div>
                         <div className="text-[10.5px] font-mono-num font-bold text-[#f3ead7]">
                           {vizier.statLabel}
                         </div>
-                        <div className="text-[10px] text-emerald-300 leading-snug">
+                        <div className="text-[10px] text-[#e0b86e] leading-snug">
                           {vizier.effect}
                         </div>
                       </div>
@@ -1918,6 +1985,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {Object.values(IDEOLOGIES).map((ideo) => {
                   const isCurrent = playerNation.ideology === ideo.id;
+                  const glyphName = IDEOLOGY_GLYPHS[ideo.id] ?? "crown";
                   return (
                     <button
                       type="button"
@@ -1926,37 +1994,39 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                       aria-pressed={isCurrent}
                       className={`p-2.5 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
                         isCurrent
-                          ? "bg-[#221b13] border-2 text-white shadow-lg"
-                          : "bg-[#1a1510] border-[#caa15a]/20 text-slate-300 hover:border-[#caa15a]/50"
+                          ? "bg-[#241c13] border-2 border-[#e0b86e] text-[#faf3e3] shadow-lg"
+                          : "bg-[#1a1510] border-[#caa15a]/25 text-[#d8cbb5] hover:border-[#caa15a]/55"
                       }`}
-                      style={{ borderColor: isCurrent ? ideo.color : undefined }}
                     >
                       <span
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-lg font-display shrink-0 border border-white/15"
-                        style={{
-                          backgroundColor: `${ideo.color}33`,
-                          color: ideo.color,
-                        }}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                          isCurrent
+                            ? "bg-[#2c2216] border-[#e0b86e]/60 text-[#e0b86e]"
+                            : "bg-[#14100c] border-[#caa15a]/30 text-[#caa15a]"
+                        }`}
                         aria-hidden="true"
                       >
-                        {IDEOLOGY_GLYPHS[ideo.id] ?? "◆"}
+                        <AoH3GlyphSvg name={glyphName} className="w-4 h-4" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-white truncate">
+                        <div className="text-xs font-bold text-[#faf3e3] truncate">
                           {ideo.name}
                         </div>
-                        <div className="text-[10px] text-[#b8a990] line-clamp-1 mt-0.5">
-                          {ideo.description}
-                        </div>
                         <div className="text-[10px] font-mono-num text-[#d8cbb5] mt-1 flex items-center gap-1.5 flex-wrap">
-                          <span className="text-amber-300">
+                          <span className="text-[#e0b86e]">
                             Vergi{" "}
                             {ideo.taxBonus >= 0
                               ? `+${ideo.taxBonus}`
                               : ideo.taxBonus}
                           </span>
                           <span className="opacity-40">·</span>
-                          <span className="text-rose-300">
+                          <span
+                            className={
+                              ideo.militaryAttackBonus < 0
+                                ? "text-rose-300"
+                                : "text-[#f3ead7]"
+                            }
+                          >
                             Ordu{" "}
                             {ideo.militaryAttackBonus >= 0
                               ? `+${ideo.militaryAttackBonus}`
@@ -1965,7 +2035,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                           {isCurrent && (
                             <>
                               <span className="opacity-40">·</span>
-                              <span className="text-emerald-300 font-bold">
+                              <span className="text-[#e0b86e] font-bold">
                                 Aktif
                               </span>
                             </>
@@ -1993,20 +2063,22 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     !enacted &&
                     playerNation.treasury >= ref.costGold &&
                     playerNation.researchPoints >= ref.costResearch;
+                  const reformGlyph =
+                    REFORM_GLYPHS[reformIndex % REFORM_GLYPHS.length];
                   return (
                     <div
                       key={ref.id}
-                      className="bg-[#1b1611] border border-[#caa15a]/20 rounded-xl p-2.5 flex items-center justify-between gap-3"
+                      className="bg-[#1b1611] border border-[#caa15a]/25 rounded-xl p-2.5 flex items-center justify-between gap-3"
                     >
                       <div className="flex items-start gap-2 min-w-0">
-                        <span className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300 flex items-center justify-center text-base shrink-0">
-                          {REFORM_GLYPHS[reformIndex % REFORM_GLYPHS.length]}
+                        <span className="w-8 h-8 rounded-lg bg-[#241c13] border border-[#caa15a]/35 text-[#e0b86e] flex items-center justify-center shrink-0">
+                          <AoH3GlyphSvg name={reformGlyph} className="w-4 h-4" />
                         </span>
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-white truncate">
+                          <div className="text-xs font-bold text-[#faf3e3] truncate">
                             {ref.name}
                           </div>
-                          <div className="text-[10px] text-emerald-400 line-clamp-1">
+                          <div className="text-[10px] text-[#e0b86e] line-clamp-1">
                             {ref.effectLabel}
                           </div>
                         </div>
@@ -2017,10 +2089,10 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                         onClick={() => onEnactReform(ref.id)}
                         className={`min-h-[34px] px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 whitespace-nowrap cursor-pointer ${
                           enacted
-                            ? "bg-emerald-950 text-emerald-400 border border-emerald-500/30 cursor-default"
+                            ? "bg-[#241c13] text-[#e0b86e] border border-[#e0b86e]/40 cursor-default"
                             : canAfford
                             ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e]"
-                            : "bg-[#120f0c] text-slate-500 border border-slate-800 cursor-not-allowed"
+                            : "bg-[#120f0c] text-[#7c6f5c] border border-[#352b20] cursor-not-allowed"
                         }`}
                       >
                         {enacted
@@ -2036,8 +2108,8 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             {/* Formable Empires */}
             <div className="bg-[#15110d] border border-[#caa15a]/45 rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-display font-bold text-amber-300 flex items-center gap-2">
-                  <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                <h3 className="text-sm font-display font-bold text-[#e0b86e] flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-[#caa15a] shrink-0" />
                   <span>Tarihi İmparatorluk İlanı</span>
                 </h3>
                 <span className="font-mono-num text-xs text-[#b8a990] whitespace-nowrap">
@@ -2082,13 +2154,10 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-white">
+                          <div className="text-xs font-bold text-[#faf3e3]">
                             {emp.name}
                           </div>
-                          <p className="text-[11px] text-[#b8a990] mt-0.5">
-                            {emp.description}
-                          </p>
-                          <div className="text-[11px] text-amber-300 font-semibold mt-1">
+                          <div className="text-[11px] text-[#e0b86e] font-semibold mt-0.5">
                             {emp.bonusSummary}
                           </div>
                         </div>
@@ -2098,10 +2167,10 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                           onClick={() => onFormEmpire(emp.id)}
                           className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 whitespace-nowrap cursor-pointer ${
                             alreadyFormed
-                              ? "bg-emerald-950 text-emerald-400 border border-emerald-500/40 cursor-default"
+                              ? "bg-[#241c13] text-[#e0b86e] border border-[#e0b86e]/45 cursor-default"
                               : canForm
                               ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
-                              : "bg-[#120f0c] text-slate-500 border border-slate-800 cursor-not-allowed"
+                              : "bg-[#120f0c] text-[#7c6f5c] border border-[#352b20] cursor-not-allowed"
                           }`}
                         >
                           {alreadyFormed
@@ -2115,36 +2184,50 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                       {!alreadyFormed && (
                         <div className="pt-2 border-t border-[#caa15a]/15 flex flex-wrap gap-x-2.5 gap-y-1 text-[10px] font-mono-num">
                           <span
-                            className={
+                            className={`inline-flex items-center gap-1 ${
                               hasProvinces
-                                ? "text-emerald-300"
-                                : "text-[#b8a990]"
-                            }
+                                ? "text-[#e0b86e]"
+                                : "text-[#8e806a]"
+                            }`}
                           >
-                            {hasProvinces ? "✓" : "✗"}{" "}
-                            {playerEconomy.territoryCount}/{emp.requiredProvinces}{" "}
-                            Eyalet
+                            <AoH3GlyphSvg
+                              name={hasProvinces ? "check" : "lock"}
+                              className="w-2.5 h-2.5 shrink-0"
+                            />
+                            <span>
+                              {playerEconomy.territoryCount}/{emp.requiredProvinces}{" "}
+                              Eyalet
+                            </span>
                           </span>
 
                           {reqTechs > 0 && (
                             <span
-                              className={
-                                hasTechs ? "text-emerald-300" : "text-[#b8a990]"
-                              }
+                              className={`inline-flex items-center gap-1 ${
+                                hasTechs ? "text-[#e0b86e]" : "text-[#8e806a]"
+                              }`}
                             >
-                              {hasTechs ? "✓" : "✗"}{" "}
-                              {playerNation.unlockedTechs.length}/{reqTechs}{" "}
-                              Teknoloji
+                              <AoH3GlyphSvg
+                                name={hasTechs ? "check" : "lock"}
+                                className="w-2.5 h-2.5 shrink-0"
+                              />
+                              <span>
+                                {playerNation.unlockedTechs.length}/{reqTechs}{" "}
+                                Teknoloji
+                              </span>
                             </span>
                           )}
 
                           {reqGold > 0 && (
                             <span
-                              className={
-                                hasGold ? "text-emerald-300" : "text-[#b8a990]"
-                              }
+                              className={`inline-flex items-center gap-1 ${
+                                hasGold ? "text-[#e0b86e]" : "text-[#8e806a]"
+                              }`}
                             >
-                              {hasGold ? "✓" : "✗"} {reqGold} Altın
+                              <AoH3GlyphSvg
+                                name={hasGold ? "check" : "lock"}
+                                className="w-2.5 h-2.5 shrink-0"
+                              />
+                              <span>{reqGold} Altın</span>
                             </span>
                           )}
 
@@ -2156,11 +2239,16 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
                             return (
                               <span
                                 key={tid}
-                                className={
-                                  isOwned ? "text-emerald-300" : "text-rose-300"
-                                }
+                                className={`inline-flex items-center gap-1 ${
+                                  isOwned ? "text-[#e0b86e]" : "text-rose-300"
+                                }`}
                               >
-                                {isOwned ? "✓" : "✗"} ★ {cityName}
+                                <AoH3GlyphSvg
+                                  name={isOwned ? "check" : "lock"}
+                                  className="w-2.5 h-2.5 shrink-0"
+                                />
+                                <AoH3GlyphSvg name="star" className="w-2.5 h-2.5 shrink-0" />
+                                <span>{cityName}</span>
                               </span>
                             );
                           })}

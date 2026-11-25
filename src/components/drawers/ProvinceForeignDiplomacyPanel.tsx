@@ -18,7 +18,9 @@ import {
   canAcceptLandPurchase,
 } from "../../engine/diplomacyAndWarActions";
 import { computeNationTechMetrics } from "../../data/world2026Data";
+import { cleanNationName } from "../../utils/formatters";
 import { sound } from "../../utils/soundEngine";
+import { AoH3GlyphSvg, AoH3MenuBanner } from "../illustrations/AoH3Illustrations";
 
 interface ProvinceForeignDiplomacyPanelProps {
   playerNation: Nation;
@@ -106,20 +108,48 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
   const btnStandard =
     "min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#1b1510] hover:bg-[#251d15] border border-[#caa15a]/35 text-left flex items-center justify-between transition-colors cursor-pointer";
   const btnActivePact =
-    "min-h-[44px] px-3.5 py-2.5 rounded-xl bg-emerald-950/65 hover:bg-emerald-900/70 border border-emerald-500/50 text-left flex items-center justify-between transition-colors cursor-pointer";
+    "min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[#251d14] hover:bg-[#2e2419] border border-[#e0b86e] text-left flex items-center justify-between transition-colors cursor-pointer";
   const btnHostile =
     "min-h-[44px] px-3.5 py-2.5 rounded-xl bg-rose-950/55 hover:bg-rose-900/65 border border-rose-500/45 text-left flex items-center justify-between transition-colors cursor-pointer";
 
   return (
     <div className="bg-[#14100c]/95 border border-[#caa15a]/35 rounded-2xl p-4 space-y-4">
+      <AoH3MenuBanner
+        artKey={activeWar ? "FORTRESS" : "COURT"}
+        branch={activeWar ? "MILITARY" : "ADMINISTRATION"}
+        icon={activeWar ? "sword" : "crown"}
+        title={cleanNationName(selectedOwner.name)}
+        subtitle={
+          activeWar
+            ? `Savaşta · Savaş Skoru ${playerWarScore !== null && playerWarScore > 0 ? `+${playerWarScore}` : playerWarScore ?? activeWar.attackerWarScore}%`
+            : `${personalityMeta.name} · İlişki ${rel.score > 0 ? `+${rel.score}` : rel.score}`
+        }
+        rightSlot={
+          onInspectNation ? (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                onInspectNation(selectedOwner.id);
+              }}
+              className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#1b1510]/90 hover:bg-[#261d15] border border-[#caa15a]/50 text-[#f3ead7] text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5 shrink-0 text-[#e0b86e]" />
+              <span>Tüm Diplomasisi</span>
+            </button>
+          ) : undefined
+        }
+      />
+
       {/* Castle Siege Bombardment Panel when at War */}
       {activeWar && (
         <div className="bg-rose-950/40 border border-rose-500/40 rounded-xl p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-rose-200">
-              ♜ {selectedTerritory.name} Kalesi Kuşatma Harekatı
+            <span className="text-xs font-bold text-rose-200 inline-flex items-center gap-1.5">
+              <AoH3GlyphSvg name="fortress" className="w-3.5 h-3.5 text-rose-300 shrink-0" />
+              <span>{selectedTerritory.name} Kalesi Kuşatma Harekatı</span>
             </span>
-            <span className="font-mono-num text-xs font-bold text-amber-300">
+            <span className="font-mono-num text-xs font-bold text-[#e0b86e]">
               Sur Dayanıklılığı: %{selectedTerritory.castleWallHp ?? 100}
             </span>
           </div>
@@ -133,12 +163,12 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
               onClick={() => onSiegeBombardment(selectedTerritory.id, "ARTILLERY")}
               className="min-h-[42px] px-3 py-2 rounded-xl bg-[#221a12] hover:bg-[#2c2217] border border-[#caa15a]/45 text-left transition-colors cursor-pointer"
             >
-              <div className="text-xs font-bold text-amber-200">
+              <div className="text-xs font-bold text-[#f3ead7]">
                 {gameMode === "EMPIRES_1440"
                   ? "Darbzen Topçu Ateşi"
                   : "Topçu Bombardımanı"}
               </div>
-              <div className="font-mono-num text-[10px] text-amber-400">
+              <div className="font-mono-num text-[10px] text-[#e0b86e]">
                 180 Altın · Sur -%35 &amp; Garnizon -%10
               </div>
             </button>
@@ -151,62 +181,45 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                   ? "Şahi Topu & Lağımcı Hücumu"
                   : "SİHA & Nokta Kuşatma Baskını"}
               </div>
-              <div className="font-mono-num text-[10px] text-amber-300">
-                220 Altın · 20 ⚜ Nüfuz · Sur -%45 &amp; Garnizon -%18
+              <div className="font-mono-num text-[10px] text-[#e0b86e] inline-flex items-center gap-1 flex-wrap">
+                <span>220 Altın · 20</span>
+                <AoH3GlyphSvg name="fleur" className="w-3 h-3 inline shrink-0" />
+                <span>Nüfuz · Sur -%45 &amp; Garnizon -%18</span>
               </div>
             </button>
           </div>
         </div>
       )}
 
-      {/* Foreign Nation Header + Complete Intel Strip (Altın, Toplam Ordu, Teknoloji, Başkent) */}
-      <div className="space-y-3 border-b border-[#caa15a]/25 pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-display font-bold text-[#f3ead7]">
-              {selectedOwner.name} İle Diplomatik İlişkiler
-            </h3>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#b8a990] mt-0.5">
-              <span>
-                İlişki Puanı:{" "}
-                <strong
-                  className={`font-mono-num ${
-                    rel.score >= 25
-                      ? "text-emerald-300"
-                      : rel.score <= -25
-                      ? "text-rose-400"
-                      : "text-amber-300"
-                  }`}
-                >
-                  {rel.score > 0 ? `+${rel.score}` : rel.score}
-                </strong>
-              </span>
-              <span aria-hidden="true">·</span>
-              <span
-                className="text-amber-200 font-semibold"
-                title={personalityMeta.description}
-                data-testid="foreign-ai-personality"
+      {/* Foreign Nation Status + Complete Intel Strip */}
+      <div className="space-y-2.5 border-b border-[#caa15a]/25 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-[#b8a990]">
+            <span>
+              İlişki:{" "}
+              <strong
+                className={`font-mono-num ${
+                  rel.score >= 25
+                    ? "text-[#e0b86e]"
+                    : rel.score <= -25
+                    ? "text-rose-400"
+                    : "text-[#f3ead7]"
+                }`}
               >
-                {personalityMeta.name}
-              </span>
-            </div>
+                {rel.score > 0 ? `+${rel.score}` : rel.score}
+              </strong>
+            </span>
+            <span aria-hidden="true">·</span>
+            <span
+              className="text-[#e0b86e] font-semibold"
+              title={personalityMeta.description}
+              data-testid="foreign-ai-personality"
+            >
+              {personalityMeta.name}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {onInspectNation && (
-              <button
-                type="button"
-                onClick={() => {
-                  sound.playClick();
-                  onInspectNation(selectedOwner.id);
-                }}
-                className="px-2.5 py-1.5 rounded-lg bg-[#1b1510] hover:bg-[#251d15] border border-[#caa15a]/40 text-[#f3ead7] text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <Globe className="w-3.5 h-3.5 shrink-0 text-[#e0b86e]" />
-                <span>Tüm Diplomasisi</span>
-              </button>
-            )}
-
+          <div>
             {activeWar ? (
               <span className="text-xs font-bold text-rose-400">
                 SAVAŞTA · Senin tarafın:{" "}
@@ -240,13 +253,13 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
         >
           <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
             <div className="text-[10px] text-[#b8a990]">Hazine (Altın)</div>
-            <div className="font-mono-num text-xs sm:text-sm font-bold text-amber-300">
+            <div className="font-mono-num text-xs sm:text-sm font-bold text-[#e0b86e]">
               {Math.floor(selectedOwner.treasury).toLocaleString("tr-TR")} A
             </div>
           </div>
           <div className="rounded-xl bg-[#1b1510] border border-[#caa15a]/25 p-2">
             <div className="text-[10px] text-[#b8a990]">Toplam Asker</div>
-            <div className="font-mono-num text-xs sm:text-sm font-bold text-emerald-300">
+            <div className="font-mono-num text-xs sm:text-sm font-bold text-[#f3ead7]">
               {ownerTotalArmy.toLocaleString("tr-TR")}
             </div>
           </div>
@@ -275,7 +288,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
             <div className="text-xs font-bold text-[#f3ead7]">
               Diplomatik Heyet Gönder
             </div>
-            <div className="text-[11px] text-emerald-300">
+            <div className="text-[11px] text-[#e0b86e]">
               +20 İlişki Puanı (150 Altın)
             </div>
           </div>
@@ -307,7 +320,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                 ? "Ticaret Anlaşması Aktif"
                 : "Ticaret Anlaşması Kur"}
             </div>
-            <div className="text-[11px] text-amber-300">
+            <div className="text-[11px] text-[#e0b86e]">
               +%14 Karşılıklı Ticaret Geliri
             </div>
           </div>
@@ -383,13 +396,13 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                   : "Saldırı Paktı Kur"}
               </span>
             </div>
-            <div className="text-[11px] text-emerald-300">
+            <div className="text-[11px] text-[#e0b86e]">
               {rel.allianceType === "OFFENSIVE"
                 ? "Ortak taarruz & savunma yürürlükte"
                 : "Ortak hedefe savaşta birlikte taarruz edilir (+45 İlişki)"}
             </div>
           </div>
-          <Swords className="w-4 h-4 text-emerald-300 shrink-0" />
+          <Swords className="w-4 h-4 text-[#e0b86e] shrink-0" />
         </button>
 
         <button
@@ -402,7 +415,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                 ? "Ambargoyu Kaldır"
                 : "Ticaret Ambargosu Uygula"}
             </div>
-            <div className="text-[11px] text-amber-300">
+            <div className="text-[11px] text-[#e0b86e]">
               {playerEmbargoActive
                 ? "Hedefin ticaret geliri %18 azalıyor."
                 : "Uygularsan hedefin ticaret geliri %18 düşer."}
@@ -413,7 +426,7 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
               )}
             </div>
           </div>
-          <Ban className="w-4 h-4 text-amber-400 shrink-0" />
+          <Ban className="w-4 h-4 text-[#e0b86e] shrink-0" />
         </button>
 
         {selectedOwner.vassalOf === playerNation.id ? (
@@ -422,10 +435,10 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
             className={btnStandard}
           >
             <div>
-              <div className="text-xs font-bold text-amber-200">
+              <div className="text-xs font-bold text-[#f3ead7]">
                 Vasal Devleti Barışçıl İlhak Et
               </div>
-              <div className="text-[11px] text-amber-300">
+              <div className="text-[11px] text-[#e0b86e]">
                 {vassalAnnexCost} Altın · +20 İlişki gerekir
               </div>
             </div>
@@ -553,8 +566,8 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
             return (
               <div className="col-span-1 sm:col-span-2 p-2.5 rounded-xl bg-[#19140f] border border-[#caa15a]/30 text-[11px] space-y-1.5">
                 {playerAttackers.length > 0 && (
-                  <div className="text-emerald-300 flex items-center gap-1.5">
-                    <Swords className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                  <div className="text-[#f3ead7] flex items-center gap-1.5">
+                    <Swords className="w-3.5 h-3.5 shrink-0 text-[#e0b86e]" />
                     <span>
                       <strong>Saldırı Paktı Ortaklarınız:</strong>{" "}
                       {playerAttackers.map((id) => nations[id]?.name).join(", ")}{" "}
@@ -563,8 +576,8 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
                   </div>
                 )}
                 {targetDefenders.length > 0 && (
-                  <div className="text-amber-300 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                  <div className="text-[#e0b86e] flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 shrink-0 text-[#e0b86e]" />
                     <span>
                       <strong>Hedefin Savunma Paktı:</strong>{" "}
                       {targetDefenders.map((id) => nations[id]?.name).join(", ")}{" "}

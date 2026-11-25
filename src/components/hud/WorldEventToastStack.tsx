@@ -48,10 +48,10 @@ function getEventAccent(type: WorldNewsEvent['type']): {
       };
     case 'COALITION':
       return {
-        border: 'border-sky-500/50',
-        badgeBg: 'bg-sky-500/20 text-sky-300',
+        border: 'border-[#caa15a]/55',
+        badgeBg: 'bg-[#caa15a]/20 text-[#e0b86e]',
         label: 'Diplomasi',
-        icon: <Scale className="w-3 h-3 text-sky-300 shrink-0" />,
+        icon: <Scale className="w-3 h-3 text-[#e0b86e] shrink-0" />,
       };
     case 'REFORM':
       return {

@@ -167,18 +167,20 @@ export function resolveTerritoryReligion(
     if (lon < 26.8 && lat > 39.5) return 'CHRISTIAN_ORTHODOX';
     return 'ISLAM_SUNNI';
   }
-  if (oId === '300') return 'CHRISTIAN_ORTHODOX'; // Byzantium
-  if (oId === '818') return 'ISLAM_SUNNI'; // Mamluk
-  if (oId === '364') return 'ISLAM_SHIA'; // Karakoyunlu / Akkoyunlu
-  if (oId === '860') return 'ISLAM_SUNNI'; // Timurid
-  if (oId === '643') return 'ISLAM_SUNNI'; // Golden Horde
-  if (oId === '348' || oId === '276' || oId === '250' || oId === '724' || oId === '826' || oId === '616' || oId === '380') {
+  if (oId === '300' || oId === '268' || oId === '643') return 'CHRISTIAN_ORTHODOX'; // Byzantium, Georgia, Muscovy
+  if (oId === '818' || oId === '682' || oId === '887' || oId === '788' || oId === '012' || oId === '504') return 'ISLAM_SUNNI';
+  if (oId === '031') return 'ISLAM_SHIA'; // Karakoyunlu / Akkoyunlu
+  if (oId === '364' || oId === '860' || oId === '804' || oId === '902' || oId === '903' || oId === '398') return 'ISLAM_SUNNI'; // Timurid, Uzbek, Crimea, Great Horde, Sibir, Kazakh
+  if (oId === '348' || oId === '276' || oId === '250' || oId === '724' || oId === '826' || oId === '616' || oId === '380' || oId === '620' || oId === '905' || oId === '428' || oId === '040' || oId === '203' || oId === '528' || oId === '756' || oId === '440') {
     return 'CHRISTIAN_CATHOLIC';
   }
-  if (oId === '642' || oId === '688' || oId === '804') return 'CHRISTIAN_ORTHODOX';
-  if (oId === '156' || oId === '392') return 'BUDDHISM_EAST';
-  if (oId === '356') return 'HINDUISM_VEDIC';
-  if (oId === '484' || oId === '604') return 'INDIGENOUS_AMERICAN';
+  if (oId === '642' || oId === '498' || oId === '688') return 'CHRISTIAN_ORTHODOX';
+  if (oId === '156' || oId === '392' || oId === '410') return 'BUDDHISM_EAST';
+  if (oId === '356' || oId === '050') return 'ISLAM_SUNNI'; // Delhi & Bengal Sultanates
+  if (oId === '904' || oId === '360') return 'HINDUISM_VEDIC'; // Vijayanagara & Majapahit
+  if (oId === '484' || oId === '076' || oId === '604' || oId === '840' || oId === '124' || oId === '906' || oId === '907' || oId === '170' || oId === '032' || oId === '192') {
+    return 'INDIGENOUS_AMERICAN';
+  }
 
   // Geographic regional fallback
   if (lon >= 20 && lon <= 65 && lat >= 10 && lat <= 42) return 'ISLAM_SUNNI';
@@ -205,16 +207,18 @@ export function resolveTerritoryCulture(
     return 'TURKIC_OGHUZ';
   }
   if (oId === '300') return 'GREEK_BYZANTINE';
-  if (oId === '818' || oId === '504') return 'ARABIC_LEVANT';
-  if (oId === '364') return 'TURKIC_OGHUZ';
-  if (oId === '860') return 'PERSIAN_IRANIC';
-  if (oId === '643') return 'MONGOL_STEPPE';
-  if (oId === '276') return 'GERMANIC_CENTRAL';
-  if (oId === '250' || oId === '724' || oId === '380') return 'ROMANCE_LATIN';
-  if (oId === '348' || oId === '616' || oId === '642') return 'SLAVIC_EAST_SOUTH';
+  if (oId === '818' || oId === '504' || oId === '682' || oId === '887' || oId === '788' || oId === '012') return 'ARABIC_LEVANT';
+  if (oId === '031') return 'TURKIC_OGHUZ';
+  if (oId === '364') return 'PERSIAN_IRANIC';
+  if (oId === '860' || oId === '804' || oId === '902' || oId === '903' || oId === '398' || oId === '496') return 'MONGOL_STEPPE';
+  if (oId === '276' || oId === '040' || oId === '528' || oId === '756') return 'GERMANIC_CENTRAL';
+  if (oId === '250' || oId === '724' || oId === '380' || oId === '620') return 'ROMANCE_LATIN';
+  if (oId === '348' || oId === '616' || oId === '642' || oId === '498' || oId === '643' || oId === '440' || oId === '688') return 'SLAVIC_EAST_SOUTH';
   if (oId === '156') return 'SINIC_HAN';
   if (oId === '392') return 'JAPANESE_YAMATO';
-  if (oId === '484' || oId === '604') return 'AMERINDIAN';
+  if (oId === '484' || oId === '076' || oId === '604' || oId === '840' || oId === '124' || oId === '906' || oId === '907' || oId === '170' || oId === '032' || oId === '192') {
+    return 'AMERINDIAN';
+  }
 
   // Regional coords
   if (lon >= 26 && lon <= 48 && lat >= 36 && lat <= 42) return 'TURKIC_OGHUZ';

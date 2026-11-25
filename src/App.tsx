@@ -860,7 +860,7 @@ function GameAppInner() {
         pendingTargetNation &&
         (pendingFromTerritory || pendingSourceSeaArmy) &&
         pendingToTerritory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/88">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-[2px]">
           <div
             ref={warConfirmationRef}
             role="dialog"
@@ -868,33 +868,33 @@ function GameAppInner() {
             aria-labelledby="war-confirmation-title"
             aria-describedby="war-confirmation-description"
             tabIndex={-1}
-            className="w-full max-w-md bg-slate-900 border-2 border-rose-500/70 rounded-2xl shadow-2xl overflow-hidden text-slate-100"
+            className="w-full max-w-md bg-[#14100c] border border-rose-500/60 rounded-2xl shadow-2xl overflow-hidden text-[#f3ead7]"
           >
-            <div className="px-4 py-3 bg-gradient-to-r from-rose-950 via-slate-900 to-slate-950 border-b border-rose-500/40 flex items-center justify-between">
+            <div className="px-4 py-3 bg-gradient-to-r from-[#281214] via-[#1b1510] to-[#14100c] border-b border-rose-500/35 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-rose-600 flex items-center justify-center shadow">
-                  <ShieldAlert className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 rounded-xl bg-rose-900/70 border border-rose-500/50 flex items-center justify-center shadow">
+                  <ShieldAlert className="w-5 h-5 text-rose-200" />
                 </div>
                 <div>
-                  <h3 id="war-confirmation-title" className="font-display font-bold text-sm sm:text-base text-white">
+                  <h3 id="war-confirmation-title" className="font-display font-bold text-sm sm:text-base text-[#f3ead7]">
                     Sınır İhlali & Savaş İlanı Onayı
                   </h3>
                   <p className="text-[11px] text-rose-300">
-                    Age of History 3 Diplomasi Kuralı: Tarafsız Ülke Toprağı
+                    Diplomatik Kural: Tarafsız Ülke Toprağı
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => store.setPendingWarMove(null)}
                 aria-label="Savaş ilanı onayını kapat"
-                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white cursor-pointer"
+                className="w-7 h-7 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#9d8f76] hover:text-[#f3ead7] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="p-4 space-y-3 text-xs">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/90 border border-slate-800">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0f0c09] border border-[#caa15a]/25">
                 <div className="flex items-center gap-2.5">
                   <NationFlagCanvasBadge
                     nationId={pendingTargetNation.id}
@@ -904,17 +904,17 @@ function GameAppInner() {
                     height={26}
                   />
                   <div>
-                    <div className="font-bold text-white text-sm">
+                    <div className="font-bold text-[#f3ead7] text-sm">
                       {cleanNationName(pendingTargetNation.name)}
                     </div>
-                    <div className="text-[11px] text-slate-400">
-                      Hedef Eyalet: <strong className="text-amber-300">{cleanProvinceName(pendingToTerritory.name)}</strong> ({(pendingToTerritory.garrison / 1000).toFixed(1)}B Garnizon)
+                    <div className="text-[11px] text-[#9d8f76]">
+                      Hedef Eyalet: <strong className="text-[#e0b86e]">{cleanProvinceName(pendingToTerritory.name)}</strong> ({(pendingToTerritory.garrison / 1000).toFixed(1)}B Garnizon)
                     </div>
                   </div>
                 </div>
               </div>
 
-              <p id="war-confirmation-description" className="text-slate-300 leading-relaxed">
+              <p id="war-confirmation-description" className="text-[#d4c8b4] leading-relaxed">
                 {pendingSourceSeaArmy ? (
                   <>
                     <strong>{pendingSourceSeaArmy.name}</strong> donanmanızdaki{' '}
@@ -945,7 +945,7 @@ function GameAppInner() {
               <div className="space-y-2 pt-1">
                 <button
                   onClick={() => store.confirmPendingWarMove()}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-600/25 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-rose-900/70 hover:bg-rose-800/80 border border-rose-500/50 text-rose-100 font-bold text-xs flex items-center justify-center gap-2 shadow-lg cursor-pointer"
                 >
                   <Swords className="w-4 h-4" />
                   <span>Resmen Savaş İlan Et ve Taarruza Geç</span>
@@ -959,15 +959,15 @@ function GameAppInner() {
                     );
                     store.setPendingWarMove(null);
                   }}
-                  className="w-full py-2 px-4 rounded-xl bg-sky-600/25 hover:bg-sky-600/35 border border-sky-500/40 text-sky-200 font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2 px-4 rounded-xl bg-[#caa15a]/15 hover:bg-[#caa15a]/25 border border-[#caa15a]/40 text-[#e0b86e] font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Compass className="w-4 h-4 text-sky-400" />
+                  <Compass className="w-4 h-4 text-[#e0b86e]" />
                   <span>Savaşmadan Askeri Geçiş İzni İste (120 Altın)</span>
                 </button>
 
                 <button
                   onClick={() => store.setPendingWarMove(null)}
-                  className="w-full py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs cursor-pointer"
+                  className="w-full py-2 px-4 rounded-xl bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/20 text-[#9d8f76] hover:text-[#f3ead7] font-semibold text-xs cursor-pointer"
                 >
                   Hareket Emrini İptal Et
                 </button>

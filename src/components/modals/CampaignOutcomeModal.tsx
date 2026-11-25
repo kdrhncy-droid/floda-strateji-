@@ -174,7 +174,7 @@ export const CampaignOutcomeModal: React.FC<CampaignOutcomeModalProps> = ({
 
             <div className="p-3 rounded-xl bg-slate-950/75 border border-slate-800">
               <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1">
-                <Calendar className="w-3.5 h-3.5 text-sky-400" />
+                <Calendar className="w-3.5 h-3.5 text-[#e0b86e]" />
                 <span>Sefer Süresi</span>
               </div>
               <div className="font-mono font-bold text-sm text-white">

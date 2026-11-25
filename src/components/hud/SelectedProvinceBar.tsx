@@ -50,7 +50,11 @@ import {
   formatTroopsShort,
 } from '../../utils/formatters';
 import { sound } from '../../utils/soundEngine';
-import { TerrainPanoramaSvg } from '../illustrations/AoH3Illustrations';
+import {
+  AoH3GlyphSvg,
+  ResourceSvg,
+  TerrainPanoramaSvg,
+} from '../illustrations/AoH3Illustrations';
 
 interface SelectedProvinceBarProps {
   territory: Territory;
@@ -178,7 +182,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
 
   const cleanName = cleanProvinceName(territory.name);
   const cleanOwnerName = cleanNationName(owner.name);
-  const titleText = territory.isCapital ? `★ ${cleanName}` : cleanName;
+  const titleText = cleanName;
   const terrainMeta =
     TERRAIN_INFO[territory.terrain || 'OVA'] || TERRAIN_INFO.OVA;
   const resMeta = RESOURCE_INFO[territory.resource] || RESOURCE_INFO.TAHIL;
@@ -208,11 +212,11 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
   const isOverSupply = hasIntel && territory.garrison > supplyLimit;
 
   return (
-    <div className="hud-province-quickbar absolute bottom-2.5 left-2.5 right-2.5 sm:right-auto sm:w-[560px] sm:max-w-[calc(100vw-8rem)] z-20 rounded-2xl bg-[#090e1a]/96 border border-amber-500/50 shadow-2xl px-2.5 sm:px-3 py-2 flex flex-col gap-2">
+    <div className="hud-province-quickbar absolute bottom-2.5 left-2.5 right-2.5 sm:right-auto sm:w-[560px] sm:max-w-[calc(100vw-8rem)] z-20 rounded-2xl bg-[#14100c]/96 border border-[#caa15a]/50 shadow-2xl px-2.5 sm:px-3 py-2 flex flex-col gap-2">
       {/* Direct Movement Prompt Banner (No Forced Percentage Split!) */}
       {isOrderActive && (
-        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-sky-950/90 border border-sky-400/50 text-[11px]">
-          <span className="font-bold text-sky-200 truncate">
+        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-[#1b1510]/95 border border-[#caa15a]/55 text-[11px]">
+          <span className="font-bold text-[#f3ead7] truncate">
             {territory.isCoastal
               ? `Hedef şehre veya açık denize dokunun · %${Math.round(moveRatio * 100)} (${plannedSendTroops.toLocaleString('tr-TR')} asker)`
               : `Hedef şehre dokunun · %${Math.round(moveRatio * 100)} (${plannedSendTroops.toLocaleString('tr-TR')} asker)`}
@@ -223,7 +227,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               sound.playClick();
               onStartArmyOrder(null);
             }}
-            className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 text-[10px] font-bold border border-slate-700 whitespace-nowrap shrink-0"
+            className="px-2 py-0.5 rounded-lg bg-[#241c13] hover:bg-[#32271b] text-[#f3ead7] text-[10px] font-bold border border-[#caa15a]/35 whitespace-nowrap shrink-0"
           >
             İptal
           </button>
@@ -232,9 +236,10 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
 
       {/* Optional Split Ratio Strip ("Böl") */}
       {splitOpen && isPlayerOwned && (
-        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-amber-950/85 border border-amber-500/50 text-[11px]">
-          <span className="font-bold text-amber-200 truncate">
-            ✂️ Bölünerek gönderilecek ordu oranı:
+        <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-[#241c13]/95 border border-[#caa15a]/50 text-[11px]">
+          <span className="font-bold text-[#f3ead7] truncate flex items-center gap-1">
+            <Scissors className="w-3 h-3 text-[#e0b86e] shrink-0" />
+            <span className="truncate">Bölünerek gönderilecek ordu oranı:</span>
           </span>
           <div className="flex items-center gap-1 shrink-0">
             {[0.25, 0.5, 0.75].map((r) => (
@@ -249,8 +254,8 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                 }}
                 className={`px-2 py-0.5 rounded-lg font-mono-num text-[10px] font-bold whitespace-nowrap shrink-0 transition-colors ${
                   Math.abs(moveRatio - r) < 0.05 && isOrderActive
-                    ? 'bg-amber-400 text-slate-950'
-                    : 'bg-slate-900 text-amber-200 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40'
+                    ? 'bg-[#caa15a] text-[#14100c]'
+                    : 'bg-[#14100c] text-[#e0b86e] hover:bg-[#caa15a] hover:text-[#14100c] border border-[#caa15a]/40'
                 }`}
               >
                 %{Math.round(r * 100)}
@@ -259,7 +264,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             <button
               type="button"
               onClick={() => setSplitOpen(false)}
-              className="px-2 py-0.5 rounded-lg bg-slate-900 text-slate-300 text-[10px] font-bold border border-slate-700 whitespace-nowrap shrink-0"
+              className="px-2 py-0.5 rounded-lg bg-[#14100c] text-[#d8cbb5] text-[10px] font-bold border border-[#3a2f22] whitespace-nowrap shrink-0"
             >
               Vazgeç
             </button>
@@ -270,8 +275,9 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
       {/* Safe Disband Confirmation Strip ("Asker Sil") */}
       {disbandOpen && isPlayerOwned && !isUnderCombat && (
         <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-[11px]">
-          <span className="font-bold text-rose-200 truncate">
-            🪖 Terhis (%75 İnsan Gücü İadesi):
+          <span className="font-bold text-rose-200 truncate flex items-center gap-1">
+            <AoH3GlyphSvg name="shield" className="w-3 h-3 text-rose-300 shrink-0" />
+            <span className="truncate">Terhis (%75 İnsan Gücü İadesi):</span>
           </span>
           <div className="flex items-center gap-1 shrink-0">
             <button
@@ -297,7 +303,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             <button
               type="button"
               onClick={() => setDisbandOpen(false)}
-              className="px-2 py-0.5 rounded-lg bg-slate-900 text-slate-300 text-[10px] font-bold border border-slate-700 whitespace-nowrap shrink-0"
+              className="px-2 py-0.5 rounded-lg bg-[#14100c] text-[#d8cbb5] text-[10px] font-bold border border-[#3a2f22] whitespace-nowrap shrink-0"
             >
               Vazgeç
             </button>
@@ -309,31 +315,29 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
       {recruitOpen && isPlayerOwned && (
         <div
           data-testid="province-bar-recruit-strip"
-          className="flex flex-col gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-950/95 border border-emerald-500/50 text-[11px]"
+          className="flex flex-col gap-1.5 px-2.5 py-2 rounded-xl bg-[#1b1510]/98 border border-[#caa15a]/50 text-[11px]"
         >
           <div className="flex items-center justify-between gap-1.5 flex-wrap">
-            <span className="font-bold text-emerald-200 text-[10px]">
-              ⚔️ Birlik Sınıfı Seç &amp; Bas:
+            <span className="font-bold text-[#e0b86e] text-[10px] flex items-center gap-1">
+              <AoH3GlyphSvg name="sword" className="w-3 h-3 shrink-0" />
+              <span>Birlik Sınıfı Seç &amp; Bas:</span>
             </span>
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
               {[
                 {
                   id: 'infantry' as const,
-                  label: `🛡 ${armyGen.infantryShort}`,
-                  activeTone: 'bg-emerald-500 text-slate-950 border-emerald-300',
-                  idleTone: 'bg-slate-900 text-emerald-200 border-emerald-500/40',
+                  glyph: 'shield' as const,
+                  label: armyGen.infantryShort,
                 },
                 {
                   id: 'armor' as const,
-                  label: `🐎 ${armyGen.armorShort}`,
-                  activeTone: 'bg-amber-500 text-slate-950 border-amber-300',
-                  idleTone: 'bg-slate-900 text-amber-200 border-amber-500/40',
+                  glyph: 'cavalry' as const,
+                  label: armyGen.armorShort,
                 },
                 {
                   id: 'airDrone' as const,
-                  label: `💣 ${armyGen.airArtilleryShort}`,
-                  activeTone: 'bg-sky-400 text-slate-950 border-sky-200',
-                  idleTone: 'bg-slate-900 text-sky-200 border-sky-500/40',
+                  glyph: 'artillery' as const,
+                  label: armyGen.airArtilleryShort,
                 },
               ].map((u) => (
                 <button
@@ -344,19 +348,23 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                     sound.playClick();
                     setQuickUnitType(u.id);
                   }}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                    quickUnitType === u.id ? u.activeTone : u.idleTone
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1 ${
+                    quickUnitType === u.id
+                      ? 'bg-[#caa15a] text-[#14100c] border-[#f3ead7]'
+                      : 'bg-[#14100c] text-[#d8cbb5] border-[#caa15a]/35 hover:border-[#e0b86e]'
                   }`}
                 >
-                  {u.label}
+                  <AoH3GlyphSvg name={u.glyph} className="w-3 h-3 shrink-0" />
+                  <span>{u.label}</span>
                 </button>
               ))}
               <button
                 type="button"
                 onClick={() => setRecruitOpen(false)}
-                className="px-1.5 py-0.5 rounded-lg bg-slate-900 text-slate-300 text-[10px] font-bold border border-slate-700 whitespace-nowrap shrink-0 cursor-pointer"
+                aria-label="Asker basma panelini kapat"
+                className="px-1.5 py-0.5 rounded-lg bg-[#14100c] text-[#b8a990] hover:text-[#faf3e3] text-[10px] font-bold border border-[#3a2f22] whitespace-nowrap shrink-0 cursor-pointer flex items-center justify-center"
               >
-                ✕
+                <X className="w-3 h-3" />
               </button>
             </div>
           </div>
@@ -378,7 +386,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                   onQuickRecruitInfantry(territory.id);
                 }
               }}
-              className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-2 py-1 rounded-lg bg-[#2a2117] hover:bg-[#382b1d] border border-[#caa15a]/50 text-[#f3ead7] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
             >
               +1.000 Bas ({quickUnitType === 'infantry' ? '120A' : quickUnitType === 'armor' ? '180A' : '500A'})
             </button>
@@ -400,7 +408,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                   onQuickRecruitInfantry(territory.id);
                 }
               }}
-              className="px-2 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-2 py-1 rounded-lg bg-[#2a2117] hover:bg-[#382b1d] border border-[#caa15a]/50 text-[#e0b86e] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
             >
               +{quickUnitType === 'infantry' ? '5.000 (250A)' : quickUnitType === 'armor' ? '2.500 (420A)' : '2.500 (1100A)'}
             </button>
@@ -413,9 +421,10 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                   onClick={() =>
                     onBatchRecruitUnits('SINGLE_MAX', quickUnitType, territory.id)
                   }
-                  className="px-2 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-[#caa15a] hover:bg-[#e0b86e] text-[#14100c] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-1"
                 >
-                  ⚡ Bu Şehirde Maks Bas
+                  <AoH3GlyphSvg name="bolt" className="w-3 h-3 shrink-0" />
+                  <span>Bu Şehirde Maks Bas</span>
                 </button>
                 <button
                   type="button"
@@ -423,9 +432,10 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                   onClick={() =>
                     onBatchRecruitUnits('BORDER', quickUnitType, territory.id, 1)
                   }
-                  className="px-2 py-1 rounded-lg bg-sky-600/85 hover:bg-sky-500 text-white text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-[#14100c] hover:bg-[#241c13] border border-[#caa15a]/45 text-[#f3ead7] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-1"
                 >
-                  🛡 Sınırlara Toplu Bas
+                  <AoH3GlyphSvg name="shield" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                  <span>Sınırlara Toplu Bas</span>
                 </button>
                 <button
                   type="button"
@@ -433,9 +443,10 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                   onClick={() =>
                     onBatchRecruitUnits('ALL', quickUnitType, territory.id, 1)
                   }
-                  className="px-2 py-1 rounded-lg bg-purple-600/85 hover:bg-purple-500 text-white text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="px-2 py-1 rounded-lg bg-[#14100c] hover:bg-[#241c13] border border-[#caa15a]/45 text-[#e0b86e] text-[10px] font-extrabold whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-1"
                 >
-                  🌍 Tüm Ülkeye Toplu Bas
+                  <AoH3GlyphSvg name="globe" className="w-3 h-3 shrink-0" />
+                  <span>Tüm Ülkeye Toplu Bas</span>
                 </button>
               </>
             )}
@@ -451,7 +462,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             <button
               onClick={() => cycleOwnedProvince(-1)}
               title="Önceki Eyaletimiz / Ordumuz"
-              className="w-7 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-amber-400 shrink-0"
+              className="w-7 h-9 rounded-xl bg-[#1b1510] hover:bg-[#2a2117] border border-[#3a2f22] flex items-center justify-center text-[#e0b86e] shrink-0"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -465,7 +476,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             className="flex items-center gap-2.5 min-w-0 text-left flex-1"
           >
             {/* AoH3 Mini Illustrated Terrain + Flag Crest */}
-            <div className="hud-province-thumb relative w-12 h-10 rounded-xl overflow-hidden border border-amber-500/40 shrink-0 shadow">
+            <div className="hud-province-thumb relative w-12 h-10 rounded-xl overflow-hidden border border-[#caa15a]/45 shrink-0 shadow">
               <TerrainPanoramaSvg
                 terrain={territory.terrain || 'OVA'}
                 fortLevel={territory.buildings.fortress}
@@ -485,60 +496,69 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs sm:text-sm font-bold text-white truncate">
-                  {titleText}
+                <span className="text-xs sm:text-sm font-bold text-[#faf3e3] truncate flex items-center gap-1">
+                  {territory.isCapital && (
+                    <AoH3GlyphSvg name="star" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                  )}
+                  <span className="truncate">{titleText}</span>
                 </span>
                 {straitBadge ? (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-sky-500/20 text-sky-300 border border-sky-500/40 shrink-0">
-                    ⚓ +{straitBadge.dailyTollShare}G
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-[#caa15a]/20 text-[#e0b86e] border border-[#caa15a]/45 shrink-0 inline-flex items-center gap-0.5">
+                    <AoH3GlyphSvg name="anchor" className="w-2.5 h-2.5 shrink-0" />
+                    <span>+{straitBadge.dailyTollShare}G</span>
                   </span>
                 ) : isPlayerOwned ? (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shrink-0">
-                    🛡 BİZİM EYALET
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-[#caa15a]/20 text-[#e0b86e] border border-[#caa15a]/50 shrink-0 inline-flex items-center gap-0.5">
+                    <AoH3GlyphSvg name="shield" className="w-2.5 h-2.5 shrink-0" />
+                    <span>BİZİM EYALET</span>
                   </span>
                 ) : atWar ? (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-rose-500/30 text-rose-200 border border-rose-500/60 shrink-0">
-                    ⚔️ DÜŞMAN
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-rose-500/30 text-rose-200 border border-rose-500/60 shrink-0 inline-flex items-center gap-0.5">
+                    <AoH3GlyphSvg name="sword" className="w-2.5 h-2.5 shrink-0" />
+                    <span>DÜŞMAN</span>
                   </span>
                 ) : isAllied ? (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-sky-500/25 text-sky-200 border border-sky-500/50 shrink-0">
-                    🤝 MÜTTEFİK
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-[#caa15a]/20 text-[#f3ead7] border border-[#caa15a]/50 shrink-0 inline-flex items-center gap-0.5">
+                    <AoH3GlyphSvg name="handshake" className="w-2.5 h-2.5 shrink-0" />
+                    <span>MÜTTEFİK</span>
                   </span>
                 ) : (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#1b1510] text-[#d8cbb5] border border-[#3a2f22] shrink-0">
                     TARAFSIZ
                   </span>
                 )}
                 {territory.isAssimilating && (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-orange-500/20 text-orange-300 border border-orange-500/50 shrink-0">
-                    🌍 Asimile %{Math.round(territory.assimilation ?? 30)}
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-[#caa15a]/20 text-[#e0b86e] border border-[#caa15a]/50 shrink-0 inline-flex items-center gap-0.5">
+                    <AoH3GlyphSvg name="globe" className="w-2.5 h-2.5 shrink-0" />
+                    <span>Asimile %{Math.round(territory.assimilation ?? 30)}</span>
                   </span>
                 )}
                 {territory.constructionQueue && territory.constructionQueue.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/50 shrink-0">
-                    🔨 İnşa ({territory.constructionQueue[0].totalDays - territory.constructionQueue[0].progressDays}g)
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-[#caa15a]/20 text-[#e0b86e] border border-[#caa15a]/50 shrink-0 inline-flex items-center gap-0.5">
+                    <AoH3GlyphSvg name="hammer" className="w-2.5 h-2.5 shrink-0" />
+                    <span>İnşa ({territory.constructionQueue[0].totalDays - territory.constructionQueue[0].progressDays}g)</span>
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-300 truncate mt-0.5 font-mono-num">
-                <span className="text-slate-400 truncate max-w-[100px] font-sans">
+              <div className="flex items-center gap-1.5 text-[11px] text-[#d8cbb5] truncate mt-0.5 font-mono-num">
+                <span className="text-[#b8a990] truncate max-w-[100px] font-sans">
                   {cleanOwnerName}
                 </span>
-                <span className="text-slate-600">·</span>
+                <span className="text-[#6e604c]">·</span>
                 <span
                   className={`font-bold shrink-0 ${
                     isPlayerOwned
-                      ? 'text-emerald-300'
+                      ? 'text-[#e0b86e]'
                       : atWar
                       ? 'text-rose-300'
-                      : 'text-amber-300'
+                      : 'text-[#d8cbb5]'
                   }`}
                 >
                   {hasIntel ? (
                     <>
                       {formatTroopsShort(territory.garrison)}
-                      <span className="hud-landscape-hide text-[10px] text-slate-300 font-sans">
+                      <span className="hud-landscape-hide text-[10px] text-[#d8cbb5] font-sans">
                         {' '}· {armyGen.infantryShort}: {infK}B · {armyGen.armorShort}: {armK}B · {armyGen.airArtilleryShort}: {airK}B
                       </span>
                     </>
@@ -546,32 +566,34 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                     '? İstihbarat'
                   )}
                 </span>
-                <span className="text-slate-600">·</span>
+                <span className="text-[#6e604c]">·</span>
                 <span
-                  className="text-amber-300 font-bold shrink-0"
+                  className="text-[#e0b86e] font-bold shrink-0 inline-flex items-center gap-0.5"
                   title={`Şehir Gelişim Puanı: ${dev.developmentScore} (${dev.tierLabel})`}
                 >
-                  ★{dev.developmentScore}P
+                  <AoH3GlyphSvg name="star" className="w-2.5 h-2.5 shrink-0" />
+                  <span>{dev.developmentScore}P</span>
                 </span>
-                <span className="text-slate-600">·</span>
+                <span className="text-[#6e604c]">·</span>
                 <span
-                  className="text-emerald-300 font-bold shrink-0 font-sans"
+                  className="text-[#f3ead7] font-bold shrink-0 font-sans inline-flex items-center gap-0.5"
                   title={`${resMeta.name}: Ham ${dev.baseResourceValue}A → Yatırımlı ${dev.effectiveResourceValue} Altın/gün (×${dev.totalInvestmentMult} Yatırım Çarpanı)`}
                 >
-                  {resMeta.icon} {resMeta.shortName} {dev.effectiveResourceValue}A
+                  <ResourceSvg resource={territory.resource} className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                  <span>{resMeta.shortName} {dev.effectiveResourceValue}A</span>
                 </span>
-                <span className="hidden md:inline text-slate-600">·</span>
-                <span className="hidden md:inline text-slate-300 truncate max-w-[85px] font-sans">
+                <span className="hidden md:inline text-[#6e604c]">·</span>
+                <span className="hidden md:inline text-[#d8cbb5] truncate max-w-[85px] font-sans">
                   {terrainMeta.name}
                 </span>
                 {hasIntel && (
                   <>
-                    <span className="hidden sm:inline text-slate-600">·</span>
+                    <span className="hidden sm:inline text-[#6e604c]">·</span>
                     <span
                       className={`hidden sm:inline shrink-0 ${
                         isOverSupply
                           ? 'text-rose-400 font-bold'
-                          : 'text-slate-400'
+                          : 'text-[#b8a990]'
                       }`}
                       title={`${seasonInfo.name} İkmal Limiti: ${supplyLimit.toLocaleString('tr-TR')} asker (${isOverSupply ? 'Limit aşıldı — haftalık yıpranma riski!' : 'Güvenli ikmal'})`}
                       data-testid="province-supply-status"
@@ -589,7 +611,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             <button
               onClick={() => cycleOwnedProvince(1)}
               title="Sonraki Eyaletimiz / Ordumuz"
-              className="w-7 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-amber-400 shrink-0"
+              className="w-7 h-9 rounded-xl bg-[#1b1510] hover:bg-[#2a2117] border border-[#3a2f22] flex items-center justify-center text-[#e0b86e] shrink-0"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -603,7 +625,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
             }}
             title="Seçimi Kaldır"
             aria-label="Eyalet seçimini kaldır"
-            className="w-7 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white shrink-0"
+            className="w-7 h-9 rounded-xl bg-[#1b1510] hover:bg-[#2a2117] border border-[#3a2f22] flex items-center justify-center text-[#b8a990] hover:text-[#faf3e3] shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -617,10 +639,14 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                 sound.playWarHorn();
                 onOpenBattleOverview();
               }}
-              className="min-h-[36px] px-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-[11px] font-bold flex items-center justify-center gap-1 shadow-lg shadow-red-950/60 animate-pulse transition-all whitespace-nowrap shrink-0"
+              className="min-h-[36px] px-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-[#8f6a34] hover:from-rose-600 hover:to-[#caa15a] text-[#faf3e3] text-[11px] font-bold flex items-center justify-center gap-1 shadow-lg animate-pulse transition-all whitespace-nowrap shrink-0"
             >
-              <Swords className="w-3.5 h-3.5 shrink-0" />
-              <span>{territory.siege ? '♜ Kuşatma' : '⚔️ Muharebe'}</span>
+              {territory.siege ? (
+                <AoH3GlyphSvg name="fortress" className="w-3.5 h-3.5 shrink-0" />
+              ) : (
+                <Swords className="w-3.5 h-3.5 shrink-0" />
+              )}
+              <span>{territory.siege ? 'Kuşatma' : 'Muharebe'}</span>
             </button>
           )}
 
@@ -637,8 +663,8 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               title="Ordunun tamamını (%100) doğrudan seçeceğiniz şehre hareket ettirin"
               className={`min-h-[36px] px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 ${
                 isOrderActive
-                  ? 'bg-sky-500 text-slate-950 animate-pulse'
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                  ? 'bg-[#f3ead7] text-[#14100c] animate-pulse'
+                  : 'bg-[#caa15a] hover:bg-[#e0b86e] text-[#14100c]'
               }`}
             >
               <Navigation className="w-3.5 h-3.5 shrink-0" />
@@ -657,11 +683,11 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               title="Ordudan %25, %50 veya %75 ayırarak hareket ettir"
               className={`min-h-[36px] px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 ${
                 splitOpen
-                  ? 'bg-amber-500/25 border-amber-400 text-amber-200'
-                  : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  ? 'bg-[#caa15a]/25 border-[#e0b86e] text-[#f3ead7]'
+                  : 'bg-[#1b1510] hover:bg-[#261e16] border-[#caa15a]/35 text-[#f3ead7]'
               }`}
             >
-              <Scissors className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <Scissors className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
               <span>Böl</span>
             </button>
           )}
@@ -676,9 +702,9 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                 onMergeArmies(territory.id);
               }}
               title="Komşu şehirlerdeki güvenli yedek birlikleri bu merkezde birleştir"
-              className="min-h-[36px] px-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-sky-500/40 text-sky-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
+              className="min-h-[36px] px-2.5 rounded-xl bg-[#1b1510] hover:bg-[#261e16] border border-[#caa15a]/40 text-[#f3ead7] text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
             >
-              <Layers className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+              <Layers className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
               <span>Birleştir</span>
             </button>
           )}
@@ -702,10 +728,10 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               }
               className={`min-h-[36px] px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 ${
                 isUnderCombat
-                  ? 'bg-slate-900/50 border-slate-800 text-slate-500 cursor-not-allowed'
+                  ? 'bg-[#1b1510]/50 border-[#3a2f22] text-[#7e705a] cursor-not-allowed'
                   : disbandOpen
                   ? 'bg-rose-600/30 border-rose-400 text-rose-200'
-                  : 'bg-slate-900/90 hover:bg-rose-950/60 border-rose-500/40 text-rose-300'
+                  : 'bg-[#1b1510] hover:bg-rose-950/60 border-rose-500/40 text-rose-300'
               }`}
             >
               <Trash2 className="w-3.5 h-3.5 shrink-0" />
@@ -725,9 +751,10 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                   onAssimilateTerritory(territory.id);
                 }}
                 title="Fethedilen şehri asimile ederek %100 Öz Vatan (Core) yap ve isyan riskini düşür (180 Altın)"
-                className="min-h-[36px] px-2.5 rounded-xl bg-orange-500/20 hover:bg-orange-500/35 border border-orange-500/55 text-orange-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
+                className="min-h-[36px] px-2.5 rounded-xl bg-[#261d13] hover:bg-[#35281a] border border-[#caa15a]/55 text-[#f3ead7] text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
               >
-                <span>🌍 Asimile Et (180A)</span>
+                <AoH3GlyphSvg name="globe" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                <span>Asimile Et (180A)</span>
               </button>
             )}
 
@@ -746,10 +773,10 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                 }
               }}
               title="Asker Bas: Piyade, Süvari/Zırhlı, Topçu/SİHA ve Toplu Asker Basma"
-              className={`min-h-[36px] px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`min-h-[36px] px-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer border ${
                 recruitOpen
-                  ? 'bg-emerald-400 text-slate-950 shadow'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  ? 'bg-[#caa15a] text-[#14100c] border-[#f3ead7] shadow'
+                  : 'bg-[#2a2117] hover:bg-[#382b1d] text-[#f3ead7] border-[#caa15a]/55'
               }`}
             >
               <UserPlus className="w-3.5 h-3.5 shrink-0" />
@@ -766,9 +793,9 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               }}
               aria-label={`${cleanOwnerName} diplomasi ağını incele`}
               title={`${cleanOwnerName} ülkesinin savaşlarını, müttefiklerini ve paktlarını gör`}
-              className="flex-1 sm:flex-initial min-h-[36px] px-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/50 text-sky-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors"
+              className="flex-1 sm:flex-initial min-h-[36px] px-2.5 rounded-xl bg-[#1b1510] hover:bg-[#261e16] border border-[#caa15a]/45 text-[#f3ead7] text-[11px] font-bold flex items-center justify-center gap-1 transition-colors"
             >
-              <Globe className="w-3.5 h-3.5 text-sky-300 shrink-0" />
+              <Globe className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
               <span>Ülke</span>
             </button>
           )}
@@ -778,16 +805,16 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
               sound.playClick();
               onOpenFullDrawer();
             }}
-            className="flex-1 sm:flex-initial min-h-[36px] px-2.5 sm:px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
+            className="flex-1 sm:flex-initial min-h-[36px] px-2.5 sm:px-3 rounded-xl bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/35 text-[#f3ead7] text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors"
           >
             {isPlayerOwned ? (
               <>
-                <Landmark className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <Landmark className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
                 <span>İnşa & Eyalet</span>
               </>
             ) : (
               <>
-                <Eye className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <Eye className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
                 <span>İncele</span>
               </>
             )}

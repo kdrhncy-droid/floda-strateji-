@@ -680,8 +680,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       {seaArmyOrderSourceId &&
         !selectedSeaArmyId &&
         seaArmies.some((s) => s.id === seaArmyOrderSourceId) && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-sky-950/95 border border-sky-400/55 text-sky-100 shadow-xl max-w-[calc(100vw-1.5rem)]">
-            <Crosshair className="w-4 h-4 text-sky-300 shrink-0" />
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#14100c]/95 border border-[#caa15a]/55 text-[#f3ead7] shadow-xl max-w-[calc(100vw-1.5rem)]">
+            <Crosshair className="w-4 h-4 text-[#e0b86e] shrink-0" />
             <span className="text-xs font-medium truncate">
               <strong>
                 {seaArmies.find((s) => s.id === seaArmyOrderSourceId)?.name ||
@@ -691,7 +691,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
             </span>
             <button
               onClick={onCancelArmyOrder}
-              className="px-2.5 py-1 text-xs font-semibold bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-lg border border-slate-700 whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-2.5 py-1 text-xs font-semibold bg-[#1b1510] hover:bg-[#2a2117] text-[#f3ead7] rounded-lg border border-[#caa15a]/35 whitespace-nowrap shrink-0 cursor-pointer"
             >
               İptal
             </button>

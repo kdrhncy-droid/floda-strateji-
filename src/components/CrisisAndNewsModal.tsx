@@ -164,7 +164,7 @@ export const CrisisAndNewsModal: React.FC<CrisisAndNewsModalProps> = ({
                           <ShieldAlert className="w-3.5 h-3.5 text-orange-400" />
                         )}
                         {ev.type === 'ECONOMY' && (
-                          <TrendingUp className="w-3.5 h-3.5 text-sky-400" />
+                          <TrendingUp className="w-3.5 h-3.5 text-[#e0b86e]" />
                         )}
                         <span>{ev.title}</span>
                       </span>

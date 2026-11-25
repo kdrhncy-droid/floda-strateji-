@@ -88,7 +88,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
       ) : offlineStatus === 'CACHING' ? (
         <div
           title="Oyun dosyaları çevrimdışı kullanım için önbelleğe alınıyor"
-          className="px-2 py-1 rounded-lg bg-sky-950/70 border border-sky-500/40 text-sky-200 text-[10.5px] font-semibold flex items-center gap-1 whitespace-nowrap"
+          className="px-2 py-1 rounded-lg bg-[#14100c]/90 border border-[#caa15a]/45 text-[#e0b86e] text-[10.5px] font-semibold flex items-center gap-1 whitespace-nowrap"
         >
           <Loader2 className="w-3 h-3 animate-spin shrink-0" />
           <span className={compact ? 'hidden xl:inline' : 'hidden sm:inline'}>
@@ -164,8 +164,9 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
                   <strong>Floda Strategy</strong>, telefonunuza tam ekran bir mobil oyun olarak kurulabilir ve internetsiz oynanabilir:
                 </p>
                 {offlineStatus === 'READY' && (
-                  <div className="rounded-lg bg-emerald-950/60 border border-emerald-500/40 px-3 py-2 text-emerald-200 font-semibold">
-                    ✓ Çevrimdışı önbellek hazır! Tüm harita, ses ve oyun dosyaları cihaza indirildi.
+                  <div className="rounded-lg bg-emerald-950/60 border border-emerald-500/40 px-3 py-2 text-emerald-200 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Çevrimdışı önbellek hazır! Tüm harita, ses ve oyun dosyaları cihaza indirildi.</span>
                   </div>
                 )}
                 {isIOS ? (

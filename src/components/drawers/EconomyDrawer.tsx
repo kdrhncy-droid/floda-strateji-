@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Anchor, Compass, Layers, Swords, TrendingUp } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { BuildingType } from '../../types/game';
 import { CommandDrawersProps } from './drawerTypes';
 import { BUILDINGS, RESOURCE_INFO } from '../../data/world2026Data';
@@ -10,6 +10,15 @@ import {
   TRADE_RAID_INFLUENCE_COST,
   TRADE_RAID_MANPOWER_COST,
 } from '../../engine/straitsAndTradeEngine';
+import { cleanNationName, cleanProvinceName } from '../../utils/formatters';
+import {
+  AoH3GlyphName,
+  AoH3GlyphSvg,
+  AoH3MenuBanner,
+  ResourceSvg,
+} from '../illustrations/AoH3Illustrations';
+
+type EconomyTab = 'BUDGET' | 'BATCH' | 'CITIES';
 
 export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
   playerNation,
@@ -29,6 +38,7 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
   onSelectTerritory,
   gameMode = 'EMPIRES_1440',
 }) => {
+  const [activeTab, setActiveTab] = useState<EconomyTab>('BUDGET');
   const [batchBuilding, setBatchBuilding] = useState<BuildingType>('factory');
   const is1440 = gameMode === 'EMPIRES_1440';
   const tradeDetails = playerEconomy.tradeDetails;
@@ -99,623 +109,756 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
     }))
     .sort((a, b) => b.dev.developmentScore - a.dev.developmentScore);
 
+  const maxDevScore = Math.max(
+    100,
+    ownedTerritoryDevRows[0]?.dev.developmentScore ?? 100
+  );
+
+  const hasBatchActions = Boolean(
+    onBatchAssimilate ||
+      onBatchStabilityFestival ||
+      onBatchUpgradeBuilding ||
+      onBatchBorderMobilization
+  );
+
+  const bannerConfig =
+    activeTab === 'BUDGET'
+      ? {
+          artKey: 'TREASURY' as const,
+          branch: 'ECONOMY' as const,
+          title: is1440 ? 'Hazine-i Hümâyûn & Maliye' : 'Ulusal Hazine & Bütçe',
+          subtitle: `${Math.floor(playerNation.treasury).toLocaleString('tr-TR')} Altın · Net ${
+            playerEconomy.netDailyGold >= 0
+              ? `+${playerEconomy.netDailyGold}`
+              : playerEconomy.netDailyGold
+          } A/gün`,
+          icon: 'gold' as AoH3GlyphName,
+        }
+      : activeTab === 'BATCH'
+      ? {
+          artKey: 'ENGINEERING' as const,
+          branch: 'ADMINISTRATION' as const,
+          title: 'Tek Tık Toplu Yönetim',
+          subtitle: `${ownedTerritories.length} Eyalet · ${nonCorePendingCount} Entegrasyon · ${borderCityCount} Sınır`,
+          icon: 'hammer' as AoH3GlyphName,
+        }
+      : {
+          artKey: 'TRADE' as const,
+          branch: 'ECONOMY' as const,
+          title: is1440 ? 'Boğazlar, Kervanlar & Şehirler' : 'Boğazlar & Küresel Ticaret',
+          subtitle: `${tradeDetails.controlledStraits.length} Boğaz · +${playerEconomy.caravanTradeIncome} A/gün Hat`,
+          icon: 'anchor' as AoH3GlyphName,
+        };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-      {/* Income & Expense Breakdown (6 cols) */}
-      <div className="lg:col-span-6 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3">
-        <h3 className="text-sm font-bold text-white">
-          Günlük Hazine Gelir ve Gider Bilançosu
-        </h3>
+    <div className="space-y-3">
+      {/* AoH3 Illustrated Oil-Painting Header Banner */}
+      <AoH3MenuBanner
+        artKey={bannerConfig.artKey}
+        branch={bannerConfig.branch}
+        title={bannerConfig.title}
+        subtitle={bannerConfig.subtitle}
+        icon={bannerConfig.icon}
+        rightSlot={
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#14100c]/85 border border-[#caa15a]/35 font-mono-num text-[11px] text-[#e0b86e]">
+            <span>Enflasyon %{playerNation.inflation.toFixed(1)}</span>
+          </div>
+        }
+      />
 
-        <div className="space-y-2 text-xs">
-          <div className="flex justify-between py-1.5 border-b border-slate-800/80">
-            <span className="text-slate-300">
-              Vergi Gelirleri (%{playerNation.taxRate} Oran)
-            </span>
-            <span className="font-mono-num font-semibold text-emerald-400">
-              +{playerEconomy.taxIncome} Altın
-            </span>
-          </div>
-          <div className="flex justify-between py-1.5 border-b border-slate-800/80">
-            <span className="text-slate-300">
-              Sanayi & Stratejik Kaynak Üretimi
-            </span>
-            <span className="font-mono-num font-semibold text-emerald-400">
-              +{playerEconomy.productionIncome} Altın
-            </span>
-          </div>
-          <div className="flex justify-between py-1.5 border-b border-slate-800/80">
-            <span className="text-slate-300">
-              İç Pazar & Ticaret Antlaşmaları
-            </span>
-            <span className="font-mono-num font-semibold text-emerald-400">
-              +{domesticTrade} Altın
-            </span>
-          </div>
-          <div className="flex justify-between py-1.5 border-b border-slate-800/80">
-            <span className="text-amber-200 flex items-center gap-1.5">
-              <span>⚓ Stratejik Boğaz Gümrükleri</span>
-              {playerEconomy.seizedBlockadeIncome > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
-                  +{playerEconomy.seizedBlockadeIncome} Abluka
-                </span>
-              )}
-            </span>
-            <span className="font-mono-num font-semibold text-amber-300">
-              +{playerEconomy.straitTollIncome + playerEconomy.seizedBlockadeIncome} Altın
-            </span>
-          </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 py-1.5 border-b border-slate-800/80">
-            <div className="min-w-0">
-              <span className="text-sky-200">
-                {is1440
-                  ? '🐪 İpek & Baharat Kervan Geliri (Net)'
-                  : '🚢 Deniz & Lojistik Geliri (Net)'}
-              </span>
-              {playerEconomy.blockadePenaltyLoss > 0 && (
-                <p className="mt-0.5 text-[10px] leading-tight text-rose-300">
-                  Abluka kesintisi −{playerEconomy.blockadePenaltyLoss} Altın; net gelire zaten yansıtıldı.
-                </p>
-              )}
-            </div>
-            <span className="font-mono-num font-semibold text-sky-300">
-              +{playerEconomy.caravanTradeIncome} Altın
-            </span>
-          </div>
-          <div className="flex justify-between py-1.5 border-b border-slate-800/80">
-            <span className="text-slate-300">Vasal Devletlerden Haraç Geliri</span>
-            <span className="font-mono-num font-semibold text-emerald-400">
-              +{playerEconomy.vassalIncome} Altın
-            </span>
-          </div>
-          <div className="flex justify-between py-1.5 border-b border-slate-800/80">
-            <span className="text-slate-300">Üst Devlete Haraç Ödemesi</span>
-            <span className="font-mono-num font-semibold text-rose-400">
-              -{playerEconomy.vassalTributeOut} Altın
-            </span>
-          </div>
-          <div className="flex justify-between py-1.5 border-b border-slate-800/80">
-            <span className="text-slate-300">
-              Ordu Bakım Gideri (
-              {playerEconomy.totalGarrison.toLocaleString('tr-TR')} Asker)
-            </span>
-            <span className="font-mono-num font-semibold text-rose-400">
-              -{playerEconomy.militaryUpkeep} Altın
-            </span>
-          </div>
-          <div className="flex justify-between py-1.5 border-b border-slate-800/80">
-            <span className="text-slate-300">
-              Enflasyon Erimesi (%{playerNation.inflation.toFixed(1)})
-            </span>
-            <span className="font-mono-num font-semibold text-rose-400">
-              -{playerEconomy.inflationPenalty} Altın
-            </span>
-          </div>
+      {/* AoH3 3-Tab Economy Switcher + Live Treasury Strip */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#caa15a]/25">
+        <div
+          role="tablist"
+          aria-label="Ekonomi ve Hazine Sekmeleri"
+          className="grid grid-cols-3 gap-1 bg-[#120e0a] p-1 rounded-xl border border-[#caa15a]/30 w-full sm:w-auto"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'BUDGET'}
+            data-testid="eco-tab-budget"
+            onClick={() => setActiveTab('BUDGET')}
+            className={`min-h-[44px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'BUDGET'
+                ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow'
+                : 'text-[#d8cbb5] hover:text-[#faf3e3]'
+            }`}
+          >
+            <AoH3GlyphSvg name="gold" className="w-3.5 h-3.5 shrink-0" />
+            <span>Bütçe</span>
+          </button>
 
-          <div className="flex justify-between pt-2 text-sm font-bold">
-            <span className="text-white">Günlük Net Bütçe Dengesi</span>
-            <span
-              className={`font-mono-num ${
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'BATCH'}
+            data-testid="eco-tab-batch"
+            onClick={() => setActiveTab('BATCH')}
+            className={`min-h-[44px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'BATCH'
+                ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow'
+                : 'text-[#d8cbb5] hover:text-[#faf3e3]'
+            }`}
+          >
+            <AoH3GlyphSvg name="hammer" className="w-3.5 h-3.5 shrink-0" />
+            <span>Toplu İşlem</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'CITIES'}
+            data-testid="eco-tab-cities"
+            onClick={() => setActiveTab('CITIES')}
+            className={`min-h-[44px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'CITIES'
+                ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow'
+                : 'text-[#d8cbb5] hover:text-[#faf3e3]'
+            }`}
+          >
+            <AoH3GlyphSvg name="anchor" className="w-3.5 h-3.5 shrink-0" />
+            <span>Boğaz &amp; Şehir</span>
+          </button>
+        </div>
+
+        {/* Inline Treasury Summary */}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-mono-num text-[#c5b79e]">
+          <span>
+            Hazine:{' '}
+            <strong className="text-[#e0b86e]">
+              {Math.floor(playerNation.treasury).toLocaleString('tr-TR')} A
+            </strong>
+          </span>
+          <span className="text-[#caa15a]/40">·</span>
+          <span>
+            Net:{' '}
+            <strong
+              className={
                 playerEconomy.netDailyGold >= 0
-                  ? 'text-amber-400'
+                  ? 'text-emerald-400'
                   : 'text-rose-400'
-              }`}
+              }
             >
               {playerEconomy.netDailyGold >= 0
                 ? `+${playerEconomy.netDailyGold}`
                 : playerEconomy.netDailyGold}{' '}
-              Altın / Gün
-            </span>
-          </div>
-        </div>
-
-        {/* Monetary Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
-          <button
-            onClick={onCentralBankIntervention}
-            className="min-h-[44px] px-3 py-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-200 text-xs font-semibold flex flex-col items-center justify-center transition-colors"
-          >
-            <span>
-              {is1440
-                ? 'Sikke Tashihi & Narh Fermanı'
-                : 'Enflasyonla Mücadele Paketi'}
-            </span>
-            <span className="text-[10px] text-sky-400">
-              800 Altın → -%2.5 Enflasyon & +2 İstikrar
-            </span>
-          </button>
-          <button
-            onClick={onIssueWarBonds}
-            className="min-h-[44px] px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-xs font-semibold flex flex-col items-center justify-center transition-colors"
-          >
-            <span>
-              {is1440
-                ? 'İltizam & Sefer Akçesi Çıkar'
-                : 'Devlet Tahvili İhraç Et'}
-            </span>
-            <span className="text-[10px] text-amber-400">
-              +850 Altın Anında (+%4.5 Enflasyon · -6 İstikrar)
-            </span>
-          </button>
+              A/gün
+            </strong>
+          </span>
+          <span className="text-[#caa15a]/40">·</span>
+          <span>
+            Enflasyon{' '}
+            <strong className="text-[#f3ead7]">
+              %{playerNation.inflation.toFixed(1)}
+            </strong>
+          </span>
         </div>
       </div>
 
-      {/* Tax & Budget Sliders (6 cols) */}
-      <div className="lg:col-span-6 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-4">
-        <h3 className="text-sm font-bold text-white">
-          Vergi Oranı ve Ulusal Bütçe Kaydırıcıları
-        </h3>
+      {/* TAB 1: BÜTÇE */}
+      {activeTab === 'BUDGET' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Income & Expense Breakdown */}
+          <div className="lg:col-span-6 bg-[#14100c] border border-[#caa15a]/35 rounded-2xl p-4 space-y-2.5">
+            <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+              <AoH3GlyphSvg name="scroll" className="w-4 h-4 text-[#e0b86e]" />
+              <span>Günlük Hazine Bilançosu</span>
+            </h3>
 
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-slate-300 font-medium">
-              Ulusal Vergi Oranı (Yüksek vergi istikrarı zorlar)
-            </span>
-            <span className="font-mono-num font-bold text-amber-400">
-              %{playerNation.taxRate}
-            </span>
-          </div>
-          <input
-            type="range"
-            min={10}
-            max={60}
-            value={playerNation.taxRate}
-            onChange={(e) => onUpdateTaxRate(Number(e.target.value))}
-            className="w-full accent-amber-500 cursor-pointer"
-          />
-        </div>
-
-        {(
-          [
-            {
-              key: 'military',
-              label: 'Askeri Harcamalar (Ordu Taarruz Gücü)',
-              color: 'text-rose-400',
-            },
-            {
-              key: 'economy',
-              label: 'Sanayi Teşvikleri (Üretim Çıktısı)',
-              color: 'text-emerald-400',
-            },
-            {
-              key: 'research',
-              label: 'Bilim & Teknoloji Fonu (Araştırma Hızı)',
-              color: 'text-sky-400',
-            },
-            {
-              key: 'welfare',
-              label: 'Sosyal Refah (İstikrar & İsyan Önleme)',
-              color: 'text-purple-400',
-            },
-          ] as const
-        ).map((item) => (
-          <div key={item.key} className="space-y-1">
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-300">{item.label}</span>
-              <span className={`font-mono-num font-bold ${item.color}`}>
-                %{playerNation.budget[item.key]}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={10}
-              max={80}
-              value={playerNation.budget[item.key]}
-              onChange={(e) => onUpdateBudget(item.key, Number(e.target.value))}
-              className="w-full accent-amber-500 cursor-pointer"
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Stage 3.5: AoH2 DE / AoH3 Batch Empire Management (Toplu İmparatorluk Yönetimi) */}
-      {(onBatchAssimilate ||
-        onBatchStabilityFestival ||
-        onBatchUpgradeBuilding ||
-        onBatchBorderMobilization) && (
-        <div
-          data-testid="batch-empire-management-card"
-          className="lg:col-span-12 bg-slate-950/85 border border-sky-500/35 rounded-2xl p-4 space-y-3"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-            <div>
-              <h3 className="text-sm font-bold text-sky-300 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-sky-400 shrink-0" />
-                <span>Toplu İmparatorluk Yönetimi (Tek Tık Makro İdare)</span>
-              </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Büyük imparatorluklarda tek tek şehir gezmeden asimilasyon, şenlik, sınır seferberliği ve kıyı limanı dahil toplu inşaat başlatın.
-              </p>
-            </div>
-            <span className="font-mono-num text-xs text-amber-300 font-bold shrink-0">
-              Hazine: {Math.floor(playerNation.treasury).toLocaleString('tr-TR')} Altın
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {/* 1. Toplu Asimilasyon */}
-            {onBatchAssimilate && (
-              <button
-                type="button"
-                data-testid="batch-assimilate-btn"
-                disabled={nonCorePendingCount === 0 || playerNation.treasury < 180}
-                onClick={onBatchAssimilate}
-                className="p-3 rounded-xl bg-slate-900/90 hover:bg-emerald-950/50 border border-slate-800 hover:border-emerald-500/50 text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="text-xs font-bold text-white">
-                      🌍 Toplu Asimilasyon
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-mono-num text-[10px] font-bold shrink-0">
-                      {nonCorePendingCount} Şehir
-                    </span>
-                  </div>
-                  <p className="text-[10.5px] text-slate-400 mt-1 leading-snug">
-                    Yabancı/işgal altındaki şehirleri Öz Vatan sürecine alır (-12 huzursuzluk).
-                  </p>
-                </div>
-                <div className="text-[11px] font-mono-num font-bold text-amber-300">
-                  {nonCorePendingCount > 0
-                    ? `180G / Şehir (${(nonCorePendingCount * 180).toLocaleString('tr-TR')}G)`
-                    : 'Tüm Şehirler Öz Vatan'}
-                </div>
-              </button>
-            )}
-
-            {/* 2. Toplu Şenlik & İstikrar */}
-            {onBatchStabilityFestival && (
-              <button
-                type="button"
-                data-testid="batch-festival-btn"
-                disabled={restlessCount === 0 || playerNation.treasury < 140}
-                onClick={onBatchStabilityFestival}
-                className="p-3 rounded-xl bg-slate-900/90 hover:bg-amber-950/40 border border-slate-800 hover:border-amber-500/50 text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="text-xs font-bold text-white">
-                      🎉 Toplu Şenlik & Dirlik
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 font-mono-num text-[10px] font-bold shrink-0">
-                      {restlessCount} Huzursuz
-                    </span>
-                  </div>
-                  <p className="text-[10.5px] text-slate-400 mt-1 leading-snug">
-                    Huzursuz (%10+) şehirlerde -15 isyan riski ve +2 Ulusal İstikrar sağlar.
-                  </p>
-                </div>
-                <div className="text-[11px] font-mono-num font-bold text-amber-300">
-                  {restlessCount > 0
-                    ? `140G / Şehir (${(restlessCount * 140).toLocaleString('tr-TR')}G)`
-                    : 'Asayiş Yerinde'}
-                </div>
-              </button>
-            )}
-
-            {/* 3. Sınır Seferberliği */}
-            {onBatchBorderMobilization && (
-              <button
-                type="button"
-                data-testid="batch-border-mob-btn"
-                disabled={
-                  borderCityCount === 0 ||
-                  playerNation.treasury < borderMobUnitGold ||
-                  playerNation.manpower < 1000
-                }
-                onClick={onBatchBorderMobilization}
-                className="p-3 rounded-xl bg-slate-900/90 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/50 text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="text-xs font-bold text-white">
-                      🛡️ Sınır Seferberliği
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 font-mono-num text-[10px] font-bold shrink-0">
-                      {borderCityCount} Sınır
-                    </span>
-                  </div>
-                  <p className="text-[10.5px] text-slate-400 mt-1 leading-snug">
-                    Yabancı komşulu zayıf sınır şehirlerine +1.000 Piyade takviye eder.
-                  </p>
-                </div>
-                <div className="text-[11px] font-mono-num font-bold text-amber-300">
-                  {borderCityCount > 0
-                    ? `${borderMobUnitGold}G + 1.000 İG / Şehir`
-                    : 'Sınır Şehri Yok'}
-                </div>
-              </button>
-            )}
-
-            {/* 4. Toplu Bina / Kıyı Limanı İnşası */}
-            {onBatchUpgradeBuilding && (
-              <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between gap-2">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="text-xs font-bold text-white">
-                      🏗️ Toplu Bina İnşası
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 font-mono-num text-[10px] font-bold shrink-0">
-                      {eligibleBatchBuildCities.length} Uygun
-                    </span>
-                  </div>
-                  <select
-                    aria-label="Toplu inşa edilecek bina türü"
-                    data-testid="batch-building-select"
-                    value={batchBuilding}
-                    onChange={(e) => setBatchBuilding(e.target.value as BuildingType)}
-                    className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-100 font-medium focus:outline-none focus:border-amber-400"
-                  >
-                    {BUILDINGS.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                        {b.requiresCoastal ? ' (Yalnızca Kıyı)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="button"
-                  data-testid="batch-build-btn"
-                  disabled={eligibleBatchBuildCities.length === 0}
-                  onClick={() => onBatchUpgradeBuilding(batchBuilding)}
-                  className="w-full min-h-[36px] px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-extrabold transition-colors disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {eligibleBatchBuildCities.length > 0
-                    ? `İnşayı Başlat (${eligibleBatchBuildCities.length}Ş · ${totalBatchBuildCost.toLocaleString('tr-TR')}G)`
-                    : batchBldDef.requiresCoastal
-                    ? 'Uygun Kıyı Şehri Yok'
-                    : 'Uygun Şehir Yok'}
-                </button>
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                <span className="text-[#d8cbb5]">
+                  Vergi (%{playerNation.taxRate})
+                </span>
+                <span className="font-mono-num font-semibold text-emerald-400">
+                  +{playerEconomy.taxIncome} A
+                </span>
               </div>
-            )}
+              <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                <span className="text-[#d8cbb5]">Üretim &amp; Kaynak</span>
+                <span className="font-mono-num font-semibold text-emerald-400">
+                  +{playerEconomy.productionIncome} A
+                </span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                <span className="text-[#d8cbb5]">İç Pazar &amp; Ticaret</span>
+                <span className="font-mono-num font-semibold text-emerald-400">
+                  +{domesticTrade} A
+                </span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                <span className="text-[#f3ead7] flex items-center gap-1.5">
+                  <AoH3GlyphSvg name="anchor" className="w-3.5 h-3.5 text-[#e0b86e]" />
+                  <span>Boğaz Gümrükleri</span>
+                  {playerEconomy.seizedBlockadeIncome > 0 && (
+                    <span className="text-[10px] text-[#e0b86e] font-mono-num">
+                      (+{playerEconomy.seizedBlockadeIncome} Abluka)
+                    </span>
+                  )}
+                </span>
+                <span className="font-mono-num font-semibold text-[#e0b86e]">
+                  +{playerEconomy.straitTollIncome + playerEconomy.seizedBlockadeIncome} A
+                </span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                <span className="text-[#f3ead7] flex items-center gap-1.5">
+                  <AoH3GlyphSvg
+                    name={is1440 ? 'caravan' : 'anchor'}
+                    className="w-3.5 h-3.5 text-[#e0b86e]"
+                  />
+                  <span>{is1440 ? 'Kervan Geliri' : 'Deniz Lojistiği'}</span>
+                  {playerEconomy.blockadePenaltyLoss > 0 && (
+                    <span className="text-[10px] font-mono-num text-rose-400">
+                      (−{playerEconomy.blockadePenaltyLoss} Abluka)
+                    </span>
+                  )}
+                </span>
+                <span className="font-mono-num font-semibold text-[#e0b86e]">
+                  +{playerEconomy.caravanTradeIncome} A
+                </span>
+              </div>
+              {playerEconomy.vassalIncome > 0 && (
+                <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                  <span className="text-[#d8cbb5]">Vasal Haracı</span>
+                  <span className="font-mono-num font-semibold text-emerald-400">
+                    +{playerEconomy.vassalIncome} A
+                  </span>
+                </div>
+              )}
+              {playerEconomy.vassalTributeOut > 0 && (
+                <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                  <span className="text-[#d8cbb5]">Üst Devlet Haracı</span>
+                  <span className="font-mono-num font-semibold text-rose-400">
+                    -{playerEconomy.vassalTributeOut} A
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                <span className="text-[#d8cbb5]">
+                  Ordu Bakımı ({(playerEconomy.totalGarrison / 1000).toFixed(1)}B)
+                </span>
+                <span className="font-mono-num font-semibold text-rose-400">
+                  -{playerEconomy.militaryUpkeep} A
+                </span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-[#caa15a]/15">
+                <span className="text-[#d8cbb5]">
+                  Enflasyon (%{playerNation.inflation.toFixed(1)})
+                </span>
+                <span className="font-mono-num font-semibold text-rose-400">
+                  -{playerEconomy.inflationPenalty} A
+                </span>
+              </div>
+
+              <div className="flex justify-between pt-2 text-sm font-bold">
+                <span className="text-[#f3ead7]">Net Bütçe</span>
+                <span
+                  className={`font-mono-num ${
+                    playerEconomy.netDailyGold >= 0
+                      ? 'text-[#e0b86e]'
+                      : 'text-rose-400'
+                  }`}
+                >
+                  {playerEconomy.netDailyGold >= 0
+                    ? `+${playerEconomy.netDailyGold}`
+                    : playerEconomy.netDailyGold}{' '}
+                  A/gün
+                </span>
+              </div>
+            </div>
+
+            {/* Monetary Actions (Unified Obsidian + Antique Gold) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onCentralBankIntervention}
+                className="min-h-[44px] px-3 py-2 rounded-xl bg-[#1b1510] hover:bg-[#261d14] border border-[#caa15a]/45 text-[#f3ead7] text-xs font-bold flex flex-col items-center justify-center transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <AoH3GlyphSvg name="scale" className="w-3.5 h-3.5 text-[#e0b86e]" />
+                  <span>{is1440 ? 'Sikke Tashihi' : 'Enflasyon Müdahalesi'}</span>
+                </span>
+                <span className="text-[10px] font-mono-num text-[#e0b86e]">
+                  800 A · -%2.5 Enf · +2 İst
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={onIssueWarBonds}
+                className="min-h-[44px] px-3 py-2 rounded-xl bg-[#1b1510] hover:bg-[#261d14] border border-[#caa15a]/45 text-[#f3ead7] text-xs font-bold flex flex-col items-center justify-center transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <AoH3GlyphSvg name="gold" className="w-3.5 h-3.5 text-[#e0b86e]" />
+                  <span>{is1440 ? 'Sefer Akçesi' : 'Devlet Tahvili'}</span>
+                </span>
+                <span className="text-[10px] font-mono-num text-[#e0b86e]">
+                  +850 A · +%4.5 Enf · -6 İst
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tax & Budget Sliders (Fixed Obsidian + Antique Gold) */}
+          <div className="lg:col-span-6 bg-[#14100c] border border-[#caa15a]/35 rounded-2xl p-4 space-y-3.5">
+            <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+              <AoH3GlyphSvg name="scale" className="w-4 h-4 text-[#e0b86e]" />
+              <span>Vergi &amp; Harcama Oranları</span>
+            </h3>
+
+            <div className="p-2.5 rounded-xl bg-[#1b1510] border border-[#caa15a]/30 space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-[#f3ead7] font-semibold">
+                  Ulusal Vergi Oranı
+                </span>
+                <span className="font-mono-num font-bold text-[#e0b86e]">
+                  %{playerNation.taxRate}
+                </span>
+              </div>
+              <input
+                type="range"
+                aria-label="Ulusal Vergi Oranı"
+                min={10}
+                max={60}
+                value={playerNation.taxRate}
+                onChange={(e) => onUpdateTaxRate(Number(e.target.value))}
+                className="w-full h-6 accent-[#e0b86e] cursor-pointer"
+              />
+            </div>
+
+            {(
+              [
+                {
+                  key: 'military',
+                  label: 'Askerî Harcama',
+                  icon: 'sword' as AoH3GlyphName,
+                },
+                {
+                  key: 'economy',
+                  label: 'Sanayi Yatırımı',
+                  icon: 'hammer' as AoH3GlyphName,
+                },
+                {
+                  key: 'research',
+                  label: 'Bilim & Araştırma',
+                  icon: 'science' as AoH3GlyphName,
+                },
+                {
+                  key: 'welfare',
+                  label: 'Sosyal Refah',
+                  icon: 'scale' as AoH3GlyphName,
+                },
+              ] as const
+            ).map((item) => (
+              <div
+                key={item.key}
+                className="p-2.5 rounded-xl bg-[#1b1510] border border-[#caa15a]/25 space-y-1"
+              >
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#d8cbb5] font-semibold flex items-center gap-1.5">
+                    <AoH3GlyphSvg
+                      name={item.icon}
+                      className="w-3.5 h-3.5 text-[#e0b86e] shrink-0"
+                    />
+                    <span>{item.label}</span>
+                  </span>
+                  <span className="font-mono-num font-bold text-[#e0b86e]">
+                    %{playerNation.budget[item.key]}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  aria-label={item.label}
+                  min={10}
+                  max={80}
+                  value={playerNation.budget[item.key]}
+                  onChange={(e) =>
+                    onUpdateBudget(item.key, Number(e.target.value))
+                  }
+                  className="w-full h-6 accent-[#e0b86e] cursor-pointer"
+                />
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Stage 3: Strategic Straits, Blockades & Trade Corridors Command Center (Full 12 cols) */}
-      <div className="lg:col-span-12 bg-slate-950/85 border border-amber-500/35 rounded-2xl p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-800 pb-3">
-          <div>
-            <h3 className="text-sm font-bold text-amber-300 flex items-center gap-2">
-              <Anchor className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>
-                Stratejik Boğaz Hakimiyeti, Deniz Ablukası ve Ticaret Koridorları
-              </span>
+      {/* TAB 2: TOPLU İŞLEM */}
+      {activeTab === 'BATCH' && (
+        <div
+          data-testid="batch-empire-management-card"
+          className="bg-[#14100c] border border-[#caa15a]/40 rounded-2xl p-4 space-y-3"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-[#caa15a]/20 pb-2">
+            <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+              <AoH3GlyphSvg name="hammer" className="w-4 h-4 text-[#e0b86e] shrink-0" />
+              <span>Tek Tık Toplu Yönetim</span>
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Boğaz kıyılarını tutan devlet gümrük geliri toplar ve savaşta düşman ordularının deniz geçişini ve ticaretini ablukaya alır. Harita üstünden <strong>Ekonomi</strong> modunu açarak kervan akışını canlı izleyebilirsiniz.
-            </p>
+            <span className="font-mono-num text-xs text-[#e0b86e] font-bold shrink-0">
+              {Math.floor(playerNation.treasury).toLocaleString('tr-TR')} Altın
+            </span>
           </div>
 
-          {onRaidEnemyTradeRoutes && (
-            <button
-              disabled={!canRaidTrade}
-              onClick={onRaidEnemyTradeRoutes}
-              className={`min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold flex flex-col items-center justify-center shrink-0 border transition-colors ${
-                canRaidTrade
-                  ? 'bg-rose-600/25 hover:bg-rose-600/40 border-rose-500/60 text-rose-100 shadow-md'
-                  : 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed'
-              }`}
-            >
-              <span className="flex items-center gap-1.5">
-                <Swords className="w-3.5 h-3.5 text-rose-400" />
-                <span>
-                  {is1440
-                    ? '🏴‍☠️ Düşman Kervanlarına Akın Düzenle'
-                    : '🏴‍☠️ Düşman Ticaret Konvoyunu Vur'}
-                </span>
-              </span>
-              <span className="text-[10px] font-mono-num opacity-85">
-                {isPlayerInWar
-                  ? `${TRADE_RAID_INFLUENCE_COST} ⚜ Nüfuz · ${TRADE_RAID_MANPOWER_COST} Asker → +180..680G Ganimet`
-                  : 'Sadece aktif savaş sırasında kullanılabilir'}
-              </span>
-            </button>
-          )}
-        </div>
+          {hasBatchActions ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              {onBatchAssimilate && (
+                <button
+                  type="button"
+                  data-testid="batch-assimilate-btn"
+                  disabled={
+                    nonCorePendingCount === 0 || playerNation.treasury < 180
+                  }
+                  onClick={onBatchAssimilate}
+                  className="min-h-[84px] p-3 rounded-xl bg-[#1b1510] hover:bg-[#241c13] border border-[#caa15a]/35 hover:border-[#e0b86e] text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold text-[#f3ead7] flex items-center gap-1.5">
+                      <AoH3GlyphSvg name="globe" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                      <span>Toplu Asimilasyon</span>
+                    </span>
+                    <span className="font-mono-num text-[11px] font-bold text-[#e0b86e] shrink-0">
+                      {nonCorePendingCount} Şehir
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono-num font-bold text-[#c5b79e]">
+                    {nonCorePendingCount > 0
+                      ? `180A/Ş (${(nonCorePendingCount * 180).toLocaleString('tr-TR')}A)`
+                      : 'Tümü Öz Vatan'}
+                  </div>
+                </button>
+              )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* World Strategic Straits Radar */}
-          <div className="space-y-2">
-            <div className="text-xs font-bold text-slate-200 flex items-center justify-between">
-              <span>⚓ Dünya Boğazları ve Gümrük Kontrolü</span>
-              <span className="font-mono-num text-amber-300">
-                Hakimiyetiniz: {tradeDetails.controlledStraits.length} Boğaz
+              {onBatchStabilityFestival && (
+                <button
+                  type="button"
+                  data-testid="batch-festival-btn"
+                  disabled={restlessCount === 0 || playerNation.treasury < 140}
+                  onClick={onBatchStabilityFestival}
+                  className="min-h-[84px] p-3 rounded-xl bg-[#1b1510] hover:bg-[#241c13] border border-[#caa15a]/35 hover:border-[#e0b86e] text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold text-[#f3ead7] flex items-center gap-1.5">
+                      <AoH3GlyphSvg name="festival" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                      <span>Toplu Şenlik</span>
+                    </span>
+                    <span className="font-mono-num text-[11px] font-bold text-[#e0b86e] shrink-0">
+                      {restlessCount} Huzursuz
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono-num font-bold text-[#c5b79e]">
+                    {restlessCount > 0
+                      ? `140A/Ş (${(restlessCount * 140).toLocaleString('tr-TR')}A)`
+                      : 'Asayiş Yerinde'}
+                  </div>
+                </button>
+              )}
+
+              {onBatchBorderMobilization && (
+                <button
+                  type="button"
+                  data-testid="batch-border-mob-btn"
+                  disabled={
+                    borderCityCount === 0 ||
+                    playerNation.treasury < borderMobUnitGold ||
+                    playerNation.manpower < 1000
+                  }
+                  onClick={onBatchBorderMobilization}
+                  className="min-h-[84px] p-3 rounded-xl bg-[#1b1510] hover:bg-[#241c13] border border-[#caa15a]/35 hover:border-[#e0b86e] text-left flex flex-col justify-between gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold text-[#f3ead7] flex items-center gap-1.5">
+                      <AoH3GlyphSvg name="shield" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                      <span>Sınır Seferberliği</span>
+                    </span>
+                    <span className="font-mono-num text-[11px] font-bold text-[#e0b86e] shrink-0">
+                      {borderCityCount} Sınır
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono-num font-bold text-[#c5b79e]">
+                    {borderCityCount > 0
+                      ? `${borderMobUnitGold}A + 1B İG / Şehir`
+                      : 'Sınır Yok'}
+                  </div>
+                </button>
+              )}
+
+              {onBatchUpgradeBuilding && (
+                <div className="p-3 rounded-xl bg-[#1b1510] border border-[#caa15a]/35 flex flex-col justify-between gap-2">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="text-xs font-bold text-[#f3ead7] flex items-center gap-1.5">
+                        <AoH3GlyphSvg name="hammer" className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+                        <span>Toplu İnşa</span>
+                      </span>
+                      <span className="font-mono-num text-[11px] font-bold text-[#e0b86e] shrink-0">
+                        {eligibleBatchBuildCities.length} Uygun
+                      </span>
+                    </div>
+                    <select
+                      aria-label="Toplu inşa edilecek bina türü"
+                      data-testid="batch-building-select"
+                      value={batchBuilding}
+                      onChange={(e) =>
+                        setBatchBuilding(e.target.value as BuildingType)
+                      }
+                      className="w-full min-h-[38px] px-2 py-1 rounded-lg bg-[#0f0c09] border border-[#caa15a]/35 text-xs text-[#f3ead7] font-medium focus:outline-none focus:border-[#e0b86e]"
+                    >
+                      {BUILDINGS.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                          {b.requiresCoastal ? ' (Kıyı)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    data-testid="batch-build-btn"
+                    disabled={eligibleBatchBuildCities.length === 0}
+                    onClick={() => onBatchUpgradeBuilding(batchBuilding)}
+                    className="w-full min-h-[44px] px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#caa15a] to-[#e0b86e] hover:from-[#d8b16b] hover:to-[#ecc77e] text-[#14100c] text-[11px] font-extrabold transition-colors disabled:bg-[#120e0a] disabled:from-[#120e0a] disabled:to-[#120e0a] disabled:text-[#6e624f] disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {eligibleBatchBuildCities.length > 0
+                      ? `Başlat (${eligibleBatchBuildCities.length}Ş · ${totalBatchBuildCost.toLocaleString('tr-TR')}A)`
+                      : batchBldDef.requiresCoastal
+                      ? 'Kıyı Şehri Yok'
+                      : 'Uygun Şehir Yok'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* TAB 3: BOĞAZ & ŞEHİRLER (AoH3 Table + Unified Gold Progress Bar) */}
+      {activeTab === 'CITIES' && (
+        <div className="space-y-4">
+          {/* AoH3-Style Province Economy & Development Table */}
+          <div className="bg-[#14100c] border border-[#caa15a]/40 rounded-2xl overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#caa15a]/25 flex items-center justify-between gap-2 bg-[#1a140f]">
+              <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+                <AoH3GlyphSvg name="gold" className="w-4 h-4 text-[#e0b86e] shrink-0" />
+                <span>Eyalet Ekonomi &amp; Yatırım Tablosu</span>
+              </h3>
+              <span className="font-mono-num text-xs text-[#e0b86e] font-bold">
+                {ownedTerritoryDevRows.length} Şehir
               </span>
             </div>
 
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {allWorldStraits.map((st) => {
-                const myShare = st.ownerTollShares[playerNation.id] || 0;
-                const domNation = st.dominantOwnerId
-                  ? nations[st.dominantOwnerId]
-                  : null;
-                const firstShoreId = st.activeShoreIds[0];
+            {/* Table Column Header */}
+            <div className="grid grid-cols-[minmax(0,1.25fr)_76px_minmax(96px,1fr)_64px] items-center gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#a79880] bg-[#100d09] border-b border-[#caa15a]/20">
+              <span>Şehir</span>
+              <span>Kaynak</span>
+              <span>Gelişim</span>
+              <span className="text-right">Gelir</span>
+            </div>
 
+            {/* Scrollable City Rows */}
+            <div className="divide-y divide-[#caa15a]/15 max-h-[260px] overflow-y-auto">
+              {ownedTerritoryDevRows.map(({ territory: t, resMeta, dev }) => {
+                const fillPct = Math.max(
+                  6,
+                  Math.min(100, Math.round((dev.developmentScore / maxDevScore) * 100))
+                );
                 return (
-                  <div
-                    key={st.def.id}
-                    className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 text-xs ${
-                      myShare > 0
-                        ? 'bg-amber-950/25 border-amber-500/50'
-                        : st.isContestedByWar
-                        ? 'bg-rose-950/25 border-rose-500/40'
-                        : 'bg-slate-900/90 border-slate-800'
-                    }`}
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => onSelectTerritory(t.id)}
+                    className="w-full min-h-[44px] px-3 py-2 grid grid-cols-[minmax(0,1.25fr)_76px_minmax(96px,1fr)_64px] items-center gap-2 text-left hover:bg-[#1e1812] transition-colors cursor-pointer"
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-white truncate">
-                        ⚓ {st.def.name}
-                      </div>
-                      <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                        Hakim:{' '}
-                        <strong className="text-slate-200">
-                          {domNation
-                            ? domNation.name.replace(/\s*\(1440\)\s*$/, '')
-                            : 'Paylaşımlı'}
-                        </strong>
-                        {myShare > 0 && st.hasFullMonopoly && (
-                          <span className="text-emerald-400 font-semibold">
-                            {' '}
-                            · Tam Hakimiyet
-                          </span>
-                        )}
-                        {st.isContestedByWar && (
-                          <span className="text-rose-400 font-semibold">
-                            {' '}
-                            · Ablukada
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] font-mono-num mt-0.5 flex items-center gap-2">
-                        <span className="text-amber-300">
-                          Gümrük: +{st.totalDailyToll}G/gün
-                        </span>
-                        {myShare > 0 && (
-                          <span className="text-emerald-400 font-bold">
-                            (Payınız: +{myShare}G)
-                          </span>
-                        )}
-                      </div>
+                    <div className="min-w-0 flex items-center gap-1.5">
+                      {t.isCapital && (
+                        <AoH3GlyphSvg
+                          name="star"
+                          className="w-3 h-3 text-[#e0b86e] shrink-0"
+                        />
+                      )}
+                      <span className="text-xs font-bold text-[#f3ead7] truncate">
+                        {cleanProvinceName(t.name)}
+                      </span>
                     </div>
 
-                    {firstShoreId && (
-                      <button
-                        onClick={() => onSelectTerritory(firstShoreId)}
-                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-semibold text-slate-200 shrink-0"
-                      >
-                        Kıyıya Git
-                      </button>
-                    )}
-                  </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#d8cbb5] truncate">
+                      <ResourceSvg
+                        resource={t.resource}
+                        className="w-3.5 h-3.5 text-[#e0b86e] shrink-0"
+                      />
+                      <span className="truncate">{resMeta.name}</span>
+                    </div>
+
+                    <div className="relative h-5 rounded bg-[#0d0a07] border border-[#caa15a]/30 overflow-hidden flex items-center px-1.5">
+                      <div
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#8f6a34] to-[#e0b86e] transition-all"
+                        style={{ width: `${fillPct}%` }}
+                      />
+                      <span className="relative z-10 font-mono-num text-[10px] font-extrabold text-[#faf3e3] drop-shadow">
+                        {dev.developmentScore} · ×{dev.totalInvestmentMult}
+                      </span>
+                    </div>
+
+                    <div className="text-right font-mono-num text-xs font-bold text-[#e0b86e] shrink-0">
+                      +{dev.effectiveDailyGdp}A
+                    </div>
+                  </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Active Trade Caravans & Maritime Corridors */}
-          <div className="space-y-2">
-            <div className="text-xs font-bold text-slate-200 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Compass className="w-3.5 h-3.5 text-sky-400" />
-                <span>
-                  {is1440
-                    ? 'Aktif Kervan ve Deniz Ticaret Hatlarınız'
-                    : 'Aktif Küresel Ticaret ve Enerji Hatlarınız'}
-                </span>
-              </span>
-              <span className="font-mono-num text-sky-300">
-                +{playerEconomy.caravanTradeIncome} Altın/gün
-              </span>
+          {/* Strategic Straits & Trade Corridors */}
+          <div className="bg-[#14100c] border border-[#caa15a]/35 rounded-2xl p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#caa15a]/20 pb-2.5">
+              <h3 className="text-sm font-display font-bold text-[#f3ead7] flex items-center gap-2">
+                <AoH3GlyphSvg name="anchor" className="w-4 h-4 text-[#e0b86e] shrink-0" />
+                <span>Boğazlar &amp; Ticaret Hatları</span>
+              </h3>
+
+              {onRaidEnemyTradeRoutes && (
+                <button
+                  type="button"
+                  disabled={!canRaidTrade}
+                  onClick={onRaidEnemyTradeRoutes}
+                  className={`min-h-[44px] px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-colors cursor-pointer ${
+                    canRaidTrade
+                      ? 'bg-rose-950/60 hover:bg-rose-900/70 border-rose-500/60 text-rose-100'
+                      : 'bg-[#120e0a] border-[#caa15a]/20 text-[#6e624f] cursor-not-allowed'
+                  }`}
+                >
+                  <AoH3GlyphSvg name="sword" className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span className="flex items-center gap-1">
+                    <span>{is1440 ? 'Kervan Akını' : 'Konvoy Vur'}</span>
+                    <span>({TRADE_RAID_INFLUENCE_COST}</span>
+                    <AoH3GlyphSvg name="fleur" className="w-3 h-3 shrink-0" />
+                    <span>· {TRADE_RAID_MANPOWER_COST} İG)</span>
+                  </span>
+                </button>
+              )}
             </div>
 
-            {tradeDetails.activeCorridors.length === 0 ? (
-              <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-400">
-                Henüz büyük küresel kervan/deniz kavşaklarından birine sahip değilsiniz. Önemli liman veya boğaz şehirlerini fethederek küresel ticaret ağından pay alabilirsiniz.
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                {tradeDetails.activeCorridors.map((corr) => (
-                  <div
-                    key={corr.corridorId}
-                    className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs ${
-                      corr.isBlockadedByEnemy
-                        ? 'bg-rose-950/25 border-rose-500/50'
-                        : 'bg-slate-900/90 border-slate-800'
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className="font-bold text-white truncate">
-                        {corr.name}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                        <span>
-                          Kavşak Kontrolü:{' '}
-                          <strong className="font-mono-num text-slate-200">
-                            {corr.ownedHubCount}/{corr.totalHubCount}
-                          </strong>
-                        </span>
-                        {corr.isBlockadedByEnemy ? (
-                          <span className="text-rose-300 font-semibold">
-                            ⚠️ Düşman Boğaz Ablukası Altında!
-                          </span>
-                        ) : (
-                          <span className="text-emerald-400">
-                            ✓ Açık Güzergâh
-                          </span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {/* Straits */}
+              <div className="space-y-1.5">
+                <div className="text-xs font-bold text-[#d8cbb5] flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <AoH3GlyphSvg name="anchor" className="w-3.5 h-3.5 text-[#e0b86e]" />
+                    <span>Boğaz Gümrükleri</span>
+                  </span>
+                  <span className="font-mono-num text-[#e0b86e]">
+                    {tradeDetails.controlledStraits.length} Hakimiyet
+                  </span>
+                </div>
+                <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                  {allWorldStraits.map((st) => {
+                    const myShare = st.ownerTollShares[playerNation.id] || 0;
+                    const domNation = st.dominantOwnerId
+                      ? nations[st.dominantOwnerId]
+                      : null;
+                    const firstShoreId = st.activeShoreIds[0];
+
+                    return (
+                      <div
+                        key={st.def.id}
+                        className={`px-2.5 py-2 rounded-xl border flex items-center justify-between gap-2 text-xs ${
+                          myShare > 0
+                            ? 'bg-[#211910] border-[#e0b86e]/65'
+                            : st.isContestedByWar
+                            ? 'bg-rose-950/25 border-rose-500/45'
+                            : 'bg-[#1b1510] border-[#caa15a]/25'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-[#f3ead7] flex items-center gap-1.5 truncate">
+                            <AoH3GlyphSvg name="anchor" className="w-3 h-3 text-[#e0b86e] shrink-0" />
+                            <span className="truncate">{st.def.name}</span>
+                          </div>
+                          <div className="text-[11px] font-mono-num text-[#b8a990] truncate">
+                            {domNation
+                              ? cleanNationName(domNation.name)
+                              : 'Paylaşımlı'}{' '}
+                            · +{st.totalDailyToll}A/g
+                            {myShare > 0 && (
+                              <span className="text-emerald-400 font-bold">
+                                {' '}
+                                (Pay: +{myShare}A)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {firstShoreId && (
+                          <button
+                            type="button"
+                            onClick={() => onSelectTerritory(firstShoreId)}
+                            className="min-h-[38px] px-2.5 py-1 rounded-lg bg-[#241c14] hover:bg-[#31261b] border border-[#caa15a]/35 text-[11px] font-semibold text-[#e0b86e] flex items-center gap-1 shrink-0 cursor-pointer"
+                          >
+                            <MapPin className="w-3 h-3" />
+                            <span>Git</span>
+                          </button>
                         )}
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-                    <div className="font-mono-num font-bold text-sky-300 shrink-0">
-                      +{corr.dailyIncome}G/gün
-                    </div>
+              {/* Corridors */}
+              <div className="space-y-1.5">
+                <div className="text-xs font-bold text-[#d8cbb5] flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <AoH3GlyphSvg name="compass" className="w-3.5 h-3.5 text-[#e0b86e]" />
+                    <span>{is1440 ? 'Kervan Hatları' : 'Küresel Koridorlar'}</span>
+                  </span>
+                  <span className="font-mono-num text-[#e0b86e]">
+                    +{playerEconomy.caravanTradeIncome} A/gün
+                  </span>
+                </div>
+
+                {tradeDetails.activeCorridors.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-[#1b1510] border border-[#caa15a]/20 text-xs text-[#b8a990]">
+                    Aktif kervan/deniz kavşağı yok.
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
+                    {tradeDetails.activeCorridors.map((corr) => (
+                      <div
+                        key={corr.corridorId}
+                        className={`px-2.5 py-2 rounded-xl border flex items-center justify-between gap-2 text-xs ${
+                          corr.isBlockadedByEnemy
+                            ? 'bg-rose-950/25 border-rose-500/50'
+                            : 'bg-[#1b1510] border-[#caa15a]/25'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="font-bold text-[#f3ead7] truncate">
+                            {corr.name}
+                          </div>
+                          <div className="text-[11px] font-mono-num text-[#b8a990]">
+                            Kavşak {corr.ownedHubCount}/{corr.totalHubCount} ·{' '}
+                            {corr.isBlockadedByEnemy ? (
+                              <span className="text-rose-300 font-semibold">
+                                Ablukada
+                              </span>
+                            ) : (
+                              <span className="text-emerald-400">Açık</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="font-mono-num font-bold text-[#e0b86e] shrink-0">
+                          +{corr.dailyIncome}A/g
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Stage 3.1 & 3.2: City Development Scores & Investment-Driven Resource Production Table */}
-      <div className="lg:col-span-12 bg-slate-950/85 border border-emerald-500/35 rounded-2xl p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-          <div>
-            <h3 className="text-sm font-bold text-emerald-300 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                Şehir Gelişim Puanları ve Yatırım Odaklı Kaynak Üretimi ({ownedTerritoryDevRows.length} Eyalet)
-              </span>
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Her şehrin ham üretim kaynağı vardır (🪵 Odun, 🐄 Sığır, 🌿 Pamuk, 🌾 Tahıl, ⛏ Demir, 🪙 Altın, 🛢 Petrol); ancak <strong>Sanayi, Liman ve Teknoloji yatırımı</strong> yapılan şehirler, yatırımsız kalan zengin madenleri geride bırakır.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[240px] overflow-y-auto pr-1">
-          {ownedTerritoryDevRows.map(({ territory: t, resMeta, dev }) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => onSelectTerritory(t.id)}
-              className="text-left p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/50 transition-colors flex items-center justify-between gap-2"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-white truncate">
-                    {t.isCapital ? '★ ' : ''}
-                    {t.name.replace(/^★\s*/, '')}
-                  </span>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono-num font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
-                    ★{dev.developmentScore}P
-                  </span>
-                </div>
-                <div className="text-[11px] text-amber-200/95 truncate mt-0.5 flex items-center gap-1">
-                  <span>{resMeta.icon}</span>
-                  <span className="truncate">{resMeta.name}</span>
-                </div>
-                <div className="text-[10px] font-mono-num text-slate-400 mt-0.5">
-                  Ham {dev.baseResourceValue}A →{' '}
-                  <strong className="text-emerald-400">
-                    {dev.effectiveResourceValue}A/gün
-                  </strong>{' '}
-                  (×{dev.totalInvestmentMult})
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-xs font-mono-num font-bold text-amber-300">
-                  +{dev.effectiveDailyGdp}
-                </div>
-                <div className="text-[9px] text-slate-400">Günlük GDP</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
