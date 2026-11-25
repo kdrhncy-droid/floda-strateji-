@@ -779,7 +779,7 @@ test('computeGameTick preserves territories/nations references during hourly arm
 
 import { geoArea, geoMercator } from 'd3-geo';
 import { feature } from 'topojson-client';
-import worldData from 'world-atlas/countries-110m.json';
+import worldData from 'world-atlas/countries-50m.json';
 import { initializeWorld2026 } from './worldBuilder';
 import {
   COUNTRY_PROVINCE_SEEDS,
@@ -803,8 +803,8 @@ test('expanded province seeds and 1440 scenario cover 100% of world landmasses w
   const world1440 = initializeWorld2026('EMPIRES_1440');
 
   assert.ok(
-    world2026.features.length >= 880 && world2026.features.length <= 920,
-    `Expected 880-920 provinces in 2026 world, got ${world2026.features.length}`
+    world2026.features.length >= 940 && world2026.features.length <= 1020,
+    `Expected 940-1020 provinces in 2026 world, got ${world2026.features.length}`
   );
   assert.equal(
     world1440.features.length,
@@ -7643,17 +7643,57 @@ test('1444 scenario distributes historical city counts, borders, and capitals ac
   assert.equal(countByOwner('156').length, 36, 'Ming Dynasty should have 36 provinces');
   assert.equal(countByOwner('276').length, 20, 'Holy Roman Empire should have 20 provinces');
   assert.equal(countByOwner('250').length, 18, 'Kingdom of France should have 18 provinces');
-  assert.equal(countByOwner('724').length, 20, 'Castile & Aragon should have 20 provinces');
+  assert.equal(countByOwner('724').length, 21, 'Castile & Aragon should have 21 provinces');
   assert.equal(countByOwner('348').length, 12, 'Kingdom of Hungary should have 12 provinces');
   assert.equal(world1440.territories['642_CLJ'].ownerId, '348', 'Transylvania should belong to Hungary');
-  assert.equal(countByOwner('392').length, 14, 'Ashikaga Japan should have 14 provinces');
-  assert.equal(countByOwner('826').length, 13, 'Kingdom of England should have 13 provinces');
-  assert.equal(countByOwner('905').length, 2, 'Kingdom of Scotland should have 2 cities');
+  assert.equal(countByOwner('392').length, 18, 'Ashikaga Japan should have 18 provinces');
+  assert.equal(countByOwner('826').length, 14, 'Kingdom of England should have 14 provinces');
+  assert.equal(countByOwner('905').length, 5, 'Kingdom of Scotland should have 5 cities');
   assert.equal(world1440.territories['826_EDI'].ownerId, '905', 'Edinburgh should belong to Scotland');
+  assert.equal(world1440.territories['826_INV'].ownerId, '905', 'Inverness should belong to Scotland');
   assert.equal(countByOwner('616').length, 12, 'Kingdom of Poland should have 12 provinces');
   assert.equal(world1440.territories['616_GDN'].ownerId, '428', 'Marienburg/Danzig should belong to Teutonic Order');
-  assert.equal(countByOwner('440').length, 10, 'Grand Duchy of Lithuania should have 10 provinces');
+  assert.equal(countByOwner('440').length, 11, 'Grand Duchy of Lithuania should have 11 provinces');
   assert.equal(world1440.territories['804'].ownerId, '440', 'Kiev should belong to Lithuania');
+  assert.equal(world1440.territories['643_KRS'].ownerId, '440', 'Kursk should belong to Lithuania');
+
+  // Muscovy must not swallow the steppe or Siberia: the Horde and Sibir realms
+  // own contiguous land instead of a handful of islands inside Russia.
+  assert.equal(countByOwner('643').length, 13, 'Muscovy & Novgorod should hold 13 provinces');
+  assert.equal(countByOwner('902').length, 10, 'Great Horde & Kazan should hold 10 provinces');
+  assert.equal(countByOwner('903').length, 19, 'Sibir should hold 19 provinces');
+  for (const id of ['643_VOG', '643_ASF', '643_KZN', '643_KUF', '643_SRT', '643_VRN', '643_PNZ', '643_UFA', '643_CHL', '643_SVX']) {
+    assert.equal(world1440.territories[id].ownerId, '902', `${id} should belong to the Great Horde & Kazan`);
+  }
+  for (const id of ['643_OMS', '643_OVB', '643_KJA', '643_IKT', '643_TOM', '643_TYU', '643_YAK', '643_KHT', '643_SLH', '643_MNG']) {
+    assert.equal(world1440.territories[id].ownerId, '903', `${id} should belong to Sibir`);
+  }
+  // Every land realm must be reachable from its capital by land (no stranded islands).
+  const landmassCheck = (ownerId: string) => {
+    const owned = Object.values(world1440.territories).filter((t) => t.ownerId === ownerId);
+    const set = new Set(owned.map((t) => t.id));
+    const start = owned[0].id;
+    const seen = new Set([start]);
+    const stack = [start];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      for (const nb of world1440.territories[cur].neighbors) {
+        if (set.has(nb) && !seen.has(nb)) { seen.add(nb); stack.push(nb); }
+      }
+    }
+    return seen.size;
+  };
+  // (Nations that legitimately hold islands — England with Belfast, Norway with
+  // Iceland, Venice with Crete — are excluded: province neighbours do not span
+  // water, so a single landmass is the right expectation only for the
+  // continental realms the 1444 borders are built from.)
+  for (const ownerId of ['643', '902', '903', '440']) {
+    assert.equal(
+      landmassCheck(ownerId),
+      countByOwner(ownerId).length,
+      `${world1440.nations[ownerId].name} territory must be one contiguous landmass`
+    );
+  }
   assert.equal(countByOwner('642').length, 6, 'Wallachia should have 6 provinces');
   assert.equal(countByOwner('498').length, 4, 'Moldavia should have 4 provinces');
   assert.equal(world1440.territories['642_IAS'].ownerId, '498', 'Iasi should belong to Moldavia');
@@ -7973,8 +8013,20 @@ test('three-stage label LOD keeps distant maps clean and reveals districts only 
     true
   );
   assert.equal(shouldRenderProvinceLabel('city', 2.5, desktop, false), true);
-  assert.equal(shouldRenderProvinceLabel('capital', 1.45, desktop, false), true);
-  assert.equal(shouldRenderProvinceLabel('capital', 1.3, desktop, false), false);
+  // The default 1.55x world view must stay realm-name only (AoH3 overview look),
+  // so capitals now start a little later than the old 1.4x.
+  assert.ok(
+    desktop.capitalNameMinZoom > 1.55,
+    `Capital labels must stay out of the world overview, got ${desktop.capitalNameMinZoom}`
+  );
+  assert.equal(
+    shouldRenderProvinceLabel('capital', desktop.capitalNameMinZoom, desktop, false),
+    true
+  );
+  assert.equal(
+    shouldRenderProvinceLabel('capital', desktop.capitalNameMinZoom - 0.05, desktop, false),
+    false
+  );
 
   // Density setting still shifts the thresholds (COMPACT later, DETAILED earlier).
   const compact = getMapLabelThresholds('COMPACT', false);
@@ -8013,12 +8065,12 @@ test('1444 great-power ranking is preserved after the district expansion', () =>
   assert.ok(topArmy.includes('792'), 'Ottoman army must stay in the 1444 top 5');
 });
 
-test('~900-province world build stays within the interactive start budget', () => {
+test('~980-province world build stays within the interactive start budget', () => {
   const startedAt = performance.now();
   const world = initializeWorld2026('STANDARD_2026');
   const elapsed = performance.now() - startedAt;
 
-  assert.ok(world.features.length >= 880 && world.features.length <= 920);
+  assert.ok(world.features.length >= 940 && world.features.length <= 1020);
   assert.ok(
     elapsed < 1500,
     `World creation with ~900 provinces took ${elapsed.toFixed(0)}ms (budget 1500ms, target 350ms)`

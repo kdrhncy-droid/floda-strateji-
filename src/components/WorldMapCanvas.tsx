@@ -18,6 +18,7 @@ import {
 } from '../map/spatialIndex';
 import { useMapGestures } from '../map/useMapGestures';
 import { AoH3Minimap } from './hud/AoH3Minimap';
+import { MapModeIconRail } from './hud/MapModeIconRail';
 import { performanceTelemetry } from '../utils/performanceTelemetry';
 import {
   BorderThicknessOption,
@@ -66,6 +67,7 @@ interface WorldMapCanvasProps {
   armyOrderSourceId: string | null;
   seaArmyOrderSourceId?: string | null;
   mapMode: MapMode;
+  onSetMapMode?: (mode: MapMode) => void;
   mapLabelDensity?: MapLabelDensityOption;
   mapLabelScale?: MapLabelScaleOption;
   borderThickness?: BorderThicknessOption;
@@ -93,6 +95,20 @@ interface WorldMapCanvasProps {
   onCancelArmyOrder: () => void;
 }
 
+/** Dev-only frame cost probe: `window.__mapPerf` powers the Chromium perf tests. */
+type MapPerfSample = { base: number[]; overlay: number[]; mov: number[]; sea: number[]; labels: number[] };
+const getMapPerf = (): MapPerfSample => {
+  const g = globalThis as unknown as { __mapPerf?: MapPerfSample };
+  if (!g.__mapPerf) g.__mapPerf = { base: [], overlay: [], mov: [], sea: [], labels: [] };
+  return g.__mapPerf;
+};
+const recordPerf = (bucket: keyof MapPerfSample, ms: number) => {
+  if (!import.meta.env.DEV) return;
+  const perf = getMapPerf();
+  perf[bucket].push(ms);
+  if (perf[bucket].length > 240) perf[bucket].shift();
+};
+
 export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   features,
   territories,
@@ -109,6 +125,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   armyOrderSourceId,
   seaArmyOrderSourceId = null,
   mapMode,
+  onSetMapMode,
   mapLabelDensity = 'BALANCED',
   mapLabelScale = 'NORMAL',
   borderThickness = 'NORMAL',
@@ -522,6 +539,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     if (!canReuseBaseCanvas) {
       const baseCtx = baseCanvas.getContext('2d');
       if (baseCtx) {
+        const __baseT0 = import.meta.env.DEV ? performance.now() : 0;
         baseCtx.save();
         baseCtx.setTransform(1, 0, 0, 1, 0, 0);
         baseCtx.clearRect(0, 0, pixelW, pixelH);
@@ -569,16 +587,19 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           fogOfWarEnabled,
           borderThickness,
         };
+        if (import.meta.env.DEV && __baseT0) recordPerf('base', performance.now() - __baseT0);
       }
     }
 
     const drawOverlayFrame = (frameNowMs: number) => {
+      const __overlayT0 = import.meta.env.DEV ? performance.now() : 0;
       // 1. Blit cached base polygon & border layer in <0.1ms
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(baseCanvas, 0, 0);
       ctx.scale(dpr, dpr);
 
+      const __tMov = import.meta.env.DEV ? performance.now() : 0;
       // 2. Draw smooth 60 FPS interpolated marching armies layer
       const interpolatedProgress = computeInterpolatedProgressMap(
         movementTweensRef.current,
@@ -603,6 +624,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         animPhaseOverride,
       });
 
+      if (import.meta.env.DEV && __tMov) recordPerf('mov', performance.now() - __tMov);
+      const __tSea = import.meta.env.DEV ? performance.now() : 0;
       // 2b. Draw fleets/armies anchored on open sea (plus active coastal blockades)
       renderSeaArmiesLayer({
         ctx,
@@ -618,6 +641,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         selectedSeaArmyId,
       });
 
+      if (import.meta.env.DEV && __tSea) recordPerf('sea', performance.now() - __tSea);
+      const __tLabels = import.meta.env.DEV ? performance.now() : 0;
       // 3. Draw dynamic province labels, army shields, and live battle widgets
       renderMapLabelsAndBattles({
         ctx,
@@ -642,6 +667,10 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       });
 
       ctx.restore();
+      if (import.meta.env.DEV) {
+        if (__tLabels) recordPerf('labels', performance.now() - __tLabels);
+        recordPerf('overlay', performance.now() - __overlayT0);
+      }
     };
 
     drawOverlayFrame(nowMs);
@@ -734,6 +763,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
 
       {showMinimap && (
         <div className="absolute bottom-2.5 right-2.5 z-20 hidden lg:block">
+          <MapModeIconRail mapMode={mapMode} onSetMapMode={onSetMapMode} />
           <AoH3Minimap
             features={features}
             territories={territories}

@@ -266,12 +266,13 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
       '643_ASF': 'Astrahan',
       '643_KZN': 'Kazan',
       '643_KUF': 'Samara',
-      '643_SVX': 'Perm',
+      // Yekaterinburg keeps its period name (Kamenny Poyas); renaming it to
+      // "Perm" collided with the real Perm province sitting right next to it.
     },
   },
   {
     id: '903',
-    name: 'Sibir & Mançurya Hanlığı',
+    name: 'Sibir Hanlığı & Sibirya Kavimleri',
     flagCode: 'SİB',
     color: '#46697A',
     ideology: 'MONARCHY',
@@ -282,7 +283,7 @@ export const EMPIRES_1440_DEFS: Empire1440Def[] = [
     absorbedCountryIds: [],
     provinceRenames: {
       '643_OMS': '★ Sibir',
-      '643_OVB': 'Tümen',
+      '643_OVB': 'Baraba',
       '643_KJA': 'Yenisey',
       '643_IKT': 'İrkutsk',
       '643_KHV': 'Amur',
@@ -1398,21 +1399,45 @@ const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
   '643_SMO': '440', // Smolensk held by Lithuania
   '643_KRR': '804', // Crimea / Kuban held by Crimean Khanate
   '643_ROV': '804', // Azov steppe held by Crimean Khanate
-  // Muscovy vs Great Horde & Sibir
-  '643_VOG': '902', // Sarai
+  // Muscovy vs Great Horde, Kazan & Sibir
+  // The whole 2026 Russia landmass is absorbed by Muscovy first, so every
+  // province that historically belonged to the steppe khanates has to be
+  // handed back explicitly — otherwise they end up as isolated islands of
+  // Horde land inside a giant Muscovy blob.
+  '643_VOG': '902', // Sarai (Volgograd)
   '643_ASF': '902', // Astrakhan
   '643_KZN': '902', // Kazan
   '643_KUF': '902', // Samara
-  '643_SVX': '902', // Perm / Ural
-  '643_OMS': '903', // Sibir Khanate
-  '643_OVB': '903',
-  '643_KJA': '903',
-  '643_IKT': '903',
-  '643_KHV': '903',
-  '643_VVO': '903',
+  '643_SVX': '902', // Yekaterinburg / Kamenny Poyas (Ural)
+  '643_SRT': '902', // Saratov — Lower Volga steppe
+  '643_VRN': '902', // Voronezh — Don steppe
+  '643_PNZ': '902', // Penza — Moksha/Kazan frontier
+  '643_UFA': '902', // Ufa — Bashkiria under Kazan
+  '643_CHL': '902', // Chelyabinsk — Trans-Urals steppe
+  '643_OMS': '903', // Sibir Khanate (Omsk)
+  '643_OVB': '903', // Novosibirsk / Baraba steppe
+  '643_KJA': '903', // Krasnoyarsk / Yenisey
+  '643_IKT': '903', // Irkutsk
+  '643_KHV': '903', // Khabarovsk / Amur
+  '643_VVO': '903', // Vladivostok / Jurchen lands
+  '643_TOM': '903', // Tomsk
+  '643_TYU': '903', // Tyumen
+  '643_SLH': '903', // Yugra (Salekhard)
+  '643_MNG': '903', // Mangazeya
+  '643_NRK': '903', // Norilsk / Pyasina
+  '643_KHT': '903', // Khatanga / Taymyr
+  '643_TUR': '903', // Tura / Evenk
+  '643_YAK': '903', // Yakutsk
+  '643_VKH': '903', // Verkhoyansk
+  '643_CKD': '903', // Chokurdakh / Indigirka
+  '643_AND': '903', // Anadyr / Chukotka
+  '643_MGD': '903', // Magadan
+  '643_KAM': '903', // Kamchatka
+  '643_KRS': '440', // Kursk was Lithuanian until the 1500s
   // Britain
   '826_EDI': '905', // Scotland
   '826_GLA': '905', // Scotland
+  '826_INV': '905', // Inverness — Highlands, not England
   // Anatolia, Persia, Central Asia & Levant
   '792_ERZ': '031', // Karakoyunlu / Akkoyunlu
   '792_VAN': '031',
@@ -1454,6 +1479,13 @@ const PROVINCE_OWNER_OVERRIDES_1440: Record<string, string> = {
   '840_LAX': '906',
   '840_SFO': '906',
   '840_SEA': '906',
+  // Great Basin & Pacific coast: leaving these with the Iroquois stranded a
+  // five-province island behind the Plains nations.
+  '840_SLC': '906',
+  '840_LAS': '906',
+  '840_BOI': '906',
+  '840_PDX': '906',
+  '840_SDG': '906',
 };
 const COUNTRY_OWNER_OVERRIDES_1440: Record<string, string> = {};
 
@@ -1613,7 +1645,7 @@ export function transformBundleTo1440Scenario(
     '364': { targetArmy: 148000, targetGdp: 940 },  // Timur İmparatorluğu
     '276': { targetArmy: 138000, targetGdp: 980 },  // Kutsal Roma İmparatorluğu
     '031': { targetArmy: 112000, targetGdp: 690 },  // Karakoyunlu & Akkoyunlu
-    '250': { targetArmy: 108000, targetGdp: 810 },  // Fransa Krallığı
+    '250': { targetArmy: 108000, targetGdp: 880 },  // Fransa Krallığı (1444'te Venedik'ten büyük vergi tabanı)
     '356': { targetArmy: 104000, targetGdp: 760 },  // Delhi Sultanlığı
     '380': { targetArmy: 96000, targetGdp: 790 },   // Venedik & İtalya Devletleri
     '724': { targetArmy: 92000, targetGdp: 680 },   // Kastilya & Aragon

@@ -258,6 +258,18 @@ function GameAppInner() {
     }
   }, []);
 
+  // Dünya Gazetesi lifecycle: a fresh headline pops the chronicle open and it
+  // folds itself away again after a short read window, so the bottom-right
+  // corner does not stay buried under the minimap for a whole campaign.
+  const latestNewsId = newsEvents[0]?.id ?? null;
+  const [chronicleOpen, setChronicleOpen] = useState(true);
+  useEffect(() => {
+    if (!latestNewsId) return;
+    setChronicleOpen(true);
+    const closeTimer = window.setTimeout(() => setChronicleOpen(false), 15000);
+    return () => window.clearTimeout(closeTimer);
+  }, [latestNewsId]);
+
   // Sync game state machine to document.body.dataset.state
   useEffect(() => {
     if (screenState === 'TITLE_MENU') {
@@ -1027,6 +1039,7 @@ function GameAppInner() {
             armyOrderSourceId={armyOrderSourceId}
             seaArmyOrderSourceId={seaArmyOrderSourceId}
             mapMode={mapMode}
+            onSetMapMode={store.setMapMode}
             mapLabelDensity={settings.mapLabelDensity}
             zoomCommand={zoomCommand}
             fogOfWarEnabled={settings.fogOfWarEnabled}
@@ -1049,13 +1062,16 @@ function GameAppInner() {
           />
         )}
 
-        <div className="absolute bottom-[9.9rem] right-2.5 z-10 pointer-events-none">
-          <AoH3ChronicleLog
-            newsEvents={newsEvents}
-            onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
-            hidden={activeTab !== 'NONE'}
-          />
-        </div>
+        {chronicleOpen && (
+          <div className="absolute bottom-[11.6rem] right-2.5 z-10 pointer-events-none">
+            <AoH3ChronicleLog
+              newsEvents={newsEvents}
+              onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
+              onClose={() => setChronicleOpen(false)}
+              hidden={activeTab !== 'NONE'}
+            />
+          </div>
+        )}
 
         <WorldEventToastStack
           newsEvents={newsEvents}

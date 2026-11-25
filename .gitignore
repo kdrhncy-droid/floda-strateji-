@@ -10,3 +10,6 @@ coverage/
 dev-dist/
 .playwright-cli/
 
+
+# Local Chromium/FPS probe harness (not shipped)
+.tmp-probe/

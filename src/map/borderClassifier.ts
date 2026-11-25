@@ -117,6 +117,33 @@ function pointInProjectedFeature(
   return false;
 }
 
+
+/** Shortest distance from a point to any edge of the projected feature. */
+function distanceToFeatureBoundary(
+  px: number,
+  py: number,
+  pf: ProjectedFeatureRings,
+  maxDistance: number
+): number {
+  let best = maxDistance;
+  for (const ring of pf.rings) {
+    for (let i = 0; i < ring.length; i++) {
+      const [ax, ay] = ring[i];
+      const [bx, by] = ring[(i + 1) % ring.length];
+      if (Math.abs(ax - px) > best && Math.abs(bx - px) > best) continue;
+      if (Math.abs(ay - py) > best && Math.abs(by - py) > best) continue;
+      const dx = bx - ax;
+      const dy = by - ay;
+      const len2 = dx * dx + dy * dy;
+      let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const d = Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+      if (d < best) best = d;
+    }
+  }
+  return best;
+}
+
 /**
  * Classifies each province's edge segments into per-province Path2D buckets so the renderer
  * can leverage RBush viewport culling and draw ONLY on-screen borders at 60 FPS even at 28x zoom!
@@ -131,43 +158,59 @@ export function buildClassifiedBorderPaths(params: {
   const borderMap: ClassifiedBorderMap = new Map();
   const projectedMap = projectFeatureRings(features, projection);
   const projectedList = Array.from(projectedMap.values());
+  if (projectedList.length === 0) return borderMap;
 
-  // Probes are evaluated in projected (pre-zoom) units. Keeping them tiny means
-  // a coastal segment is never mistaken for a land frontier just because a
-  // far-away neighbour happens to sit within a generous sampling radius.
-  const probeDistances = [0.32, 0.85];
-  const bboxPad = 1.5;
+  const featureIndexById = new Map<string, number>();
+  projectedList.forEach((pf, idx) => featureIndexById.set(pf.id, idx));
 
-  // Pre-compute candidate neighbour lists once (bbox pre-filter, O(n^2) but only
-  // during cache builds) so the per-segment loop stays lean.
-  const candidateCache = new Map<string, ProjectedFeatureRings[]>();
-
-  const getCandidates = (pf: ProjectedFeatureRings): ProjectedFeatureRings[] => {
-    const cached = candidateCache.get(pf.id);
-    if (cached) return cached;
-    const out: ProjectedFeatureRings[] = [];
-    for (const other of projectedList) {
-      if (other.id === pf.id) continue;
-      if (
-        other.maxX < pf.minX - bboxPad ||
-        other.minX > pf.maxX + bboxPad ||
-        other.maxY < pf.minY - bboxPad ||
-        other.minY > pf.maxY + bboxPad
-      ) {
-        continue;
+  // ── Shared-vertex index ───────────────────────────────────────────────────
+  // Adjacent provinces come from a single Voronoi tessellation, so their shared
+  // border is made of *the same* vertices. Indexing vertices lets us decide a
+  // segment's neighbour with two hash lookups; the old approach probed every
+  // nearby province per segment, which cost ~800ms once the 1:50m coastline
+  // multiplied the segment count by five.
+  const vertexQuantum = 1e-4; // ≈10 m: absorbs float drift between two cells
+  // Numeric keys: string concat for every vertex lookup cost more than the
+  // whole classification did with numeric double keys.
+  const KEY_STRIDE = 1e7;
+  const vertexKey = (x: number, y: number) =>
+    Math.round(x / vertexQuantum) * KEY_STRIDE + Math.round(y / vertexQuantum);
+  const vertexOwners = new Map<number, number[]>();
+  projectedList.forEach((pf, fi) => {
+    for (const ring of pf.rings) {
+      for (const pt of ring) {
+        const key = vertexKey(pt[0], pt[1]);
+        const owners = vertexOwners.get(key);
+        if (!owners) vertexOwners.set(key, [fi]);
+        else if (owners[owners.length - 1] !== fi) owners.push(fi);
       }
-      out.push(other);
     }
-    candidateCache.set(pf.id, out);
-    return out;
+  });
+
+  const sharedFeatureFor = (
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    selfIdx: number
+  ): number => {
+    const ownersA = vertexOwners.get(vertexKey(ax, ay));
+    if (!ownersA) return -1;
+    const ownersB = vertexOwners.get(vertexKey(bx, by));
+    if (!ownersB) return -1;
+    const candidates = ownersA.length <= ownersB.length ? ownersA : ownersB;
+    const other = ownersA.length <= ownersB.length ? ownersB : ownersA;
+    for (const fi of candidates) {
+      if (fi === selfIdx) continue;
+      if (other.includes(fi)) return fi;
+    }
+    return -1;
   };
 
   for (const pf of projectedList) {
-    const id = pf.id;
-    const terr = territories[id];
+    const terr = territories[pf.id];
     if (!terr) continue;
-
-    const candidates = getCandidates(pf);
+    const fi = featureIndexById.get(pf.id) ?? -1;
     const ownerId = terr.ownerId;
     const isPlayerOwned = ownerId === playerNationId;
 
@@ -176,16 +219,13 @@ export function buildClassifiedBorderPaths(params: {
     let coastline: Path2D | undefined;
     let playerFrontier: Path2D | undefined;
 
-    /** Last point written per bucket, so consecutive segments form one smooth polyline. */
     let internalEnd: [number, number] | null = null;
     let intlEnd: [number, number] | null = null;
     let coastEnd: [number, number] | null = null;
     let frontierEnd: [number, number] | null = null;
 
-    const samePoint = (
-      a: [number, number] | null,
-      b: [number, number]
-    ) => Boolean(a) && Math.abs(a![0] - b[0]) < 1e-6 && Math.abs(a![1] - b[1]) < 1e-6;
+    const samePoint = (a: [number, number] | null, b: [number, number]) =>
+      Boolean(a) && Math.abs(a![0] - b[0]) < 1e-6 && Math.abs(a![1] - b[1]) < 1e-6;
 
     const appendInternal = (a: [number, number], b: [number, number]) => {
       if (!internal) internal = new Path2D();
@@ -213,7 +253,6 @@ export function buildClassifiedBorderPaths(params: {
     };
 
     for (const ring of pf.rings) {
-      // Rings are separate subpaths — never join the last point of one ring to the next.
       internalEnd = null;
       intlEnd = null;
       coastEnd = null;
@@ -223,52 +262,21 @@ export function buildClassifiedBorderPaths(params: {
       for (let i = 0; i < len; i++) {
         const a = ring[i];
         const b = ring[(i + 1) % len];
-        const dx = b[0] - a[0];
-        const dy = b[1] - a[1];
-        const segLen = Math.hypot(dx, dy);
-        if (segLen < 0.02 || segLen > 600) continue;
+        const segLen = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        // 1:50m vertices sit ~0.01 projected units apart; the old 0.02 cut threw
+        // most of the real coastline away and left dashed borders.
+        if (segLen < 1e-4 || segLen > 600) continue;
 
         const mx = (a[0] + b[0]) * 0.5;
         const my = (a[1] + b[1]) * 0.5;
-        const ux = -dy / segLen;
-        const uy = dx / segLen;
-
-        // Determine the outward normal with a tight inner probe (0.2 units keeps
-        // the test inside very narrow slivers as well).
-        const plusInside = pointInProjectedFeature(
-          mx + ux * 0.2,
-          my + uy * 0.2,
-          pf
-        );
-        const outUx = plusInside ? -ux : ux;
-        const outUy = plusInside ? -uy : uy;
 
         let otherOwnerId: string | null = null;
-        for (const dist of probeDistances) {
-          const px = mx + outUx * dist;
-          const py = my + outUy * dist;
-          for (const cand of candidates) {
-            if (pointInProjectedFeature(px, py, cand)) {
-              otherOwnerId = territories[cand.id]?.ownerId ?? null;
-              break;
-            }
-          }
-          if (otherOwnerId !== null) break;
-        }
-
-        // Fallback: polygons that barely overlap at the midpoint.
-        if (otherOwnerId === null) {
-          for (const cand of candidates) {
-            if (pointInProjectedFeature(mx, my, cand)) {
-              otherOwnerId = territories[cand.id]?.ownerId ?? null;
-              break;
-            }
-          }
+        const sharedIdx = sharedFeatureFor(a[0], a[1], b[0], b[1], fi);
+        if (sharedIdx >= 0) {
+          otherOwnerId = territories[projectedList[sharedIdx].id]?.ownerId ?? null;
         }
 
         if (otherOwnerId === ownerId) {
-          // Internal district/sancak edge. Both sides draw it (identical style),
-          // which keeps the polyline continuous instead of alternating segments.
           appendInternal(a, b);
         } else if (otherOwnerId !== null) {
           appendInternational(a, b);
@@ -278,12 +286,7 @@ export function buildClassifiedBorderPaths(params: {
       }
     }
 
-    borderMap.set(id, {
-      internal,
-      international,
-      coastline,
-      playerFrontier,
-    });
+    borderMap.set(pf.id, { internal, international, coastline, playerFrontier });
   }
 
   return borderMap;

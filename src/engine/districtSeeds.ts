@@ -83,6 +83,10 @@ export const DISTRICT_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     d('VKH', 'Verkhoyansk', 133.39, 67.55, 0.004, 'Yakut'),
     d('CKD', 'Chokurdakh', 147.9, 70.62, 0.004, 'Indigir'),
     d('AND', 'Anadyr', 177.51, 64.73, 0.004, 'Çukçi'),
+    // Kuzey Urallar / Peçora ormanları: Kazan ve Perm hücrelerinin Kuzey Buz
+    // Denizi'ne uzanan ince kamalarını böler.
+    d('SYK', 'Sıktıvkar', 50.84, 61.67, 0.006, 'Ust-Sısolsk'),
+    d('UKH', 'Uhta', 53.9, 63.6, 0.004, 'Peçora'),
   ],
 
   // ── ABD: 16 → 34 ────────────────────────────────────────────────────────
