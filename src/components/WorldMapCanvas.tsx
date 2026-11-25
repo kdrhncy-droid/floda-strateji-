@@ -134,6 +134,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   const movementTweensRef = useRef<MovementTweenMap>(new Map());
   const borderCacheRef = useRef<{
     dimsKey: string;
+    /** Owner-only signature: borders do not change while a tick mutates units. */
+    signature: string;
     territories: Record<string, Territory>;
     playerNationId: string;
     paths: ClassifiedBorderMap;
@@ -477,15 +479,30 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     const nowMs = performance.now();
     syncMovementTweens(movementTweensRef.current, movements, speed, nowMs);
 
-    // Cache classified sovereign/internal/coastal border paths per (dimsKey, territories ref, playerNationId)
+    // Cache classified sovereign/internal/coastal border paths. The classifier only
+    // reads ownerId, so the cache survives simulation ticks (which replace the
+    // territories object every tick) and is rebuilt only when a province changes
+    // hands or the projection resizes.
     let classifiedBorders: ClassifiedBorderMap | null = null;
+    const borderCache = borderCacheRef.current;
+    let ownershipSignature = borderCache?.signature ?? '';
+    if (!borderCache || borderCache.territories !== territories) {
+      const parts: string[] = [];
+      for (const id in territories) {
+        parts.push(`${id}:${territories[id].ownerId}`);
+      }
+      ownershipSignature = parts.join(';');
+    }
     if (
-      borderCacheRef.current &&
-      borderCacheRef.current.dimsKey === dimsKey &&
-      borderCacheRef.current.territories === territories &&
-      borderCacheRef.current.playerNationId === playerNationId
+      borderCache &&
+      borderCache.dimsKey === dimsKey &&
+      borderCache.signature === ownershipSignature &&
+      borderCache.playerNationId === playerNationId
     ) {
-      classifiedBorders = borderCacheRef.current.paths;
+      classifiedBorders = borderCache.paths;
+      // Ownership is unchanged, so keep the fresh territories reference to skip
+      // rebuilding the signature string on every following frame.
+      borderCache.territories = territories;
     } else if (features.length > 0) {
       classifiedBorders = buildClassifiedBorderPaths({
         features,
@@ -495,6 +512,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       });
       borderCacheRef.current = {
         dimsKey,
+        signature: ownershipSignature,
         territories,
         playerNationId,
         paths: classifiedBorders,

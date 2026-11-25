@@ -73,10 +73,12 @@ function projectFeatureRings(
       for (const coord of outer) {
         const pt = projection([coord[0], coord[1]]);
         if (!pt || !Number.isFinite(pt[0]) || !Number.isFinite(pt[1])) continue;
-        // Skip microscopic sub-pixel jitter vertices to keep Path2D ultra-fast at high zoom
+        // Drop only true sub-pixel duplicates. The old 0.35 threshold simplified
+        // adjacent rings differently, which made shared borders drift apart and
+        // produced broken/gapped frontier lines.
         if (
           Number.isFinite(lastX) &&
-          Math.hypot(pt[0] - lastX, pt[1] - lastY) < 0.35
+          Math.hypot(pt[0] - lastX, pt[1] - lastY) < 0.1
         ) {
           continue;
         }
@@ -129,37 +131,94 @@ export function buildClassifiedBorderPaths(params: {
   const borderMap: ClassifiedBorderMap = new Map();
   const projectedMap = projectFeatureRings(features, projection);
   const projectedList = Array.from(projectedMap.values());
-  const probeDistances = [0.45, 1.35, 2.5];
+
+  // Probes are evaluated in projected (pre-zoom) units. Keeping them tiny means
+  // a coastal segment is never mistaken for a land frontier just because a
+  // far-away neighbour happens to sit within a generous sampling radius.
+  const probeDistances = [0.32, 0.85];
+  const bboxPad = 1.5;
+
+  // Pre-compute candidate neighbour lists once (bbox pre-filter, O(n^2) but only
+  // during cache builds) so the per-segment loop stays lean.
+  const candidateCache = new Map<string, ProjectedFeatureRings[]>();
+
+  const getCandidates = (pf: ProjectedFeatureRings): ProjectedFeatureRings[] => {
+    const cached = candidateCache.get(pf.id);
+    if (cached) return cached;
+    const out: ProjectedFeatureRings[] = [];
+    for (const other of projectedList) {
+      if (other.id === pf.id) continue;
+      if (
+        other.maxX < pf.minX - bboxPad ||
+        other.minX > pf.maxX + bboxPad ||
+        other.maxY < pf.minY - bboxPad ||
+        other.minY > pf.maxY + bboxPad
+      ) {
+        continue;
+      }
+      out.push(other);
+    }
+    candidateCache.set(pf.id, out);
+    return out;
+  };
 
   for (const pf of projectedList) {
     const id = pf.id;
     const terr = territories[id];
     if (!terr) continue;
 
-    // Gather ALL geometrically adjacent polygons by expanded bounding box (never misses a corner/seam touch)
-    const bboxCandidates: ProjectedFeatureRings[] = [];
-    const pad = 3.5;
-    for (const other of projectedList) {
-      if (other.id === id) continue;
-      if (
-        other.maxX < pf.minX - pad ||
-        other.minX > pf.maxX + pad ||
-        other.maxY < pf.minY - pad ||
-        other.minY > pf.maxY + pad
-      ) {
-        continue;
-      }
-      bboxCandidates.push(other);
-    }
-
+    const candidates = getCandidates(pf);
     const ownerId = terr.ownerId;
     const isPlayerOwned = ownerId === playerNationId;
+
     let internal: Path2D | undefined;
     let international: Path2D | undefined;
     let coastline: Path2D | undefined;
     let playerFrontier: Path2D | undefined;
 
+    /** Last point written per bucket, so consecutive segments form one smooth polyline. */
+    let internalEnd: [number, number] | null = null;
+    let intlEnd: [number, number] | null = null;
+    let coastEnd: [number, number] | null = null;
+    let frontierEnd: [number, number] | null = null;
+
+    const samePoint = (
+      a: [number, number] | null,
+      b: [number, number]
+    ) => Boolean(a) && Math.abs(a![0] - b[0]) < 1e-6 && Math.abs(a![1] - b[1]) < 1e-6;
+
+    const appendInternal = (a: [number, number], b: [number, number]) => {
+      if (!internal) internal = new Path2D();
+      if (!samePoint(internalEnd, a)) internal.moveTo(a[0], a[1]);
+      internal.lineTo(b[0], b[1]);
+      internalEnd = b;
+    };
+    const appendInternational = (a: [number, number], b: [number, number]) => {
+      if (!international) international = new Path2D();
+      if (!samePoint(intlEnd, a)) international.moveTo(a[0], a[1]);
+      international.lineTo(b[0], b[1]);
+      intlEnd = b;
+      if (isPlayerOwned) {
+        if (!playerFrontier) playerFrontier = new Path2D();
+        if (!samePoint(frontierEnd, a)) playerFrontier.moveTo(a[0], a[1]);
+        playerFrontier.lineTo(b[0], b[1]);
+        frontierEnd = b;
+      }
+    };
+    const appendCoastline = (a: [number, number], b: [number, number]) => {
+      if (!coastline) coastline = new Path2D();
+      if (!samePoint(coastEnd, a)) coastline.moveTo(a[0], a[1]);
+      coastline.lineTo(b[0], b[1]);
+      coastEnd = b;
+    };
+
     for (const ring of pf.rings) {
+      // Rings are separate subpaths — never join the last point of one ring to the next.
+      internalEnd = null;
+      intlEnd = null;
+      coastEnd = null;
+      frontierEnd = null;
+
       const len = ring.length;
       for (let i = 0; i < len; i++) {
         const a = ring[i];
@@ -167,28 +226,28 @@ export function buildClassifiedBorderPaths(params: {
         const dx = b[0] - a[0];
         const dy = b[1] - a[1];
         const segLen = Math.hypot(dx, dy);
-        if (segLen < 0.12 || segLen > 240) continue;
+        if (segLen < 0.02 || segLen > 600) continue;
 
         const mx = (a[0] + b[0]) * 0.5;
         const my = (a[1] + b[1]) * 0.5;
         const ux = -dy / segLen;
         const uy = dx / segLen;
 
-        // Determine outward unit normal using a tight inner probe
+        // Determine the outward normal with a tight inner probe (0.2 units keeps
+        // the test inside very narrow slivers as well).
         const plusInside = pointInProjectedFeature(
-          mx + ux * 0.35,
-          my + uy * 0.35,
+          mx + ux * 0.2,
+          my + uy * 0.2,
           pf
         );
         const outUx = plusInside ? -ux : ux;
         const outUy = plusInside ? -uy : uy;
 
-        // Multi-distance outward probe handles both tiny Voronoi gaps and slight overlaps cleanly
         let otherOwnerId: string | null = null;
         for (const dist of probeDistances) {
           const px = mx + outUx * dist;
           const py = my + outUy * dist;
-          for (const cand of bboxCandidates) {
+          for (const cand of candidates) {
             if (pointInProjectedFeature(px, py, cand)) {
               otherOwnerId = territories[cand.id]?.ownerId ?? null;
               break;
@@ -197,9 +256,9 @@ export function buildClassifiedBorderPaths(params: {
           if (otherOwnerId !== null) break;
         }
 
-        // Fallback: if polygons slightly overlap at midpoint, check midpoint directly against candidates
+        // Fallback: polygons that barely overlap at the midpoint.
         if (otherOwnerId === null) {
-          for (const cand of bboxCandidates) {
+          for (const cand of candidates) {
             if (pointInProjectedFeature(mx, my, cand)) {
               otherOwnerId = territories[cand.id]?.ownerId ?? null;
               break;
@@ -208,24 +267,13 @@ export function buildClassifiedBorderPaths(params: {
         }
 
         if (otherOwnerId === ownerId) {
-          if (a[0] < b[0] || (a[0] === b[0] && a[1] < b[1])) {
-            if (!internal) internal = new Path2D();
-            internal.moveTo(a[0], a[1]);
-            internal.lineTo(b[0], b[1]);
-          }
+          // Internal district/sancak edge. Both sides draw it (identical style),
+          // which keeps the polyline continuous instead of alternating segments.
+          appendInternal(a, b);
         } else if (otherOwnerId !== null) {
-          if (!international) international = new Path2D();
-          international.moveTo(a[0], a[1]);
-          international.lineTo(b[0], b[1]);
-          if (isPlayerOwned) {
-            if (!playerFrontier) playerFrontier = new Path2D();
-            playerFrontier.moveTo(a[0], a[1]);
-            playerFrontier.lineTo(b[0], b[1]);
-          }
+          appendInternational(a, b);
         } else {
-          if (!coastline) coastline = new Path2D();
-          coastline.moveTo(a[0], a[1]);
-          coastline.lineTo(b[0], b[1]);
+          appendCoastline(a, b);
         }
       }
     }
