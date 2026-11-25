@@ -1,9 +1,34 @@
-// Web Audio API Synthesized Sound Effects + Android Haptic Feedback for Grand Strategy War Room
+// Offline Open-Source Audio Samples (Wesnoth GPL/CC) + Web Audio API Fallback + Haptic Feedback
+
+type SfxKey =
+  | 'click'
+  | 'select'
+  | 'build'
+  | 'march'
+  | 'recruit'
+  | 'war_horn'
+  | 'treaty'
+  | 'victory'
+  | 'defeat';
+
+const SFX_URLS: Record<SfxKey, string> = {
+  click: '/assets/audio/sfx/click.mp3',
+  select: '/assets/audio/sfx/select.mp3',
+  build: '/assets/audio/sfx/build.mp3',
+  march: '/assets/audio/sfx/march.mp3',
+  recruit: '/assets/audio/sfx/recruit.mp3',
+  war_horn: '/assets/audio/sfx/war_horn.mp3',
+  treaty: '/assets/audio/sfx/treaty.mp3',
+  victory: '/assets/audio/sfx/victory.mp3',
+  defeat: '/assets/audio/sfx/defeat.mp3',
+};
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private volumeScale: number = 0.68;
+  private buffers: Map<SfxKey, AudioBuffer> = new Map();
+  private preloadStarted: boolean = false;
   public enabled: boolean = true;
 
   public setVolumes(masterPct: number, sfxPct: number) {
@@ -30,6 +55,30 @@ class SoundEngine {
     return this.masterGain;
   }
 
+  private preloadSamples() {
+    if (
+      this.preloadStarted ||
+      !this.ctx ||
+      typeof window === 'undefined' ||
+      typeof fetch !== 'function'
+    ) {
+      return;
+    }
+    this.preloadStarted = true;
+    const ctx = this.ctx;
+    (Object.keys(SFX_URLS) as SfxKey[]).forEach((key) => {
+      fetch(SFX_URLS[key])
+        .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject()))
+        .then((buf) => ctx.decodeAudioData(buf))
+        .then((decoded) => {
+          this.buffers.set(key, decoded);
+        })
+        .catch(() => {
+          // Silently fall back to Web Audio synth if sample isn't available
+        });
+    });
+  }
+
   private init() {
     if (!this.ctx && typeof window !== 'undefined') {
       const AudioCtx =
@@ -44,6 +93,30 @@ class SoundEngine {
       this.ctx.resume().catch(() => {});
     }
     this.getOutputNode();
+    this.preloadSamples();
+  }
+
+  private playSample(
+    key: SfxKey,
+    gainLevel: number = 0.65,
+    playbackRate: number = 1.0
+  ): boolean {
+    if (!this.ctx) return false;
+    const buffer = this.buffers.get(key);
+    if (!buffer) return false;
+    try {
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.setValueAtTime(playbackRate, this.ctx.currentTime);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(gainLevel, this.ctx.currentTime);
+      source.connect(gain);
+      gain.connect(this.getOutputNode() || this.ctx.destination);
+      source.start(0);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private vibrate(pattern: number | number[]) {
@@ -75,12 +148,12 @@ class SoundEngine {
     this.vibrate(8);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('click', 0.42, 1.05)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(520);
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    // Warm wooden war-room frame tap (soft low-mid transient)
     osc.type = 'sine';
     osc.frequency.setValueAtTime(290, now);
     osc.frequency.exponentialRampToValueAtTime(118, now + 0.038);
@@ -99,12 +172,12 @@ class SoundEngine {
     this.vibrate(10);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('select', 0.45, 1.0)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(580);
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    // Soft parchment map focus tone
     osc.type = 'sine';
     osc.frequency.setValueAtTime(240, now);
     osc.frequency.exponentialRampToValueAtTime(320, now + 0.06);
@@ -124,10 +197,10 @@ class SoundEngine {
     this.vibrate([12, 26, 14]);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('build', 0.65, 1.0)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(640);
-    // Warm resonant stone masonry & timber chord (D4 -> A4 -> D5) routed through masterGain + warm filter
     [220, 293.66, 369.99].forEach((freq, idx) => {
       if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
@@ -149,6 +222,7 @@ class SoundEngine {
     this.vibrate(10);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('march', 0.58, 1.0)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(360);
@@ -176,10 +250,10 @@ class SoundEngine {
     this.vibrate([18, 30, 24]);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('war_horn', 0.72, 1.0)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(420);
-    // Warm AoH3 deep historical war drum + low horn fifth (no raw sawtooth buzz)
     [98, 146.83].forEach((freq, idx) => {
       if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
@@ -204,6 +278,7 @@ class SoundEngine {
     this.vibrate([10, 20, 10]);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('treaty', 0.65, 1.0)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(680);
@@ -231,10 +306,10 @@ class SoundEngine {
     this.vibrate([14, 28, 18]);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('victory', 0.72, 1.0)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(620);
-    // Warm, low-register AoH3 parchment seal chord (C4, E4, G4) — no piercing C6
     [261.63, 329.63, 392.0].forEach((freq, idx) => {
       if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
@@ -259,10 +334,10 @@ class SoundEngine {
     this.vibrate([22, 24, 22]);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('defeat', 0.7, 1.0)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(380);
-    // Soft muted descending interval (A3 -> F3 -> D3)
     [220, 174.61, 146.83].forEach((freq, idx) => {
       if (!this.ctx) return;
       const osc = this.ctx.createOscillator();
@@ -283,10 +358,10 @@ class SoundEngine {
     this.vibrate([12, 18, 16]);
     this.init();
     if (!this.ctx) return;
+    if (this.playSample('recruit', 0.65, 1.0)) return;
 
     const now = this.ctx.currentTime;
     const filter = this.createWarmFilter(580);
-    // Crisp martial snare-drum thud + ascending fifth bugle chime
     const drumOsc = this.ctx.createOscillator();
     const drumGain = this.ctx.createGain();
     drumOsc.type = 'triangle';

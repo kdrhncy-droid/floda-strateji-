@@ -1,6 +1,10 @@
-// Polyphonic Web Audio Ottoman Mehterhane Synthesizer & Custom MP3 Engine
+// Offline Open-Source Orchestral Soundtrack (Battle for Wesnoth GPL/CC) + Ottoman Mehterhane Synthesizer & Custom MP3 Engine
 
 export type MusicTrackId =
+  | 'OSS_WESNOTH_KINGDOM'
+  | 'OSS_WESNOTH_LOYALISTS'
+  | 'OSS_WESNOTH_BATTLE_EPIC'
+  | 'OSS_WESNOTH_REVELATION'
   | 'TR_MEHTER_CEDDIN'
   | 'TR_MEHTER_HUCUM'
   | 'TR_MEHTER_GENC_OSMAN'
@@ -18,13 +22,46 @@ export interface MusicTrackDefinition {
   bpm: number;
   eraTag: string;
   isMehter?: boolean;
+  audioUrl?: string;
 }
 
 export const MUSIC_TRACKS: MusicTrackDefinition[] = [
   {
+    id: 'OSS_WESNOTH_KINGDOM',
+    title: 'Krallık Divanı Senfonisi (Açık Kaynak Orkestra)',
+    subtitle: 'Battle for Wesnoth — Ana Saltanat & Strateji Orkestra Kaydı (Çevrimdışı MP3)',
+    bpm: 108,
+    eraTag: 'Açık Kaynak Orkestra',
+    audioUrl: '/assets/audio/music/wesnoth_main_menu.mp3',
+  },
+  {
+    id: 'OSS_WESNOTH_LOYALISTS',
+    title: 'İmparatorluk Muhafızları Marşı (Açık Kaynak Orkestra)',
+    subtitle: 'Battle for Wesnoth — Loyalists Kraliyet Seferi Senfonisi (Çevrimdışı MP3)',
+    bpm: 116,
+    eraTag: 'Açık Kaynak Orkestra',
+    audioUrl: '/assets/audio/music/wesnoth_loyalists.mp3',
+  },
+  {
+    id: 'OSS_WESNOTH_BATTLE_EPIC',
+    title: 'Büyük Meydan Muharebesi (Açık Kaynak Orkestra)',
+    subtitle: 'Battle for Wesnoth — Battle Epic Savaş & Kuşatma Senfonisi (Çevrimdışı MP3)',
+    bpm: 128,
+    eraTag: 'Açık Kaynak Orkestra',
+    audioUrl: '/assets/audio/music/wesnoth_battle_epic.mp3',
+  },
+  {
+    id: 'OSS_WESNOTH_REVELATION',
+    title: 'Keşif ve Diplomasi Prelüdü (Açık Kaynak Orkestra)',
+    subtitle: 'Battle for Wesnoth — Revelation Tarihi Harita & Diplomasi Teması (Çevrimdışı MP3)',
+    bpm: 96,
+    eraTag: 'Açık Kaynak Orkestra',
+    audioUrl: '/assets/audio/music/wesnoth_revelation.mp3',
+  },
+  {
     id: 'TR_MEHTER_CEDDIN',
     title: 'Ceddin Deden, Neslin Baban',
-    subtitle: 'Orijinal Osmanlı Mehter Marşı (Zurna, Kös & Çevgan)',
+    subtitle: 'Orijinal Osmanlı Mehter Marşı (Zurna, Kös & Çevgan Sentezi)',
     bpm: 112,
     eraTag: 'Mehterhane-i Hümayun',
     isMehter: true,
@@ -302,10 +339,12 @@ const STRATEGY_SYMPHONY_SCORE: NoteStep[] = [
 class NationalMusicEngine {
   private ctx: AudioContext | null = null;
   private isPlayingState: boolean = false;
-  private currentTrack: MusicTrackId = 'TR_MEHTER_CEDDIN';
+  private currentTrack: MusicTrackId = 'OSS_WESNOTH_KINGDOM';
   private customTrackName: string = 'Özel Marş (MP3)';
   private customAudioEl: HTMLAudioElement | null = null;
   private customObjectUrl: string | null = null;
+  private bundledAudioEl: HTMLAudioElement | null = null;
+  private bundledAudioSrc: string | null = null;
   private stepIndex: number = 0;
   private timerId: number | null = null;
   private listeners: Set<() => void> = new Set();
@@ -333,7 +372,7 @@ class NationalMusicEngine {
     }
     return (
       MUSIC_TRACKS.find((t) => t.id === this.currentTrack)?.title ||
-      'Ceddin Deden, Neslin Baban'
+      'Krallık Divanı Senfonisi (Açık Kaynak Orkestra)'
     );
   }
 
@@ -351,8 +390,12 @@ class NationalMusicEngine {
         0.03
       );
     }
+    const clampedVol = Math.max(0, Math.min(1, this.musicVolumeScale));
     if (this.customAudioEl) {
-      this.customAudioEl.volume = Math.max(0, Math.min(1, this.musicVolumeScale));
+      this.customAudioEl.volume = clampedVol;
+    }
+    if (this.bundledAudioEl) {
+      this.bundledAudioEl.volume = clampedVol;
     }
   }
 
@@ -385,10 +428,10 @@ class NationalMusicEngine {
     this.getOutputNode();
   }
 
-  public selectDefaultTrackForNation(nationId: string) {
+  public selectDefaultTrackForNation(_nationId: string) {
     if (this.currentTrack === 'CUSTOM_MP3') return;
-    if (nationId === '792' || nationId === '031') {
-      this.currentTrack = 'TR_MEHTER_CEDDIN';
+    if (!MUSIC_TRACKS.some((t) => t.id === this.currentTrack)) {
+      this.currentTrack = 'OSS_WESNOTH_KINGDOM';
     }
     this.notify();
   }
@@ -449,6 +492,30 @@ class NationalMusicEngine {
       return;
     }
 
+    const activeDef = MUSIC_TRACKS.find((t) => t.id === this.currentTrack);
+    if (activeDef?.audioUrl && typeof Audio !== 'undefined') {
+      if (!this.bundledAudioEl || this.bundledAudioSrc !== activeDef.audioUrl) {
+        if (this.bundledAudioEl) {
+          this.bundledAudioEl.pause();
+        }
+        this.bundledAudioEl = new Audio(activeDef.audioUrl);
+        this.bundledAudioEl.loop = true;
+        this.bundledAudioSrc = activeDef.audioUrl;
+      }
+      this.bundledAudioEl.volume = Math.max(
+        0,
+        Math.min(1, this.musicVolumeScale)
+      );
+      this.bundledAudioEl.play().catch(() => {
+        // Fallback to Web Audio synth if autoplay or audio decoding fails
+        this.initContext();
+        this.stepIndex = 0;
+        this.scheduleNextNote();
+      });
+      this.notify();
+      return;
+    }
+
     this.initContext();
     this.stepIndex = 0;
     this.scheduleNextNote();
@@ -463,6 +530,9 @@ class NationalMusicEngine {
     }
     if (this.customAudioEl) {
       this.customAudioEl.pause();
+    }
+    if (this.bundledAudioEl) {
+      this.bundledAudioEl.pause();
     }
     this.notify();
   }

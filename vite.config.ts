@@ -55,7 +55,7 @@ export default defineConfig(() => {
           navigateFallbackDenylist: [/^\/api\//],
           ignoreURLParametersMatching: [/.*/],
           globPatterns: [
-            '**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,json,woff,woff2}',
+            '**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,json,woff,woff2,mp3,wav,ogg}',
           ],
           globIgnores: [
             '**/game_map_*.png',
