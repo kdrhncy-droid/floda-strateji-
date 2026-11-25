@@ -777,22 +777,34 @@ test('computeGameTick preserves territories/nations references during hourly arm
   assert.equal(curState.territories['300'].ownerId, '792', 'Superior army should conquer province on the map');
 });
 
+import { geoArea, geoMercator } from 'd3-geo';
+import { feature } from 'topojson-client';
+import worldData from 'world-atlas/countries-110m.json';
 import { initializeWorld2026 } from './worldBuilder';
-import { COUNTRY_PROVINCE_SEEDS } from './polygonSubdivider';
+import {
+  COUNTRY_PROVINCE_SEEDS,
+  getHistoricProvinceNames,
+  getNormalizedProvinceShares,
+} from './polygonSubdivider';
 import { MUSIC_TRACKS } from './musicEngine';
+import { buildSeedForFeature } from '../data/world2026Data';
+import {
+  renderMapLabelsAndBattles,
+  shouldRenderProvinceLabel,
+} from '../map/mapLabelsAndUnitsRenderer';
 
 test('expanded province seeds and 1440 scenario cover 100% of world landmasses with 14+ Ottoman sancaks and offline Mehter tracks', () => {
   assert.ok(
-    COUNTRY_PROVINCE_SEEDS['792'].length >= 20,
-    `Ottoman/Turkey (792) should have >= 20 historical sancak subdivisions, got ${COUNTRY_PROVINCE_SEEDS['792'].length}`
+    COUNTRY_PROVINCE_SEEDS['792'].length >= 36,
+    `Ottoman/Turkey (792) should have >= 36 historical sancak subdivisions, got ${COUNTRY_PROVINCE_SEEDS['792'].length}`
   );
 
   const world2026 = initializeWorld2026('STANDARD_2026');
   const world1440 = initializeWorld2026('EMPIRES_1440');
 
   assert.ok(
-    world2026.features.length >= 280,
-    `Expected >= 280 provinces in 2026 world, got ${world2026.features.length}`
+    world2026.features.length >= 880 && world2026.features.length <= 920,
+    `Expected 880-920 provinces in 2026 world, got ${world2026.features.length}`
   );
   assert.equal(
     world1440.features.length,
@@ -812,8 +824,8 @@ test('expanded province seeds and 1440 scenario cover 100% of world landmasses w
     (t) => t.ownerId === '792'
   );
   assert.ok(
-    ottomanProvinces1440.length >= 12,
-    `Expected Ottoman 1440 to start with >= 12 provinces, got ${ottomanProvinces1440.length}`
+    ottomanProvinces1440.length >= 30,
+    `Expected Ottoman 1440 to start with >= 30 provinces, got ${ottomanProvinces1440.length}`
   );
 
   // Verify offline Ottoman Mehter track catalog
@@ -7613,39 +7625,458 @@ test('1444 scenario distributes historical city counts, borders, and capitals ac
   }));
   const maxCityCount = Math.max(...ownerCounts.map((x) => x.count));
   assert.ok(
-    maxCityCount <= 22,
-    `No 1444 realm should exceed 22 cities, found ${maxCityCount}`
+    maxCityCount <= 45,
+    `No 1444 realm should exceed 45 provinces after the district expansion, found ${maxCityCount}`
   );
 
   // Key Eurasian historical city counts & borders
-  assert.equal(countByOwner('792').length, 20, 'Ottoman Empire (1444) should have 20 cities');
+  assert.equal(countByOwner('792').length, 35, 'Ottoman Empire (1444) should have 35 provinces');
   assert.equal(world1440.territories['300_SKG'].ownerId, '792', 'Selanik should be Ottoman in 1444');
   assert.equal(world1440.territories['300_IOA'].ownerId, '792', 'Yanya should be Ottoman in 1444');
   assert.equal(world1440.territories['642_CND'].ownerId, '792', 'Dobruca/Silistre should be Ottoman in 1444');
 
-  assert.equal(countByOwner('300').length, 2, 'Byzantium & Morea (1444) should have 2 cities');
+  assert.equal(countByOwner('300').length, 5, 'Byzantium & Morea (1444) should have 5 provinces');
   assert.equal(world1440.territories['792_IST'].ownerId, '300', 'Constantinople must belong to Byzantium');
   assert.equal(world1440.territories['300_CRT'].ownerId, '380', 'Crete must belong to Venice');
 
-  assert.equal(countByOwner('818').length, 16, 'Mamluk Sultanate should have 16 cities');
-  assert.equal(countByOwner('156').length, 15, 'Ming Dynasty should have 15 cities');
-  assert.equal(countByOwner('276').length, 11, 'Holy Roman Empire should have 11 cities');
-  assert.equal(countByOwner('250').length, 10, 'Kingdom of France should have 10 cities');
-  assert.equal(countByOwner('724').length, 9, 'Castile & Aragon should have 9 cities');
-  assert.equal(countByOwner('348').length, 8, 'Kingdom of Hungary should have 8 cities');
+  assert.equal(countByOwner('818').length, 31, 'Mamluk Sultanate should have 31 provinces');
+  assert.equal(countByOwner('156').length, 36, 'Ming Dynasty should have 36 provinces');
+  assert.equal(countByOwner('276').length, 20, 'Holy Roman Empire should have 20 provinces');
+  assert.equal(countByOwner('250').length, 18, 'Kingdom of France should have 18 provinces');
+  assert.equal(countByOwner('724').length, 20, 'Castile & Aragon should have 20 provinces');
+  assert.equal(countByOwner('348').length, 12, 'Kingdom of Hungary should have 12 provinces');
   assert.equal(world1440.territories['642_CLJ'].ownerId, '348', 'Transylvania should belong to Hungary');
-  assert.equal(countByOwner('392').length, 7, 'Ashikaga Japan should have 7 cities');
-  assert.equal(countByOwner('826').length, 6, 'Kingdom of England should have 6 cities');
+  assert.equal(countByOwner('392').length, 14, 'Ashikaga Japan should have 14 provinces');
+  assert.equal(countByOwner('826').length, 13, 'Kingdom of England should have 13 provinces');
   assert.equal(countByOwner('905').length, 2, 'Kingdom of Scotland should have 2 cities');
   assert.equal(world1440.territories['826_EDI'].ownerId, '905', 'Edinburgh should belong to Scotland');
-  assert.equal(countByOwner('616').length, 6, 'Kingdom of Poland should have 6 cities');
+  assert.equal(countByOwner('616').length, 12, 'Kingdom of Poland should have 12 provinces');
   assert.equal(world1440.territories['616_GDN'].ownerId, '428', 'Marienburg/Danzig should belong to Teutonic Order');
-  assert.equal(countByOwner('440').length, 6, 'Grand Duchy of Lithuania should have 6 cities');
+  assert.equal(countByOwner('440').length, 10, 'Grand Duchy of Lithuania should have 10 provinces');
   assert.equal(world1440.territories['804'].ownerId, '440', 'Kiev should belong to Lithuania');
-  assert.equal(countByOwner('642').length, 2, 'Wallachia should have 2 cities');
-  assert.equal(countByOwner('498').length, 2, 'Moldavia should have 2 cities');
+  assert.equal(countByOwner('642').length, 6, 'Wallachia should have 6 provinces');
+  assert.equal(countByOwner('498').length, 4, 'Moldavia should have 4 provinces');
   assert.equal(world1440.territories['642_IAS'].ownerId, '498', 'Iasi should belong to Moldavia');
   assert.equal(world1440.nations['031'].capitalTerritoryId, '364_TBZ', 'Karakoyunlu capital should be Tabriz');
   assert.equal(world1440.nations['364'].capitalTerritoryId, '860_SKD', 'Timurid capital should be Samarkand');
 });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Expanded world map: ~880–920 provinces, 3-stage labels, period naming
+// ─────────────────────────────────────────────────────────────────────────────
+
+function pointInOuterRingForTest(
+  lon: number,
+  lat: number,
+  ring: number[][]
+): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    if (
+      yi > lat !== yj > lat &&
+      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function geometryContainsPointForTest(
+  geometry: { type: string; coordinates: unknown },
+  lon: number,
+  lat: number
+): boolean {
+  if (geometry.type === 'Polygon') {
+    const ring = (geometry.coordinates as number[][][])[0];
+    return ring ? pointInOuterRingForTest(lon, lat, ring) : false;
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return (geometry.coordinates as number[][][][]).some(
+      (poly) => poly[0] && pointInOuterRingForTest(lon, lat, poly[0])
+    );
+  }
+  return false;
+}
+
+test('expanded map keeps every district polygon on land, connected and tappable', () => {
+  const world = initializeWorld2026('STANDARD_2026');
+  const totalProvinces = world.features.length;
+
+  assert.equal(Object.keys(world.territories).length, totalProvinces);
+  assert.equal(
+    new Set(world.features.map((f) => f.id)).size,
+    totalProvinces,
+    'Province IDs must stay unique'
+  );
+
+  const districts = Object.values(world.territories).filter((t) => t.isDistrict);
+  assert.ok(
+    districts.length >= 430,
+    `Expected >= 430 tier-3 districts, got ${districts.length}`
+  );
+
+  const featureById = new Map(world.features.map((f) => [f.id, f]));
+  for (const district of districts) {
+    const feature = featureById.get(district.id);
+    assert.ok(feature, `District ${district.id} must have a polygon feature`);
+    assert.ok(
+      geoArea(feature as unknown as Parameters<typeof geoArea>[0]) > 1e-7,
+      `District ${district.name} (${district.id}) must have a real land polygon`
+    );
+    assert.ok(
+      district.neighbors.length >= 1,
+      `District ${district.name} (${district.id}) must have >= 1 neighbour`
+    );
+    // Label anchor must sit on its own land (never in the ocean/bay).
+    assert.ok(
+      geometryContainsPointForTest(
+        feature!.geometry as unknown as { type: string; coordinates: unknown },
+        district.centroid[0],
+        district.centroid[1]
+      ),
+      `District label anchor of ${district.name} (${district.id}) must be on land`
+    );
+  }
+
+  // Legacy provinces also keep at least one neighbour (no isolated islands).
+  for (const territory of Object.values(world.territories)) {
+    assert.ok(
+      territory.neighbors.length >= 1,
+      `Province ${territory.name} (${territory.id}) must have >= 1 neighbour`
+    );
+  }
+
+  // Every nation keeps a valid, owned capital province.
+  for (const nation of Object.values(world.nations)) {
+    const capital = world.territories[nation.capitalTerritoryId];
+    assert.ok(capital, `${nation.name} must keep capital ${nation.capitalTerritoryId}`);
+    assert.equal(capital!.isCapital, true);
+    assert.equal(capital!.ownerId, nation.id);
+    assert.notEqual(capital!.isDistrict, true, 'A capital can never be a tier-3 district');
+  }
+});
+
+test('regional scaling targets match the approved plan and micro-states stay whole', () => {
+  const minimums: Record<string, number> = {
+    '792': 36, // Türkiye / Anadolu
+    '643': 34, // Rusya
+    '840': 32, // ABD
+    '156': 32, // Çin
+    '356': 24, // Hindistan
+    '276': 20, // Almanya
+    '250': 19, // Fransa
+    '380': 17, // İtalya
+    '724': 17, // İspanya
+    '124': 16, // Kanada
+    '826': 15, // Birleşik Krallık
+    '364': 15, // İran
+    '392': 14, // Japonya
+    '036': 12, // Avustralya
+    '484': 12, // Meksika
+    '616': 12, // Polonya
+    '076': 16, // Brezilya
+    '410': 11, // Güney Kore
+    '804': 10, // Ukrayna
+    '818': 10, // Mısır
+    '682': 10, // Suudi Arabistan
+    '360': 10, // Endonezya
+    '398': 10, // Kazakistan
+    '642': 10, // Romanya
+    '566': 8, // Nijerya
+    '710': 8, // Güney Afrika
+    '231': 8, // Etiyopya
+  };
+
+  for (const [countryId, minimum] of Object.entries(minimums)) {
+    const seeds = COUNTRY_PROVINCE_SEEDS[countryId];
+    assert.ok(seeds, `Country ${countryId} must have a seed list`);
+    assert.ok(
+      seeds!.length >= minimum,
+      `Country ${countryId} should have >= ${minimum} provinces, got ${seeds!.length}`
+    );
+  }
+
+  // Micro-states and small islands are intentionally NOT over-divided: they
+  // either stay a single province or keep their original at most two cities.
+  for (const microState of ['196', '756', '056', '422', '442', '064', '352', '242', '044']) {
+    const seeds = COUNTRY_PROVINCE_SEEDS[microState];
+    assert.ok(
+      !seeds || seeds.length <= 2,
+      `Micro-state ${microState} must stay at most 2 tappable provinces, got ${seeds?.length}`
+    );
+  }
+
+  // Every new district carries both a modern and a period name.
+  const districtSeeds = Object.values(COUNTRY_PROVINCE_SEEDS)
+    .flat()
+    .filter((seed) => seed.isDistrict);
+  assert.ok(districtSeeds.length >= 430);
+  for (const seed of districtSeeds) {
+    assert.ok(seed.name.length > 0, 'District must have a modern 2026 name');
+    assert.ok(
+      Boolean(seed.historicName),
+      `District ${seed.name} must carry a 1444 period name`
+    );
+  }
+});
+
+test('district additions normalize population, GDP and army shares to 1.00 per country', () => {
+  for (const [countryId, seeds] of Object.entries(COUNTRY_PROVINCE_SEEDS)) {
+    const shares = getNormalizedProvinceShares(seeds);
+    assert.equal(shares.length, seeds.length);
+    const sum = shares.reduce((acc, v) => acc + v, 0);
+    assert.ok(
+      Math.abs(sum - 1) < 1e-9,
+      `${countryId} normalized shares must sum to 1.00, got ${sum}`
+    );
+    assert.ok(
+      shares.every((v) => Number.isFinite(v) && v > 0),
+      `${countryId} shares must be positive`
+    );
+  }
+
+  // Recompute the country seed exactly like worldBuilder does and verify that
+  // adding districts did not change the country's total population.
+  const topo = worldData as unknown as {
+    objects: { countries: unknown };
+  };
+  const geoCollection = feature(
+    topo as never,
+    topo.objects.countries as never
+  ) as unknown as { features: { id?: string; properties?: { name?: string } }[] };
+  const filtered = geoCollection.features.filter(
+    (f) =>
+      String(f.id) !== '010' &&
+      f.properties?.name !== 'Antarctica'
+  );
+  const metaById = new Map<string, { rawName: string; index: number }>();
+  filtered.forEach((f, idx) => {
+    metaById.set(String(f.id || `90${idx}`).padStart(3, '0'), {
+      rawName: f.properties?.name || '',
+      index: idx,
+    });
+  });
+
+  const world = initializeWorld2026('STANDARD_2026');
+  for (const countryId of ['792', '840', '276', '356', '643', '616']) {
+    const meta = metaById.get(countryId);
+    assert.ok(meta, `Country ${countryId} must exist in the atlas`);
+    const seed = buildSeedForFeature(countryId, meta!.rawName, meta!.index);
+    const provinces = COUNTRY_PROVINCE_SEEDS[countryId]
+      .map((s) =>
+        world.territories[s.isCapital ? countryId : `${countryId}_${s.suffixId}`]
+      )
+      .filter(Boolean);
+    const totalPopulation = provinces.reduce((acc, p) => acc + p!.population, 0);
+    assert.ok(
+      Math.abs(totalPopulation - seed.population) <=
+        Math.max(10, seed.population * 0.005),
+      `${countryId} total population must stay ${seed.population}, got ${totalPopulation}`
+    );
+
+    const totalArmy = provinces.reduce((acc, p) => acc + p!.garrison, 0);
+    assert.ok(
+      Math.abs(totalArmy - seed.garrison) <= Math.max(20, seed.garrison * 0.02),
+      `${countryId} starting army must stay ${seed.garrison}, got ${totalArmy}`
+    );
+
+    const expectedGdp = Math.round(seed.baseGdp * 1.15);
+    const totalGdp = provinces.reduce((acc, p) => acc + p!.baseGdp, 0);
+    assert.ok(
+      Math.abs(totalGdp - expectedGdp) <= Math.max(6, expectedGdp * 0.05),
+      `${countryId} total GDP must stay ${expectedGdp}, got ${totalGdp}`
+    );
+  }
+});
+
+test('2026 uses modern names while 1444 uses period sancak/eyalet names', () => {
+  const modern = initializeWorld2026('STANDARD_2026');
+  const historic = initializeWorld2026('EMPIRES_1440');
+
+  const expectations: [string, string, string][] = [
+    ['792_GZP', 'Gaziantep', 'Ayıntab'],
+    ['792_MAN', 'Manisa', 'Saruhan'],
+    ['792_BAL', 'Balıkesir', 'Karesi'],
+    ['792_KOC', 'Kocaeli', 'İznikmid'],
+    ['792_URF', 'Şanlıurfa', 'Ruha'],
+    ['792_DYB', 'Diyarbakır', 'Amid'],
+    ['643_PSK', 'Pskov', 'Pskov'],
+    ['392_KIJ', 'Niigata', 'Echigo'],
+    ['392', 'Tokyo', 'Edo'],
+    ['250_LIL', 'Lille', 'Flandre'],
+    ['250_MPL', 'Montpellier', 'Languedoc'],
+    ['484', 'Meksiko', '★ Tenochtitlan'],
+  ];
+
+  for (const [provinceId, modernName, periodName] of expectations) {
+    assert.equal(
+      modern.territories[provinceId]?.name,
+      modernName,
+      `${provinceId} must keep its modern 2026 name`
+    );
+    assert.equal(
+      historic.territories[provinceId]?.name,
+      periodName,
+      `${provinceId} must use its 1444 period name`
+    );
+  }
+
+  const periodNames = getHistoricProvinceNames();
+  assert.ok(
+    Object.keys(periodNames).length >= 500,
+    `Expected >= 500 period names, got ${Object.keys(periodNames).length}`
+  );
+  assert.equal(periodNames['792_GZP'], 'Ayıntab');
+  assert.equal(periodNames['392_KIJ'], 'Echigo');
+  assert.equal(periodNames['250_LIL'], 'Flandre');
+
+  // Modern-only names must never leak into the 1444 scenario for renamed ids.
+  for (const [provinceId, modernName] of expectations) {
+    if (modernName === historic.territories[provinceId]?.name) continue;
+    assert.notEqual(
+      historic.territories[provinceId]?.name,
+      modernName,
+      `${provinceId} must not show its modern name in 1444`
+    );
+  }
+});
+
+test('three-stage label LOD keeps distant maps clean and reveals districts only when zoomed', () => {
+  const desktop = getMapLabelThresholds('BALANCED', false);
+  const mobile = getMapLabelThresholds('BALANCED', true);
+
+  assert.ok(desktop.nationNameMaxZoom <= desktop.capitalNameMinZoom);
+  assert.ok(desktop.capitalNameMinZoom < desktop.provinceNameMinZoom);
+  assert.ok(desktop.provinceNameMinZoom < desktop.districtNameMinZoom);
+  assert.ok(
+    desktop.districtNameMinZoom >= 2.4,
+    'Districts should only appear at >= 2.4x on desktop'
+  );
+  assert.ok(
+    mobile.districtNameMinZoom >= 2.8,
+    'Districts should only appear at >= 2.8x on mobile'
+  );
+
+  assert.equal(shouldRenderProvinceLabel('district', 0.5, desktop, true), true);
+  assert.equal(
+    shouldRenderProvinceLabel('district', desktop.districtNameMinZoom - 0.01, desktop, false),
+    false
+  );
+  assert.equal(
+    shouldRenderProvinceLabel('district', desktop.districtNameMinZoom, desktop, false),
+    true
+  );
+  assert.equal(shouldRenderProvinceLabel('city', 2.5, desktop, false), true);
+  assert.equal(shouldRenderProvinceLabel('capital', 1.45, desktop, false), true);
+  assert.equal(shouldRenderProvinceLabel('capital', 1.3, desktop, false), false);
+
+  // Density setting still shifts the thresholds (COMPACT later, DETAILED earlier).
+  const compact = getMapLabelThresholds('COMPACT', false);
+  const detailed = getMapLabelThresholds('DETAILED', false);
+  assert.ok(compact.districtNameMinZoom > desktop.districtNameMinZoom);
+  assert.ok(detailed.districtNameMinZoom < desktop.districtNameMinZoom);
+  assert.ok(compact.capitalNameMinZoom > desktop.capitalNameMinZoom);
+  assert.ok(detailed.capitalNameMinZoom < desktop.capitalNameMinZoom);
+});
+
+test('1444 great-power ranking is preserved after the district expansion', () => {
+  const world1440 = initializeWorld2026('EMPIRES_1440');
+  const totals: Record<string, { gdp: number; army: number }> = {};
+  for (const territory of Object.values(world1440.territories)) {
+    const bucket = (totals[territory.ownerId] ??= { gdp: 0, army: 0 });
+    bucket.gdp += territory.baseGdp;
+    bucket.army += territory.garrison;
+  }
+
+  const topGdp = Object.entries(totals)
+    .sort((a, b) => b[1].gdp - a[1].gdp)
+    .slice(0, 8)
+    .map(([id]) => id);
+  for (const greatPower of ['156', '792', '818', '364', '276', '250']) {
+    assert.ok(
+      topGdp.includes(greatPower),
+      `Great power ${greatPower} must remain in the 1444 GDP top 8, got ${topGdp.join(',')}`
+    );
+  }
+
+  const topArmy = Object.entries(totals)
+    .sort((a, b) => b[1].army - a[1].army)
+    .slice(0, 5)
+    .map(([id]) => id);
+  assert.ok(topArmy.includes('156'), 'Ming must lead the 1444 army ranking');
+  assert.ok(topArmy.includes('792'), 'Ottoman army must stay in the 1444 top 5');
+});
+
+test('~900-province world build stays within the interactive start budget', () => {
+  const startedAt = performance.now();
+  const world = initializeWorld2026('STANDARD_2026');
+  const elapsed = performance.now() - startedAt;
+
+  assert.ok(world.features.length >= 880 && world.features.length <= 920);
+  assert.ok(
+    elapsed < 1500,
+    `World creation with ~900 provinces took ${elapsed.toFixed(0)}ms (budget 1500ms, target 350ms)`
+  );
+});
+
+
+function createStubCanvasContext(): CanvasRenderingContext2D {
+  const gradient = { addColorStop: () => {} };
+  const base: Record<string, unknown> = {
+    measureText: (text: string) => ({ width: String(text).length * 6 }),
+    createLinearGradient: () => gradient,
+    createRadialGradient: () => gradient,
+    createPattern: () => gradient,
+    getImageData: () => ({ data: new Uint8ClampedArray(4) }),
+    canvas: { width: 800, height: 600 },
+  };
+  return new Proxy(base, {
+    get(target, prop: string) {
+      if (prop in target) return target[prop];
+      return () => {};
+    },
+    set(target, prop: string, value) {
+      target[prop] = value;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+}
+
+test('canvas labels render without errors at every LOD stage with ~900 provinces', () => {
+  const world = initializeWorld2026('STANDARD_2026');
+  const projection = geoMercator().scale(120).translate([400, 300]);
+  const ctx = createStubCanvasContext();
+
+  // Overview → capitals → major cities → districts → deep zoom.
+  for (const k of [0.8, 1.45, 1.9, 2.5, 3.4]) {
+    assert.doesNotThrow(() =>
+      renderMapLabelsAndBattles({
+        ctx,
+        width: 800,
+        height: 600,
+        transform: { x: 0, y: 0, k },
+        visibleFeatures: world.features,
+        territories: world.territories,
+        nations: world.nations,
+        relations: world.relations,
+        wars: [],
+        battles: [],
+        projection,
+        mapMode: 'POLITICAL',
+        mapLabelDensity: 'BALANCED',
+        mapLabelScaleMultiplier: 1,
+        playerNationId: '792',
+        selectedTerritoryId: '792_GZP',
+        armyOrderSourceId: null,
+        fogOfWarEnabled: false,
+        visibleTerritoryIds: new Set(Object.keys(world.territories)),
+      })
+    );
+  }
+});

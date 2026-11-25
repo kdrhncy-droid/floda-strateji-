@@ -58,23 +58,54 @@ function formatTroopBadgeNumber(garrison: number, zoomK: number): string {
   return `${Math.max(0, Math.round(garrison))}`;
 }
 
+export interface MapLabelThresholds {
+  /** Below this zoom only nation realm names are drawn (overview). */
+  nationNameMaxZoom: number;
+  /** Capitals (★) appear from here on. */
+  capitalNameMinZoom: number;
+  /** Major cities (Tier 2, legacy 448-map cities) appear from here on. */
+  provinceNameMinZoom: number;
+  /** District / sancak names (Tier 3) appear last, only when zoomed in. */
+  districtNameMinZoom: number;
+}
+
+/**
+ * Three-stage label LOD:
+ *   1. overview  → nation realm names (and capitals as soon as they fit)
+ *   2. regional  → capitals + major cities
+ *   3. front/district (≥2.4x desktop, ≥2.8x mobile on BALANCED) → districts
+ * Density setting still shifts every stage, COMPACT hiding more and
+ * DETAILED revealing earlier.
+ */
 export function getMapLabelThresholds(
   density: MapLabelDensityOption,
   isMobileViewport: boolean
-): { capitalNameMinZoom: number; provinceNameMinZoom: number } {
+): MapLabelThresholds {
   if (density === 'COMPACT') {
-    return isMobileViewport
-      ? { capitalNameMinZoom: 2.0, provinceNameMinZoom: 2.65 }
-      : { capitalNameMinZoom: 1.8, provinceNameMinZoom: 2.45 };
+    const capitalNameMinZoom = isMobileViewport ? 1.85 : 1.7;
+    return {
+      nationNameMaxZoom: capitalNameMinZoom,
+      capitalNameMinZoom,
+      provinceNameMinZoom: isMobileViewport ? 2.35 : 2.2,
+      districtNameMinZoom: isMobileViewport ? 2.95 : 2.75,
+    };
   }
   if (density === 'DETAILED') {
-    return isMobileViewport
-      ? { capitalNameMinZoom: 1.45, provinceNameMinZoom: 1.9 }
-      : { capitalNameMinZoom: 1.3, provinceNameMinZoom: 1.7 };
+    const capitalNameMinZoom = isMobileViewport ? 1.35 : 1.25;
+    return {
+      nationNameMaxZoom: capitalNameMinZoom,
+      capitalNameMinZoom,
+      provinceNameMinZoom: isMobileViewport ? 1.65 : 1.55,
+      districtNameMinZoom: isMobileViewport ? 2.45 : 2.15,
+    };
   }
-  return isMobileViewport
-    ? { capitalNameMinZoom: 1.75, provinceNameMinZoom: 2.25 }
-    : { capitalNameMinZoom: 1.55, provinceNameMinZoom: 2.05 };
+  const capitalNameMinZoom = isMobileViewport ? 1.5 : 1.4;
+  return {
+    nationNameMaxZoom: capitalNameMinZoom,
+    capitalNameMinZoom,
+    provinceNameMinZoom: isMobileViewport ? 1.95 : 1.8,
+    districtNameMinZoom: isMobileViewport ? 2.8 : 2.4,
+  };
 }
 
 const DYNASTY_PREFIX_TO_CITY_MAP: Record<string, string> = {
@@ -172,6 +203,28 @@ export function formatProvinceMapLabel(
   return { lines: [labelText], isFull: !labelText.endsWith('…') };
 }
 
+export type ProvinceLabelTier = 'capital' | 'city' | 'district';
+
+/**
+ * Pure LOD decision for a province label. Used by the canvas renderer and
+ * covered directly by tests:
+ *   - selected province is always labelled (touch/selection override)
+ *   - capitals from capitalNameMinZoom
+ *   - major cities from provinceNameMinZoom
+ *   - districts/sancaks only from districtNameMinZoom
+ */
+export function shouldRenderProvinceLabel(
+  tier: ProvinceLabelTier,
+  zoomK: number,
+  thresholds: MapLabelThresholds,
+  isSelected: boolean
+): boolean {
+  if (isSelected) return true;
+  if (tier === 'capital') return zoomK >= thresholds.capitalNameMinZoom;
+  if (tier === 'district') return zoomK >= thresholds.districtNameMinZoom;
+  return zoomK >= thresholds.provinceNameMinZoom;
+}
+
 export function isNationPlayerOrAlly(
   nationId: string | undefined,
   playerNationId: string,
@@ -241,25 +294,27 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     if (t) visibleTerritories.push(t);
   }
 
-  // Sort priority: Selected -> Player Owned -> At War Enemy -> Capitals -> Largest Garrison
+  // Label priority (approved plan):
+  // Selected → Player Capital → Capitals → Major Cities → Districts.
+  const labelRank = (t: Territory): number => {
+    if (t.id === selectedTerritoryId) return 0;
+    const isCapital = Boolean(t.isCapital || t.id === t.ownerId);
+    const isPlayer = t.ownerId === playerNationId;
+    const isDistrict = Boolean(t.isDistrict) && !isCapital;
+    if (isCapital) return isPlayer ? 1 : 2;
+    if (isDistrict) return isPlayer ? 6 : 7;
+    if (isPlayer) return 3;
+    if (isAtWar(wars, playerNationId, t.ownerId)) return 4;
+    return 5;
+  };
   const sortedForLabels = [...visibleTerritories].sort((a, b) => {
-    if (a.id === selectedTerritoryId) return -1;
-    if (b.id === selectedTerritoryId) return 1;
-    const aPlayer = a.ownerId === playerNationId;
-    const bPlayer = b.ownerId === playerNationId;
-    if (aPlayer && !bPlayer) return -1;
-    if (!aPlayer && bPlayer) return 1;
-    const aEnemy = Boolean(isAtWar(wars, playerNationId, a.ownerId));
-    const bEnemy = Boolean(isAtWar(wars, playerNationId, b.ownerId));
-    if (aEnemy && !bEnemy) return -1;
-    if (!aEnemy && bEnemy) return 1;
-    if (a.isCapital && !b.isCapital) return -1;
-    if (!a.isCapital && b.isCapital) return 1;
+    const rankDiff = labelRank(a) - labelRank(b);
+    if (rankDiff !== 0) return rankDiff;
     return (b.garrison || 0) - (a.garrison || 0);
   });
 
-  // 0. AoH3 Grand Strategy Country Realm Names (Rendered at overview / normal zoom < 2.15)
-  if (transform.k < 2.15) {
+  // 0. AoH3 Grand Strategy Country Realm Names (overview LOD only)
+  if (transform.k < labelThresholds.nationNameMaxZoom) {
     const nationClusters: Record<
       string,
       { pts: [number, number][]; count: number }
@@ -445,10 +500,18 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     const hasIntel = !fogOfWarEnabled || visibleTerritoryIds.has(t.id);
 
     // 1. Province / City Name Label (Only pure city names, no old dynasty/country prefixes)
-    const wantsName =
-      isSelected ||
-      (isCapital && transform.k >= labelThresholds.capitalNameMinZoom) ||
-      transform.k >= labelThresholds.provinceNameMinZoom;
+    const isDistrictTier = Boolean(t.isDistrict) && !isCapital;
+    const labelTier: ProvinceLabelTier = isCapital
+      ? 'capital'
+      : isDistrictTier
+      ? 'district'
+      : 'city';
+    const wantsName = shouldRenderProvinceLabel(
+      labelTier,
+      transform.k,
+      labelThresholds,
+      isSelected
+    );
 
     let namePlaced = false;
     if (wantsName && !battleTerritorySet.has(t.id)) {
@@ -461,14 +524,17 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       );
 
       const mobileScale = (isMobileViewport ? 0.87 : 1.0) * mapLabelScaleMultiplier;
-      const fontSize =
-        (isSelected
-          ? 10.2
-          : isCapital
-          ? Math.min(10.4, Math.max(7.8, 7.4 + Math.min(12, transform.k) * 0.22))
-          : Math.min(9.2, Math.max(7.1, 6.7 + Math.min(12, transform.k) * 0.19))) *
-        mobileScale;
-      ctx.font = `${isCapital || isSelected ? '700' : '600'} ${fontSize.toFixed(1)}px "Plus Jakarta Sans", system-ui, sans-serif`;
+      const baseFontSize = isSelected
+        ? 10.2
+        : isCapital
+        ? Math.min(10.4, Math.max(7.8, 7.4 + Math.min(12, transform.k) * 0.22))
+        : isDistrictTier
+        ? Math.min(8.2, Math.max(6.4, 6.0 + Math.min(12, transform.k) * 0.17))
+        : Math.min(9.2, Math.max(7.1, 6.7 + Math.min(12, transform.k) * 0.19));
+      const fontSize = baseFontSize * mobileScale;
+      const labelWeight: '500' | '600' | '700' =
+        isCapital || isSelected ? '700' : isDistrictTier ? '500' : '600';
+      ctx.font = `${labelWeight} ${fontSize.toFixed(1)}px "Plus Jakarta Sans", system-ui, sans-serif`;
 
       const lineHeight = fontSize + 1.8;
       const widestLine = lines.reduce((maxW, ln) => {
@@ -518,7 +584,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.lineJoin = 'round';
-        ctx.lineWidth = isSelected ? 2.7 : 2.25;
+        ctx.lineWidth = isSelected ? 2.7 : isDistrictTier ? 1.9 : 2.25;
         ctx.strokeStyle = 'rgba(2, 6, 20, 0.94)';
         ctx.fillStyle = isSelected
           ? '#FDE68A'
@@ -528,6 +594,8 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
           ? '#FECDD3'
           : isCapital
           ? '#FEF3C7'
+          : isDistrictTier
+          ? '#CBD5E1'
           : '#F1F5F9';
 
         const startY =

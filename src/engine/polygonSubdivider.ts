@@ -1,52 +1,47 @@
 import { geoArea } from 'd3-geo';
 import type { Feature, Geometry, Polygon, Position } from 'geojson';
 import { ResourceType } from '../types/game';
+import { DISTRICT_PROVINCE_SEEDS } from './districtSeeds';
+import type { ProvinceSubSeed } from './core/provinceSeedTypes';
 
-export interface ProvinceSubSeed {
-  suffixId: string;
-  name: string;
-  lon: number;
-  lat: number;
-  isCapital?: boolean;
-  gdpShare: number;
-  resource?: ResourceType;
-}
+export type { ProvinceSubSeed } from './core/provinceSeedTypes';
 
-// Curated authentic sub-provinces for major and regional countries (Expanded to ~335+ provinces worldwide)
-export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
+// Curated authentic sub-provinces for major and regional countries (original 448-province map).
+// Preserved verbatim so every legacy province ID survives without a save/scenario migration.
+const CURATED_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   // Türkiye / Osmanlı Coğrafyası (20 Şehir)
   '792': [
-    { suffixId: 'ANK', name: 'Ankara', lon: 32.85, lat: 39.92, isCapital: true, gdpShare: 0.09, resource: 'DEMIR_CELIK' },
-    { suffixId: 'IST', name: 'İstanbul', lon: 28.97, lat: 41.02, gdpShare: 0.13, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'EDR', name: 'Edirne', lon: 26.55, lat: 41.67, gdpShare: 0.06, resource: 'TAHIL' },
-    { suffixId: 'GLB', name: 'Çanakkale', lon: 26.65, lat: 39.95, gdpShare: 0.04, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'BUR', name: 'Bursa', lon: 29.06, lat: 40.18, gdpShare: 0.07, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'IZM', name: 'İzmir', lon: 27.14, lat: 38.42, gdpShare: 0.07, resource: 'PAMUK' },
-    { suffixId: 'MUG', name: 'Muğla', lon: 28.36, lat: 37.21, gdpShare: 0.04, resource: 'KERESTE' },
-    { suffixId: 'KUT', name: 'Kütahya', lon: 29.98, lat: 39.42, gdpShare: 0.04, resource: 'ALTIN' },
-    { suffixId: 'ANT', name: 'Antalya', lon: 30.70, lat: 36.88, gdpShare: 0.05, resource: 'KERESTE' },
-    { suffixId: 'KNY', name: 'Konya', lon: 32.48, lat: 37.87, gdpShare: 0.05, resource: 'TAHIL' },
-    { suffixId: 'KYS', name: 'Sivas', lon: 36.15, lat: 39.20, gdpShare: 0.05, resource: 'SIGIR' },
-    { suffixId: 'KST', name: 'Kastamonu', lon: 34.05, lat: 41.55, gdpShare: 0.04, resource: 'KERESTE' },
-    { suffixId: 'SAM', name: 'Samsun', lon: 36.33, lat: 41.28, gdpShare: 0.04, resource: 'TAHIL' },
-    { suffixId: 'ADA', name: 'Adana', lon: 35.32, lat: 37.00, gdpShare: 0.04, resource: 'PAMUK' },
-    { suffixId: 'GZP', name: 'Gaziantep', lon: 37.38, lat: 37.35, gdpShare: 0.04, resource: 'PAMUK' },
-    { suffixId: 'MLT', name: 'Malatya', lon: 38.55, lat: 38.65, gdpShare: 0.03, resource: 'ALTIN' },
-    { suffixId: 'TRB', name: 'Trabzon', lon: 39.71, lat: 41.00, gdpShare: 0.04, resource: 'KERESTE' },
-    { suffixId: 'ERZ', name: 'Erzurum', lon: 41.60, lat: 40.10, gdpShare: 0.03, resource: 'SIGIR' },
-    { suffixId: 'DYB', name: 'Diyarbakır', lon: 40.23, lat: 37.91, gdpShare: 0.03, resource: 'PETROL' },
-    { suffixId: 'VAN', name: 'Van', lon: 43.15, lat: 38.50, gdpShare: 0.02, resource: 'SIGIR' },
+    { suffixId: 'ANK', name: 'Ankara', lon: 32.85, lat: 39.92, isCapital: true, gdpShare: 0.09, historicName: 'Engürü', resource: 'DEMIR_CELIK' },
+    { suffixId: 'IST', name: 'İstanbul', lon: 28.97, lat: 41.02, gdpShare: 0.13, historicName: 'Konstantiniyye', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'EDR', name: 'Edirne', lon: 26.55, lat: 41.67, gdpShare: 0.06, historicName: 'Edirne', resource: 'TAHIL' },
+    { suffixId: 'GLB', name: 'Çanakkale', lon: 26.65, lat: 39.95, gdpShare: 0.04, historicName: 'Gelibolu', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'BUR', name: 'Bursa', lon: 29.06, lat: 40.18, gdpShare: 0.07, historicName: 'Hüdavendigar', resource: 'FINANS_MERKEZI' },
+    { suffixId: 'IZM', name: 'İzmir', lon: 27.14, lat: 38.42, gdpShare: 0.07, historicName: 'İzmir', resource: 'PAMUK' },
+    { suffixId: 'MUG', name: 'Muğla', lon: 28.36, lat: 37.21, gdpShare: 0.04, historicName: 'Menteşe', resource: 'KERESTE' },
+    { suffixId: 'KUT', name: 'Kütahya', lon: 29.98, lat: 39.42, gdpShare: 0.04, historicName: 'Germiyan', resource: 'ALTIN' },
+    { suffixId: 'ANT', name: 'Antalya', lon: 30.70, lat: 36.88, gdpShare: 0.05, historicName: 'Teke', resource: 'KERESTE' },
+    { suffixId: 'KNY', name: 'Konya', lon: 32.48, lat: 37.87, gdpShare: 0.05, historicName: 'Karaman', resource: 'TAHIL' },
+    { suffixId: 'KYS', name: 'Sivas', lon: 36.15, lat: 39.20, gdpShare: 0.05, historicName: 'Rum', resource: 'SIGIR' },
+    { suffixId: 'KST', name: 'Kastamonu', lon: 34.05, lat: 41.55, gdpShare: 0.04, historicName: 'Kastamonu', resource: 'KERESTE' },
+    { suffixId: 'SAM', name: 'Samsun', lon: 36.33, lat: 41.28, gdpShare: 0.04, historicName: 'Canik', resource: 'TAHIL' },
+    { suffixId: 'ADA', name: 'Adana', lon: 35.32, lat: 37.00, gdpShare: 0.04, historicName: 'Adana', resource: 'PAMUK' },
+    { suffixId: 'GZP', name: 'Gaziantep', lon: 37.38, lat: 37.35, gdpShare: 0.04, historicName: 'Ayıntab', resource: 'PAMUK' },
+    { suffixId: 'MLT', name: 'Malatya', lon: 38.55, lat: 38.65, gdpShare: 0.03, historicName: 'Malatya', resource: 'ALTIN' },
+    { suffixId: 'TRB', name: 'Trabzon', lon: 39.71, lat: 41.00, gdpShare: 0.04, historicName: 'Trabzon', resource: 'KERESTE' },
+    { suffixId: 'ERZ', name: 'Erzurum', lon: 41.60, lat: 40.10, gdpShare: 0.03, historicName: 'Erzurum', resource: 'SIGIR' },
+    { suffixId: 'DYB', name: 'Diyarbakır', lon: 40.23, lat: 37.91, gdpShare: 0.03, historicName: 'Amid', resource: 'PETROL' },
+    { suffixId: 'VAN', name: 'Van', lon: 43.15, lat: 38.50, gdpShare: 0.02, historicName: 'Van', resource: 'SIGIR' },
   ],
   // Yunanistan (4 Şehir)
   '300': [
-    { suffixId: 'ATH', name: 'Atina', lon: 23.72, lat: 37.98, isCapital: true, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'SKG', name: 'Selanik', lon: 22.94, lat: 40.64, gdpShare: 0.26, resource: 'PAMUK' },
+    { suffixId: 'ATH', name: 'Atina', lon: 23.72, lat: 37.98, isCapital: true, gdpShare: 0.42, historicName: 'Atina', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SKG', name: 'Selanik', lon: 22.94, lat: 40.64, gdpShare: 0.26, historicName: 'Selanik', resource: 'PAMUK' },
     { suffixId: 'IOA', name: 'Yanya', lon: 20.85, lat: 39.66, gdpShare: 0.14, resource: 'SIGIR' },
     { suffixId: 'CRT', name: 'Girit', lon: 25.14, lat: 35.33, gdpShare: 0.18, resource: 'TICARET_BOGAZI' },
   ],
   // Bulgaristan (3 Şehir)
   '100': [
-    { suffixId: 'SOF', name: 'Sofya', lon: 23.32, lat: 42.69, isCapital: true, gdpShare: 0.44, resource: 'DEMIR_CELIK' },
+    { suffixId: 'SOF', name: 'Sofya', lon: 23.32, lat: 42.69, isCapital: true, gdpShare: 0.44, historicName: 'Sofya', resource: 'DEMIR_CELIK' },
     { suffixId: 'PDV', name: 'Filibe', lon: 24.74, lat: 42.14, gdpShare: 0.30, resource: 'TAHIL' },
     { suffixId: 'VAR', name: 'Varna', lon: 27.91, lat: 43.21, gdpShare: 0.26, resource: 'KERESTE' },
   ],
@@ -83,25 +78,25 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Avusturya (3 Şehir)
   '040': [
-    { suffixId: 'VIE', name: 'Viyana', lon: 16.37, lat: 48.20, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'VIE', name: 'Viyana', lon: 16.37, lat: 48.20, isCapital: true, gdpShare: 0.48, historicName: 'Wien', resource: 'FINANS_MERKEZI' },
     { suffixId: 'GRZ', name: 'Graz', lon: 15.43, lat: 47.07, gdpShare: 0.28, resource: 'DEMIR_CELIK' },
     { suffixId: 'INN', name: 'Innsbruck', lon: 11.40, lat: 47.26, gdpShare: 0.24, resource: 'YARI_ILETKEN' },
   ],
   // Çekya (2 Şehir)
   '203': [
-    { suffixId: 'PRG', name: 'Prag', lon: 14.43, lat: 50.07, isCapital: true, gdpShare: 0.60, resource: 'DEMIR_CELIK' },
+    { suffixId: 'PRG', name: 'Prag', lon: 14.43, lat: 50.07, isCapital: true, gdpShare: 0.60, historicName: 'Praha', resource: 'DEMIR_CELIK' },
     { suffixId: 'BRQ', name: 'Brno', lon: 16.60, lat: 49.19, gdpShare: 0.40, resource: 'YARI_ILETKEN' },
   ],
   // Suriye (4 Şehir)
   '760': [
-    { suffixId: 'DAM', name: 'Şam', lon: 36.29, lat: 33.51, isCapital: true, gdpShare: 0.34, resource: 'TAHIL' },
+    { suffixId: 'DAM', name: 'Şam', lon: 36.29, lat: 33.51, isCapital: true, gdpShare: 0.34, historicName: 'Dimaşk', resource: 'TAHIL' },
     { suffixId: 'ALP', name: 'Halep', lon: 37.16, lat: 36.20, gdpShare: 0.30, resource: 'TAHIL' },
     { suffixId: 'LTK', name: 'Lazkiye', lon: 35.78, lat: 35.53, gdpShare: 0.18, resource: 'TICARET_BOGAZI' },
     { suffixId: 'DEZ', name: 'Deyrizor', lon: 40.14, lat: 35.33, gdpShare: 0.18, resource: 'PETROL' },
   ],
   // Irak (4 Şehir)
   '368': [
-    { suffixId: 'BGW', name: 'Bağdat', lon: 44.36, lat: 33.31, isCapital: true, gdpShare: 0.36, resource: 'PETROL' },
+    { suffixId: 'BGW', name: 'Bağdat', lon: 44.36, lat: 33.31, isCapital: true, gdpShare: 0.36, historicName: 'Bağdat', resource: 'PETROL' },
     { suffixId: 'BSR', name: 'Basra', lon: 47.78, lat: 30.50, gdpShare: 0.28, resource: 'PETROL' },
     { suffixId: 'EBL', name: 'Musul', lon: 43.13, lat: 36.34, gdpShare: 0.20, resource: 'DOGALGAZ' },
     { suffixId: 'KIK', name: 'Kerkük', lon: 44.39, lat: 35.46, gdpShare: 0.16, resource: 'PETROL' },
@@ -129,7 +124,7 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Almanya (11 Şehir)
   '276': [
-    { suffixId: 'BER', name: 'Berlin', lon: 13.40, lat: 52.52, isCapital: true, gdpShare: 0.12, resource: 'YARI_ILETKEN' },
+    { suffixId: 'BER', name: 'Berlin', lon: 13.40, lat: 52.52, isCapital: true, gdpShare: 0.12, historicName: 'Cölln', resource: 'YARI_ILETKEN' },
     { suffixId: 'MUC', name: 'Münih', lon: 11.58, lat: 48.13, gdpShare: 0.12, resource: 'YARI_ILETKEN' },
     { suffixId: 'STR', name: 'Stuttgart', lon: 9.18, lat: 48.78, gdpShare: 0.09, resource: 'YARI_ILETKEN' },
     { suffixId: 'FRA', name: 'Frankfurt', lon: 8.68, lat: 50.11, gdpShare: 0.12, resource: 'FINANS_MERKEZI' },
@@ -197,17 +192,17 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Ukrayna (4 Şehir)
   '804': [
-    { suffixId: 'KYV', name: 'Kiev', lon: 30.52, lat: 50.45, isCapital: true, gdpShare: 0.32, resource: 'TAHIL' },
+    { suffixId: 'KYV', name: 'Kiev', lon: 30.52, lat: 50.45, isCapital: true, gdpShare: 0.32, historicName: 'Kiev', resource: 'TAHIL' },
     { suffixId: 'LVV', name: 'Lviv', lon: 24.03, lat: 49.84, gdpShare: 0.22, resource: 'TAHIL' },
     { suffixId: 'ODS', name: 'Odessa', lon: 30.72, lat: 46.48, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
     { suffixId: 'HRK', name: 'Harkiv', lon: 36.23, lat: 49.00, gdpShare: 0.22, resource: 'DEMIR_CELIK' },
   ],
   // Polonya (6 Şehir)
   '616': [
-    { suffixId: 'WAW', name: 'Varşova', lon: 21.01, lat: 52.23, isCapital: true, gdpShare: 0.24, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'WAW', name: 'Varşova', lon: 21.01, lat: 52.23, isCapital: true, gdpShare: 0.24, historicName: 'Warszawa', resource: 'FINANS_MERKEZI' },
     { suffixId: 'POZ', name: 'Poznań', lon: 16.92, lat: 52.40, gdpShare: 0.15, resource: 'TAHIL' },
-    { suffixId: 'KRK', name: 'Krakow', lon: 19.94, lat: 50.06, gdpShare: 0.19, resource: 'DEMIR_CELIK' },
-    { suffixId: 'GDN', name: 'Gdansk', lon: 18.64, lat: 54.35, gdpShare: 0.15, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'KRK', name: 'Krakow', lon: 19.94, lat: 50.06, gdpShare: 0.19, historicName: 'Kraków', resource: 'DEMIR_CELIK' },
+    { suffixId: 'GDN', name: 'Gdansk', lon: 18.64, lat: 54.35, gdpShare: 0.15, historicName: 'Danzig', resource: 'TICARET_BOGAZI' },
     { suffixId: 'LUZ', name: 'Lublin', lon: 22.57, lat: 51.25, gdpShare: 0.13, resource: 'TAHIL' },
     { suffixId: 'WRO', name: 'Wrocław', lon: 17.03, lat: 51.11, gdpShare: 0.14, resource: 'DEMIR_CELIK' },
   ],
@@ -240,18 +235,18 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Rusya (18 Şehir)
   '643': [
-    { suffixId: 'MOW', name: 'Moskova', lon: 37.61, lat: 55.75, isCapital: true, gdpShare: 0.14, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MOW', name: 'Moskova', lon: 37.61, lat: 55.75, isCapital: true, gdpShare: 0.14, historicName: 'Moskva', resource: 'FINANS_MERKEZI' },
     { suffixId: 'LED', name: 'St. Petersburg', lon: 30.33, lat: 59.93, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
     { suffixId: 'SMO', name: 'Smolensk', lon: 32.04, lat: 54.78, gdpShare: 0.05, resource: 'KERESTE' },
     { suffixId: 'GOJ', name: 'Nijni Novgorod', lon: 44.00, lat: 56.32, gdpShare: 0.06, resource: 'DEMIR_CELIK' },
     { suffixId: 'KRR', name: 'Krasnodar', lon: 39.00, lat: 45.03, gdpShare: 0.06, resource: 'TAHIL' },
-    { suffixId: 'ROV', name: 'Rostov-na-Donu', lon: 39.70, lat: 47.23, gdpShare: 0.05, resource: 'TAHIL' },
-    { suffixId: 'VOG', name: 'Volgograd', lon: 44.51, lat: 48.70, gdpShare: 0.05, resource: 'DEMIR_CELIK' },
-    { suffixId: 'ASF', name: 'Astrahan', lon: 48.03, lat: 46.34, gdpShare: 0.05, resource: 'PETROL' },
-    { suffixId: 'KZN', name: 'Kazan', lon: 49.10, lat: 55.79, gdpShare: 0.06, resource: 'DOGALGAZ' },
+    { suffixId: 'ROV', name: 'Rostov-na-Donu', lon: 39.70, lat: 47.23, gdpShare: 0.05, historicName: 'Azak', resource: 'TAHIL' },
+    { suffixId: 'VOG', name: 'Volgograd', lon: 44.51, lat: 48.70, gdpShare: 0.05, historicName: 'Saray', resource: 'DEMIR_CELIK' },
+    { suffixId: 'ASF', name: 'Astrahan', lon: 48.03, lat: 46.34, gdpShare: 0.05, historicName: 'Hacı Tarhan', resource: 'PETROL' },
+    { suffixId: 'KZN', name: 'Kazan', lon: 49.10, lat: 55.79, gdpShare: 0.06, historicName: 'Kazan', resource: 'DOGALGAZ' },
     { suffixId: 'KUF', name: 'Samara', lon: 50.15, lat: 53.20, gdpShare: 0.05, resource: 'PETROL' },
     { suffixId: 'ARH', name: 'Arhangelsk', lon: 40.54, lat: 64.54, gdpShare: 0.04, resource: 'KERESTE' },
-    { suffixId: 'SVX', name: 'Yekaterinburg', lon: 60.60, lat: 56.83, gdpShare: 0.06, resource: 'DEMIR_CELIK' },
+    { suffixId: 'SVX', name: 'Yekaterinburg', lon: 60.60, lat: 56.83, gdpShare: 0.06, historicName: 'Kamenny Poyas', resource: 'DEMIR_CELIK' },
     { suffixId: 'OMS', name: 'Omsk', lon: 73.36, lat: 54.99, gdpShare: 0.04, resource: 'TAHIL' },
     { suffixId: 'OVB', name: 'Novosibirsk', lon: 82.92, lat: 55.00, gdpShare: 0.05, resource: 'DOGALGAZ' },
     { suffixId: 'KJA', name: 'Krasnoyarsk', lon: 92.86, lat: 56.01, gdpShare: 0.04, resource: 'ALTIN' },
@@ -285,51 +280,51 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // ABD (16 Şehir)
   '840': [
-    { suffixId: 'WAS', name: 'Washington', lon: -77.50, lat: 38.40, isCapital: true, gdpShare: 0.09, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'NYC', name: 'New York', lon: -73.80, lat: 41.50, gdpShare: 0.11, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'BOS', name: 'Boston', lon: -71.06, lat: 42.36, gdpShare: 0.06, resource: 'YARI_ILETKEN' },
+    { suffixId: 'WAS', name: 'Washington', lon: -77.50, lat: 38.40, isCapital: true, gdpShare: 0.09, historicName: 'Potomac', resource: 'FINANS_MERKEZI' },
+    { suffixId: 'NYC', name: 'New York', lon: -73.80, lat: 41.50, gdpShare: 0.11, historicName: 'Lenape', resource: 'FINANS_MERKEZI' },
+    { suffixId: 'BOS', name: 'Boston', lon: -71.06, lat: 42.36, gdpShare: 0.06, historicName: 'Shawmut', resource: 'YARI_ILETKEN' },
     { suffixId: 'PHI', name: 'Philadelphia', lon: -75.16, lat: 39.95, gdpShare: 0.05, resource: 'DEMIR_CELIK' },
-    { suffixId: 'CHI', name: 'Şikago', lon: -87.62, lat: 41.87, gdpShare: 0.08, resource: 'TAHIL' },
+    { suffixId: 'CHI', name: 'Şikago', lon: -87.62, lat: 41.87, gdpShare: 0.08, historicName: 'Mishigami', resource: 'TAHIL' },
     { suffixId: 'DET', name: 'Detroit', lon: -83.04, lat: 42.33, gdpShare: 0.05, resource: 'DEMIR_CELIK' },
     { suffixId: 'MSP', name: 'Minneapolis', lon: -93.26, lat: 44.97, gdpShare: 0.05, resource: 'TAHIL' },
     { suffixId: 'ATL', name: 'Atlanta', lon: -84.38, lat: 33.74, gdpShare: 0.06, resource: 'PAMUK' },
-    { suffixId: 'MIA', name: 'Miami', lon: -81.50, lat: 27.60, gdpShare: 0.05, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'MIA', name: 'Miami', lon: -81.50, lat: 27.60, gdpShare: 0.05, historicName: 'Tequesta', resource: 'TICARET_BOGAZI' },
     { suffixId: 'HOU', name: 'Houston', lon: -95.36, lat: 29.76, gdpShare: 0.07, resource: 'PETROL' },
     { suffixId: 'DAL', name: 'Dallas', lon: -96.79, lat: 32.77, gdpShare: 0.06, resource: 'DOGALGAZ' },
     { suffixId: 'DEN', name: 'Denver', lon: -104.99, lat: 39.73, gdpShare: 0.05, resource: 'ALTIN' },
     { suffixId: 'PHX', name: 'Phoenix', lon: -112.07, lat: 33.44, gdpShare: 0.05, resource: 'NADIR_TOPRAK' },
-    { suffixId: 'LAX', name: 'Los Angeles', lon: -118.24, lat: 34.05, gdpShare: 0.07, resource: 'YARI_ILETKEN' },
-    { suffixId: 'SFO', name: 'San Francisco', lon: -122.41, lat: 37.77, gdpShare: 0.05, resource: 'YARI_ILETKEN' },
-    { suffixId: 'SEA', name: 'Seattle', lon: -122.33, lat: 47.60, gdpShare: 0.05, resource: 'KERESTE' },
+    { suffixId: 'LAX', name: 'Los Angeles', lon: -118.24, lat: 34.05, gdpShare: 0.07, historicName: 'Yangna', resource: 'YARI_ILETKEN' },
+    { suffixId: 'SFO', name: 'San Francisco', lon: -122.41, lat: 37.77, gdpShare: 0.05, historicName: 'Yerba Buena', resource: 'YARI_ILETKEN' },
+    { suffixId: 'SEA', name: 'Seattle', lon: -122.33, lat: 47.60, gdpShare: 0.05, historicName: 'Duwamish', resource: 'KERESTE' },
   ],
   // Kanada (6 Şehir)
   '124': [
-    { suffixId: 'YOW', name: 'Ottawa', lon: -75.69, lat: 45.42, isCapital: true, gdpShare: 0.22, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'YYZ', name: 'Toronto', lon: -79.38, lat: 43.65, gdpShare: 0.20, resource: 'DEMIR_CELIK' },
-    { suffixId: 'YUL', name: 'Montreal', lon: -71.20, lat: 46.81, gdpShare: 0.16, resource: 'KERESTE' },
+    { suffixId: 'YOW', name: 'Ottawa', lon: -75.69, lat: 45.42, isCapital: true, gdpShare: 0.22, historicName: 'Odawa', resource: 'FINANS_MERKEZI' },
+    { suffixId: 'YYZ', name: 'Toronto', lon: -79.38, lat: 43.65, gdpShare: 0.20, historicName: 'Taronto', resource: 'DEMIR_CELIK' },
+    { suffixId: 'YUL', name: 'Montreal', lon: -71.20, lat: 46.81, gdpShare: 0.16, historicName: 'Hochelaga', resource: 'KERESTE' },
     { suffixId: 'YWG', name: 'Winnipeg', lon: -97.13, lat: 49.89, gdpShare: 0.12, resource: 'TAHIL' },
     { suffixId: 'YYC', name: 'Calgary', lon: -114.07, lat: 51.04, gdpShare: 0.15, resource: 'PETROL' },
     { suffixId: 'YVR', name: 'Vancouver', lon: -123.12, lat: 49.28, gdpShare: 0.15, resource: 'TICARET_BOGAZI' },
   ],
   // Meksika (3 Şehir)
   '484': [
-    { suffixId: 'MEX', name: 'Meksiko', lon: -99.13, lat: 19.43, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'MEX', name: 'Meksiko', lon: -99.13, lat: 19.43, isCapital: true, gdpShare: 0.44, historicName: 'Tenochtitlan', resource: 'FINANS_MERKEZI' },
     { suffixId: 'MTY', name: 'Monterrey', lon: -100.31, lat: 25.68, gdpShare: 0.32, resource: 'DEMIR_CELIK' },
     { suffixId: 'GDL', name: 'Guadalajara', lon: -103.34, lat: 20.65, gdpShare: 0.24, resource: 'PETROL' },
   ],
   // Çin (15 Şehir)
   '156': [
     { suffixId: 'BJS', name: 'Pekin', lon: 116.40, lat: 39.90, isCapital: true, gdpShare: 0.11, resource: 'DEMIR_CELIK' },
-    { suffixId: 'SHA', name: 'Şanghay', lon: 121.47, lat: 31.23, gdpShare: 0.12, resource: 'YARI_ILETKEN' },
-    { suffixId: 'CAN', name: 'Kanton', lon: 113.26, lat: 23.12, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'SHA', name: 'Şanghay', lon: 121.47, lat: 31.23, gdpShare: 0.12, historicName: 'Songjiang', resource: 'YARI_ILETKEN' },
+    { suffixId: 'CAN', name: 'Kanton', lon: 113.26, lat: 23.12, gdpShare: 0.10, historicName: 'Guangzhou', resource: 'TICARET_BOGAZI' },
     { suffixId: 'FOC', name: 'Fuzhou', lon: 119.30, lat: 26.07, gdpShare: 0.06, resource: 'YARI_ILETKEN' },
-    { suffixId: 'TAO', name: 'Çingdao', lon: 120.38, lat: 36.06, gdpShare: 0.06, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'WUH', name: 'Vuhan', lon: 114.30, lat: 30.59, gdpShare: 0.07, resource: 'DEMIR_CELIK' },
+    { suffixId: 'TAO', name: 'Çingdao', lon: 120.38, lat: 36.06, gdpShare: 0.06, historicName: 'Jiaozhou', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'WUH', name: 'Vuhan', lon: 114.30, lat: 30.59, gdpShare: 0.07, historicName: 'Wuchang', resource: 'DEMIR_CELIK' },
     { suffixId: 'CKG', name: 'Çongçing', lon: 106.55, lat: 29.56, gdpShare: 0.06, resource: 'DEMIR_CELIK' },
-    { suffixId: 'SIA', name: 'Xi\'an', lon: 108.94, lat: 34.26, gdpShare: 0.06, resource: 'TAHIL' },
+    { suffixId: 'SIA', name: 'Xi\'an', lon: 108.94, lat: 34.26, gdpShare: 0.06, historicName: "Chang'an", resource: 'TAHIL' },
     { suffixId: 'SHE', name: 'Şenyang', lon: 123.43, lat: 41.80, gdpShare: 0.06, resource: 'DEMIR_CELIK' },
     { suffixId: 'HRB', name: 'Harbin', lon: 126.53, lat: 45.80, gdpShare: 0.05, resource: 'TAHIL' },
-    { suffixId: 'CTU', name: 'Çengdu', lon: 104.06, lat: 30.67, gdpShare: 0.06, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'CTU', name: 'Çengdu', lon: 104.06, lat: 30.67, gdpShare: 0.06, historicName: 'Chengdu', resource: 'NADIR_TOPRAK' },
     { suffixId: 'KMG', name: 'Kunming', lon: 102.83, lat: 24.88, gdpShare: 0.05, resource: 'PAMUK' },
     { suffixId: 'LHW', name: 'Lanzhou', lon: 103.83, lat: 36.06, gdpShare: 0.05, resource: 'ALTIN' },
     { suffixId: 'LXA', name: 'Lhasa', lon: 91.11, lat: 29.65, gdpShare: 0.04, resource: 'NADIR_TOPRAK' },
@@ -342,7 +337,7 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Mısır (4 Şehir)
   '818': [
-    { suffixId: 'CAI', name: 'Kahire', lon: 31.23, lat: 30.04, isCapital: true, gdpShare: 0.38, resource: 'TAHIL' },
+    { suffixId: 'CAI', name: 'Kahire', lon: 31.23, lat: 30.04, isCapital: true, gdpShare: 0.38, historicName: 'Kahire', resource: 'TAHIL' },
     { suffixId: 'ALY', name: 'İskenderiye', lon: 29.91, lat: 31.20, gdpShare: 0.24, resource: 'TICARET_BOGAZI' },
     { suffixId: 'SUZ', name: 'Süveyş', lon: 33.20, lat: 29.50, gdpShare: 0.20, resource: 'TICARET_BOGAZI' },
     { suffixId: 'ASW', name: 'Asvan', lon: 31.50, lat: 25.00, gdpShare: 0.18, resource: 'PETROL' },
@@ -388,12 +383,12 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Nijerya (2 Şehir)
   '566': [
-    { suffixId: 'ABV', name: 'Abuja', lon: 7.49, lat: 9.07, isCapital: true, gdpShare: 0.48, resource: 'TAHIL' },
-    { suffixId: 'LOS', name: 'Lagos', lon: 3.37, lat: 6.52, gdpShare: 0.52, resource: 'PETROL' },
+    { suffixId: 'ABV', name: 'Abuja', lon: 7.49, lat: 9.07, isCapital: true, gdpShare: 0.48, historicName: 'Abuja', resource: 'TAHIL' },
+    { suffixId: 'LOS', name: 'Lagos', lon: 3.37, lat: 6.52, gdpShare: 0.52, historicName: 'Eko', resource: 'PETROL' },
   ],
   // Güney Afrika (2 Şehir)
   '710': [
-    { suffixId: 'JNB', name: 'Pretoria', lon: 28.04, lat: -26.20, isCapital: true, gdpShare: 0.58, resource: 'NADIR_TOPRAK' },
+    { suffixId: 'JNB', name: 'Pretoria', lon: 28.04, lat: -26.20, isCapital: true, gdpShare: 0.58, historicName: 'Tshwane', resource: 'NADIR_TOPRAK' },
     { suffixId: 'CPT', name: 'Cape Town', lon: 18.42, lat: -33.92, gdpShare: 0.42, resource: 'TICARET_BOGAZI' },
   ],
   // Pakistan (3 Şehir)
@@ -404,16 +399,16 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Hindistan (10 Şehir)
   '356': [
-    { suffixId: 'DEL', name: 'Yeni Delhi', lon: 77.20, lat: 28.61, isCapital: true, gdpShare: 0.15, resource: 'TAHIL' },
-    { suffixId: 'JAI', name: 'Jaipur', lon: 75.78, lat: 26.91, gdpShare: 0.08, resource: 'PAMUK' },
-    { suffixId: 'LKO', name: 'Luknov', lon: 80.94, lat: 26.84, gdpShare: 0.08, resource: 'TAHIL' },
-    { suffixId: 'AMD', name: 'Ahmedabad', lon: 72.57, lat: 23.02, gdpShare: 0.10, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'BOM', name: 'Mumbai', lon: 73.50, lat: 18.80, gdpShare: 0.14, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'HYD', name: 'Haydarabad', lon: 78.48, lat: 17.38, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
-    { suffixId: 'BLR', name: 'Bangalore', lon: 77.59, lat: 12.97, gdpShare: 0.10, resource: 'YARI_ILETKEN' },
-    { suffixId: 'MAA', name: 'Madras', lon: 80.27, lat: 13.08, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'PAT', name: 'Patna', lon: 84.80, lat: 25.60, gdpShare: 0.07, resource: 'TAHIL' },
-    { suffixId: 'CCU', name: 'Kalküta', lon: 88.36, lat: 22.57, gdpShare: 0.09, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'DEL', name: 'Yeni Delhi', lon: 77.20, lat: 28.61, isCapital: true, gdpShare: 0.15, historicName: 'Dehli', resource: 'TAHIL' },
+    { suffixId: 'JAI', name: 'Jaipur', lon: 75.78, lat: 26.91, gdpShare: 0.08, historicName: 'Amber', resource: 'PAMUK' },
+    { suffixId: 'LKO', name: 'Luknov', lon: 80.94, lat: 26.84, gdpShare: 0.08, historicName: 'Lakhnau', resource: 'TAHIL' },
+    { suffixId: 'AMD', name: 'Ahmedabad', lon: 72.57, lat: 23.02, gdpShare: 0.10, historicName: 'Karnavati', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'BOM', name: 'Mumbai', lon: 73.50, lat: 18.80, gdpShare: 0.14, historicName: 'Bombay', resource: 'FINANS_MERKEZI' },
+    { suffixId: 'HYD', name: 'Haydarabad', lon: 78.48, lat: 17.38, gdpShare: 0.10, historicName: 'Golconda', resource: 'DEMIR_CELIK' },
+    { suffixId: 'BLR', name: 'Bangalore', lon: 77.59, lat: 12.97, gdpShare: 0.10, historicName: 'Bengaluru', resource: 'YARI_ILETKEN' },
+    { suffixId: 'MAA', name: 'Madras', lon: 80.27, lat: 13.08, gdpShare: 0.09, historicName: 'Madraspatnam', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'PAT', name: 'Patna', lon: 84.80, lat: 25.60, gdpShare: 0.07, historicName: 'Pataliputra', resource: 'TAHIL' },
+    { suffixId: 'CCU', name: 'Kalküta', lon: 88.36, lat: 22.57, gdpShare: 0.09, historicName: 'Kalikata', resource: 'TICARET_BOGAZI' },
   ],
   // Endonezya (3 Şehir)
   '360': [
@@ -429,26 +424,26 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Japonya (7 Şehir)
   '392': [
-    { suffixId: 'TYO', name: 'Tokyo', lon: 139.69, lat: 35.68, isCapital: true, gdpShare: 0.26, resource: 'YARI_ILETKEN' },
+    { suffixId: 'TYO', name: 'Tokyo', lon: 139.69, lat: 35.68, isCapital: true, gdpShare: 0.26, historicName: 'Edo', resource: 'YARI_ILETKEN' },
     { suffixId: 'OSA', name: 'Osaka', lon: 135.50, lat: 34.69, gdpShare: 0.20, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'SPK', name: 'Sapporo', lon: 141.35, lat: 42.00, gdpShare: 0.12, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'FUK', name: 'Fukuoka', lon: 130.60, lat: 33.20, gdpShare: 0.12, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'HIJ', name: 'Hiroşima', lon: 132.45, lat: 34.45, gdpShare: 0.10, resource: 'DEMIR_CELIK' },
-    { suffixId: 'NGO', name: 'Nagoya', lon: 137.10, lat: 35.60, gdpShare: 0.11, resource: 'DEMIR_CELIK' },
-    { suffixId: 'SDJ', name: 'Sendai', lon: 140.70, lat: 38.40, gdpShare: 0.09, resource: 'TAHIL' },
+    { suffixId: 'SPK', name: 'Sapporo', lon: 141.35, lat: 42.00, gdpShare: 0.12, historicName: 'Ishikari', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'FUK', name: 'Fukuoka', lon: 130.60, lat: 33.20, gdpShare: 0.12, historicName: 'Hakata', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'HIJ', name: 'Hiroşima', lon: 132.45, lat: 34.45, gdpShare: 0.10, historicName: 'Aki', resource: 'DEMIR_CELIK' },
+    { suffixId: 'NGO', name: 'Nagoya', lon: 137.10, lat: 35.60, gdpShare: 0.11, historicName: 'Nagoya', resource: 'DEMIR_CELIK' },
+    { suffixId: 'SDJ', name: 'Sendai', lon: 140.70, lat: 38.40, gdpShare: 0.09, historicName: 'Sendai', resource: 'TAHIL' },
   ],
   // Brezilya (6 Şehir)
   '076': [
     { suffixId: 'BSB', name: 'Brasilia', lon: -47.88, lat: -15.79, isCapital: true, gdpShare: 0.20, resource: 'TAHIL' },
-    { suffixId: 'GRU', name: 'Sao Paulo', lon: -46.63, lat: -23.55, gdpShare: 0.25, resource: 'FINANS_MERKEZI' },
-    { suffixId: 'GIG', name: 'Rio de Janeiro', lon: -43.17, lat: -22.90, gdpShare: 0.18, resource: 'PETROL' },
-    { suffixId: 'SSA', name: 'Salvador', lon: -38.50, lat: -12.97, gdpShare: 0.12, resource: 'PAMUK' },
-    { suffixId: 'REC', name: 'Recife', lon: -34.87, lat: -8.04, gdpShare: 0.11, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'GRU', name: 'Sao Paulo', lon: -46.63, lat: -23.55, gdpShare: 0.25, historicName: 'Piratininga', resource: 'FINANS_MERKEZI' },
+    { suffixId: 'GIG', name: 'Rio de Janeiro', lon: -43.17, lat: -22.90, gdpShare: 0.18, historicName: 'Guanabara', resource: 'PETROL' },
+    { suffixId: 'SSA', name: 'Salvador', lon: -38.50, lat: -12.97, gdpShare: 0.12, historicName: 'São Salvador', resource: 'PAMUK' },
+    { suffixId: 'REC', name: 'Recife', lon: -34.87, lat: -8.04, gdpShare: 0.11, historicName: 'Pernambuco', resource: 'TICARET_BOGAZI' },
     { suffixId: 'MAO', name: 'Manaus', lon: -60.02, lat: -4.00, gdpShare: 0.14, resource: 'NADIR_TOPRAK' },
   ],
   // Arjantin (3 Şehir)
   '032': [
-    { suffixId: 'BUE', name: 'Buenos Aires', lon: -58.38, lat: -34.60, isCapital: true, gdpShare: 0.50, resource: 'TAHIL' },
+    { suffixId: 'BUE', name: 'Buenos Aires', lon: -58.38, lat: -34.60, isCapital: true, gdpShare: 0.50, historicName: 'Quilmes', resource: 'TAHIL' },
     { suffixId: 'COR', name: 'Córdoba', lon: -64.18, lat: -31.42, gdpShare: 0.28, resource: 'DEMIR_CELIK' },
     { suffixId: 'USH', name: 'Ushuaia', lon: -68.50, lat: -45.80, gdpShare: 0.22, resource: 'DOGALGAZ' },
   ],
@@ -504,14 +499,14 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Kolombiya (3 Şehir)
   '170': [
-    { suffixId: 'BOG', name: 'Bogota', lon: -74.07, lat: 4.71, isCapital: true, gdpShare: 0.44, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'BOG', name: 'Bogota', lon: -74.07, lat: 4.71, isCapital: true, gdpShare: 0.44, historicName: 'Bacatá', resource: 'FINANS_MERKEZI' },
     { suffixId: 'MDE', name: 'Medellin', lon: -75.56, lat: 6.24, gdpShare: 0.28, resource: 'ALTIN' },
     { suffixId: 'CTG', name: 'Cartagena', lon: -75.51, lat: 10.39, gdpShare: 0.28, resource: 'PETROL' },
   ],
   // Peru (3 Şehir)
   '604': [
-    { suffixId: 'LIM', name: 'Lima', lon: -77.04, lat: -12.04, isCapital: true, gdpShare: 0.46, resource: 'TICARET_BOGAZI' },
-    { suffixId: 'CUZ', name: 'Cusco', lon: -71.96, lat: -13.53, gdpShare: 0.32, resource: 'ALTIN' },
+    { suffixId: 'LIM', name: 'Lima', lon: -77.04, lat: -12.04, isCapital: true, gdpShare: 0.46, historicName: 'Pachacamac', resource: 'TICARET_BOGAZI' },
+    { suffixId: 'CUZ', name: 'Cusco', lon: -71.96, lat: -13.53, gdpShare: 0.32, historicName: 'Qusqu', resource: 'ALTIN' },
     { suffixId: 'IQT', name: 'Iquitos', lon: -73.25, lat: -3.74, gdpShare: 0.22, resource: 'KERESTE' },
   ],
   // Venezuela (3 Şehir)
@@ -522,18 +517,18 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Şili (3 Şehir)
   '152': [
-    { suffixId: 'SCL', name: 'Santiago', lon: -70.66, lat: -33.44, isCapital: true, gdpShare: 0.48, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'SCL', name: 'Santiago', lon: -70.66, lat: -33.44, isCapital: true, gdpShare: 0.48, historicName: 'Mapocho', resource: 'FINANS_MERKEZI' },
     { suffixId: 'ANF', name: 'Antofagasta', lon: -70.39, lat: -23.65, gdpShare: 0.30, resource: 'NADIR_TOPRAK' },
     { suffixId: 'PUQ', name: 'Valdivia', lon: -73.24, lat: -39.81, gdpShare: 0.22, resource: 'KERESTE' },
   ],
   // Bolivya (2 Şehir)
   '068': [
-    { suffixId: 'LPB', name: 'La Paz', lon: -68.11, lat: -16.48, isCapital: true, gdpShare: 0.54, resource: 'ALTIN' },
+    { suffixId: 'LPB', name: 'La Paz', lon: -68.11, lat: -16.48, isCapital: true, gdpShare: 0.54, historicName: 'Chuquiago', resource: 'ALTIN' },
     { suffixId: 'SRZ', name: 'Santa Cruz', lon: -63.18, lat: -17.78, gdpShare: 0.46, resource: 'DOGALGAZ' },
   ],
   // Ekvador (2 Şehir)
   '218': [
-    { suffixId: 'UIO', name: 'Quito', lon: -78.46, lat: -0.18, isCapital: true, gdpShare: 0.52, resource: 'PETROL' },
+    { suffixId: 'UIO', name: 'Quito', lon: -78.46, lat: -0.18, isCapital: true, gdpShare: 0.52, historicName: 'Quito', resource: 'PETROL' },
     { suffixId: 'GYE', name: 'Guayaquil', lon: -79.88, lat: -2.18, gdpShare: 0.48, resource: 'TICARET_BOGAZI' },
   ],
   // Paraguay (2 Şehir)
@@ -543,7 +538,7 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Küba (2 Şehir)
   '192': [
-    { suffixId: 'HAV', name: 'Havana', lon: -82.36, lat: 23.11, isCapital: true, gdpShare: 0.58, resource: 'TICARET_BOGAZI' },
+    { suffixId: 'HAV', name: 'Havana', lon: -82.36, lat: 23.11, isCapital: true, gdpShare: 0.58, historicName: 'Habana', resource: 'TICARET_BOGAZI' },
     { suffixId: 'SCU', name: 'Santiago', lon: -75.82, lat: 20.02, gdpShare: 0.42, resource: 'PAMUK' },
   ],
   // Kongo DC (4 Şehir)
@@ -618,12 +613,12 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
   ],
   // Gana (2 Şehir)
   '288': [
-    { suffixId: 'ACC', name: 'Akra', lon: -0.18, lat: 5.60, isCapital: true, gdpShare: 0.56, resource: 'ALTIN' },
+    { suffixId: 'ACC', name: 'Akra', lon: -0.18, lat: 5.60, isCapital: true, gdpShare: 0.56, historicName: 'Nkran', resource: 'ALTIN' },
     { suffixId: 'KMS', name: 'Kumasi', lon: -1.62, lat: 6.68, gdpShare: 0.44, resource: 'PAMUK' },
   ],
   // Hollanda (2 Şehir)
   '528': [
-    { suffixId: 'AMS', name: 'Amsterdam', lon: 4.90, lat: 52.36, isCapital: true, gdpShare: 0.56, resource: 'FINANS_MERKEZI' },
+    { suffixId: 'AMS', name: 'Amsterdam', lon: 4.90, lat: 52.36, isCapital: true, gdpShare: 0.56, historicName: 'Amstelredamme', resource: 'FINANS_MERKEZI' },
     { suffixId: 'RTM', name: 'Rotterdam', lon: 4.47, lat: 51.92, gdpShare: 0.44, resource: 'TICARET_BOGAZI' },
   ],
   // Belçika (2 Şehir)
@@ -667,6 +662,88 @@ export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> = {
     { suffixId: 'SHK', name: 'İşkodra', lon: 19.51, lat: 42.06, gdpShare: 0.42, resource: 'KERESTE' },
   ],
 };
+
+/**
+ * Merges curated (original 448 map) seeds with the global district expansion.
+ * Existing seeds are never removed or reordered, so legacy province IDs
+ * (`countryId`, `countryId_SUFFIX`) remain stable across saves and scenarios.
+ */
+function mergeProvinceSeeds(
+  base: Record<string, ProvinceSubSeed[]>,
+  expansion: Record<string, ProvinceSubSeed[]>
+): Record<string, ProvinceSubSeed[]> {
+  const merged: Record<string, ProvinceSubSeed[]> = {};
+  Object.keys(base).forEach((countryId) => {
+    merged[countryId] = [...base[countryId]];
+  });
+  Object.entries(expansion).forEach(([countryId, seeds]) => {
+    const existing = merged[countryId] ?? [];
+    const usedSuffixes = new Set(existing.map((s) => s.suffixId));
+    const usedCandidates = new Set(
+      existing.map((s) => `${s.lon.toFixed(2)},${s.lat.toFixed(2)}`)
+    );
+    seeds.forEach((seed) => {
+      // Never duplicate an ID or an exact coordinate (zero-area cell).
+      if (usedSuffixes.has(seed.suffixId)) return;
+      // A capital seed is only accepted when the country has no curated
+      // seed set yet (single-province country being expanded). Existing
+      // capital slots always stay owned by the original 448-map seed.
+      if (seed.isCapital && existing.length > 0) return;
+      if (existing.some((s) => s.isCapital) && seed.isCapital) return;
+      const coordKey = `${seed.lon.toFixed(2)},${seed.lat.toFixed(2)}`;
+      if (usedCandidates.has(coordKey)) return;
+      usedSuffixes.add(seed.suffixId);
+      usedCandidates.add(coordKey);
+      existing.push(seed);
+    });
+    merged[countryId] = existing;
+  });
+  return merged;
+}
+
+/** Global seed table: original 448-map seeds + ~440 district/sancak seeds worldwide. */
+export const COUNTRY_PROVINCE_SEEDS: Record<string, ProvinceSubSeed[]> =
+  mergeProvinceSeeds(CURATED_PROVINCE_SEEDS, DISTRICT_PROVINCE_SEEDS);
+
+/**
+ * Normalizes a country's per-province shares so population, GDP and starting
+ * army always add up to exactly 1.00 for the country, no matter how many
+ * districts were added. Keeps the global power balance intact.
+ */
+export function getNormalizedProvinceShares(
+  seeds: ProvinceSubSeed[]
+): number[] {
+  if (seeds.length === 0) return [];
+  const raw = seeds.map((s) =>
+    Number.isFinite(s.gdpShare) && s.gdpShare > 0 ? s.gdpShare : 0
+  );
+  const total = raw.reduce((sum, v) => sum + v, 0);
+  if (total <= 0) {
+    return seeds.map(() => 1 / seeds.length);
+  }
+  return raw.map((v) => v / total);
+}
+
+/**
+ * Province-ID → period name map used by the 1444 scenario. Only seeds that
+ * actually carry a `historicName` are included, so explicit scenario renames
+ * (e.g. "★ Edirne") still win over the data-driven period names.
+ */
+export function getHistoricProvinceNames(
+  seedsByCountry: Record<string, ProvinceSubSeed[]> = COUNTRY_PROVINCE_SEEDS
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  Object.entries(seedsByCountry).forEach(([countryId, seeds]) => {
+    seeds.forEach((seed) => {
+      if (!seed.historicName) return;
+      const provinceId = seed.isCapital
+        ? countryId
+        : `${countryId}_${seed.suffixId}`;
+      map[provinceId] = seed.historicName;
+    });
+  });
+  return map;
+}
 
 // Clamps ±180° antimeridian wrap vertices (such as Russia's Chukotka tip at -175° lon or Fiji)
 // into the ring's primary hemisphere so the ring is NEVER dropped and NEVER streaks across the globe!
@@ -837,6 +914,170 @@ function clipRingWithHalfPlane(
   return out;
 }
 
+function extractOuterRings(geometry: Geometry): Position[][] {
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates[0] ? [geometry.coordinates[0]] : [];
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates
+      .map((poly) => poly[0])
+      .filter((ring): ring is Position[] => Boolean(ring));
+  }
+  return [];
+}
+
+function pointInRing(lon: number, lat: number, ring: Position[]): boolean {
+  const n = ring.length;
+  if (n < 3) return false;
+  let inside = false;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    if (
+      yi > lat !== yj > lat &&
+      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+interface NearestRingPoint {
+  lon: number;
+  lat: number;
+  dist: number;
+  ring: Position[];
+}
+
+function nearestPointOnRings(
+  lon: number,
+  lat: number,
+  rings: Position[][]
+): NearestRingPoint | null {
+  let best: NearestRingPoint | null = null;
+  for (const ring of rings) {
+    const n = ring.length;
+    for (let i = 0; i < n; i++) {
+      const ax = ring[i][0];
+      const ay = ring[i][1];
+      const bx = ring[(i + 1) % n][0];
+      const by = ring[(i + 1) % n][1];
+      const dx = bx - ax;
+      const dy = by - ay;
+      const lenSq = dx * dx + dy * dy;
+      let t = 0;
+      if (lenSq > 1e-12) {
+        t = Math.max(0, Math.min(1, ((lon - ax) * dx + (lat - ay) * dy) / lenSq));
+      }
+      const px = ax + dx * t;
+      const py = ay + dy * t;
+      const dist = Math.hypot(px - lon, py - lat);
+      if (!best || dist < best.dist) {
+        best = { lon: px, lat: py, dist, ring };
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Locks every seed to the country's main landmass before Voronoi clipping:
+ * seeds already inside a polygon ring are untouched; stray seeds are snapped to
+ * the nearest coastline/ring vertex and nudged inland so no province can be
+ * empty and no label can drift into the ocean.
+ */
+export function snapSeedsIntoGeometry(
+  geometry: Geometry,
+  seeds: ProvinceSubSeed[]
+): ProvinceSubSeed[] {
+  const rings = extractOuterRings(geometry);
+  if (rings.length === 0 || seeds.length <= 1) return seeds;
+
+  const usedCoords = new Set<string>();
+  return seeds.map((seed) => {
+    let lon = seed.lon;
+    let lat = seed.lat;
+    const inside = rings.some((ring) => pointInRing(lon, lat, ring));
+    if (!inside) {
+      const nearest = nearestPointOnRings(lon, lat, rings);
+      if (nearest) {
+        // Nudge 0.12° towards the ring's interior; direction is approximated
+        // with the ring centroid, which is always on the landward side here.
+        const centerLon =
+          nearest.ring.reduce((sum, p) => sum + p[0], 0) / nearest.ring.length;
+        const centerLat =
+          nearest.ring.reduce((sum, p) => sum + p[1], 0) / nearest.ring.length;
+        const dLon = centerLon - nearest.lon;
+        const dLat = centerLat - nearest.lat;
+        const len = Math.hypot(dLon, dLat) || 1;
+        lon = nearest.lon + (dLon / len) * 0.12;
+        lat = nearest.lat + (dLat / len) * 0.12;
+      }
+    }
+
+    let key = `${lon.toFixed(3)},${lat.toFixed(3)}`;
+    let guard = 0;
+    while (usedCoords.has(key) && guard < 12) {
+      lon += 0.09;
+      lat += 0.05;
+      key = `${lon.toFixed(3)},${lat.toFixed(3)}`;
+      guard++;
+    }
+    usedCoords.add(key);
+
+    if (lon === seed.lon && lat === seed.lat) return seed;
+    return { ...seed, lon, lat };
+  });
+}
+
+function clipRingWithBox(
+  ring: Position[],
+  lon: number,
+  lat: number,
+  radius: number
+): Position[] {
+  let current = ring;
+  const planes: [number, number, number][] = [
+    [-1, 0, -(lon - radius)], // x >= lon - radius
+    [1, 0, lon + radius], // x <= lon + radius
+    [0, -1, -(lat - radius)], // y >= lat - radius
+    [0, 1, lat + radius], // y <= lat + radius
+  ];
+  for (const [a, b, c] of planes) {
+    current = clipRingWithHalfPlane(current, a, b, c);
+    if (current.length < 4) return [];
+  }
+  return current;
+}
+
+/** Fallback cell for a pathological seed so no district ever disappears. */
+function buildFallbackCell(
+  outerRings: Position[][],
+  seed: ProvinceSubSeed
+): Geometry | null {
+  for (const radius of [0.75, 1.5, 3]) {
+    const rings: Position[][] = [];
+    outerRings.forEach((ring) => {
+      const clipped = clipRingWithBox(ring, seed.lon, seed.lat, radius);
+      const normalized = clipped.length >= 4 ? normalizeSphericalRing(clipped) : null;
+      if (normalized) rings.push(normalized);
+    });
+    if (rings.length === 1) {
+      return { type: 'Polygon', coordinates: [rings[0]] };
+    }
+    if (rings.length > 1) {
+      return {
+        type: 'MultiPolygon',
+        coordinates: rings.map((r) => [r]),
+      };
+    }
+  }
+  return null;
+}
+
 export function subdivideCountryGeometry(
   geometry: Geometry,
   seeds: ProvinceSubSeed[]
@@ -855,9 +1096,14 @@ export function subdivideCountryGeometry(
     });
   }
 
+  // Lock every seed onto the country's main landmass (centroid/mainland snap)
+  // so no district can be empty and no label can end up in the ocean.
+  const snappedSeeds = snapSeedsIntoGeometry(safeBaseGeometry, seeds);
+
   // Filter out tiny opposite-hemisphere island rings when subdividing (e.g., Russia's -175° Wrangel Island when main continent is clamped to +19°..+179.92°)
   const avgSeedLon =
-    seeds.reduce((acc, s) => acc + s.lon, 0) / Math.max(1, seeds.length);
+    snappedSeeds.reduce((acc, s) => acc + s.lon, 0) /
+    Math.max(1, snappedSeeds.length);
   const filteredOuterRings = outerRings.filter((ring) => {
     const sampleLon = ring[0]?.[0] ?? 0;
     return Math.abs(sampleLon - avgSeedLon) < 155;
@@ -866,14 +1112,14 @@ export function subdivideCountryGeometry(
   const activeOuterRings =
     filteredOuterRings.length > 0 ? filteredOuterRings : outerRings;
 
-  if (activeOuterRings.length === 0 || seeds.length <= 1) {
-    return seeds.map((s) => ({ seed: s, geometry: safeBaseGeometry }));
+  if (activeOuterRings.length === 0 || snappedSeeds.length <= 1) {
+    return snappedSeeds.map((s) => ({ seed: s, geometry: safeBaseGeometry }));
   }
 
-  return seeds.map((seedI, i) => {
+  return snappedSeeds.map((seedI, i) => {
     let currentRings = activeOuterRings.map((r) => [...r]);
 
-    seeds.forEach((seedJ, j) => {
+    snappedSeeds.forEach((seedJ, j) => {
       if (i === j) return;
       const a = 2 * (seedJ.lon - seedI.lon);
       const b = 2 * (seedJ.lat - seedI.lat);
@@ -905,9 +1151,14 @@ export function subdivideCountryGeometry(
             coordinates: normalizedRings.map((r) => [r]),
           };
 
+    const fallbackGeom =
+      normalizedRings.length > 0
+        ? clippedGeom
+        : buildFallbackCell(activeOuterRings, seedI) ?? safeBaseGeometry;
+
     return {
       seed: seedI,
-      geometry: normalizedRings.length > 0 ? clippedGeom : safeBaseGeometry,
+      geometry: fallbackGeom,
     };
   });
 }

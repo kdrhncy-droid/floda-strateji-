@@ -218,6 +218,11 @@ export interface Territory {
   ownerId: string;
   coreOwnerId: string;
   isCapital?: boolean;
+  /**
+   * Tier-3 admin unit (ilçe / sancak) added in the expanded map.
+   * Undefined/false keeps legacy save compatibility.
+   */
+  isDistrict?: boolean;
   isCoastal?: boolean;
   terrain?: TerrainType;
   fiefLordId?: string | null;
