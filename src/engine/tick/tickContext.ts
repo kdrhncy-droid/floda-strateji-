@@ -147,23 +147,16 @@ export function pickEligibleCrisisEvent(
   gameMode: GameModeId
 ): CrisisEventDefinition {
   const is1440 = gameMode === 'EMPIRES_1440';
-  const eligibleEvents = CRISIS_EVENTS.filter((ev) => {
-    if (is1440) {
-      return (
-        ev.id.startsWith('crisis_yeniceri') ||
-        ev.id.startsWith('crisis_silk_road') ||
-        ev.id.startsWith('crisis_sahi') ||
-        ev.id.startsWith('crisis_timar') ||
-        ev.id === 'crisis_military_mobilization' ||
-        ev.id === 'crisis_inflation_wave'
-      );
-    }
-    return (
-      !ev.id.startsWith('crisis_yeniceri') &&
-      !ev.id.startsWith('crisis_sahi') &&
-      !ev.id.startsWith('crisis_timar')
-    );
-  });
+  const isHistoricalId = (id: string) =>
+    id.startsWith('crisis_1440_') ||
+    id.startsWith('crisis_yeniceri') ||
+    id.startsWith('crisis_silk_road') ||
+    id.startsWith('crisis_sahi') ||
+    id.startsWith('crisis_timar');
+
+  const eligibleEvents = CRISIS_EVENTS.filter((ev) =>
+    is1440 ? isHistoricalId(ev.id) : !isHistoricalId(ev.id)
+  );
   const pool = eligibleEvents.length > 0 ? eligibleEvents : CRISIS_EVENTS;
   return pool[Math.floor(Math.random() * pool.length)];
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Anchor, Bot, Check, Crosshair, Lock, MapPin, Navigation, TrendingUp } from "lucide-react";
+import { Anchor, Bot, Check, Crosshair, Lock, MapPin, Navigation, Search, TrendingUp, X } from "lucide-react";
 import { CommandDrawersProps } from "./drawerTypes";
 import { ArmyModernizationCard } from "./ArmyModernizationCard";
 import {
@@ -86,6 +86,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   const [rankingSortBy, setRankingSortBy] = useState<
     "SCORE" | "GDP" | "ARMY" | "TECH" | "PRESTIGE" | "CAPITAL"
   >("SCORE");
+  const [rankingSearch, setRankingSearch] = useState("");
   const [recruitmentTab, setRecruitmentTab] = useState<"REGULAR" | "MERCENARY">(
     "REGULAR"
   );
@@ -1786,6 +1787,29 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
             )}
           </div>
 
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-[#b8a990] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="search"
+              value={rankingSearch}
+              onChange={(e) => setRankingSearch(e.target.value)}
+              placeholder="Sıralamada devlet ara..."
+              aria-label="Güç sıralamasında devlet ara"
+              data-testid="power-rank-search-input"
+              className="w-full min-h-[38px] pl-8 pr-8 py-1.5 rounded-xl bg-[#0f0c09] border border-[#caa15a]/30 focus:border-[#e0b86e] focus:outline-none text-xs text-[#faf3e3] placeholder:text-[#8e806a]"
+            />
+            {rankingSearch && (
+              <button
+                type="button"
+                onClick={() => setRankingSearch("")}
+                aria-label="Aramayı temizle"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-[#b8a990] hover:text-[#faf3e3] cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 bg-[#0f0c09] p-1 rounded-xl border border-[#caa15a]/30">
             {(
               [
@@ -1818,7 +1842,28 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
               const playerEntry = rankedList.find(
                 (r) => r.nation.id === playerNation.id
               );
-              return rankedList.slice(0, 45).map((entry, idx) => {
+              const normQuery = rankingSearch.trim().toLocaleLowerCase("tr-TR");
+              const indexedList = rankedList.map((entry, idx) => ({
+                entry,
+                rank: idx + 1,
+              }));
+              const visibleRows = normQuery
+                ? indexedList.filter(({ entry }) =>
+                    cleanNationName(entry.nation.name)
+                      .toLocaleLowerCase("tr-TR")
+                      .includes(normQuery)
+                  )
+                : indexedList;
+
+              if (visibleRows.length === 0) {
+                return (
+                  <div className="p-6 text-center rounded-xl bg-[#18130e] border border-[#caa15a]/25 text-xs text-[#b8a990]">
+                    Aramaya uygun devlet bulunamadı.
+                  </div>
+                );
+              }
+
+              return visibleRows.map(({ entry, rank }) => {
                 const isPlayer = entry.nation.id === playerNation.id;
                 const reasons: { label: string; tone: "rose" | "gold" | "sky" }[] = [];
                 if (!isPlayer && playerEntry) {
@@ -1871,7 +1916,7 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
                       className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
                     >
                       <span className="font-mono-num text-xs font-bold text-[#e0b86e] w-6 shrink-0">
-                        #{idx + 1}
+                        #{rank}
                       </span>
                       <NationFlagCanvasBadge
                         nationId={entry.nation.id}

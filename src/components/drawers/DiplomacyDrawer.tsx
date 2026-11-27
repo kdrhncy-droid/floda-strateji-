@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ChevronRight, MapPin } from "lucide-react";
+import { ChevronRight, MapPin, Search, X } from "lucide-react";
 import { CommandDrawersProps } from "./drawerTypes";
 import {
   getOrCreateRelation,
@@ -28,6 +28,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
   gameMode = "EMPIRES_1440",
 }) => {
   const [diploFilter, setDiploFilter] = useState<"ALL" | "ALLIES" | "NEIGHBORS" | "WARS">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { provsByNation, marchingByNation, neighborNationIds } = useMemo(() => {
     const provMap = new Map<string, Territory[]>();
@@ -148,11 +149,17 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
         return bProvs - aProvs;
       });
 
-    return diploFilter === "ALL" ? [playerNation, ...others] : others;
+    const list = diploFilter === "ALL" ? [playerNation, ...others] : others;
+    const normQuery = searchQuery.trim().toLocaleLowerCase("tr-TR");
+    if (!normQuery) return list;
+    return list.filter((n) =>
+      cleanNationName(n.name).toLocaleLowerCase("tr-TR").includes(normQuery)
+    );
   }, [
     nations,
     playerNation,
     diploFilter,
+    searchQuery,
     neighborNationIds,
     pactSummary.alliedIdSet,
     relations,
@@ -382,30 +389,55 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
         </div>
       )}
 
-      {/* Filter Strip */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-        {(
-          [
-            { id: 'ALL', label: `Tümü (${Object.values(nations).filter((n) => !n.isEliminated).length})` },
-            { id: 'ALLIES', label: `İttifak (${pactSummary.allies.length})` },
-            { id: 'NEIGHBORS', label: 'Komşu' },
-            { id: 'WARS', label: 'Savaş' },
-          ] as const
-        ).map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            data-testid={`diplo-filter-${f.id}`}
-            onClick={() => setDiploFilter(f.id)}
-            className={`min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              diploFilter === f.id
-                ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] font-bold'
-                : 'bg-[#16120e] text-[#d8cbb5] border border-[#caa15a]/30 hover:border-[#caa15a]/60'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Search + Filter Strip */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-3.5 h-3.5 text-[#b8a990] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Devlet ara..."
+            aria-label="Diplomasi listesinde devlet ara"
+            data-testid="diplo-search-input"
+            className="w-full min-h-[38px] pl-8 pr-8 py-1.5 rounded-xl bg-[#16120e] border border-[#caa15a]/30 focus:border-[#e0b86e] focus:outline-none text-xs text-[#faf3e3] placeholder:text-[#8e806a]"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="Aramayı temizle"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-[#b8a990] hover:text-[#faf3e3] cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 shrink-0">
+          {(
+            [
+              { id: 'ALL', label: `Tümü (${Object.values(nations).filter((n) => !n.isEliminated).length})` },
+              { id: 'ALLIES', label: `İttifak (${pactSummary.allies.length})` },
+              { id: 'NEIGHBORS', label: 'Komşu' },
+              { id: 'WARS', label: 'Savaş' },
+            ] as const
+          ).map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              data-testid={`diplo-filter-${f.id}`}
+              onClick={() => setDiploFilter(f.id)}
+              className={`min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                diploFilter === f.id
+                  ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] font-bold'
+                  : 'bg-[#16120e] text-[#d8cbb5] border border-[#caa15a]/30 hover:border-[#caa15a]/60'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Compact AoH3 Nation Rows */}

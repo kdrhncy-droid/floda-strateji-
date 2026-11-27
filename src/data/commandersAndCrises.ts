@@ -317,5 +317,68 @@ export const CRISIS_EVENTS: CrisisEventDefinition[] = [
       },
     ],
   },
+  {
+    id: 'crisis_1440_akce',
+    title: 'Darphane-i Âmire ve Gümüş Akçe Ayarı',
+    category: 'EKONOMI',
+    description:
+      'Artan sefer masrafları üzerine Başdefterdar gümüş akçenin ayarını düşürerek hazineye nakit sağlamayı veya tam ayarlı sikke basıp piyasayı rahatlatmayı arz ediyor.',
+    options: [
+      {
+        id: 'opt_1',
+        label: 'Tam Ayarlı Gümüş Akçe Bas (Sikke Tashihi)',
+        effectSummary: '-400 Altın · -%3.0 Enflasyon · +7 İstikrar',
+        effects: { treasuryDelta: -400, inflationDelta: -3.0, stabilityDelta: 7 },
+      },
+      {
+        id: 'opt_2',
+        label: 'Akçe Tağşişi ile Sefer Hazinesini Doldur',
+        effectSummary: '+1.050 Altın · +%1.8 Enflasyon · -3 İstikrar',
+        effects: { treasuryDelta: 1050, inflationDelta: 1.8, stabilityDelta: -3 },
+      },
+    ],
+  },
+  {
+    id: 'crisis_1440_plague',
+    title: 'Kıyı Limanlarında Salgın Tehlikesi',
+    category: 'JEOPOLITIK',
+    description:
+      'Akdeniz ticaret kadırgalarıyla liman şehirlerimize taşınan salgın hastalık haberi ulaştı. Hekimbaşı karantina ve darüşşifa tedbirleri öneriyor.',
+    options: [
+      {
+        id: 'opt_1',
+        label: 'Darüşşifaları Aç ve Liman Karantinası Uygula',
+        effectSummary: '-350 Altın · +8 İstikrar · +35 Araştırma',
+        effects: { treasuryDelta: -350, stabilityDelta: 8, researchDelta: 35 },
+      },
+      {
+        id: 'opt_2',
+        label: 'Deniz Ticaretini Kapatmadan Akışa İzin Ver',
+        effectSummary: '+650 Altın · -6 İstikrar',
+        effects: { treasuryDelta: 650, stabilityDelta: -6 },
+      },
+    ],
+  },
+  {
+    id: 'crisis_1440_scholars',
+    title: 'Semerkant Rasathanesi Âlimlerinin Daveti',
+    category: 'TEKNOLOJI',
+    description:
+      'Doğu medreselerinden yetişen ünlü matematik ve astronomi âlimleri payitahtımıza davet edilmeyi bekliyor.',
+    options: [
+      {
+        id: 'opt_1',
+        label: 'Âlimlere Vakıf ve Medrese Kürsüsü Tahsis Et',
+        effectSummary: '-450 Altın · +95 Araştırma Puanı · +5 İstikrar',
+        effects: { treasuryDelta: -450, researchDelta: 95, stabilityDelta: 5 },
+      },
+      {
+        id: 'opt_2',
+        label: 'Haritacılık ve Denizcilik Risalelerini Satın Al',
+        effectSummary: '-180 Altın · +45 Araştırma Puanı',
+        effects: { treasuryDelta: -180, researchDelta: 45 },
+      },
+    ],
+  },
 ];
 

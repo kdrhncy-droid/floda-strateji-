@@ -811,6 +811,7 @@ function GameAppInner() {
             showNewsDrawer={showNewsDrawer}
             onCloseNewsDrawer={() => store.setShowNewsDrawer(false)}
             newsEvents={newsEvents}
+            gameMode={gameMode}
           />
         )}
 
