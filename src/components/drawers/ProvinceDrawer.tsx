@@ -25,6 +25,7 @@ import {
   getGameSeason,
   isTerritoryEncircled,
 } from "../../engine/seasonSupplyAndAiProfile";
+import { getProvinceWeather } from "../../engine/seasonalWeatherEngine";
 import { computeVisibleTerritoryIds } from "../../engine/fogOfWarEngine";
 import { TERRAIN_INFO } from "../../engine/pashaAndFiefEngine";
 import {
@@ -125,11 +126,14 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
     selectedOwner
   );
   const seasonInfo = getGameSeason(tick, gameMode);
+  const provinceWeather = getProvinceWeather(selectedTerritory, tick, gameMode);
   const supplyLimit = Math.round(
     calculateProvinceSupplyLimit(
       selectedTerritory,
       selectedOwner,
-      seasonInfo
+      seasonInfo,
+      tick,
+      gameMode
     ) * (isEncircled ? 0.65 : 1.0)
   );
   const isOverSupply = hasSelectedIntel && selectedTerritory.garrison > supplyLimit;
@@ -339,7 +343,7 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                     {/* 8. İkmal */}
                     <div
                       className="bg-[#1b1510] border border-[#caa15a]/25 rounded-xl p-2 min-w-0"
-                      title={seasonInfo.name}
+                      title={`${provinceWeather.label} · İkmal Çarpanı ×${provinceWeather.supplyMultiplier.toFixed(2)}`}
                     >
                       <div className="text-[9.5px] text-[#a79880] flex items-center gap-1 truncate">
                         <Truck className="w-3 h-3 text-[#e0b86e] shrink-0" />
@@ -353,6 +357,50 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                         {(supplyLimit / 1000).toFixed(0)}B
                         {isOverSupply ? '!' : ''}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Seasonal Weather & Terrain Telemetry Strip */}
+                  <div
+                    data-testid="province-drawer-weather"
+                    className="bg-[#1b1510] border border-[#caa15a]/25 rounded-xl px-2.5 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px]"
+                    title={provinceWeather.summary}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: provinceWeather.accentHex }}
+                        aria-hidden="true"
+                      />
+                      <span
+                        className="font-bold truncate"
+                        style={{ color: provinceWeather.accentHex }}
+                      >
+                        {provinceWeather.label}
+                      </span>
+                      <span className="text-[#8e806b] text-[10px] truncate">
+                        · {tMeta.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2.5 font-mono-num text-[10.5px] text-[#d8cbb5] shrink-0">
+                      <span title="Arazi ve hava kaynaklı yürüyüş hızı">
+                        Hız %{Math.round(provinceWeather.movementSpeedMultiplier * 100)}
+                      </span>
+                      <span className="text-[#caa15a]/35">·</span>
+                      <span title="Muharebede birlik verimi">
+                        Verim %{Math.round(provinceWeather.troopEfficiencyMultiplier * 100)}
+                      </span>
+                      <span className="text-[#caa15a]/35">·</span>
+                      <span
+                        className={
+                          provinceWeather.attritionMultiplier >= 1.5
+                            ? 'text-rose-300 font-bold'
+                            : 'text-[#d8cbb5]'
+                        }
+                        title="Haftalık hava ve ikmal yıpranma çarpanı"
+                      >
+                        Yıpranma ×{provinceWeather.attritionMultiplier.toFixed(2)}
+                      </span>
                     </div>
                   </div>
 

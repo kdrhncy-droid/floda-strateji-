@@ -3,6 +3,7 @@ import {
   ActiveBattle,
   ActiveWar,
   ArmyMovement,
+  CampaignTimelapse,
   DiplomaticEnvoy,
   DiplomaticRelation,
   GameModeId,
@@ -12,6 +13,8 @@ import {
   WorldNewsEvent,
 } from '../types/game';
 import { formatGameDate } from './simulationEngine';
+import { validateCampaignTimelapse } from './timelapseEngine';
+import { getNationTagForMode } from '../data/nationTagRegistry';
 
 export type SaveSlotId = 'AUTOSAVE' | 'SLOT_1' | 'SLOT_2' | 'SLOT_3';
 
@@ -36,6 +39,7 @@ export interface SaveGamePayload {
   tick: number;
   hour?: number;
   worldSeed?: number;
+  timelapse?: CampaignTimelapse;
 }
 
 export interface SaveSlotMetadata {
@@ -372,6 +376,7 @@ export function hydrateSavedPayload(
     }
     mergedNations[nId] = {
       ...merged,
+      tag: merged.tag || getNationTagForMode(nId, rawPayload.gameMode || 'EMPIRES_1440'),
       treasury: Number.isFinite(merged.treasury) ? merged.treasury : 1200,
       manpower: Number.isFinite(merged.manpower) ? merged.manpower : 50000,
       stability: Number.isFinite(merged.stability) ? merged.stability : 75,
@@ -532,6 +537,7 @@ export function hydrateSavedPayload(
     worldSeed: Number.isFinite(rawPayload.worldSeed)
       ? rawPayload.worldSeed
       : undefined,
+    timelapse: validateCampaignTimelapse(rawPayload.timelapse) ?? undefined,
   };
 }
 

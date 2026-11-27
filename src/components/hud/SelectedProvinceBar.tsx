@@ -29,6 +29,7 @@ import {
   calculateProvinceSupplyLimit,
   getGameSeason,
 } from '../../engine/seasonSupplyAndAiProfile';
+import { getProvinceWeather } from '../../engine/seasonalWeatherEngine';
 import { getProvinceStraitBadge } from '../../engine/straitsAndTradeEngine';
 import {
   ActiveBattle,
@@ -214,7 +215,14 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
     getNationModernizedTier(owner)
   );
   const seasonInfo = getGameSeason(tick, gameMode);
-  const supplyLimit = calculateProvinceSupplyLimit(territory, owner, seasonInfo);
+  const provinceWeather = getProvinceWeather(territory, tick, gameMode);
+  const supplyLimit = calculateProvinceSupplyLimit(
+    territory,
+    owner,
+    seasonInfo,
+    tick,
+    gameMode
+  );
   const isOverSupply = hasIntel && territory.garrison > supplyLimit;
 
   return (
@@ -601,6 +609,19 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                 <span className="hidden md:inline text-[#d8cbb5] truncate max-w-[85px] font-sans">
                   {terrainMeta.name}
                 </span>
+                <span className="hidden sm:inline text-[#6e604c]">·</span>
+                <span
+                  data-testid="province-weather-tag"
+                  className="hidden sm:inline shrink-0 font-sans font-semibold"
+                  style={{ color: provinceWeather.accentHex }}
+                  title={`${provinceWeather.label} · Yürüyüş Hızı %${Math.round(
+                    provinceWeather.movementSpeedMultiplier * 100
+                  )} · Birlik Verimi %${Math.round(
+                    provinceWeather.troopEfficiencyMultiplier * 100
+                  )} · Yıpranma ×${provinceWeather.attritionMultiplier.toFixed(2)} — ${provinceWeather.summary}`}
+                >
+                  {provinceWeather.shortLabel}
+                </span>
                 {hasIntel && (
                   <>
                     <span className="hidden sm:inline text-[#6e604c]">·</span>
@@ -610,7 +631,7 @@ export const SelectedProvinceBar: React.FC<SelectedProvinceBarProps> = ({
                           ? 'text-rose-400 font-bold'
                           : 'text-[#b8a990]'
                       }`}
-                      title={`${seasonInfo.name} İkmal Limiti: ${supplyLimit.toLocaleString('tr-TR')} asker (${isOverSupply ? 'Limit aşıldı — haftalık yıpranma riski!' : 'Güvenli ikmal'})`}
+                      title={`${provinceWeather.label} İkmal Limiti: ${supplyLimit.toLocaleString('tr-TR')} asker (${isOverSupply ? 'Limit aşıldı — haftalık yıpranma riski!' : 'Güvenli ikmal'})`}
                       data-testid="province-supply-status"
                     >
                       İkmal {Math.round(territory.garrison / 1000)}B/{Math.round(supplyLimit / 1000)}B

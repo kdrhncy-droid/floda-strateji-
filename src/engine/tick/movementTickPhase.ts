@@ -13,6 +13,7 @@ import {
 import { classifyTerritoryTraversal } from '../pathfindingEngine';
 import { checkStraitMilitaryBlockade } from '../straitsAndTradeEngine';
 import { scaleUnits } from '../core/unitHelpers';
+import { getProvinceWeather } from '../seasonalWeatherEngine';
 import { computeUnitWeightedPower, TickContext } from './tickContext';
 
 /**
@@ -25,15 +26,62 @@ export function runMovementTickPhase(ctx: TickContext): void {
   if (input.movements.length === 0) return;
 
   const arrived: ArmyMovement[] = [];
-  const progressStep = isSubDayMode
+  const baseProgressStep = isSubDayMode
     ? Math.max(4, Math.round((48 * hoursStep) / 24))
     : 25;
+  const dayFraction = isSubDayMode ? hoursStep / 24 : 1;
 
-  const steppedMovements = input.movements.map((mv) => ({
-    ...mv,
-    units: mv.units || { infantry: mv.troops, armor: 0, airDrone: 0 },
-    progress: mv.progress + progressStep,
-  }));
+  const steppedMovements = input.movements.map((mv) => {
+    const baseUnits = mv.units || { infantry: mv.troops, armor: 0, airDrone: 0 };
+    const destTerr = ctx.nextTerritories[mv.toTerritoryId];
+    const originTerr = ctx.nextTerritories[mv.fromTerritoryId];
+    const weatherTerr = destTerr || originTerr;
+    const weather = weatherTerr
+      ? getProvinceWeather(weatherTerr, nextTick, input.gameMode)
+      : null;
+
+    // Land marches scale with terrain + seasonal weather (winter snow, monsoon mud, heatwave).
+    // Naval fleets only experience mild open-water drag during severe winter or monsoon storms.
+    const speedMult = mv.isNaval
+      ? weather && (weather.condition === 'SEVERE_WINTER' || weather.condition === 'MONSOON')
+        ? 0.88
+        : 1.0
+      : weather
+      ? weather.movementSpeedMultiplier
+      : 1.0;
+
+    const effectiveStep = Math.max(2, Math.round(baseProgressStep * speedMult));
+
+    // Exposed overland armies marching through severe winter, monsoon, or desert heatwave suffer transit attrition
+    // scaled by the fraction of this step actually spent in transit before arriving at the destination.
+    let nextTroops = mv.troops;
+    let nextUnits = baseUnits;
+    const distanceTraveled = Math.max(0, Math.min(effectiveStep, 100 - mv.progress));
+    const transitStepRatio = effectiveStep > 0 ? distanceTraveled / effectiveStep : 0;
+    if (
+      !mv.isNaval &&
+      weather &&
+      weather.marchAttritionRate > 0 &&
+      mv.troops > 1500 &&
+      transitStepRatio > 0
+    ) {
+      const loss = Math.round(
+        mv.troops * weather.marchAttritionRate * dayFraction * transitStepRatio
+      );
+      if (loss > 0) {
+        const survived = Math.max(1200, mv.troops - loss);
+        nextUnits = scaleUnits(baseUnits, survived / Math.max(1, mv.troops));
+        nextTroops = survived;
+      }
+    }
+
+    return {
+      ...mv,
+      troops: nextTroops,
+      units: nextUnits,
+      progress: mv.progress + effectiveStep,
+    };
+  });
   const prevProgressMap = new Map<string, number>();
   input.movements.forEach((mv) => prevProgressMap.set(mv.id, mv.progress));
 
@@ -246,7 +294,6 @@ export function runMovementTickPhase(ctx: TickContext): void {
           'WAR'
         );
       } else if (loser.ownerId === playerNationId) {
-        ctx.sounds.push('WAR_HORN');
         ctx.toasts.push(
           `⚠️ ${battleKindLabel} (${fieldLabel}): Seyir halindeki ${anyNaval ? 'donanmamız' : 'ordumuz'} (${prevLoserTroops.toLocaleString('tr-TR')} asker) ${winNationName} kuvvetleriyle çarpışarak durduruldu!`
         );
@@ -383,7 +430,6 @@ export function runMovementTickPhase(ctx: TickContext): void {
             'WAR'
           );
         } else if (enemyFleet.ownerId === playerNationId) {
-          ctx.sounds.push('WAR_HORN');
           ctx.toasts.push(
             `⚠️ Deniz Yenilgisi: ${enemyFleet.name} yanından geçen ${attNationName} donanmasıyla girdiği çatışmada batırıldı!`
           );
@@ -413,7 +459,6 @@ export function runMovementTickPhase(ctx: TickContext): void {
         mv.units = { infantry: 0, armor: 0, airDrone: 0 };
 
         if (mv.ownerId === playerNationId) {
-          ctx.sounds.push('WAR_HORN');
           ctx.toasts.push(
             `⚠️ Deniz Muharebesi (${seaZoneName}): Donanmamız yol üzerindeki ${defNationName} (${enemyFleet.name}) filosu tarafından durduruldu ve batırıldı!`
           );
@@ -581,7 +626,6 @@ export function runMovementTickPhase(ctx: TickContext): void {
               'WAR'
             );
           } else if (enemyFleet.ownerId === playerNationId) {
-            ctx.sounds.push('WAR_HORN');
             ctx.toasts.push(
               `Deniz Yenilgisi: ${enemyFleet.name} düşman ${attNationName} donanması tarafından batırıldı!`
             );
@@ -608,7 +652,6 @@ export function runMovementTickPhase(ctx: TickContext): void {
             ),
           };
           if (mv.ownerId === playerNationId) {
-            ctx.sounds.push('WAR_HORN');
             ctx.toasts.push(
               `Donanma taarruzu ${defNationName} (${enemyFleet.name}) karşısında püskürtüldü!`
             );
@@ -704,23 +747,78 @@ export function runMovementTickPhase(ctx: TickContext): void {
         wars: ctx.nextWars,
       });
       if (straitCheck.blocked) {
-        if (mv.ownerId === playerNationId && straitCheck.reason) {
-          ctx.toasts.push(straitCheck.reason);
-        }
         if (target.ownerId === mv.ownerId) {
           ctx.writeTerritory(target.id, {
             ...target,
             garrison: target.garrison + mv.troops,
             units: {
-              infantry: target.units.infantry + mv.units.infantry,
-              armor: target.units.armor + mv.units.armor,
-              airDrone: target.units.airDrone + mv.units.airDrone,
+              infantry: (target.units?.infantry || 0) + (mv.units?.infantry || mv.troops),
+              armor: (target.units?.armor || 0) + (mv.units?.armor || 0),
+              airDrone: (target.units?.airDrone || 0) + (mv.units?.airDrone || 0),
             },
           });
+          if (mv.ownerId === playerNationId && straitCheck.reason) {
+            ctx.toasts.push(straitCheck.reason);
+          }
+        } else {
+          const retName = ctx.returnAttackerTroopsHome({
+            attackerId: mv.ownerId,
+            troops: mv.troops,
+            units: mv.units,
+            fromTerritoryId: mv.fromTerritoryId,
+            nearTerritoryId: target.id,
+          });
+          if (mv.ownerId === playerNationId) {
+            ctx.toasts.push(
+              straitCheck.reason ||
+                `⚓ Boğaz geçişi kapandı; ordunuz ${retName || 'merkez'} garnizonuna döndü.`
+            );
+          }
         }
         continue;
       }
       if (nextHopTerr) {
+        const nextHopAccess = classifyTerritoryTraversal({
+          terr: nextHopTerr,
+          toId: mv.finalDestinationId || nextHopId,
+          moverNationId: mv.ownerId,
+          nations: ctx.nextNations,
+          relations,
+          wars: ctx.nextWars,
+          allowTargetWarDeclaration: false,
+        });
+        if (nextHopAccess === 'BLOCKED') {
+          if (target.ownerId === mv.ownerId) {
+            ctx.writeTerritory(target.id, {
+              ...target,
+              garrison: target.garrison + mv.troops,
+              units: {
+                infantry: (target.units?.infantry || 0) + (mv.units?.infantry || mv.troops),
+                armor: (target.units?.armor || 0) + (mv.units?.armor || 0),
+                airDrone: (target.units?.airDrone || 0) + (mv.units?.airDrone || 0),
+              },
+            });
+            if (mv.ownerId === playerNationId) {
+              ctx.toasts.push(
+                `🛑 ${nextHopTerr.name} sınırı kapandı; ordunuz ${target.name} garnizonunda durdu.`
+              );
+            }
+          } else {
+            const retName = ctx.returnAttackerTroopsHome({
+              attackerId: mv.ownerId,
+              troops: mv.troops,
+              units: mv.units,
+              fromTerritoryId: mv.fromTerritoryId,
+              nearTerritoryId: target.id,
+            });
+            if (mv.ownerId === playerNationId) {
+              ctx.toasts.push(
+                `🛑 ${nextHopTerr.name} geçişi kapandı; ordunuz ${retName || 'merkez'} garnizonuna döndü.`
+              );
+            }
+          }
+          continue;
+        }
         ctx.nextMovements.push({
           ...mv,
           fromTerritoryId: mv.toTerritoryId,
@@ -858,8 +956,40 @@ export function runMovementTickPhase(ctx: TickContext): void {
       continue;
     }
 
-    // Arrived in allied / military-access territory at end of route -> station peacefully
+    // Arrived in allied / military-access territory at end of route -> NEVER delete troops; return intact to nearest owned garrison!
     if (targetAccess === 'FRIENDLY_PASS') {
+      const retName = ctx.returnAttackerTroopsHome({
+        attackerId: mv.ownerId,
+        troops: mv.troops,
+        units: mv.units,
+        fromTerritoryId: mv.fromTerritoryId,
+        nearTerritoryId: target.id,
+      });
+      if (mv.ownerId === playerNationId && retName) {
+        ctx.toasts.push(
+          `🤝 ${target.name} müttefik/geçiş kontrolünde; ordunuz (${(mv.troops / 1000).toFixed(1)}B) ${retName} garnizonuna döndü.`
+        );
+      }
+      continue;
+    }
+
+    // Arrived in neutral/truce territory (e.g. peace signed or 3rd power captured province mid-march) -> return intact instead of creating a phantom battle/siege!
+    if (
+      targetAccess === 'BLOCKED' ||
+      !isAtWar(ctx.nextWars, mv.ownerId, target.ownerId)
+    ) {
+      const retName = ctx.returnAttackerTroopsHome({
+        attackerId: mv.ownerId,
+        troops: mv.troops,
+        units: mv.units,
+        fromTerritoryId: mv.fromTerritoryId,
+        nearTerritoryId: target.id,
+      });
+      if (mv.ownerId === playerNationId && retName) {
+        ctx.toasts.push(
+          `🏳️ ${target.name} ile aktif savaş bulunmadığından ordunuz (${(mv.troops / 1000).toFixed(1)}B) ${retName} garnizonuna döndü.`
+        );
+      }
       continue;
     }
 
@@ -871,23 +1001,81 @@ export function runMovementTickPhase(ctx: TickContext): void {
     };
     if (existingBattleIdx !== -1) {
       const btl = ctx.nextBattles[existingBattleIdx];
-      const newAttTroops = btl.attackerTroops + mv.troops;
-      const newAttUnits = {
-        infantry:
-          (btl.attackerUnits?.infantry || 0) + (incomingUnits.infantry || 0),
-        armor: (btl.attackerUnits?.armor || 0) + (incomingUnits.armor || 0),
-        airDrone:
-          (btl.attackerUnits?.airDrone || 0) + (incomingUnits.airDrone || 0),
-      };
-      ctx.nextBattles[existingBattleIdx] = {
-        ...btl,
-        attackerTroops: newAttTroops,
-        attackerInitialTroops:
-          (btl.attackerInitialTroops || btl.attackerTroops) + mv.troops,
-        attackerUnits: newAttUnits,
-        attackerFrontline: newAttUnits.infantry + newAttUnits.armor,
-        attackerBackline: newAttUnits.airDrone,
-      };
+      const sameSideAsAttacker =
+        mv.ownerId === btl.attackerId ||
+        ctx.nextWars.some(
+          (w) =>
+            (w.attackers.includes(btl.attackerId) &&
+              w.attackers.includes(mv.ownerId) &&
+              w.defenders.includes(btl.defenderId)) ||
+            (w.defenders.includes(btl.attackerId) &&
+              w.defenders.includes(mv.ownerId) &&
+              w.attackers.includes(btl.defenderId))
+        );
+      const sameSideAsDefender =
+        !sameSideAsAttacker &&
+        (mv.ownerId === btl.defenderId ||
+          ctx.nextWars.some(
+            (w) =>
+              (w.attackers.includes(btl.defenderId) &&
+                w.attackers.includes(mv.ownerId) &&
+                w.defenders.includes(btl.attackerId)) ||
+              (w.defenders.includes(btl.defenderId) &&
+                w.defenders.includes(mv.ownerId) &&
+                w.attackers.includes(btl.attackerId))
+          ));
+
+      if (sameSideAsAttacker) {
+        const newAttTroops = btl.attackerTroops + mv.troops;
+        const newAttUnits = {
+          infantry:
+            (btl.attackerUnits?.infantry || 0) + (incomingUnits.infantry || 0),
+          armor: (btl.attackerUnits?.armor || 0) + (incomingUnits.armor || 0),
+          airDrone:
+            (btl.attackerUnits?.airDrone || 0) + (incomingUnits.airDrone || 0),
+        };
+        ctx.nextBattles[existingBattleIdx] = {
+          ...btl,
+          attackerTroops: newAttTroops,
+          attackerInitialTroops:
+            (btl.attackerInitialTroops || btl.attackerTroops) + mv.troops,
+          attackerUnits: newAttUnits,
+          attackerFrontline: newAttUnits.infantry + newAttUnits.armor,
+          attackerBackline: newAttUnits.airDrone,
+        };
+      } else if (sameSideAsDefender) {
+        const newDefTroops = btl.defenderTroops + mv.troops;
+        const newDefUnits = {
+          infantry:
+            (btl.defenderUnits?.infantry || 0) + (incomingUnits.infantry || 0),
+          armor: (btl.defenderUnits?.armor || 0) + (incomingUnits.armor || 0),
+          airDrone:
+            (btl.defenderUnits?.airDrone || 0) + (incomingUnits.airDrone || 0),
+        };
+        ctx.nextBattles[existingBattleIdx] = {
+          ...btl,
+          defenderTroops: newDefTroops,
+          defenderInitialTroops:
+            (btl.defenderInitialTroops || btl.defenderTroops) + mv.troops,
+          defenderUnits: newDefUnits,
+          defenderFrontline: newDefUnits.infantry + newDefUnits.armor,
+          defenderBackline: newDefUnits.airDrone,
+        };
+      } else {
+        // Unrelated 3rd belligerent cannot merge into someone else's battle -> return intact
+        const retName = ctx.returnAttackerTroopsHome({
+          attackerId: mv.ownerId,
+          troops: mv.troops,
+          units: incomingUnits,
+          fromTerritoryId: mv.fromTerritoryId,
+          nearTerritoryId: target.id,
+        });
+        if (mv.ownerId === playerNationId && retName) {
+          ctx.toasts.push(
+            `⚔️ ${target.name} bölgesinde başka devletler çarpışıyor; ordunuz ${retName} garnizonuna döndü.`
+          );
+        }
+      }
     } else if (target.siege) {
       const existingSiege = target.siege;
       const sameCoalitionAsBesieger =
@@ -991,7 +1179,15 @@ export function runMovementTickPhase(ctx: TickContext): void {
               },
             })
           );
-        } else {
+        } else if (mv.troops > existingSiege.attackerTroops) {
+          // Stronger non-warring rival takes over siege -> return previous besieger safely home (never delete!)
+          ctx.returnAttackerTroopsHome({
+            attackerId: existingSiege.attackerId,
+            troops: existingSiege.attackerTroops,
+            units: existingSiege.attackerUnits,
+            fromTerritoryId: existingSiege.fromTerritoryId,
+            nearTerritoryId: target.id,
+          });
           ctx.writeTerritory(target.id, {
             ...target,
             siege: {
@@ -1006,6 +1202,20 @@ export function runMovementTickPhase(ctx: TickContext): void {
               startedTick: nextTick,
             },
           });
+        } else {
+          // Existing rival besieger is larger -> return incoming army safely home (never delete!)
+          const retName = ctx.returnAttackerTroopsHome({
+            attackerId: mv.ownerId,
+            troops: mv.troops,
+            units: incomingUnits,
+            fromTerritoryId: mv.fromTerritoryId,
+            nearTerritoryId: target.id,
+          });
+          if (mv.ownerId === playerNationId && retName) {
+            ctx.toasts.push(
+              `♜ ${target.name} zaten başka bir devlet tarafından kuşatılıyor; ordunuz ${retName} garnizonuna döndü.`
+            );
+          }
         }
       }
     } else if (target.garrison > 350) {
@@ -1050,7 +1260,6 @@ export function runMovementTickPhase(ctx: TickContext): void {
         ctx.sounds.push('MARCH');
       } else if (target.ownerId === playerNationId) {
         ctx.toasts.push(`⚠️ ${target.name} şehri kuşatma altına alındı!`);
-        ctx.sounds.push('WAR_HORN');
       }
     }
   }

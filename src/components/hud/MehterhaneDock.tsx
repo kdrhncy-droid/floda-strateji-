@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { SkipForward, X, Music, Volume2, VolumeX } from 'lucide-react';
+import { SkipForward, X, Music, Volume2, VolumeX, Swords } from 'lucide-react';
 import { music, MUSIC_TRACKS } from '../../engine/musicEngine';
 
 interface MehterhaneDockProps {
   hideCompactOnMobile?: boolean;
+  dynamicWarMusic?: boolean;
+  onToggleDynamicWarMusic?: () => void;
 }
 
 export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
   hideCompactOnMobile = false,
+  dynamicWarMusic,
+  onToggleDynamicWarMusic,
 }) => {
   const [, setTick] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -17,6 +21,11 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
   }, []);
 
   const isPlaying = music.isPlaying;
+  const isDynamicOn =
+    typeof dynamicWarMusic === 'boolean'
+      ? dynamicWarMusic
+      : music.dynamicMoodEnabled;
+  const isWarMood = music.activeMood === 'WAR';
 
   if (!isPlaying && !isExpanded) {
     return null;
@@ -31,19 +40,59 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
       {/* Expanded Offline Mehterhane Selector */}
       {isExpanded && (
         <div className="pointer-events-auto w-68 sm:w-76 rounded-2xl bg-[#14100c]/98 border border-[#caa15a]/50 shadow-2xl p-3 space-y-2.5 text-xs text-[#f3ead7]">
-          <div className="flex items-center justify-between border-b border-[#caa15a]/25 pb-2">
-            <div className="flex items-center gap-1.5 font-display font-bold text-[#e0b86e]">
-              <Music className="w-4 h-4 text-[#e0b86e]" />
-              <span>Mehterhane (Çevrimdışı)</span>
+          <div className="flex items-center justify-between border-b border-[#caa15a]/25 pb-2 gap-2">
+            <div className="flex items-center gap-1.5 font-display font-bold text-[#e0b86e] min-w-0">
+              <Music className="w-4 h-4 text-[#e0b86e] shrink-0" />
+              <span className="truncate">Orkestra Müzikleri</span>
+              <span
+                className={`text-[9px] px-1.5 py-0.5 rounded border shrink-0 ${
+                  isWarMood
+                    ? 'bg-rose-950/60 border-rose-500/45 text-rose-200'
+                    : 'bg-[#caa15a]/15 border-[#caa15a]/30 text-[#e0b86e]'
+                }`}
+              >
+                {isWarMood ? 'Savaş' : 'Barış'}
+              </span>
             </div>
             <button
               onClick={() => setIsExpanded(false)}
               aria-label="Müzik seçiciyi kapat"
-              className="w-6 h-6 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#9d8f76] hover:text-[#f3ead7] cursor-pointer"
+              className="w-6 h-6 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#9d8f76] hover:text-[#f3ead7] cursor-pointer shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
+
+          <button
+            type="button"
+            aria-pressed={isDynamicOn}
+            onClick={() => {
+              if (onToggleDynamicWarMusic) {
+                onToggleDynamicWarMusic();
+              } else {
+                music.setDynamicMoodEnabled(!isDynamicOn);
+              }
+            }}
+            className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center justify-between gap-2 text-[11px] font-semibold transition-colors cursor-pointer ${
+              isDynamicOn
+                ? 'bg-[#caa15a]/15 border-[#caa15a]/50 text-[#f3ead7]'
+                : 'bg-[#0f0c09]/85 border-[#caa15a]/20 text-[#9d8f76]'
+            }`}
+          >
+            <span className="flex items-center gap-1.5 truncate">
+              <Swords className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
+              <span className="truncate">Dinamik Savaş / Barış Geçişi</span>
+            </span>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${
+                isDynamicOn
+                  ? 'bg-[#caa15a] text-[#14100c]'
+                  : 'bg-[#231c15] text-[#9d8f76]'
+              }`}
+            >
+              {isDynamicOn ? 'Açık' : 'Kapalı'}
+            </span>
+          </button>
 
           <div className="max-h-44 overflow-y-auto space-y-1 pr-0.5">
             {MUSIC_TRACKS.map((trk) => {
@@ -52,7 +101,7 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
                 <button
                   key={trk.id}
                   onClick={() => {
-                    music.setTrack(trk.id);
+                    music.setTrack(trk.id, true);
                     if (!music.isPlaying) music.play();
                   }}
                   className={`w-full p-2 rounded-xl border text-left transition-colors cursor-pointer ${
@@ -84,7 +133,7 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
         <button
           onClick={() => setIsExpanded((v) => !v)}
           className="flex items-center gap-1.5 text-left max-w-[140px] cursor-pointer"
-          title="Mehterhane Marş Seçiciyi Aç"
+          title="Müzik Seçiciyi Aç"
         >
           <Music className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
           <span className="text-[11px] font-semibold text-[#f3ead7] truncate">
@@ -94,8 +143,8 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
 
         <button
           onClick={() => music.nextTrack()}
-          title="Sonraki Marş"
-          aria-label="Sonraki Marş"
+          title="Sonraki Parça"
+          aria-label="Sonraki Parça"
           className="w-6 h-6 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#e0b86e] cursor-pointer"
         >
           <SkipForward className="w-3 h-3" />
@@ -103,8 +152,8 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
 
         <button
           onClick={() => music.toggle()}
-          title={isPlaying ? 'Marşı Durdur' : 'Marşı Çal'}
-          aria-label={isPlaying ? 'Marşı Durdur' : 'Marşı Çal'}
+          title={isPlaying ? 'Müziği Durdur' : 'Müziği Çal'}
+          aria-label={isPlaying ? 'Müziği Durdur' : 'Müziği Çal'}
           className="w-6 h-6 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#e0b86e] cursor-pointer"
         >
           {isPlaying ? (

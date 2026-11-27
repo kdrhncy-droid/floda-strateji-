@@ -16,7 +16,10 @@ import {
   Settings,
   History,
   Music,
+  Film,
+  Archive,
 } from 'lucide-react';
+import { CampaignTimelapse } from '../types/game';
 import {
   deleteSaveSlot,
   exportSaveRecordToJson,
@@ -50,6 +53,9 @@ interface SystemAndSaveModalProps {
   onReturnToTitleMenu: () => void;
   onSaveToSlot: (slotId: SaveSlotId) => SaveSlotMetadata | null;
   onLoadRecord: (record: SaveSlotRecord) => void;
+  onWatchCurrentTimelapse?: () => void;
+  onOpenTimelapseArchive?: () => void;
+  onPlayTimelapse?: (timelapse: CampaignTimelapse, title?: string) => void;
   onShowToast: (msg: string) => void;
 }
 
@@ -63,6 +69,9 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
   onReturnToTitleMenu,
   onSaveToSlot,
   onLoadRecord,
+  onWatchCurrentTimelapse,
+  onOpenTimelapseArchive,
+  onPlayTimelapse,
   onShowToast,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -284,11 +293,11 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
                       <div className="text-xs font-bold text-[#e0bc78] flex items-center gap-1.5">
                         <Music className="w-3.5 h-3.5 text-[#c89d54] shrink-0" />
                         <span className="truncate">
-                          Mehterhane-i Hümayun · {music.activeTrackTitle}
+                          Orkestra Müzikleri · {music.activeTrackTitle}
                         </span>
                       </div>
                       <p className="text-[11px] text-[#b2a58f] mt-0.5">
-                        Dahili Osmanlı marşları veya cihazınızdan yerel MP3 seçin
+                        Dahili orkestra parçaları veya cihazınızdan yerel MP3 seçin
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -312,7 +321,7 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
                         ) : (
                           <>
                             <Play className="w-3 h-3 fill-current" />
-                            <span>Marşı Çal</span>
+                            <span>Müziği Çal</span>
                           </>
                         )}
                       </button>
@@ -332,7 +341,7 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
                           if (f) {
                             music.loadCustomMp3File(f);
                             setMusicTick((t) => t + 1);
-                            onShowToast(`${f.name} marş olarak yüklendi ve çalıyor.`);
+                            onShowToast(`${f.name} arka plan müziği olarak yüklendi ve çalıyor.`);
                           }
                           e.target.value = '';
                         }}
@@ -349,7 +358,7 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
                           key={trk.id}
                           type="button"
                           onClick={() => {
-                            music.setTrack(trk.id);
+                            music.setTrack(trk.id, true);
                             if (!music.isPlaying) {
                               music.play();
                             }
@@ -383,6 +392,53 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
 
           {modalTab === 'SAVES' && (
             <section className="space-y-3">
+              {/* Timelapse Quick Replay & Archive Bar */}
+              {(onWatchCurrentTimelapse || onOpenTimelapseArchive) && (
+                <div className="rounded-xl border border-[#c89d54]/35 bg-[#13110e] p-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-[#e0bc78] flex items-center gap-1.5">
+                      <Film className="w-3.5 h-3.5 text-[#c89d54] shrink-0" />
+                      <span>Sefer Zaman Çizelgesi (Timelapse)</span>
+                    </div>
+                    <p className="text-[11px] text-[#b2a58f]">
+                      Mevcut seferinizin fetihlerini izleyin veya kalıcı arşive kaydedin
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {onWatchCurrentTimelapse && (
+                      <button
+                        type="button"
+                        data-testid="system-watch-timelapse-btn"
+                        onClick={() => {
+                          sound.playWarHorn();
+                          onClose();
+                          onWatchCurrentTimelapse();
+                        }}
+                        className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#c89d54] hover:bg-[#d8b26e] text-[#110f0d] font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Seferi İzle</span>
+                      </button>
+                    )}
+                    {onOpenTimelapseArchive && (
+                      <button
+                        type="button"
+                        data-testid="system-open-timelapse-archive-btn"
+                        onClick={() => {
+                          sound.playClick();
+                          onClose();
+                          onOpenTimelapseArchive();
+                        }}
+                        className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#211d18] hover:bg-[#2b251e] border border-[#c89d54]/45 text-[#e0bc78] font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Archive className="w-3.5 h-3.5" />
+                        <span>Arşiv</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <div className="text-xs font-bold text-[#e0bc78]">
@@ -506,6 +562,29 @@ export const SystemAndSaveModal: React.FC<SystemAndSaveModalProps> = ({
                               <Play className="w-3.5 h-3.5 fill-current" />
                               <span>Yükle</span>
                             </button>
+
+                            {onPlayTimelapse && (() => {
+                              const slotTl = loadGameFromSlot(def.id)?.payload?.timelapse;
+                              if (!slotTl) return null;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    sound.playWarHorn();
+                                    onClose();
+                                    onPlayTimelapse(
+                                      slotTl,
+                                      `${cleanNationName(meta.nationName)} (${def.title})`
+                                    );
+                                  }}
+                                  title="Bu kaydın Timelapse zaman çizelgesini izle"
+                                  className="min-h-[40px] px-2.5 py-1.5 rounded-xl bg-[#211d18] hover:bg-[#2b251e] border border-[#c89d54]/40 text-[#e0bc78] font-semibold text-xs flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                                >
+                                  <Film className="w-3.5 h-3.5" />
+                                  <span>İzle</span>
+                                </button>
+                              );
+                            })()}
 
                             {hasRollbackBackup(def.id) && (
                               <button

@@ -8,6 +8,8 @@ import { evaluateWartimeAiOperations } from '../aiAndRebellionEngine';
 import { computeEncircledProvinceIds } from '../seasonSupplyAndAiProfile';
 import { evaluatePlayerAiCommander } from '../playerAiCommander';
 import { scaleUnits } from '../core/unitHelpers';
+import { getProvinceWeather } from '../seasonalWeatherEngine';
+import { getRulerModifiers } from '../dynastyAndSuccessionEngine';
 import { computeUnitWeightedPower, TickContext } from './tickContext';
 
 /**
@@ -87,6 +89,8 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
           ? 1.05
           : 1.0;
 
+      const battleWeather = getProvinceWeather(target, nextTick, input.gameMode);
+
       for (let r = 0; r < roundsToSimulate; r++) {
         if (
           attTroops <= 350 ||
@@ -114,15 +118,19 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
         const fortBonus =
           1 + (target.buildings.fortress || 0) * 0.08 * (wallHp / 100);
 
-        // Power calculation with frontline and ranged backline bombardment
+        // Power calculation with frontline, ranged backline, and winter/monsoon troop efficiency
         const attPower =
-          (attEngagedFront * 1.05 + attBacklineArtillery * 1.6) *
+          (attEngagedFront * 1.05 +
+            attBacklineArtillery * 1.6 * battleWeather.artilleryAirEfficiencyMultiplier) *
+          battleWeather.attackerEfficiencyMultiplier *
           (1 + getNationModernizedTier(attackerNation) * 0.12) *
           (attMorale / 100) *
           (1 + attTuranPowerBonus / 100);
 
         const defPower =
-          (defEngagedFront * 1.05 + defBacklineArtillery * 1.6) *
+          (defEngagedFront * 1.05 +
+            defBacklineArtillery * 1.6 * battleWeather.artilleryAirEfficiencyMultiplier) *
+          battleWeather.defenderEfficiencyMultiplier *
           (1 + getNationModernizedTier(defenderNation) * 0.12) *
           terrainDefMult *
           fortBonus *
@@ -168,13 +176,12 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
         wallHp = Math.max(0, wallHp - siegeHit);
       }
 
-      const attPowerFinal = computeUnitWeightedPower(
-        attUnits,
-        attTroops,
-        attackerNation
-      );
+      const attPowerFinal =
+        computeUnitWeightedPower(attUnits, attTroops, attackerNation) *
+        battleWeather.attackerEfficiencyMultiplier;
       const defPowerFinal =
         computeUnitWeightedPower(defUnits, defTroops, defenderNation) *
+        battleWeather.defenderEfficiencyMultiplier *
         terrainDefMult *
         encirclementDefMult;
 
@@ -208,6 +215,9 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
           defenderTuranPowerBonus: defTuranPowerBonus,
           round,
         });
+        if (btl.attackerId === playerNationId || btl.defenderId === playerNationId) {
+          ctx.sounds.push('COMBAT_CLASH');
+        }
         continue;
       }
 
@@ -231,7 +241,18 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
         );
 
         if (target.ownerId === btl.attackerId) {
-          // Besieger had already taken the city or same owner -> just clear battle
+          // Besieger had already taken the city or same owner -> merge victorious survivors into garrison (never drop!)
+          ctx.writeTerritory(target.id, {
+            ...target,
+            garrison: target.garrison + survivors,
+            units: {
+              infantry: (target.units?.infantry || 0) + (scaledAttUnits.infantry || 0),
+              armor: (target.units?.armor || 0) + (scaledAttUnits.armor || 0),
+              airDrone: (target.units?.airDrone || 0) + (scaledAttUnits.airDrone || 0),
+            },
+            castleWallHp: wallHp,
+            siege: null,
+          });
         } else {
           // Garrison defeated! Transition victorious army straight into city siege (0 -> 100/100 bar)
           const existingSiege =
@@ -262,12 +283,11 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
           });
 
           if (btl.attackerId === playerNationId) {
-            ctx.sounds.push('MARCH');
+            ctx.sounds.push('COMBAT_CLASH');
             ctx.toasts.push(
               `⚔️ ${target.name} savunması kırıldı! Kuşatma başladı (${Math.round(breachMomentum)}/100).`
             );
           } else if (previousOwnerId === playerNationId) {
-            ctx.sounds.push('WAR_HORN');
             ctx.toasts.push(
               `⚠️ ${target.name} meydan savunması kaybedildi; düşman kuşatmaya başladı!`
             );
@@ -308,39 +328,30 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
           siege: null,
         });
 
-        // Retreat surviving attackers (>= 500) back to origin or adjacent friendly territory
-        if (attTroops >= 500) {
-          const originTerr = btl.fromTerritoryId
-            ? ctx.nextTerritories[btl.fromTerritoryId]
-            : undefined;
-          const fallbackTerr =
-            originTerr && originTerr.ownerId === btl.attackerId
-              ? originTerr
-              : target.neighbors
-                  .map((nId) => ctx.nextTerritories[nId])
-                  .find((t) => t && t.ownerId === btl.attackerId);
-
-          if (fallbackTerr) {
-            ctx.writeTerritory(fallbackTerr.id, {
-              ...fallbackTerr,
-              garrison: fallbackTerr.garrison + attTroops,
-              units: {
-                infantry:
-                  (fallbackTerr.units?.infantry || 0) +
-                  (attUnits.infantry || 0),
-                armor: (fallbackTerr.units?.armor || 0) + (attUnits.armor || 0),
-                airDrone:
-                  (fallbackTerr.units?.airDrone || 0) +
-                  (attUnits.airDrone || 0),
-              },
-            });
-          }
+        // Retreat surviving attackers (>= 250) back to origin, adjacent friendly province, or capital (never vanish!)
+        let retreatProvName: string | null = null;
+        if (attTroops >= 250) {
+          retreatProvName = ctx.returnAttackerTroopsHome({
+            attackerId: btl.attackerId,
+            troops: attTroops,
+            units: attUnits,
+            fromTerritoryId: btl.fromTerritoryId,
+            nearTerritoryId: target.id,
+          });
         }
 
         if (btl.defenderId === playerNationId) {
           ctx.toasts.push(`🛡️ ${target.name} savunması başarılı`);
         } else if (btl.attackerId === playerNationId) {
-          ctx.toasts.push(`⚠️ ${target.name} taarruzu püskürtüldü`);
+          if (retreatProvName) {
+            ctx.toasts.push(
+              `⚠️ ${target.name} taarruzu püskürtüldü! Hayatta kalan ${(attTroops / 1000).toFixed(1)}B asker ${retreatProvName} şehrine çekildi.`
+            );
+          } else {
+            ctx.toasts.push(
+              `⚠️ ${target.name} taarruzu püskürtüldü ve saldıran birlik imha oldu.`
+            );
+          }
         }
 
         ctx.nextWars = ctx.nextWars.map((w) => {
@@ -461,12 +472,16 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
     const wallBreachMult =
       siege.wallIntegrity <= 20 ? 1.35 : siege.wallIntegrity <= 50 ? 1.15 : 1.0;
 
+    const siegeWeather = getProvinceWeather(terr, nextTick, input.gameMode);
+    const attackerRulerMods = getRulerModifiers(attackerNation);
     const baseDailyAdvance =
-      ((18 + siegePower + artilleryBonus) * wallBreachMult) /
-      fortressResistance;
+      (((18 + siegePower + artilleryBonus) * wallBreachMult) /
+        fortressResistance) *
+      siegeWeather.siegeProgressMultiplier *
+      (1 + attackerRulerMods.siegeSpeedBonus);
     const stepAdvance = isSubDayMode
-      ? Math.max(1.5, (baseDailyAdvance * hoursStep) / 24)
-      : Math.max(6, baseDailyAdvance);
+      ? Math.max(1.2, (baseDailyAdvance * hoursStep) / 24)
+      : Math.max(4.5, baseDailyAdvance);
 
     const nextProgress = Math.min(100, siege.progress + stepAdvance);
     const nextWall = Math.max(0, siege.wallIntegrity - stepAdvance * 0.55);
@@ -551,7 +566,7 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
             clanInfluence: (pNat.clanInfluence ?? 120) + 15,
           });
         }
-        ctx.sounds.push('SELECT_TERRITORY');
+        ctx.sounds.push('SIEGE_FALL');
         if (captureRes.liberatedAllyId) {
           const allyName =
             ctx.nextNations[captureRes.liberatedAllyId]?.name || 'Müttefik';
@@ -577,7 +592,7 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
         }
       } else if (previousOwnerId === playerNationId) {
         ctx.toasts.push(`⚠️ ${terr.name} düştü (${attackerNation.name})`);
-        ctx.sounds.push('MARCH');
+        ctx.sounds.push('DEFEAT');
         ctx.appendNews(
           `⚠️ ${terr.name} Teslim Oldu`,
           `${attackerNation.name} ordusu ${terr.name} kuşatmasını tamamlayarak şehri ele geçirdi.`,

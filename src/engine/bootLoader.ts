@@ -9,6 +9,8 @@ export interface HardwareProfile {
   dpr: number;
   /** Chunk size for progressive world & border warmup per animation frame */
   warmupChunkSize: number;
+  /** Minimum graceful splash display duration (ms) so fast 120Hz devices do not flash past real preloading & tips */
+  minDisplayMs: number;
   /** Smooth fade-out transition duration after real warmup completes */
   fadeOutMs: number;
 }
@@ -47,8 +49,8 @@ export const BOOT_STAGES: BootStageDefinition[] = [
   },
   {
     id: 'MEDIA_AUDIO',
-    title: 'Tarihi Görseller ve Ses Motoru',
-    detail: 'Dönem tabloları, marşlar ve savaş efektleri sahneye hazırlanıyor.',
+    title: 'Tarihi Görseller ve Arayüz Hazırlığı',
+    detail: 'Dönem tabloları, komuta panelleri ve savaş ses efektleri sahneye hazırlanıyor.',
     weight: 16,
   },
 ];
@@ -146,8 +148,9 @@ export function detectHardwareProfile(input?: {
       logicalCores,
       deviceMemoryGb,
       dpr,
-      warmupChunkSize: 140,
-      fadeOutMs: 220,
+      warmupChunkSize: 120,
+      minDisplayMs: 2300,
+      fadeOutMs: 260,
     };
   }
 
@@ -159,8 +162,9 @@ export function detectHardwareProfile(input?: {
       logicalCores,
       deviceMemoryGb,
       dpr,
-      warmupChunkSize: 80,
-      fadeOutMs: 260,
+      warmupChunkSize: 75,
+      minDisplayMs: 2500,
+      fadeOutMs: 280,
     };
   }
 
@@ -172,7 +176,8 @@ export function detectHardwareProfile(input?: {
     deviceMemoryGb,
     dpr,
     warmupChunkSize: 40,
-    fadeOutMs: 300,
+    minDisplayMs: 2700,
+    fadeOutMs: 320,
   };
 }
 

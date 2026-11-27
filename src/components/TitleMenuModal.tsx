@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   BookOpen,
   Coins,
+  Film,
   FolderOpen,
   Globe,
   MapPin,
@@ -21,7 +22,7 @@ import {
   PRESET_COUNTRIES_2026,
   RESOURCE_INFO,
 } from '../data/world2026Data';
-import { GameModeId, Nation, Territory } from '../types/game';
+import { CampaignTimelapse, GameModeId, Nation, Territory } from '../types/game';
 import { GameSettings } from '../engine/gameSettings';
 import { SaveSlotMetadata, SaveSlotRecord } from '../engine/saveManager';
 import { NationFlagCanvasBadge } from '../map/nationFlagRenderer';
@@ -42,6 +43,11 @@ const StrategyTipsModal = lazy(() =>
 const MainMenuSettingsModal = lazy(() =>
   import('./modals/MainMenuSettingsModal').then((m) => ({
     default: m.MainMenuSettingsModal,
+  }))
+);
+const TimelapseArchiveModal = lazy(() =>
+  import('./modals/TimelapseArchiveModal').then((m) => ({
+    default: m.TimelapseArchiveModal,
   }))
 );
 
@@ -65,6 +71,7 @@ interface TitleMenuModalProps {
   onStartNewGame: () => void;
   onLoadSavedGame: () => void;
   onLoadSaveRecord?: (record: SaveSlotRecord) => void;
+  onPlayTimelapse?: (timelapse: CampaignTimelapse, title?: string) => void;
   onShowToast?: (msg: string) => void;
 }
 
@@ -82,6 +89,7 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
   onStartNewGame,
   onLoadSavedGame,
   onLoadSaveRecord,
+  onPlayTimelapse,
   onShowToast,
 }) => {
   const [menuView, setMenuView] = useState<TitleMenuView>('HOME');
@@ -91,6 +99,7 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
   const [showTipsModal, setShowTipsModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showSaveManager, setShowSaveManager] = useState(false);
+  const [showTimelapseArchive, setShowTimelapseArchive] = useState(false);
   const [backdropBroken, setBackdropBroken] = useState(false);
 
   const nationStatsMap = useMemo(() => {
@@ -151,7 +160,11 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
     GAME_MODES.find((m) => m.id === selectedMode) || GAME_MODES[0];
 
   const anySubModalOpen =
-    showFeedbackModal || showSaveManager || showSettingsModal || showTipsModal;
+    showFeedbackModal ||
+    showSaveManager ||
+    showSettingsModal ||
+    showTipsModal ||
+    showTimelapseArchive;
 
   const dialogRef = useAccessibleDialog(
     menuView !== 'MAP_PICKER' && !anySubModalOpen,
@@ -262,7 +275,7 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
                     type="button"
                     data-testid="menu-continue-btn"
                     onClick={() => {
-                      sound.playWarHorn();
+                      sound.playClick();
                       onLoadSavedGame();
                     }}
                     className="aoh3-menu-btn-primary w-full min-h-[48px] px-4 py-2.5 rounded-lg flex items-center justify-between gap-3 text-left cursor-pointer"
@@ -343,6 +356,22 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
                     <span className="text-sm font-semibold">Haritadan Seç</span>
                   </span>
                   <span className="text-[11px] text-[#9e927d]">Canlı Harita</span>
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="menu-timelapse-btn"
+                  onClick={() => {
+                    sound.playClick();
+                    setShowTimelapseArchive(true);
+                  }}
+                  className="aoh3-menu-btn w-full min-h-[44px] px-4 py-2 rounded-lg flex items-center justify-between gap-2 cursor-pointer"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Film className="w-4 h-4 text-[#c89d54] shrink-0" />
+                    <span className="text-sm font-semibold">Timelapse Arşivi</span>
+                  </span>
+                  <span className="text-[11px] text-[#9e927d]">Çevrimdışı</span>
                 </button>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -479,7 +508,7 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
                   type="button"
                   data-start="true"
                   onClick={() => {
-                    sound.playWarHorn();
+                    sound.playClick();
                     onStartNewGame();
                   }}
                   className="aoh3-menu-btn-primary min-h-[42px] px-4 py-2 rounded-lg font-bold text-xs sm:text-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
@@ -600,7 +629,7 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
                 type="button"
                 data-start="true"
                 onClick={() => {
-                  sound.playWarHorn();
+                  sound.playClick();
                   onStartNewGame();
                 }}
                 className="aoh3-menu-btn-primary px-3.5 sm:px-5 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold rounded-lg flex items-center gap-1.5 whitespace-nowrap shrink-0 min-h-[38px] sm:min-h-[42px] cursor-pointer"
@@ -756,7 +785,7 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
                         type="button"
                         data-start="true"
                         onClick={() => {
-                          sound.playWarHorn();
+                          sound.playClick();
                           onStartNewGame();
                         }}
                         className="aoh3-menu-btn-primary w-full h-12 rounded-lg font-display font-bold text-sm flex items-center justify-center gap-2 cursor-pointer"
@@ -920,6 +949,18 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
               } else {
                 onLoadSavedGame();
               }
+            }}
+            onPlayTimelapse={onPlayTimelapse}
+            onShowToast={onShowToast}
+          />
+        )}
+
+        {showTimelapseArchive && (
+          <TimelapseArchiveModal
+            isOpen={showTimelapseArchive}
+            onClose={() => setShowTimelapseArchive(false)}
+            onPlayTimelapse={(tl, title) => {
+              onPlayTimelapse?.(tl, title);
             }}
             onShowToast={onShowToast}
           />

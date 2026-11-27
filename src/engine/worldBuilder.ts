@@ -6,6 +6,7 @@ import {
   buildSeedForFeature,
   GAME_MODES,
 } from '../data/world2026Data';
+import { getNationTag } from '../data/nationTagRegistry';
 import {
   DiplomaticRelation,
   GameModeId,
@@ -22,6 +23,7 @@ import {
 } from './polygonSubdivider';
 import { determineProvinceTerrain } from './pashaAndFiefEngine';
 import { transformBundleTo1440Scenario } from './scenario1440Builder';
+import { ensureAllNationsHaveRulers } from './dynastyAndSuccessionEngine';
 import { STRATEGIC_STRAITS } from './straitsAndTradeEngine';
 import type { GeoCountryFeature, InitialWorldBundle } from './core/worldTypes';
 import { relationKey } from './core/diplomacyHelpers';
@@ -677,6 +679,7 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
 
     nations[cf.id] = {
       id: cf.id,
+      tag: seed.tag || getNationTag(cf.id, '2026'),
       name: seed.name,
       flagCode: seed.flagCode,
       color: seed.color,
@@ -1132,10 +1135,22 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
   };
 
   if (modeId === 'EMPIRES_1440') {
-    return transformBundleTo1440Scenario(baseBundle);
+    const bundle1440 = transformBundleTo1440Scenario(baseBundle);
+    return {
+      ...bundle1440,
+      nations: ensureAllNationsHaveRulers(
+        bundle1440.nations,
+        'EMPIRES_1440',
+        0,
+        1440
+      ),
+    };
   }
 
-  return baseBundle;
+  return {
+    ...baseBundle,
+    nations: ensureAllNationsHaveRulers(baseBundle.nations, modeId, 0, 2026),
+  };
 }
 
 

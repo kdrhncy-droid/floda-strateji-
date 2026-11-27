@@ -1,0 +1,2226 @@
+{
+  "empires": [
+    {
+      "tag": "OTT",
+      "id": "792",
+      "name": "Osmanlı İmparatorluğu",
+      "flagCode": "OSM",
+      "color": "#183222",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Edirne",
+      "capitalTerritoryId": "792_EDR",
+      "treasury": 3400,
+      "manpower": 175000,
+      "absorbedCountryIds": [
+        "792",
+        "100",
+        "807",
+        "008"
+      ],
+      "provinceRenames": {
+        "100": "Sofya",
+        "792": "Ankara",
+        "807": "Üsküp",
+        "792_EDR": "★ Edirne",
+        "792_GLB": "Gelibolu",
+        "792_BUR": "Hüdavendigar",
+        "792_IZM": "İzmir",
+        "792_MUG": "Muğla",
+        "792_KUT": "Kütahya",
+        "792_ANT": "Antalya",
+        "792_KNY": "Karaman",
+        "792_KYS": "Rum",
+        "792_KST": "Kastamonu",
+        "792_SAM": "Canik",
+        "100_PDV": "Filibe",
+        "100_VAR": "Varna",
+        "008": "Avlonya",
+        "300_SKG": "Selanik",
+        "300_IOA": "Yanya",
+        "642_CND": "Silistre"
+      }
+    },
+    {
+      "tag": "BYZ",
+      "id": "300",
+      "name": "Bizans & Mora Despotluğu",
+      "flagCode": "BİZ",
+      "color": "#78357A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ İstanbul",
+      "capitalTerritoryId": "792_IST",
+      "treasury": 1450,
+      "manpower": 42000,
+      "absorbedCountryIds": [
+        "300"
+      ],
+      "provinceRenames": {
+        "300": "Mora & Atina",
+        "792_IST": "★ Konstantinopolis"
+      }
+    },
+    {
+      "tag": "MEM",
+      "id": "818",
+      "name": "Memlük Sultanlığı",
+      "flagCode": "MEM",
+      "color": "#C88A32",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Kahire",
+      "treasury": 2900,
+      "manpower": 145000,
+      "absorbedCountryIds": [
+        "818",
+        "760",
+        "400",
+        "376",
+        "275",
+        "422"
+      ],
+      "provinceRenames": {
+        "376": "Kudüs",
+        "400": "Kerek",
+        "760": "Şam",
+        "818": "★ Kahire",
+        "818_ALY": "İskenderiye",
+        "818_SUZ": "Süveyş",
+        "818_ASW": "Asvan",
+        "760_ALP": "Halep",
+        "760_LTK": "Lazkiye",
+        "760_DEZ": "Rakka",
+        "792_ADA": "Adana",
+        "792_GZP": "Ayıntab",
+        "682_JED": "Mekke",
+        "682_MED": "Medine",
+        "682_TBK": "Tebük",
+        "682_TIF": "Taif"
+      }
+    },
+    {
+      "tag": "NAJ",
+      "id": "682",
+      "name": "Necid & Hürmüz Emirliği",
+      "flagCode": "NEC",
+      "color": "#52796F",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Riyad",
+      "treasury": 1650,
+      "manpower": 56000,
+      "absorbedCountryIds": [
+        "682",
+        "414",
+        "634",
+        "784"
+      ],
+      "provinceRenames": {
+        "414": "Kuveyt",
+        "634": "Katar",
+        "682": "★ Riyad",
+        "784": "Hürmüz",
+        "682_DMM": "Lahsa"
+      }
+    },
+    {
+      "tag": "YEM",
+      "id": "887",
+      "name": "Yemen Resûlî Sultanlığı",
+      "flagCode": "YEM",
+      "color": "#9A3B2E",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Sana",
+      "treasury": 1450,
+      "manpower": 52000,
+      "absorbedCountryIds": [
+        "887",
+        "512"
+      ],
+      "provinceRenames": {
+        "512": "Maskat",
+        "887": "★ Sana",
+        "887_ADE": "Aden"
+      }
+    },
+    {
+      "tag": "FUN",
+      "id": "729",
+      "name": "Funj & Nubya Sultanlığı",
+      "flagCode": "NUB",
+      "color": "#6B4C9A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Hartum",
+      "treasury": 1400,
+      "manpower": 58000,
+      "absorbedCountryIds": [
+        "729"
+      ],
+      "provinceRenames": {
+        "729": "★ Hartum",
+        "729_PZU": "Sevakin",
+        "729_ELF": "Darfur"
+      }
+    },
+    {
+      "tag": "AKK",
+      "id": "031",
+      "name": "Karakoyunlu & Akkoyunlu",
+      "flagCode": "AKK",
+      "color": "#2A7B9B",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Tebriz",
+      "capitalTerritoryId": "364_TBZ",
+      "treasury": 2450,
+      "manpower": 120000,
+      "absorbedCountryIds": [
+        "031",
+        "368"
+      ],
+      "provinceRenames": {
+        "368": "Bağdat",
+        "364_TBZ": "★ Tebriz",
+        "031": "Bakü",
+        "031_GNJ": "Gence",
+        "031_SKX": "Şuşa",
+        "368_BSR": "Basra",
+        "368_EBL": "Musul",
+        "368_KIK": "Kerkük",
+        "792_ERZ": "Erzurum",
+        "792_DYB": "Amid",
+        "792_VAN": "Van",
+        "792_MLT": "Malatya"
+      }
+    },
+    {
+      "tag": "GEO",
+      "id": "268",
+      "name": "Gürcistan & Trabzon",
+      "flagCode": "GUR",
+      "color": "#A64D6B",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Tiflis",
+      "treasury": 1500,
+      "manpower": 56000,
+      "absorbedCountryIds": [
+        "268",
+        "051"
+      ],
+      "provinceRenames": {
+        "268": "★ Tiflis",
+        "268_BUS": "Batum",
+        "051": "Erivan",
+        "792_TRB": "Trabzon"
+      }
+    },
+    {
+      "tag": "TIM",
+      "id": "364",
+      "name": "Timur İmparatorluğu",
+      "flagCode": "TİM",
+      "color": "#8E2430",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Semerkant",
+      "capitalTerritoryId": "860_SKD",
+      "treasury": 2950,
+      "manpower": 160000,
+      "absorbedCountryIds": [
+        "364",
+        "795",
+        "004"
+      ],
+      "provinceRenames": {
+        "364": "Tahran",
+        "795": "Nisa",
+        "860_SKD": "★ Semerkant",
+        "364_ISF": "İsfahan",
+        "364_AWZ": "Ahvaz",
+        "364_SYZ": "Şiraz",
+        "364_KER": "Kirman",
+        "364_MHD": "Meşhed",
+        "795_MRV": "Merv",
+        "795_KRW": "Türkmenbaşı",
+        "860_BHK": "Buhara",
+        "860_UGC": "Hive",
+        "860_NKS": "Harezmi",
+        "004": "Kabil",
+        "004_HEA": "Herat",
+        "004_KDH": "Kandahar"
+      }
+    },
+    {
+      "tag": "UZB",
+      "id": "860",
+      "name": "Özbek & Çağatay Hanlığı",
+      "flagCode": "ÖZB",
+      "color": "#2A9D8F",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Taşkent",
+      "treasury": 1950,
+      "manpower": 92000,
+      "absorbedCountryIds": [
+        "860",
+        "417",
+        "762"
+      ],
+      "provinceRenames": {
+        "860": "★ Taşkent",
+        "156_KHG": "Kaşgar",
+        "156_URC": "Beşbalık"
+      }
+    },
+    {
+      "tag": "MOS",
+      "id": "643",
+      "name": "Moskova & Novgorod Knezliği",
+      "flagCode": "MOS",
+      "color": "#346E3D",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Moskova",
+      "treasury": 2250,
+      "manpower": 112000,
+      "absorbedCountryIds": [
+        "643"
+      ],
+      "provinceRenames": {
+        "643": "★ Moskova",
+        "643_LED": "Nevan",
+        "643_GOJ": "Nijni Novgorod",
+        "643_ARH": "Arhangelsk"
+      }
+    },
+    {
+      "tag": "GOL",
+      "id": "902",
+      "name": "Büyük Orda & Kazan Hanlığı",
+      "flagCode": "ORD",
+      "color": "#B57C28",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Saray",
+      "capitalTerritoryId": "643_VOG",
+      "treasury": 2050,
+      "manpower": 108000,
+      "absorbedCountryIds": [],
+      "provinceRenames": {
+        "643_VOG": "★ Saray",
+        "643_ASF": "Astrahan",
+        "643_KZN": "Kazan",
+        "643_KUF": "Samara",
+        "643_SVX": "Tura",
+        "643_SRT": "Saratov",
+        "643_PNZ": "Penza",
+        "643_UFA": "Başkurdistan",
+        "643_PRM": "Perm",
+        "643_CHL": "İset"
+      }
+    },
+    {
+      "tag": "SIB",
+      "id": "903",
+      "name": "Sibir & Mançurya Hanlığı",
+      "flagCode": "SİB",
+      "color": "#46697A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Sibir",
+      "capitalTerritoryId": "643_OMS",
+      "treasury": 1650,
+      "manpower": 78000,
+      "absorbedCountryIds": [],
+      "provinceRenames": {
+        "643_OMS": "★ Sibir",
+        "643_OVB": "Baraba",
+        "643_TYU": "Tümen",
+        "643_KJA": "Yenisey",
+        "643_IKT": "İrkutsk",
+        "643_KHV": "Amur",
+        "643_VVO": "Curçen"
+      }
+    },
+    {
+      "tag": "CRI",
+      "id": "804",
+      "name": "Kırım Hanlığı",
+      "flagCode": "KIR",
+      "color": "#248277",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Bahçesaray",
+      "capitalTerritoryId": "643_KRR",
+      "treasury": 1850,
+      "manpower": 88000,
+      "absorbedCountryIds": [
+        "804"
+      ],
+      "provinceRenames": {
+        "643_KRR": "★ Bahçesaray",
+        "804_ODS": "Kefe",
+        "804_HRK": "Yedisan",
+        "643_ROV": "Azak"
+      }
+    },
+    {
+      "tag": "KAZ",
+      "id": "398",
+      "name": "Kazak & Deşt-i Kıpçak Hanlığı",
+      "flagCode": "KAZ",
+      "color": "#2C8CB8",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Türkistan",
+      "capitalTerritoryId": "398_CIT",
+      "treasury": 1750,
+      "manpower": 86000,
+      "absorbedCountryIds": [
+        "398"
+      ],
+      "provinceRenames": {
+        "398": "Astana",
+        "398_ALA": "Almatı",
+        "398_SCO": "Aktau",
+        "398_CIT": "★ Türkistan"
+      }
+    },
+    {
+      "tag": "HUN",
+      "id": "348",
+      "name": "Macaristan Krallığı",
+      "flagCode": "MAC",
+      "color": "#4A7C59",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Budin",
+      "treasury": 2450,
+      "manpower": 118000,
+      "absorbedCountryIds": [
+        "348",
+        "703"
+      ],
+      "provinceRenames": {
+        "348": "★ Budin",
+        "703": "Estergon",
+        "348_DEB": "Debrecen",
+        "348_PEC": "Peçuy",
+        "348_QGY": "Győr",
+        "642_CLJ": "Kaloşvar",
+        "642_TSR": "Temeşvar"
+      }
+    },
+    {
+      "tag": "CRO",
+      "id": "191",
+      "name": "Hırvatistan Banlığı",
+      "flagCode": "HIR",
+      "color": "#C4496A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Zagreb",
+      "treasury": 1400,
+      "manpower": 48000,
+      "absorbedCountryIds": [
+        "191"
+      ],
+      "provinceRenames": {
+        "191": "★ Zagreb",
+        "191_SPU": "Dubrovnik"
+      }
+    },
+    {
+      "tag": "WAL",
+      "id": "642",
+      "name": "Eflak Voyvodalığı",
+      "flagCode": "EFL",
+      "color": "#9C6B30",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Bükreş",
+      "treasury": 1450,
+      "manpower": 50000,
+      "absorbedCountryIds": [
+        "642"
+      ],
+      "provinceRenames": {
+        "642": "★ Bükreş",
+        "642_CRA": "Krayova"
+      }
+    },
+    {
+      "tag": "MOL",
+      "id": "498",
+      "name": "Boğdan Voyvodalığı",
+      "flagCode": "BOG",
+      "color": "#648244",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Suceava",
+      "treasury": 1450,
+      "manpower": 50000,
+      "absorbedCountryIds": [
+        "498"
+      ],
+      "provinceRenames": {
+        "498": "★ Suceava",
+        "642_IAS": "Yaş"
+      }
+    },
+    {
+      "tag": "SER",
+      "id": "688",
+      "name": "Sırbistan Despotluğu",
+      "flagCode": "SIR",
+      "color": "#7A3E3E",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Belgrad",
+      "treasury": 1650,
+      "manpower": 62000,
+      "absorbedCountryIds": [
+        "688"
+      ],
+      "provinceRenames": {
+        "688": "★ Belgrad",
+        "688_NIS": "Semendire"
+      }
+    },
+    {
+      "tag": "BOS",
+      "id": "070",
+      "name": "Bosna Krallığı",
+      "flagCode": "BOS",
+      "color": "#4361EE",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Saraybosna",
+      "treasury": 1450,
+      "manpower": 52000,
+      "absorbedCountryIds": [
+        "070",
+        "499"
+      ],
+      "provinceRenames": {
+        "070": "★ Saraybosna",
+        "070_OMO": "Mostar"
+      }
+    },
+    {
+      "tag": "HRE",
+      "id": "276",
+      "name": "Kutsal Roma İmparatorluğu",
+      "flagCode": "KRI",
+      "color": "#C6922C",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Frankfurt",
+      "capitalTerritoryId": "276_FRA",
+      "treasury": 3250,
+      "manpower": 150000,
+      "absorbedCountryIds": [
+        "276"
+      ],
+      "provinceRenames": {
+        "276": "Berlin",
+        "276_MUC": "Münih",
+        "276_STR": "Stuttgart",
+        "276_FRA": "★ Frankfurt",
+        "276_HAM": "Hamburg",
+        "276_DRS": "Dresden",
+        "276_CGN": "Köln",
+        "276_NUE": "Nürnberg",
+        "276_HAJ": "Hannover",
+        "276_RLG": "Lübeck",
+        "276_AGB": "Augsburg"
+      }
+    },
+    {
+      "tag": "SWI",
+      "id": "756",
+      "name": "İsviçre Konfederasyonu",
+      "flagCode": "ISV",
+      "color": "#C83E3B",
+      "ideology": "DEMOCRACY",
+      "capitalName": "★ Bern",
+      "treasury": 1650,
+      "manpower": 52000,
+      "absorbedCountryIds": [
+        "756"
+      ],
+      "provinceRenames": {
+        "756": "★ Bern",
+        "756_ZRH": "Zürih"
+      }
+    },
+    {
+      "tag": "BUR",
+      "id": "528",
+      "name": "Burgonya & Felemenk Dükalığı",
+      "flagCode": "BRG",
+      "color": "#7C1D3E",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Amsterdam",
+      "treasury": 2450,
+      "manpower": 88000,
+      "absorbedCountryIds": [
+        "528",
+        "056",
+        "442"
+      ],
+      "provinceRenames": {
+        "528": "★ Amsterdam",
+        "528_RTM": "Rotterdam",
+        "056": "Brüksel",
+        "056_ANR": "Anvers"
+      }
+    },
+    {
+      "tag": "HAB",
+      "id": "040",
+      "name": "Avusturya Arşidüklüğü",
+      "flagCode": "AVU",
+      "color": "#CFC5B4",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Viyana",
+      "treasury": 2350,
+      "manpower": 96000,
+      "absorbedCountryIds": [
+        "040",
+        "705"
+      ],
+      "provinceRenames": {
+        "705": "Ljubljana",
+        "040": "★ Viyana",
+        "040_GRZ": "Graz",
+        "040_INN": "Innsbruck"
+      }
+    },
+    {
+      "tag": "BOH",
+      "id": "203",
+      "name": "Bohemya Krallığı",
+      "flagCode": "BOH",
+      "color": "#A86434",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Prag",
+      "treasury": 1850,
+      "manpower": 68000,
+      "absorbedCountryIds": [
+        "203"
+      ],
+      "provinceRenames": {
+        "203": "★ Prag",
+        "203_BRQ": "Brno"
+      }
+    },
+    {
+      "tag": "VEN",
+      "id": "380",
+      "name": "Venedik & İtalya Devletleri",
+      "flagCode": "VEN",
+      "color": "#2E778D",
+      "ideology": "DEMOCRACY",
+      "capitalName": "★ Venedik",
+      "capitalTerritoryId": "380_VCE",
+      "treasury": 3100,
+      "manpower": 120000,
+      "absorbedCountryIds": [
+        "380"
+      ],
+      "provinceRenames": {
+        "380": "Roma",
+        "380_FLR": "Floransa",
+        "380_MIL": "Milano",
+        "380_VCE": "★ Venedik",
+        "380_NAP": "Napoli",
+        "380_PMO": "Palermo",
+        "380_GOA": "Cenova",
+        "380_TRN": "Torino",
+        "380_BRI": "Bari",
+        "300_CRT": "Girit",
+        "008_SHK": "İşkodra"
+      }
+    },
+    {
+      "tag": "CYP",
+      "id": "196",
+      "name": "Kıbrıs Lüzinyan Krallığı",
+      "flagCode": "KIB",
+      "color": "#D4A843",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Lefkoşa",
+      "treasury": 1350,
+      "manpower": 38000,
+      "absorbedCountryIds": [
+        "196"
+      ],
+      "provinceRenames": {
+        "196": "★ Lefkoşa"
+      }
+    },
+    {
+      "tag": "POL",
+      "id": "616",
+      "name": "Lehistan Krallığı",
+      "flagCode": "LEH",
+      "color": "#D1495B",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Krakow",
+      "capitalTerritoryId": "616_KRK",
+      "treasury": 2450,
+      "manpower": 115000,
+      "absorbedCountryIds": [
+        "616"
+      ],
+      "provinceRenames": {
+        "616": "Varşova",
+        "616_POZ": "Poznań",
+        "616_KRK": "★ Krakow",
+        "616_LUZ": "Lublin",
+        "616_WRO": "Wrocław",
+        "804_LVV": "Lviv"
+      }
+    },
+    {
+      "tag": "LIT",
+      "id": "440",
+      "name": "Litvanya Büyük Dükalığı",
+      "flagCode": "LİT",
+      "color": "#6D2E46",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Vilnius",
+      "treasury": 2300,
+      "manpower": 108000,
+      "absorbedCountryIds": [
+        "440",
+        "112"
+      ],
+      "provinceRenames": {
+        "112": "Minsk",
+        "440": "★ Vilnius",
+        "804": "Kiev",
+        "440_KUN": "Kaunas",
+        "112_BQT": "Brest",
+        "643_SMO": "Smolensk"
+      }
+    },
+    {
+      "tag": "TEU",
+      "id": "428",
+      "name": "Töton & Livonya Şövalyeleri",
+      "flagCode": "TOT",
+      "color": "#5C6773",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Riga",
+      "treasury": 1750,
+      "manpower": 72000,
+      "absorbedCountryIds": [
+        "428",
+        "233"
+      ],
+      "provinceRenames": {
+        "233": "Reval",
+        "428": "★ Riga",
+        "616_GDN": "Marienburg",
+        "643_KGD": "Königsberg",
+        "440_KLP": "Memel"
+      }
+    },
+    {
+      "tag": "FRA",
+      "id": "250",
+      "name": "Fransa Krallığı",
+      "flagCode": "FRA",
+      "color": "#2B5B84",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Paris",
+      "treasury": 3000,
+      "manpower": 155000,
+      "absorbedCountryIds": [
+        "250"
+      ],
+      "provinceRenames": {
+        "250": "★ Paris",
+        "250_LYO": "Lyon",
+        "250_MRS": "Marsilya",
+        "250_TLS": "Toulouse",
+        "250_BDX": "Bordeaux",
+        "250_NTE": "Nantes",
+        "250_URO": "Rouen",
+        "250_DIJ": "Dijon",
+        "250_RNS": "Reims",
+        "250_ORY": "Orléans"
+      }
+    },
+    {
+      "tag": "ENG",
+      "id": "826",
+      "name": "İngiltere Krallığı",
+      "flagCode": "İNG",
+      "color": "#A63A3A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Londra",
+      "treasury": 2800,
+      "manpower": 122000,
+      "absorbedCountryIds": [
+        "826"
+      ],
+      "provinceRenames": {
+        "826": "★ Londra",
+        "826_MAN": "York",
+        "826_CWL": "Cardiff",
+        "826_BRS": "Bristol",
+        "826_NWI": "Norwich",
+        "826_NCL": "Newcastle"
+      }
+    },
+    {
+      "tag": "SCO",
+      "id": "905",
+      "name": "İskoçya Krallığı",
+      "flagCode": "İSK",
+      "color": "#1D4ED8",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Edinburgh",
+      "capitalTerritoryId": "826_EDI",
+      "treasury": 1550,
+      "manpower": 54000,
+      "absorbedCountryIds": [],
+      "provinceRenames": {
+        "826_EDI": "★ Edinburgh",
+        "826_GLA": "Glasgow"
+      }
+    },
+    {
+      "tag": "IRE",
+      "id": "372",
+      "name": "İrlanda Klanları",
+      "flagCode": "İRL",
+      "color": "#2D7A5A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Dublin",
+      "treasury": 1350,
+      "manpower": 44000,
+      "absorbedCountryIds": [
+        "372"
+      ],
+      "provinceRenames": {
+        "372": "★ Dublin",
+        "372_ORK": "Cork"
+      }
+    },
+    {
+      "tag": "CAS",
+      "id": "724",
+      "name": "Kastilya & Aragon Krallığı",
+      "flagCode": "KAS",
+      "color": "#D4A024",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Toledo",
+      "capitalTerritoryId": "724_TOL",
+      "treasury": 2750,
+      "manpower": 128000,
+      "absorbedCountryIds": [
+        "724"
+      ],
+      "provinceRenames": {
+        "724": "Madrid",
+        "724_TOL": "★ Toledo",
+        "724_BCN": "Barselona",
+        "724_VLC": "Valensiya",
+        "724_SEV": "Sevilla",
+        "724_GRX": "Gırnata",
+        "724_BIO": "Bilbao",
+        "724_ZAZ": "Zaragoza",
+        "724_VLL": "Valladolid",
+        "724_MJV": "Murcia",
+        "380_PMO": "Palermo",
+        "380_CTA": "Katanya",
+        "380_CAG": "Cagliari"
+      }
+    },
+    {
+      "tag": "POR",
+      "id": "620",
+      "name": "Portekiz Krallığı",
+      "flagCode": "POR",
+      "color": "#2B7A4B",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Lizbon",
+      "treasury": 2150,
+      "manpower": 76000,
+      "absorbedCountryIds": [
+        "620"
+      ],
+      "provinceRenames": {
+        "620": "★ Lizbon",
+        "620_OPO": "Porto",
+        "620_FAO": "Faro"
+      }
+    },
+    {
+      "tag": "TLC",
+      "id": "012",
+      "name": "Tilimsan & Cezayir Sultanlığı",
+      "flagCode": "CEZ",
+      "color": "#1E6091",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Tilimsan",
+      "capitalTerritoryId": "012_ORN",
+      "treasury": 1950,
+      "manpower": 88000,
+      "absorbedCountryIds": [
+        "012"
+      ],
+      "provinceRenames": {
+        "012": "Cezayir",
+        "012_ORN": "★ Tilimsan",
+        "012_HME": "Tamanrasset"
+      }
+    },
+    {
+      "tag": "MOR",
+      "id": "504",
+      "name": "Merînî Fas Sultanlığı",
+      "flagCode": "FAS",
+      "color": "#8E3535",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Fes",
+      "capitalTerritoryId": "504_FEZ",
+      "treasury": 2050,
+      "manpower": 92000,
+      "absorbedCountryIds": [
+        "504",
+        "732",
+        "478"
+      ],
+      "provinceRenames": {
+        "504": "Rabat",
+        "504_FEZ": "★ Fes",
+        "504_RAK": "Marakeş"
+      }
+    },
+    {
+      "tag": "TUN",
+      "id": "788",
+      "name": "Tunus Hafsî Sultanlığı",
+      "flagCode": "TUN",
+      "color": "#2E8B57",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Tunus",
+      "treasury": 2000,
+      "manpower": 84000,
+      "absorbedCountryIds": [
+        "788",
+        "434"
+      ],
+      "provinceRenames": {
+        "434": "Trablus",
+        "788": "★ Tunus",
+        "788_SFA": "Kayrevan",
+        "434_BEN": "Bingazi"
+      }
+    },
+    {
+      "tag": "SWE",
+      "id": "752",
+      "name": "İsveç & Finlandiya Birliği",
+      "flagCode": "KAL",
+      "color": "#2F6690",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Stokholm",
+      "treasury": 2050,
+      "manpower": 88000,
+      "absorbedCountryIds": [
+        "752",
+        "246"
+      ],
+      "provinceRenames": {
+        "246": "Uusimaa",
+        "752": "★ Stokholm",
+        "752_GOT": "Göteborg",
+        "752_KIR": "Kiruna",
+        "246_TKU": "Turku",
+        "246_OUL": "Oulu"
+      }
+    },
+    {
+      "tag": "DEN",
+      "id": "208",
+      "name": "Danimarka Krallığı",
+      "flagCode": "DAN",
+      "color": "#B8333A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Kopenhag",
+      "treasury": 1850,
+      "manpower": 68000,
+      "absorbedCountryIds": [
+        "208"
+      ],
+      "provinceRenames": {
+        "208": "★ Kopenhag",
+        "208_AAR": "Aarhus"
+      }
+    },
+    {
+      "tag": "NOR",
+      "id": "578",
+      "name": "Norveç & İzlanda Krallığı",
+      "flagCode": "NOR",
+      "color": "#6E5A8A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Oslo",
+      "treasury": 1700,
+      "manpower": 62000,
+      "absorbedCountryIds": [
+        "578",
+        "304",
+        "352"
+      ],
+      "provinceRenames": {
+        "352": "Reykjavik",
+        "578": "★ Oslo",
+        "578_BGO": "Bergen",
+        "578_TOS": "Tromsø"
+      }
+    },
+    {
+      "tag": "ETH",
+      "id": "231",
+      "name": "Habeşistan İmparatorluğu",
+      "flagCode": "HAB",
+      "color": "#A67628",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Gondar",
+      "capitalTerritoryId": "231_GDQ",
+      "treasury": 1750,
+      "manpower": 82000,
+      "absorbedCountryIds": [
+        "231",
+        "404",
+        "800",
+        "728"
+      ],
+      "provinceRenames": {
+        "231": "Şeva",
+        "404": "Kikuyu",
+        "231_GDQ": "★ Gondar",
+        "231_DIR": "Harar",
+        "404_MBA": "Mombasa"
+      }
+    },
+    {
+      "tag": "ADA",
+      "id": "706",
+      "name": "Adal Sultanlığı",
+      "flagCode": "ADL",
+      "color": "#3A7D5C",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Mogadişu",
+      "treasury": 1450,
+      "manpower": 54000,
+      "absorbedCountryIds": [
+        "706",
+        "232",
+        "262"
+      ],
+      "provinceRenames": {
+        "706": "★ Mogadişu"
+      }
+    },
+    {
+      "tag": "SON",
+      "id": "566",
+      "name": "Songhay & Bornu İmparatorluğu",
+      "flagCode": "MAL",
+      "color": "#8C5A2B",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Kano",
+      "capitalTerritoryId": "566_KAN",
+      "treasury": 2050,
+      "manpower": 92000,
+      "absorbedCountryIds": [
+        "566",
+        "562",
+        "148",
+        "120",
+        "204",
+        "768"
+      ],
+      "provinceRenames": {
+        "148": "Bornu",
+        "204": "Dahomey",
+        "562": "Dosso",
+        "566": "Zazzau",
+        "566_KAN": "★ Kano",
+        "566_LOS": "Eko",
+        "566_BNI": "Benin"
+      }
+    },
+    {
+      "tag": "MLI",
+      "id": "466",
+      "name": "Mali İmparatorluğu",
+      "flagCode": "MLI",
+      "color": "#C89B2B",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Timbuktu",
+      "capitalTerritoryId": "466_TOM",
+      "treasury": 2250,
+      "manpower": 96000,
+      "absorbedCountryIds": [
+        "466",
+        "686",
+        "288",
+        "384",
+        "324",
+        "694",
+        "430",
+        "270",
+        "624",
+        "854"
+      ],
+      "provinceRenames": {
+        "466": "Bamako",
+        "466_TOM": "★ Timbuktu"
+      }
+    },
+    {
+      "tag": "KHO",
+      "id": "710",
+      "name": "Güney Afrika & Khoisan Klanları",
+      "flagCode": "KHO",
+      "color": "#4F775A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Mapungubve",
+      "treasury": 1550,
+      "manpower": 62000,
+      "absorbedCountryIds": [
+        "710",
+        "426",
+        "748",
+        "516",
+        "260"
+      ],
+      "provinceRenames": {
+        "710": "★ Mapungubve",
+        "710_CPT": "Ümit Burnu"
+      }
+    },
+    {
+      "tag": "ZIM",
+      "id": "716",
+      "name": "Büyük Zimbabve & Mutapa",
+      "flagCode": "ZİM",
+      "color": "#356B43",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Zimbabve",
+      "treasury": 1650,
+      "manpower": 68000,
+      "absorbedCountryIds": [
+        "716",
+        "894",
+        "454",
+        "072"
+      ],
+      "provinceRenames": {
+        "716": "★ Zimbabve",
+        "716_BUQ": "Bulawayo"
+      }
+    },
+    {
+      "tag": "KIL",
+      "id": "834",
+      "name": "Kilva Sultanlığı",
+      "flagCode": "KLV",
+      "color": "#2D7A72",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Kilva",
+      "treasury": 1650,
+      "manpower": 68000,
+      "absorbedCountryIds": [
+        "834",
+        "508",
+        "450",
+        "108",
+        "646"
+      ],
+      "provinceRenames": {
+        "450": "Antananarivo",
+        "834": "★ Kilva"
+      }
+    },
+    {
+      "tag": "KON",
+      "id": "180",
+      "name": "Kongo Krallığı",
+      "flagCode": "KON",
+      "color": "#A6523A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Mbanza",
+      "treasury": 1650,
+      "manpower": 74000,
+      "absorbedCountryIds": [
+        "180",
+        "024",
+        "178",
+        "266",
+        "140",
+        "226"
+      ],
+      "provinceRenames": {
+        "180": "★ Mbanza"
+      }
+    },
+    {
+      "tag": "DEL",
+      "id": "356",
+      "name": "Delhi Sultanlığı",
+      "flagCode": "DEL",
+      "color": "#3D7A5A",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Delhi",
+      "treasury": 2700,
+      "manpower": 145000,
+      "absorbedCountryIds": [
+        "356",
+        "586"
+      ],
+      "provinceRenames": {
+        "356": "★ Delhi",
+        "586": "Pothohar",
+        "356_JAI": "Jaipur",
+        "356_LKO": "Luknov",
+        "356_AMD": "Ahmedabad",
+        "586_LHE": "Lahor",
+        "586_KHI": "Karaçi",
+        "586_PEW": "Peşaver"
+      }
+    },
+    {
+      "tag": "VIJ",
+      "id": "904",
+      "name": "Vijayanagara & Behmenî",
+      "flagCode": "VİJ",
+      "color": "#D97706",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Vijayanagara",
+      "capitalTerritoryId": "356_BLR",
+      "treasury": 2250,
+      "manpower": 108000,
+      "absorbedCountryIds": [],
+      "provinceRenames": {
+        "356_BLR": "★ Vijayanagara",
+        "356_HYD": "Haydarabad",
+        "356_BOM": "Mumbai",
+        "356_MAA": "Madras",
+        "356_PNQ": "Pune",
+        "356_COK": "Koçin",
+        "356_CJB": "Kovai",
+        "356_VTZ": "Vizagapatam"
+      }
+    },
+    {
+      "tag": "BEN",
+      "id": "050",
+      "name": "Bengal Sultanlığı",
+      "flagCode": "BNG",
+      "color": "#0EA5E9",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Dakka",
+      "treasury": 1950,
+      "manpower": 88000,
+      "absorbedCountryIds": [
+        "050",
+        "524",
+        "064"
+      ],
+      "provinceRenames": {
+        "050": "★ Dakka",
+        "050_CGP": "Çittagong",
+        "356_CCU": "Kalküta",
+        "356_PAT": "Patna",
+        "356_GAU": "Kamarupa"
+      }
+    },
+    {
+      "tag": "KOT",
+      "id": "144",
+      "name": "Kotte (Seylan) Krallığı",
+      "flagCode": "SEY",
+      "color": "#9E5A3B",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Kolombo",
+      "treasury": 1350,
+      "manpower": 42000,
+      "absorbedCountryIds": [
+        "144"
+      ],
+      "provinceRenames": {
+        "144": "★ Kolombo",
+        "144_KDY": "Kandy"
+      }
+    },
+    {
+      "tag": "MAJ",
+      "id": "360",
+      "name": "Majapahit İmparatorluğu",
+      "flagCode": "MAJ",
+      "color": "#B85A32",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Cakarta",
+      "treasury": 1950,
+      "manpower": 82000,
+      "absorbedCountryIds": [
+        "360",
+        "626"
+      ],
+      "provinceRenames": {
+        "360": "★ Cakarta",
+        "360_MES": "Açe",
+        "360_BPN": "Bandar"
+      }
+    },
+    {
+      "tag": "AUS",
+      "id": "036",
+      "name": "Avustralya & Pasifik Klanları",
+      "flagCode": "OKY",
+      "color": "#9F6B46",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Eora",
+      "treasury": 1450,
+      "manpower": 52000,
+      "absorbedCountryIds": [
+        "036",
+        "554",
+        "598",
+        "242",
+        "540",
+        "548",
+        "090"
+      ],
+      "provinceRenames": {
+        "554": "Aotearoa",
+        "036": "★ Eora",
+        "036_MEL": "Kulin",
+        "036_PER": "Noongar"
+      }
+    },
+    {
+      "tag": "MLC",
+      "id": "458",
+      "name": "Malakka Sultanlığı",
+      "flagCode": "MLK",
+      "color": "#287E64",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Malakka",
+      "treasury": 1750,
+      "manpower": 56000,
+      "absorbedCountryIds": [
+        "458",
+        "096"
+      ],
+      "provinceRenames": {
+        "458": "★ Malakka",
+        "458_KCH": "Saravak",
+        "096": "Brunei"
+      }
+    },
+    {
+      "tag": "SUL",
+      "id": "608",
+      "name": "Tondo & Sulu Sultanlığı",
+      "flagCode": "SUL",
+      "color": "#3A6EA5",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Manila",
+      "treasury": 1550,
+      "manpower": 54000,
+      "absorbedCountryIds": [
+        "608"
+      ],
+      "provinceRenames": {
+        "608": "★ Manila",
+        "608_CEB": "Cebu",
+        "608_DVO": "Sulu"
+      }
+    },
+    {
+      "tag": "AYU",
+      "id": "764",
+      "name": "Ayutthaya Krallığı",
+      "flagCode": "AYU",
+      "color": "#386890",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Ayutthaya",
+      "capitalTerritoryId": "764_AYU",
+      "treasury": 1850,
+      "manpower": 76000,
+      "absorbedCountryIds": [
+        "764"
+      ],
+      "provinceRenames": {
+        "764": "Thonburi",
+        "764_AYU": "★ Ayutthaya",
+        "764_CNX": "Lanna",
+        "764_HDY": "Ligor"
+      }
+    },
+    {
+      "tag": "DAI",
+      "id": "704",
+      "name": "Dai Viet İmparatorluğu",
+      "flagCode": "DAI",
+      "color": "#A21CAF",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Hanoi",
+      "treasury": 1750,
+      "manpower": 78000,
+      "absorbedCountryIds": [
+        "704",
+        "418"
+      ],
+      "provinceRenames": {
+        "704": "★ Hanoi",
+        "704_DAD": "Hue",
+        "704_SGN": "Çampa"
+      }
+    },
+    {
+      "tag": "AVA",
+      "id": "104",
+      "name": "Ava (Burma) Krallığı",
+      "flagCode": "AVA",
+      "color": "#6B5B95",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Pegu",
+      "treasury": 1650,
+      "manpower": 68000,
+      "absorbedCountryIds": [
+        "104"
+      ],
+      "provinceRenames": {
+        "104": "★ Pegu",
+        "104_MDL": "Ava"
+      }
+    },
+    {
+      "tag": "KHM",
+      "id": "116",
+      "name": "Khmer (Angkor) Krallığı",
+      "flagCode": "KHM",
+      "color": "#C47D3B",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Angkor",
+      "capitalTerritoryId": "116_REP",
+      "treasury": 1450,
+      "manpower": 52000,
+      "absorbedCountryIds": [
+        "116"
+      ],
+      "provinceRenames": {
+        "116": "Phnom Penh",
+        "116_REP": "★ Angkor"
+      }
+    },
+    {
+      "tag": "MNG",
+      "id": "156",
+      "name": "Ming Hanedanı (Çin)",
+      "flagCode": "MİN",
+      "color": "#B85D28",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Pekin",
+      "treasury": 3800,
+      "manpower": 220000,
+      "absorbedCountryIds": [
+        "156",
+        "158"
+      ],
+      "provinceRenames": {
+        "156": "★ Pekin",
+        "156_SHA": "Nanjing",
+        "156_CAN": "Kanton",
+        "156_FOC": "Fuzhou",
+        "156_TAO": "Çingdao",
+        "156_WUH": "Vuhan",
+        "156_CKG": "Çongçing",
+        "156_SIA": "Xi'an",
+        "156_SHE": "Şenyang",
+        "156_HRB": "Harbin",
+        "156_CTU": "Çengdu",
+        "156_KMG": "Kunming",
+        "156_LHW": "Lanzhou",
+        "156_LXA": "Lhasa"
+      }
+    },
+    {
+      "tag": "OIR",
+      "id": "496",
+      "name": "Oyrat & Moğol Hanlığı",
+      "flagCode": "MOG",
+      "color": "#5C6F82",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Karakurum",
+      "capitalTerritoryId": "496_Kov",
+      "treasury": 1650,
+      "manpower": 86000,
+      "absorbedCountryIds": [
+        "496"
+      ],
+      "provinceRenames": {
+        "496": "Ulanbator",
+        "496_Kov": "★ Karakurum"
+      }
+    },
+    {
+      "tag": "JOS",
+      "id": "410",
+      "name": "Joseon Krallığı (Kore)",
+      "flagCode": "JOS",
+      "color": "#435898",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Hanseong",
+      "treasury": 2050,
+      "manpower": 88000,
+      "absorbedCountryIds": [
+        "410",
+        "408"
+      ],
+      "provinceRenames": {
+        "410": "★ Hanseong (Seul)",
+        "410_PUS": "Busan",
+        "410_KUV": "Gwangju"
+      }
+    },
+    {
+      "tag": "ASH",
+      "id": "392",
+      "name": "Ashikaga Şogunluğu (Japonya)",
+      "flagCode": "ŞOG",
+      "color": "#9E3B4B",
+      "ideology": "MILITARY_JUNTA",
+      "capitalName": "★ Kyoto",
+      "capitalTerritoryId": "392_OSA",
+      "treasury": 2600,
+      "manpower": 130000,
+      "absorbedCountryIds": [
+        "392"
+      ],
+      "provinceRenames": {
+        "392": "Edo",
+        "392_OSA": "★ Kyoto",
+        "392_SPK": "Ezo",
+        "392_FUK": "Hakata",
+        "392_HIJ": "Hiroşima",
+        "392_NGO": "Owari",
+        "392_SDJ": "Sendai"
+      }
+    },
+    {
+      "tag": "AZT",
+      "id": "484",
+      "name": "Aztek & Maya Konfederasyonu",
+      "flagCode": "AZT",
+      "color": "#2A7A68",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Tenochtitlan",
+      "treasury": 2050,
+      "manpower": 98000,
+      "absorbedCountryIds": [
+        "484",
+        "320",
+        "340",
+        "558",
+        "188",
+        "591",
+        "084",
+        "222"
+      ],
+      "provinceRenames": {
+        "484": "★ Tenochtitlan",
+        "484_MTY": "Monterrey",
+        "484_GDL": "Yucatan"
+      }
+    },
+    {
+      "tag": "TAI",
+      "id": "192",
+      "name": "Taíno & Karayip Kabileleri",
+      "flagCode": "KAR",
+      "color": "#1E8278",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Havana",
+      "treasury": 1350,
+      "manpower": 46000,
+      "absorbedCountryIds": [
+        "192",
+        "214",
+        "332",
+        "388",
+        "044",
+        "630",
+        "780"
+      ],
+      "provinceRenames": {
+        "192": "★ Havana",
+        "192_SCU": "Guama"
+      }
+    },
+    {
+      "tag": "IRQ",
+      "id": "840",
+      "name": "İrokua Konfederasyonu",
+      "flagCode": "İRO",
+      "color": "#6C584C",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Onondaga",
+      "treasury": 1750,
+      "manpower": 72000,
+      "absorbedCountryIds": [
+        "840"
+      ],
+      "provinceRenames": {
+        "840": "★ Onondaga",
+        "840_NYC": "Mohawk",
+        "840_BOS": "Massachusett",
+        "840_PHI": "Lenape",
+        "840_DET": "Huron",
+        "840_ATL": "Çeroki",
+        "840_MIA": "Seminol"
+      }
+    },
+    {
+      "tag": "ALG",
+      "id": "124",
+      "name": "Algonkin & Kuzey Orman Klanları",
+      "flagCode": "ALG",
+      "color": "#5B7065",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Algonkin",
+      "treasury": 1550,
+      "manpower": 62000,
+      "absorbedCountryIds": [
+        "124"
+      ],
+      "provinceRenames": {
+        "124": "★ Algonkin",
+        "124_YYZ": "Tkaronto",
+        "124_YUL": "Hochelaga",
+        "124_YWG": "Cree",
+        "124_YYC": "Karaayak",
+        "124_YVR": "Haida"
+      }
+    },
+    {
+      "tag": "APA",
+      "id": "906",
+      "name": "Bozkır & Apaçi Klanları",
+      "flagCode": "APA",
+      "color": "#9C5C38",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Arapaho",
+      "capitalTerritoryId": "840_DEN",
+      "treasury": 1650,
+      "manpower": 68000,
+      "absorbedCountryIds": [],
+      "provinceRenames": {
+        "840_DEN": "★ Arapaho",
+        "840_CHI": "İllinois",
+        "840_MSP": "Dakota",
+        "840_HOU": "Komançi",
+        "840_DAL": "Kiowa",
+        "840_PHX": "Apaçi",
+        "840_LAX": "Çumaş",
+        "840_SFO": "Miwok",
+        "840_SEA": "Çinuk"
+      }
+    },
+    {
+      "tag": "INC",
+      "id": "076",
+      "name": "İnka İmparatorluğu (Tawantinsuyu)",
+      "flagCode": "İNK",
+      "color": "#704A82",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Cusco",
+      "capitalTerritoryId": "604_CUZ",
+      "treasury": 2250,
+      "manpower": 112000,
+      "absorbedCountryIds": [
+        "604",
+        "068",
+        "152",
+        "218"
+      ],
+      "provinceRenames": {
+        "152": "Santiago",
+        "218": "Quito",
+        "604": "Lima",
+        "604_CUZ": "★ Cusco",
+        "068": "La Paz"
+      }
+    },
+    {
+      "tag": "MUI",
+      "id": "170",
+      "name": "Muisca & Karib Konfederasyonu",
+      "flagCode": "MUI",
+      "color": "#8C6D2E",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Bogota",
+      "treasury": 1600,
+      "manpower": 64000,
+      "absorbedCountryIds": [
+        "170",
+        "862",
+        "328",
+        "740"
+      ],
+      "provinceRenames": {
+        "170": "★ Bogota"
+      }
+    },
+    {
+      "tag": "TUP",
+      "id": "907",
+      "name": "Tupinambá (Brezilya Kabileleri)",
+      "flagCode": "TUP",
+      "color": "#3D7A47",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Bahia",
+      "capitalTerritoryId": "076_SSA",
+      "treasury": 1550,
+      "manpower": 62000,
+      "absorbedCountryIds": [
+        "076"
+      ],
+      "provinceRenames": {
+        "076_SSA": "★ Bahia",
+        "076": "Cerrado",
+        "076_GRU": "Tupi",
+        "076_GIG": "Guanabara",
+        "076_REC": "Pernambuco",
+        "076_MAO": "Amazon"
+      }
+    },
+    {
+      "tag": "GUA",
+      "id": "032",
+      "name": "Guaraní & Patagonya Kabileleri",
+      "flagCode": "GUA",
+      "color": "#5C768D",
+      "ideology": "MONARCHY",
+      "capitalName": "★ Pampas",
+      "treasury": 1500,
+      "manpower": 58000,
+      "absorbedCountryIds": [
+        "032",
+        "600",
+        "858",
+        "238"
+      ],
+      "provinceRenames": {
+        "032": "★ Pampas"
+      }
+    }
+  ],
+  "provinceOwnerOverridesByTag": {
+    "804": "LIT",
+    "792_IST": "BYZ",
+    "300_SKG": "OTT",
+    "300_IOA": "OTT",
+    "300_CRT": "VEN",
+    "008_SHK": "VEN",
+    "642_CND": "OTT",
+    "642_CLJ": "HUN",
+    "642_TSR": "HUN",
+    "642_ORA": "HUN",
+    "642_SBI": "HUN",
+    "642_IAS": "MOL",
+    "642_BCM": "MOL",
+    "804_LVV": "POL",
+    "804_UZH": "HUN",
+    "804_CEJ": "LIT",
+    "616_GDN": "TEU",
+    "643_KGD": "TEU",
+    "440_KLP": "TEU",
+    "616_SZZ": "HRE",
+    "616_BIA": "LIT",
+    "643_SMO": "LIT",
+    "643_KRR": "CRI",
+    "643_ROV": "CRI",
+    "643_VOG": "GOL",
+    "643_ASF": "GOL",
+    "643_SRT": "GOL",
+    "643_PNZ": "GOL",
+    "643_KZN": "GOL",
+    "643_KUF": "GOL",
+    "643_UFA": "GOL",
+    "643_PRM": "GOL",
+    "643_SVX": "GOL",
+    "643_CHL": "GOL",
+    "643_OMS": "SIB",
+    "643_TYU": "SIB",
+    "643_OVB": "SIB",
+    "643_TOM": "SIB",
+    "643_KJA": "SIB",
+    "643_IKT": "SIB",
+    "643_KHV": "SIB",
+    "643_VVO": "SIB",
+    "643_YAK": "SIB",
+    "643_MGD": "SIB",
+    "643_KAM": "SIB",
+    "643_SLH": "SIB",
+    "643_MNG": "SIB",
+    "643_NRK": "SIB",
+    "643_KHT": "SIB",
+    "643_TUR": "SIB",
+    "643_VKH": "SIB",
+    "643_CKD": "SIB",
+    "643_AND": "SIB",
+    "826_EDI": "SCO",
+    "826_GLA": "SCO",
+    "826_INV": "SCO",
+    "826_BFS": "IRE",
+    "792_ERZ": "AKK",
+    "792_VAN": "AKK",
+    "792_DYB": "AKK",
+    "792_MLT": "AKK",
+    "792_TRB": "GEO",
+    "792_ORD": "GEO",
+    "792_GZP": "MEM",
+    "792_ADA": "MEM",
+    "792_HTY": "MEM",
+    "792_MRD": "AKK",
+    "792_KAR": "AKK",
+    "792_URF": "AKK",
+    "792_ELZ": "AKK",
+    "250_LIL": "BUR",
+    "250_CAY": "MUI",
+    "380_CAG": "CAS",
+    "380_CTA": "CAS",
+    "380_PMO": "CAS",
+    "380_TRS": "HAB",
+    "682_JED": "MEM",
+    "682_MED": "MEM",
+    "682_TBK": "MEM",
+    "682_TIF": "MEM",
+    "364_TBZ": "AKK",
+    "860_SKD": "TIM",
+    "860_BHK": "TIM",
+    "860_UGC": "TIM",
+    "860_NKS": "TIM",
+    "156_URC": "UZB",
+    "156_KHG": "UZB",
+    "356_BLR": "VIJ",
+    "356_HYD": "VIJ",
+    "356_BOM": "VIJ",
+    "356_PNQ": "VIJ",
+    "356_MAA": "VIJ",
+    "356_COK": "VIJ",
+    "356_CJB": "VIJ",
+    "356_VTZ": "VIJ",
+    "356_CCU": "BEN",
+    "356_GAU": "BEN",
+    "356_PAT": "BEN",
+    "840_CHI": "APA",
+    "840_MSP": "APA",
+    "840_OMA": "APA",
+    "840_KSC": "APA",
+    "840_HOU": "APA",
+    "840_DAL": "APA",
+    "840_DEN": "APA",
+    "840_PHX": "APA",
+    "840_SLC": "APA",
+    "840_LAS": "APA",
+    "840_SDG": "APA",
+    "840_LAX": "APA",
+    "840_SFO": "APA",
+    "840_PDX": "APA",
+    "840_BOI": "APA",
+    "840_SEA": "APA",
+    "840_HNL": "APA",
+    "840_ANC": "ALG",
+    "840_OME": "ALG",
+    "840_BTT": "ALG"
+  },
+  "targetScaleByTag": {
+    "AVA": {
+      "targetArmy": 46000,
+      "targetGdp": 370
+    },
+    "KHM": {
+      "targetArmy": 34000,
+      "targetGdp": 300
+    },
+    "ALG": {
+      "targetArmy": 42000,
+      "targetGdp": 340
+    },
+    "KOT": {
+      "targetArmy": 30000,
+      "targetGdp": 280
+    },
+    "MNG": {
+      "targetArmy": 235000,
+      "targetGdp": 1380
+    },
+    "MUI": {
+      "targetArmy": 44000,
+      "targetGdp": 360
+    },
+    "KON": {
+      "targetArmy": 44000,
+      "targetGdp": 350
+    },
+    "CRO": {
+      "targetArmy": 34000,
+      "targetGdp": 310
+    },
+    "TAI": {
+      "targetArmy": 36000,
+      "targetGdp": 310
+    },
+    "CYP": {
+      "targetArmy": 26000,
+      "targetGdp": 260
+    },
+    "BOH": {
+      "targetArmy": 48000,
+      "targetGdp": 410
+    },
+    "DEN": {
+      "targetArmy": 48000,
+      "targetGdp": 420
+    },
+    "ETH": {
+      "targetArmy": 58000,
+      "targetGdp": 460
+    },
+    "FRA": {
+      "targetArmy": 108000,
+      "targetGdp": 810
+    },
+    "GEO": {
+      "targetArmy": 40000,
+      "targetGdp": 340
+    },
+    "HRE": {
+      "targetArmy": 138000,
+      "targetGdp": 980
+    },
+    "BYZ": {
+      "targetArmy": 32000,
+      "targetGdp": 290
+    },
+    "HUN": {
+      "targetArmy": 90000,
+      "targetGdp": 640
+    },
+    "DEL": {
+      "targetArmy": 104000,
+      "targetGdp": 760
+    },
+    "MAJ": {
+      "targetArmy": 48000,
+      "targetGdp": 420
+    },
+    "TIM": {
+      "targetArmy": 148000,
+      "targetGdp": 940
+    },
+    "IRE": {
+      "targetArmy": 34000,
+      "targetGdp": 290
+    },
+    "VEN": {
+      "targetArmy": 96000,
+      "targetGdp": 790
+    },
+    "ASH": {
+      "targetArmy": 88000,
+      "targetGdp": 660
+    },
+    "KAZ": {
+      "targetArmy": 56000,
+      "targetGdp": 390
+    },
+    "JOS": {
+      "targetArmy": 58000,
+      "targetGdp": 470
+    },
+    "TEU": {
+      "targetArmy": 48000,
+      "targetGdp": 390
+    },
+    "LIT": {
+      "targetArmy": 80000,
+      "targetGdp": 540
+    },
+    "MLC": {
+      "targetArmy": 42000,
+      "targetGdp": 400
+    },
+    "MLI": {
+      "targetArmy": 56000,
+      "targetGdp": 460
+    },
+    "AZT": {
+      "targetArmy": 62000,
+      "targetGdp": 490
+    },
+    "OIR": {
+      "targetArmy": 48000,
+      "targetGdp": 340
+    },
+    "MOL": {
+      "targetArmy": 34000,
+      "targetGdp": 300
+    },
+    "MOR": {
+      "targetArmy": 54000,
+      "targetGdp": 430
+    },
+    "BUR": {
+      "targetArmy": 64000,
+      "targetGdp": 560
+    },
+    "SON": {
+      "targetArmy": 68000,
+      "targetGdp": 540
+    },
+    "NOR": {
+      "targetArmy": 46000,
+      "targetGdp": 380
+    },
+    "SUL": {
+      "targetArmy": 36000,
+      "targetGdp": 320
+    },
+    "POL": {
+      "targetArmy": 86000,
+      "targetGdp": 620
+    },
+    "POR": {
+      "targetArmy": 56000,
+      "targetGdp": 470
+    },
+    "WAL": {
+      "targetArmy": 34000,
+      "targetGdp": 300
+    },
+    "MOS": {
+      "targetArmy": 76000,
+      "targetGdp": 520
+    },
+    "NAJ": {
+      "targetArmy": 48000,
+      "targetGdp": 390
+    },
+    "SER": {
+      "targetArmy": 42000,
+      "targetGdp": 350
+    },
+    "DAI": {
+      "targetArmy": 50000,
+      "targetGdp": 410
+    },
+    "ADA": {
+      "targetArmy": 36000,
+      "targetGdp": 310
+    },
+    "KHO": {
+      "targetArmy": 40000,
+      "targetGdp": 340
+    },
+    "ZIM": {
+      "targetArmy": 46000,
+      "targetGdp": 380
+    },
+    "CAS": {
+      "targetArmy": 92000,
+      "targetGdp": 680
+    },
+    "FUN": {
+      "targetArmy": 35000,
+      "targetGdp": 300
+    },
+    "SWE": {
+      "targetArmy": 64000,
+      "targetGdp": 520
+    },
+    "SWI": {
+      "targetArmy": 38000,
+      "targetGdp": 380
+    },
+    "AYU": {
+      "targetArmy": 50000,
+      "targetGdp": 430
+    },
+    "TUN": {
+      "targetArmy": 52000,
+      "targetGdp": 420
+    },
+    "OTT": {
+      "targetArmy": 185000,
+      "targetGdp": 1140
+    },
+    "CRI": {
+      "targetArmy": 60000,
+      "targetGdp": 440
+    },
+    "MEM": {
+      "targetArmy": 152000,
+      "targetGdp": 990
+    },
+    "ENG": {
+      "targetArmy": 84000,
+      "targetGdp": 640
+    },
+    "KIL": {
+      "targetArmy": 42000,
+      "targetGdp": 360
+    },
+    "IRQ": {
+      "targetArmy": 50000,
+      "targetGdp": 410
+    },
+    "UZB": {
+      "targetArmy": 72000,
+      "targetGdp": 490
+    },
+    "YEM": {
+      "targetArmy": 36000,
+      "targetGdp": 320
+    },
+    "GOL": {
+      "targetArmy": 78000,
+      "targetGdp": 500
+    },
+    "SIB": {
+      "targetArmy": 54000,
+      "targetGdp": 380
+    },
+    "VIJ": {
+      "targetArmy": 66000,
+      "targetGdp": 560
+    },
+    "SCO": {
+      "targetArmy": 40000,
+      "targetGdp": 330
+    },
+    "APA": {
+      "targetArmy": 50000,
+      "targetGdp": 400
+    },
+    "TUP": {
+      "targetArmy": 42000,
+      "targetGdp": 350
+    },
+    "AKK": {
+      "targetArmy": 112000,
+      "targetGdp": 690
+    },
+    "HAB": {
+      "targetArmy": 74000,
+      "targetGdp": 550
+    },
+    "INC": {
+      "targetArmy": 70000,
+      "targetGdp": 540
+    },
+    "BEN": {
+      "targetArmy": 58000,
+      "targetGdp": 470
+    },
+    "TLC": {
+      "targetArmy": 48000,
+      "targetGdp": 390
+    },
+    "GUA": {
+      "targetArmy": 40000,
+      "targetGdp": 330
+    },
+    "AUS": {
+      "targetArmy": 38000,
+      "targetGdp": 330
+    },
+    "BOS": {
+      "targetArmy": 36000,
+      "targetGdp": 310
+    }
+  },
+  "historicalStraitLinks": [
+    [
+      "792_EDR",
+      "792_IST"
+    ],
+    [
+      "792_EDR",
+      "100"
+    ],
+    [
+      "792_EDR",
+      "300_SKG"
+    ],
+    [
+      "792_IST",
+      "792_BUR"
+    ],
+    [
+      "792_IZM",
+      "300_CRT"
+    ],
+    [
+      "792",
+      "300"
+    ],
+    [
+      "792",
+      "100"
+    ],
+    [
+      "100",
+      "642"
+    ],
+    [
+      "100",
+      "642_CND"
+    ],
+    [
+      "642_CND",
+      "498"
+    ],
+    [
+      "642_IAS",
+      "498"
+    ],
+    [
+      "100",
+      "688"
+    ],
+    [
+      "688",
+      "348"
+    ],
+    [
+      "348",
+      "040"
+    ],
+    [
+      "792_ADA",
+      "760_ALP"
+    ],
+    [
+      "792_DYB",
+      "368_EBL"
+    ],
+    [
+      "792_ERZ",
+      "031_GNJ"
+    ],
+    [
+      "792_ERZ",
+      "364_TBZ"
+    ]
+  ],
+  "startingRelationsByTag": [
+    ["OTT", "BYZ", { "score": -70 }],
+    ["OTT", "HUN", { "score": -55 }],
+    ["OTT", "VEN", { "score": -40 }],
+    ["HUN", "POL", { "score": 85, "isAllied": true, "allianceType": "OFFENSIVE", "hasMilitaryAccess": true }],
+    ["POL", "LIT", { "score": 90, "isAllied": true, "allianceType": "OFFENSIVE", "hasMilitaryAccess": true }],
+    ["FRA", "ENG", { "score": -65 }],
+    ["FRA", "SCO", { "score": 75, "isAllied": true, "allianceType": "DEFENSIVE" }],
+    ["ENG", "POR", { "score": 75, "isAllied": true, "allianceType": "DEFENSIVE" }],
+    ["OTT", "MEM", { "score": 25, "hasTradeAgreement": true }],
+    ["OTT", "AKK", { "score": 35, "hasTradeAgreement": true }],
+    ["OTT", "TIM", { "score": -20 }]
+  ]
+}

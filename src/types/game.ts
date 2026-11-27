@@ -17,6 +17,7 @@ export type MapMode =
   | 'CULTURE'
   | 'ASSIMILATION'
   | 'TERRAIN'
+  | 'WEATHER'
   | 'IDEOLOGY';
 
 export type TerrainType = 'OVA' | 'DAGLIK' | 'ORMAN' | 'COL' | 'METROPOL';
@@ -171,6 +172,21 @@ export type AiPersonality =
   | 'REVANCHIST';
 
 export type SeasonId = 'WINTER' | 'SPRING' | 'SUMMER' | 'AUTUMN';
+
+export type ClimateZoneId =
+  | 'SUBARCTIC'
+  | 'MONSOON'
+  | 'ARID'
+  | 'ALPINE'
+  | 'TEMPERATE';
+
+export type WeatherConditionId =
+  | 'CLEAR'
+  | 'MILD_WINTER'
+  | 'SEVERE_WINTER'
+  | 'MONSOON'
+  | 'MUD_THAW'
+  | 'HEATWAVE';
 
 export type DiplomaticOfferKind =
   | 'TRADE'
@@ -346,8 +362,100 @@ export interface BudgetAllocation {
   welfare: number; // 0-100
 }
 
+export type RulerTraitId =
+  | 'CONQUEROR'
+  | 'JUST_LAWGIVER'
+  | 'MERCHANT_PRINCE'
+  | 'SIEGE_MASTER'
+  | 'MASTER_DIPLOMAT'
+  | 'REFORMER'
+  | 'IRON_WILL'
+  | 'SCHOLAR'
+  | 'AMBITIOUS'
+  | 'CAUTIOUS';
+
+export type RulerDeathCause =
+  | 'NATURAL_AGE'
+  | 'ILLNESS'
+  | 'CAMPAIGN_WOUNDS'
+  | 'PALACE_COUP'
+  | 'HUNTING_ACCIDENT'
+  | 'TERM_ENDED'
+  | 'ELECTION_LOST';
+
+export interface NationRuler {
+  id: string;
+  name: string;
+  title: string;
+  dynastyName: string;
+  birthYear: number;
+  reignStartYear: number;
+  reignStartTick: number;
+  admin: number; // 1-6 (İdare)
+  diplomacy: number; // 1-6 (Diplomasi)
+  military: number; // 1-6 (Askerlik)
+  traitId: RulerTraitId;
+  isElected?: boolean;
+  termLimitYears?: number;
+}
+
+export interface RulerHeir {
+  name: string;
+  title: string;
+  dynastyName: string;
+  birthYear: number;
+  admin: number; // 1-6
+  diplomacy: number; // 1-6
+  military: number; // 1-6
+  traitId: RulerTraitId;
+  isHistorical?: boolean;
+}
+
+export interface PastRulerRecord {
+  name: string;
+  title: string;
+  dynastyName: string;
+  reignStartYear: number;
+  reignEndYear: number;
+  ageAtEnd: number;
+  cause: RulerDeathCause;
+  admin: number;
+  diplomacy: number;
+  military: number;
+  traitId: RulerTraitId;
+}
+
+export interface SuccessionChoiceOption {
+  id:
+    | 'CORONATION_DONATIVE'
+    | 'FRUGAL_TRANSITION'
+    | 'REELECT_INCUMBENT'
+    | 'NEW_MANDATE';
+  label: string;
+  subtitle: string;
+  effectSummary: string;
+  goldCost: number;
+  stabilityDelta: number;
+  prestigeDelta: number;
+}
+
+export interface SuccessionEvent {
+  id: string;
+  nationId: string;
+  nationName: string;
+  isElection: boolean;
+  eventYear: number;
+  previousRuler: PastRulerRecord;
+  incomingRuler: NationRuler;
+  nextHeir: RulerHeir | null;
+  headline: string;
+  description: string;
+  options: SuccessionChoiceOption[];
+}
+
 export interface Nation {
   id: string;
+  tag?: string;
   name: string;
   flagCode: string;
   color: string;
@@ -383,6 +491,10 @@ export interface Nation {
   lastInsultTickByNation?: Record<string, number>;
   warExhaustion?: number; // 0-100 wartime economic/military fatigue
   lastNuclearStrikeTick?: number;
+  ruler?: NationRuler;
+  heir?: RulerHeir | null;
+  dynastyHistory?: PastRulerRecord[];
+  dynastyQueueIndex?: number;
   isEliminated: boolean;
 }
 
@@ -633,5 +745,82 @@ export type PeaceDealType =
   | 'VASSALIZE'
   | 'REPARATIONS'
   | 'WHITE_PEACE';
+
+export type TimelapseMilestoneType =
+  | 'START'
+  | 'WAR'
+  | 'PEACE'
+  | 'COALITION'
+  | 'EMPIRE'
+  | 'SUCCESSION'
+  | 'REBELLION';
+
+export interface TimelapseMilestone {
+  id: string;
+  tick: number;
+  year: number;
+  dateStr: string;
+  title: string;
+  type: TimelapseMilestoneType;
+}
+
+export interface TimelapseNationSnapshot {
+  id: string;
+  name: string;
+  color: string;
+  flagCode: string;
+  capitalTerritoryId?: string;
+}
+
+export interface TimelapseDeltaFrame {
+  index: number;
+  tick: number;
+  year: number;
+  dateStr: string;
+  ownerDeltas: Record<string, string>;
+  nationUpdates?: Record<string, Partial<TimelapseNationSnapshot>>;
+  playerProvinceCount: number;
+  topNationId?: string;
+  topNationProvinceCount?: number;
+}
+
+export interface CampaignTimelapse {
+  version: 1;
+  id: string;
+  gameMode: GameModeId;
+  playerNationId: string;
+  playerNationName: string;
+  startYear: number;
+  lastRecordedTick: number;
+  lastRecordedYear: number;
+  initialOwners: Record<string, string>;
+  nationSnapshots: Record<string, TimelapseNationSnapshot>;
+  frames: TimelapseDeltaFrame[];
+  milestones: TimelapseMilestone[];
+}
+
+export interface TimelapseArchiveMetadata {
+  id: string;
+  title: string;
+  gameMode: GameModeId;
+  playerNationId: string;
+  playerNationName: string;
+  flagCode: string;
+  nationColor: string;
+  startYear: number;
+  endYear: number;
+  frameCount: number;
+  milestoneCount: number;
+  finalProvinceCount: number;
+  savedAtIso: string;
+  savedAtDisplay: string;
+  sourceLabel?: string;
+}
+
+export interface TimelapseArchiveRecord {
+  schemaVersion: 1;
+  metadata: TimelapseArchiveMetadata;
+  timelapse: CampaignTimelapse;
+}
 
 

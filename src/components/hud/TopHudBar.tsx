@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
+  CloudRain,
+  CloudSun,
   Coins,
   Flag,
   FlaskConical,
@@ -8,9 +10,11 @@ import {
   Play,
   Plus,
   Shield,
+  Snowflake,
   Star,
   UserRound,
   Users,
+  Wind,
 } from 'lucide-react';
 import {
   BottomDrawerTab,
@@ -20,6 +24,7 @@ import {
   SpeedLevel,
 } from '../../types/game';
 import { formatGameDate, NationEconomyBreakdown } from '../../engine/simulationEngine';
+import { getGlobalSeasonalWeatherHeadline } from '../../engine/seasonalWeatherEngine';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
 import { cleanNationName } from '../../utils/formatters';
 import { sound } from '../../utils/soundEngine';
@@ -104,6 +109,23 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
   const nationTitle = cleanNationName(playerNation.name);
   const dateLabel = formatGameDate(tick, gameMode);
   const hourLabel = `${String(hour % 24).padStart(2, '0')}:00`;
+  const seasonHeadline = getGlobalSeasonalWeatherHeadline(tick, gameMode);
+  const SeasonIcon =
+    seasonHeadline.seasonId === 'WINTER'
+      ? Snowflake
+      : seasonHeadline.seasonId === 'SUMMER'
+      ? CloudRain
+      : seasonHeadline.seasonId === 'AUTUMN'
+      ? Wind
+      : CloudSun;
+  const seasonIconTone =
+    seasonHeadline.seasonId === 'WINTER'
+      ? 'text-sky-300'
+      : seasonHeadline.seasonId === 'SUMMER'
+      ? 'text-teal-300'
+      : seasonHeadline.seasonId === 'AUTUMN'
+      ? 'text-amber-300'
+      : 'text-emerald-300';
   const isManpowerFull =
     typeof playerManpowerCap === 'number' &&
     playerNation.manpower >= playerManpowerCap;
@@ -286,8 +308,17 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
           )}
 
           <span
+            data-testid="hud-season-weather"
+            className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#14100c]/90 border border-[#caa15a]/30 text-[10px] font-semibold text-[#e6dac4] shrink-0"
+            title={`${seasonHeadline.seasonName} · ${seasonHeadline.activePhenomenon} — ${seasonHeadline.tooltip}`}
+          >
+            <SeasonIcon className={`w-3 h-3 shrink-0 ${seasonIconTone}`} />
+            <span>{seasonHeadline.seasonName}</span>
+          </span>
+
+          <span
             className="aoh3-datenow"
-            title={`${dateLabel} · ${hourLabel}`}
+            title={`${dateLabel} · ${hourLabel} · ${seasonHeadline.seasonName} (${seasonHeadline.activePhenomenon})`}
           >
             {dateLabel}
           </span>

@@ -178,7 +178,7 @@ export const AoH3TopMenu: React.FC<AoH3TopMenuProps> = ({
             )}
             <MenuRow
               icon={isMusicPlaying ? Music : VolumeX}
-              label="Ulusal Marş"
+              label="Arka Plan Müziği"
               trailing={isMusicPlaying ? 'AÇIK' : 'KAPALI'}
               onClick={() => {
                 sound.playClick();

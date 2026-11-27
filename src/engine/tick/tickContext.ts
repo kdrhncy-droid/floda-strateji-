@@ -11,6 +11,7 @@ import {
   Nation,
   SeaArmy,
   SpeedLevel,
+  SuccessionEvent,
   TacticalBattleState,
   Territory,
   UnitComposition,
@@ -31,7 +32,15 @@ import { GameSettings } from '../gameSettings';
 export type TickSoundCue =
   | 'SELECT_TERRITORY'
   | 'MARCH'
+  | 'BUILD'
+  | 'RECRUIT'
   | 'TREATY'
+  | 'TAX_COIN'
+  | 'COMBAT_CLASH'
+  | 'SIEGE_FALL'
+  | 'VICTORY'
+  | 'DEFEAT'
+  | 'WAR_DRUM'
   | 'WAR_HORN';
 
 export interface GameTickInput {
@@ -71,6 +80,7 @@ export interface GameTickOutput {
   newsEvents: WorldNewsEvent[];
   triggeredTacticalBattle: TacticalBattleState | null;
   triggeredCrisis: CrisisEventDefinition | null;
+  triggeredSuccession: SuccessionEvent | null;
   incomingDiplomaticOffer?: IncomingDiplomaticOffer | null;
   clearIncomingOffer?: boolean;
   diplomaticEnvoys?: DiplomaticEnvoy[];
@@ -191,6 +201,7 @@ export interface TickContext {
   readonly sounds: TickSoundCue[];
   readonly triggeredTacticalBattle: TacticalBattleState | null;
   triggeredCrisis: CrisisEventDefinition | null;
+  triggeredSuccession: SuccessionEvent | null;
   incomingDiplomaticOffer: IncomingDiplomaticOffer | null | undefined;
   clearIncomingOffer: boolean;
   shouldPause: boolean;
@@ -217,7 +228,8 @@ export interface TickContext {
     troops: number;
     units: UnitComposition | undefined;
     fromTerritoryId?: string;
-  }): void;
+    nearTerritoryId?: string;
+  }): string | null;
 }
 
 export function createTickContext(input: GameTickInput): TickContext {
@@ -260,6 +272,7 @@ export function createTickContext(input: GameTickInput): TickContext {
     sounds: [],
     triggeredTacticalBattle: null,
     triggeredCrisis: null,
+    triggeredSuccession: null,
     incomingDiplomaticOffer: undefined,
     clearIncomingOffer: false,
     shouldPause: false,
@@ -415,19 +428,30 @@ export function createTickContext(input: GameTickInput): TickContext {
     },
 
     returnAttackerTroopsHome(args) {
-      const { attackerId, troops, units, fromTerritoryId } = args;
-      if (troops <= 0) return;
+      const { attackerId, troops, units, fromTerritoryId, nearTerritoryId } = args;
+      if (troops <= 0) return null;
       const attackerNation = ctx.nextNations[attackerId];
-      if (!attackerNation) return;
+      if (!attackerNation) return null;
+
+      const nearTerr = nearTerritoryId
+        ? ctx.nextTerritories[nearTerritoryId]
+        : undefined;
+      const adjacentOwned = nearTerr?.neighbors
+        ?.map((nId) => ctx.nextTerritories[nId])
+        .find((t) => t && t.ownerId === attackerId);
+      const capTerr = attackerNation.capitalTerritoryId
+        ? ctx.nextTerritories[attackerNation.capitalTerritoryId]
+        : undefined;
 
       const returnProv =
         (fromTerritoryId &&
           ctx.nextTerritories[fromTerritoryId]?.ownerId === attackerId &&
           ctx.nextTerritories[fromTerritoryId]) ||
-        ctx.nextTerritories[attackerNation.capitalTerritoryId] ||
-        Object.values(ctx.nextTerritories).find((t) => t.ownerId === attackerId);
+        adjacentOwned ||
+        (capTerr && capTerr.ownerId === attackerId && capTerr) ||
+        Object.values(ctx.nextTerritories).find((t) => t && t.ownerId === attackerId);
 
-      if (!returnProv) return;
+      if (!returnProv) return null;
       const prevU = returnProv.units || {
         infantry: returnProv.garrison,
         armor: 0,
@@ -447,6 +471,7 @@ export function createTickContext(input: GameTickInput): TickContext {
           airDrone: prevU.airDrone + (retU.airDrone || 0),
         },
       });
+      return returnProv.name;
     },
   };
 
@@ -468,6 +493,7 @@ export function finalizeTickOutput(ctx: TickContext): GameTickOutput {
     newsEvents: ctx.nextNewsEvents,
     triggeredTacticalBattle: ctx.triggeredTacticalBattle,
     triggeredCrisis: ctx.triggeredCrisis,
+    triggeredSuccession: ctx.triggeredSuccession,
     ...(ctx.incomingDiplomaticOffer !== undefined
       ? { incomingDiplomaticOffer: ctx.incomingDiplomaticOffer }
       : {}),

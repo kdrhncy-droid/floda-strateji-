@@ -3,6 +3,7 @@ import {
   Calendar,
   Coins,
   Crown,
+  Film,
   Globe2,
   Home,
   Play,
@@ -26,6 +27,7 @@ interface CampaignOutcomeModalProps {
   onContinueAfterVictory: () => void;
   onRestartCampaign: () => void;
   onReturnToTitleMenu: () => void;
+  onWatchTimelapse?: () => void;
 }
 
 export const CampaignOutcomeModal: React.FC<CampaignOutcomeModalProps> = ({
@@ -37,6 +39,7 @@ export const CampaignOutcomeModal: React.FC<CampaignOutcomeModalProps> = ({
   onContinueAfterVictory,
   onRestartCampaign,
   onReturnToTitleMenu,
+  onWatchTimelapse,
 }) => {
   const isVictory = outcome === 'VICTORY';
   const dialogRef = useAccessibleDialog(true, () => {
@@ -216,6 +219,17 @@ export const CampaignOutcomeModal: React.FC<CampaignOutcomeModalProps> = ({
               >
                 <Play className="w-4 h-4 fill-current" />
                 <span>Haritada Devam Et (Sonsuz Sefer)</span>
+              </button>
+            )}
+
+            {onWatchTimelapse && (
+              <button
+                type="button"
+                onClick={onWatchTimelapse}
+                className="w-full min-h-[44px] py-2 px-4 rounded-xl bg-[#231c15] hover:bg-[#30261d] border border-[#caa15a]/45 text-[#e0b86e] font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Film className="w-4 h-4" />
+                <span>Sefer Zaman Çizelgesi (Timelapse İzle)</span>
               </button>
             )}
 

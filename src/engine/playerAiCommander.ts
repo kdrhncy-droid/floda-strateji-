@@ -469,6 +469,16 @@ export function evaluatePlayerAiCommander(
       // Require realistic advantage per stance
       if (effectiveOffense < effectiveDefense * stanceProfile.attackRatioThreshold) continue;
 
+      // Skip target if already besieged cleanly by player with no enemy garrison remaining
+      if (
+        enemyTerr.siege &&
+        enemyTerr.siege.attackerId === playerNationId &&
+        enemyTerr.garrison <= 350 &&
+        enemyTerr.siege.attackerTroops >= 1500
+      ) {
+        continue;
+      }
+
       // Skip target if we already have sufficient effectiveDefense marching on it
       if (alreadyIncoming >= effectiveDefense * stanceProfile.overkillCap) continue;
 
@@ -737,7 +747,8 @@ export function evaluatePlayerAiCommander(
           newMovements.push({
             id: `mv_ai_sea_land_${tick}_${fleet.id}_${targetCoast.id}`,
             ownerId: playerNationId,
-            fromTerritoryId: targetCoast.id,
+            fromTerritoryId:
+              fleet.anchorCoastId || playerNation.capitalTerritoryId,
             toTerritoryId: targetCoast.id,
             finalDestinationId: targetCoast.id,
             fromCoords: fleet.coords,

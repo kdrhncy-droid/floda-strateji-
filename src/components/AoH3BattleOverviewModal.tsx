@@ -21,6 +21,7 @@ import {
   ActiveWar,
   ArmyMovement,
   DiplomaticRelation,
+  GameModeId,
   Nation,
   Territory,
 } from '../types/game';
@@ -38,6 +39,7 @@ import {
 } from '../engine/diplomacyAndWarActions';
 import { sound } from '../utils/soundEngine';
 import { useAccessibleDialog } from '../hooks/useAccessibleDialog';
+import { getProvinceWeather } from '../engine/seasonalWeatherEngine';
 import { getTechArtwork } from './drawers/techArtwork';
 import { AoH3GlyphSvg, AoH3MenuBanner } from './illustrations/AoH3Illustrations';
 
@@ -47,6 +49,8 @@ interface AoH3BattleOverviewModalProps {
   territory: Territory;
   playerNationId: string;
   nations: Record<string, Nation>;
+  tick?: number;
+  gameMode?: GameModeId;
   onClose: () => void;
   onApplyTacticalOrder?: (tactic: 'TURAN' | 'BOMBARD' | 'RETREAT') => void;
 }
@@ -57,6 +61,8 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
   territory,
   playerNationId,
   nations,
+  tick = 0,
+  gameMode,
   onClose,
   onApplyTacticalOrder,
 }) => {
@@ -88,6 +94,7 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
   const bombardmentBelowFloor = Boolean(battle && enemyTroopsForPlayer <= 200);
 
   const terrainMeta = TERRAIN_INFO[territory.terrain || 'OVA'] || TERRAIN_INFO.OVA;
+  const battleWeather = getProvinceWeather(territory, tick, gameMode);
   const combatWidth = battle?.combatWidth || 25000;
 
   const attTroops = battle ? battle.attackerTroops : siege!.attackerTroops;
@@ -347,13 +354,18 @@ export const AoH3BattleOverviewModal: React.FC<AoH3BattleOverviewModalProps> = (
             data-testid="aoh3-battle-formation-grid"
             className="rounded-xl bg-[#0e0b08] border border-[#caa15a]/35 p-3 space-y-2.5"
           >
-            <div className="flex items-center justify-between text-[11px] font-display font-bold text-[#e0b86e] border-b border-[#caa15a]/20 pb-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-display font-bold text-[#e0b86e] border-b border-[#caa15a]/20 pb-1.5">
               <span className="inline-flex items-center gap-1.5">
                 <AoH3GlyphSvg name="sword" className="w-3.5 h-3.5 shrink-0" />
                 <span>Savaş Meydanı Dizilimi</span>
               </span>
-              <span className="font-mono-num text-[10px] text-[#b8a990]">
-                Ön Hat · Kanat · Arka Hat
+              <span
+                data-testid="battle-weather-badge"
+                className="font-mono-num text-[10px] font-semibold"
+                style={{ color: battleWeather.accentHex }}
+                title={battleWeather.summary}
+              >
+                {battleWeather.label} · Saldırı %{Math.round(battleWeather.attackerEfficiencyMultiplier * 100)} · Savunma %{Math.round(battleWeather.defenderEfficiencyMultiplier * 100)}
               </span>
             </div>
 

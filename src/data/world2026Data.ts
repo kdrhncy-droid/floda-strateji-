@@ -10,6 +10,7 @@ import {
 export * from "./techAndArmyTiers";
 export * from "./countries2026";
 export * from "./commandersAndCrises";
+export * from "./nationTagRegistry";
 
 export const GAME_MODES: {
   id: GameModeId;

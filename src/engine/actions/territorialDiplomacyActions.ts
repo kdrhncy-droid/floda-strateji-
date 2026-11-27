@@ -193,7 +193,7 @@ export function evaluateLandPurchaseDomain(params: {
   const spent = spendDiplomacyPoints(player, 15);
   if ('error' in spent) return { toast: spent.error };
 
-  sound.playTreaty();
+  sound.playCoin();
   const nextTerritories: Record<string, Territory> = { ...territories };
 
   // Relocate seller's garrison to seller's capital or another seller province

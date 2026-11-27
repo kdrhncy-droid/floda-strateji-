@@ -38,6 +38,7 @@ const MINIMAP_MODE_ICONS: ReadonlyArray<{
   { id: 'CULTURE', label: 'Kültür', glyph: 'flag', tone: 'text-[#e0b86e]' },
   { id: 'ASSIMILATION', label: 'Asimilasyon', glyph: 'globe', tone: 'text-[#e0b86e]' },
   { id: 'TERRAIN', label: 'Arazi', glyph: 'compass', tone: 'text-[#e0b86e]' },
+  { id: 'WEATHER', label: 'Hava', glyph: 'bolt', tone: 'text-sky-300' },
   { id: 'IDEOLOGY', label: 'İdeoloji', glyph: 'star', tone: 'text-[#e0b86e]' },
 ];
 

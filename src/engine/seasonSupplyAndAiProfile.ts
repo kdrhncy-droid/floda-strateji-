@@ -16,6 +16,7 @@ import {
   relationKey,
 } from './core/diplomacyHelpers';
 import { isTerritoryCoastal } from './worldBuilder';
+import { getProvinceWeather } from './seasonalWeatherEngine';
 
 export interface GameSeasonInfo {
   id: SeasonId;
@@ -214,7 +215,9 @@ export function getGameSeason(
 export function calculateProvinceSupplyLimit(
   territory: Territory,
   ownerNation: Nation | undefined,
-  season: GameSeasonInfo
+  season: GameSeasonInfo,
+  tick?: number,
+  gameMode?: GameModeId
 ): number {
   const bld = territory.buildings || {
     factory: 0,
@@ -250,11 +253,13 @@ export function calculateProvinceSupplyLimit(
       ? 0.72
       : 0.68; // COL
 
-  // Seasonal extremes by terrain
-  if (season.id === 'WINTER' && terrain === 'DAGLIK') {
-    terrainFactor *= 0.85;
-  } else if (season.id === 'SUMMER' && terrain === 'COL') {
-    terrainFactor *= 0.82;
+  // Legacy global seasonal extremes by terrain (only when regional tick is unavailable)
+  if (typeof tick !== 'number') {
+    if (season.id === 'WINTER' && terrain === 'DAGLIK') {
+      terrainFactor *= 0.85;
+    } else if (season.id === 'SUMMER' && terrain === 'COL') {
+      terrainFactor *= 0.82;
+    }
   }
 
   let techMult = 1.0;
@@ -264,10 +269,15 @@ export function calculateProvinceSupplyLimit(
   if (ownerNation?.unlockedTechs?.includes('mil_6b')) techMult += 0.2;
   if (ownerNation?.unlockedTechs?.includes('eco_4b')) techMult += 0.15;
 
+  const weatherSupplyMult =
+    typeof tick === 'number'
+      ? getProvinceWeather(territory, tick, gameMode).supplyMultiplier
+      : season.supplyMultiplier;
+
   const raw =
     (18_000 + popFactor + buildingSupply) *
     terrainFactor *
-    season.supplyMultiplier *
+    weatherSupplyMult *
     techMult;
 
   return Math.max(10_000, Math.round(raw / 500) * 500);
@@ -294,6 +304,7 @@ export interface SupplyAttritionResult {
   playerAffectedCount: number;
   playerTotalLoss: number;
   worstPlayerProvinceName: string | null;
+  worstPlayerWeatherLabel?: string | null;
   encircledProvinceIds?: Set<string>;
 }
 
@@ -432,14 +443,25 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
   season: GameSeasonInfo;
   playerNationId: string;
   wars?: ActiveWar[];
+  tick?: number;
+  gameMode?: GameModeId;
 }): SupplyAttritionResult {
-  const { territories, nations, season, playerNationId, wars = [] } = params;
+  const {
+    territories,
+    nations,
+    season,
+    playerNationId,
+    wars = [],
+    tick,
+    gameMode,
+  } = params;
   let nextTerrs = territories;
   let cloned = false;
   let playerAffectedCount = 0;
   let playerTotalLoss = 0;
   let worstLoss = 0;
   let worstPlayerProvinceName: string | null = null;
+  let worstPlayerWeatherLabel: string | null = null;
   const encircledIds = computeEncircledProvinceIds(territories, nations);
   const warNationIds = new Set<string>();
   for (const w of wars) {
@@ -462,9 +484,17 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
     const owner = nations[t.ownerId];
     const isEncircled = encircledIds.has(t.id);
     const ownerAtWar = warNationIds.has(t.ownerId);
+    const weather =
+      typeof tick === 'number' ? getProvinceWeather(t, tick, gameMode) : null;
+    const effAttritionMult = weather
+      ? weather.attritionMultiplier
+      : season.attritionMultiplier;
+    const weatherExtraRate = weather ? weather.extraWeeklyAttritionRate : 0;
+
     // Encircled provinces have 35% lower effective supply limit
     const supplyLimit = Math.round(
-      calculateProvinceSupplyLimit(t, owner, season) * (isEncircled ? 0.65 : 1.0)
+      calculateProvinceSupplyLimit(t, owner, season, tick, gameMode) *
+        (isEncircled ? 0.65 : 1.0)
     );
 
     let nextGarrison = t.garrison;
@@ -472,10 +502,17 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
     let nextSiege = t.siege;
     let modified = false;
 
-    // 1. Oversized garrison exceeding local supply limit OR encircled wartime pocket suffers attrition
+    const severeExposedGarrison =
+      weather !== null &&
+      weather.severity === 'SEVERE' &&
+      ownerAtWar &&
+      t.garrison > Math.max(2500, Math.round(supplyLimit * 0.65));
+
+    // 1. Oversized garrison exceeding local supply limit, encircled wartime pocket, or severe-weather wartime exposure
     if (
       (t.garrison > supplyLimit && t.garrison > 1500) ||
-      (isEncircled && ownerAtWar && t.garrison > 1000)
+      (isEncircled && ownerAtWar && t.garrison > 1000) ||
+      severeExposedGarrison
     ) {
       const excessRatio = Math.max(
         0,
@@ -485,15 +522,17 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
         t.terrain === 'DAGLIK' || t.terrain === 'COL' ? 1.25 : 1.0;
       const encirclementBonusRate = isEncircled && ownerAtWar ? 0.038 : 0;
       const rate = Math.min(
-        0.085,
-        (0.012 + excessRatio * 0.032 + encirclementBonusRate) *
-          season.attritionMultiplier *
+        0.095,
+        (0.012 + excessRatio * 0.032 + encirclementBonusRate + weatherExtraRate) *
+          effAttritionMult *
           terrainHarshness
       );
       const rawLoss = Math.max(120, Math.round(t.garrison * rate));
       const floor =
         isEncircled && ownerAtWar
           ? 800
+          : severeExposedGarrison && t.garrison <= supplyLimit
+          ? Math.max(1500, Math.round(supplyLimit * 0.6))
           : Math.max(1500, Math.round(supplyLimit * 0.92));
       const clampedNext = Math.max(floor, t.garrison - rawLoss);
       const actualLoss = t.garrison - clampedNext;
@@ -512,22 +551,32 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
           if (actualLoss > worstLoss) {
             worstLoss = actualLoss;
             worstPlayerProvinceName = t.name;
+            worstPlayerWeatherLabel = weather ? weather.label : season.name;
           }
         }
       }
     }
 
-    // 2. Besieging army in harsh winter, mountains, desert, or above supply limit suffers attrition
+    // 2. Besieging army in harsh winter, monsoon, heatwave, mountains, desert, or above supply limit suffers attrition
     if (t.siege && t.siege.attackerTroops > 1000) {
+      const harshWeatherSiege =
+        weather !== null &&
+        (weather.condition === 'SEVERE_WINTER' ||
+          weather.condition === 'MONSOON' ||
+          weather.condition === 'HEATWAVE' ||
+          weather.condition === 'MILD_WINTER');
       const harshSiege =
         season.id === 'WINTER' ||
+        harshWeatherSiege ||
         t.terrain === 'DAGLIK' ||
         t.terrain === 'COL' ||
         t.siege.attackerTroops > supplyLimit * 0.95;
       if (harshSiege) {
         const siegeRate = Math.min(
-          0.055,
-          0.018 * season.attritionMultiplier * (t.terrain === 'DAGLIK' || t.terrain === 'COL' ? 1.2 : 1.0)
+          0.068,
+          (0.018 + weatherExtraRate * 0.85) *
+            effAttritionMult *
+            (t.terrain === 'DAGLIK' || t.terrain === 'COL' ? 1.2 : 1.0)
         );
         const siegeLoss = Math.max(120, Math.round(t.siege.attackerTroops * siegeRate));
         const nextAttTroops = Math.max(900, t.siege.attackerTroops - siegeLoss);
@@ -549,6 +598,7 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
             if (actualSiegeLoss > worstLoss) {
               worstLoss = actualSiegeLoss;
               worstPlayerProvinceName = t.name;
+              worstPlayerWeatherLabel = weather ? weather.label : season.name;
             }
           }
         }
@@ -571,6 +621,7 @@ export function evaluateWeeklySupplyAndSeasonAttrition(params: {
     playerAffectedCount,
     playerTotalLoss,
     worstPlayerProvinceName,
+    worstPlayerWeatherLabel,
     encircledProvinceIds: encircledIds,
   };
 }

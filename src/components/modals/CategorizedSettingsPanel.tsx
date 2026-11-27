@@ -407,7 +407,7 @@ export const CategorizedSettingsPanel: React.FC<CategorizedSettingsPanelProps> =
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-[#f0e6d2] flex items-center gap-1.5">
                     <ZoomIn className="w-4 h-4 text-[#c89d54] shrink-0" />
-                    <span>Harita Yakınlaştırma Düğmeleri (AoH3)</span>
+                    <span>Harita Yakınlaştırma Düğmeleri</span>
                   </div>
                   <div className="text-[11px] text-[#b2a58f] mt-0.5">
                     {settings.showZoomControls
@@ -437,10 +437,10 @@ export const CategorizedSettingsPanel: React.FC<CategorizedSettingsPanelProps> =
           <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#2a241d]">
             <div>
               <h3 className="text-xs sm:text-sm font-bold text-[#e0bc78]">
-                Ses Kanalları ve Mehterhane Seviyesi
+                Ses Kanalları ve Müzik Seviyesi
               </h3>
               <p className="text-[11px] text-[#b2a58f] mt-0.5">
-                Ana ses, marş müziği ve savaş efektlerini ayrı ayrı dengeleyin.
+                Ana ses, arka plan müziği ve savaş efektlerini ayrı ayrı dengeleyin.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -499,7 +499,7 @@ export const CategorizedSettingsPanel: React.FC<CategorizedSettingsPanelProps> =
             {/* Music Volume */}
             <label className="block space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-[#f0e6d2]">Müzik ve Mehterhane</span>
+                <span className="font-semibold text-[#f0e6d2]">Arka Plan Müziği</span>
                 <span className="font-mono-num font-bold text-[#e0bc78]">
                   %{settings.musicVolume ?? 65}
                 </span>
@@ -539,6 +539,72 @@ export const CategorizedSettingsPanel: React.FC<CategorizedSettingsPanelProps> =
                 className="w-full h-2 rounded-lg appearance-none bg-[#2b251e] accent-[#c89d54] cursor-pointer"
               />
             </label>
+
+            {/* Dynamic Peace / War Music Toggle */}
+            <div className="pt-3 border-t border-[#2a241d]">
+              <button
+                type="button"
+                aria-pressed={settings.dynamicWarMusic ?? true}
+                data-testid="toggle-dynamic-war-music"
+                onClick={() => {
+                  sound.playClick();
+                  onUpdateSettings({
+                    dynamicWarMusic: !(settings.dynamicWarMusic ?? true),
+                  });
+                }}
+                className={`w-full min-h-[48px] p-3 rounded-xl border text-left flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                  (settings.dynamicWarMusic ?? true)
+                    ? 'bg-[#26211a] border-[#c89d54]/60 text-[#f0e6d2]'
+                    : 'bg-[#1c1814] border-[#342d24] text-[#b2a58f]'
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#f0e6d2]">
+                    Dinamik Savaş / Barış Müziği Geçişi
+                  </div>
+                  <div className="text-[11px] text-[#b2a58f] mt-0.5">
+                    {(settings.dynamicWarMusic ?? true)
+                      ? 'Savaş ilanında savaş senfonisine, barışta dönem temasına yumuşak geçiş yapılır.'
+                      : 'Kapalı: Seçili orkestra parçası savaşta da sabit çalmaya devam eder.'}
+                  </div>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 ${
+                    (settings.dynamicWarMusic ?? true)
+                      ? 'bg-[#c89d54] text-[#110f0d]'
+                      : 'bg-[#2b251e] text-[#cfc3ae]'
+                  }`}
+                >
+                  {(settings.dynamicWarMusic ?? true) ? 'Açık' : 'Kapalı'}
+                </span>
+              </button>
+            </div>
+
+            {/* SFX Preview Strip */}
+            <div className="pt-2 border-t border-[#2a241d] space-y-1.5">
+              <div className="text-[11px] font-semibold text-[#b2a58f]">
+                Efekt Önizleme Paleti
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: 'Antlaşma', fn: () => sound.playTreaty() },
+                  { label: 'Savaş Davulu', fn: () => sound.playWarDrum() },
+                  { label: 'Sefer Borusu', fn: () => sound.playWarHorn() },
+                  { label: 'Çarpışma', fn: () => sound.playBattleClash() },
+                  { label: 'Kuşatma Düşüşü', fn: () => sound.playSiegeFall() },
+                  { label: 'Hazine', fn: () => sound.playCoin() },
+                ].map((cue) => (
+                  <button
+                    key={cue.label}
+                    type="button"
+                    onClick={cue.fn}
+                    className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#1c1814] hover:bg-[#2a241c] border border-[#3a3228] text-[11px] font-semibold text-[#e0bc78] transition-colors cursor-pointer"
+                  >
+                    {cue.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
         {audioExtraSlot}

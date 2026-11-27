@@ -1,0 +1,631 @@
+{
+  "tags1440": {
+    "OTT": {
+      "id": "792",
+      "name": "Osmanlı İmparatorluğu",
+      "flagCode": "OSM"
+    },
+    "BYZ": {
+      "id": "300",
+      "name": "Bizans & Mora Despotluğu",
+      "flagCode": "BİZ"
+    },
+    "MEM": {
+      "id": "818",
+      "name": "Memlük Sultanlığı",
+      "flagCode": "MEM"
+    },
+    "NAJ": {
+      "id": "682",
+      "name": "Necid & Hürmüz Emirliği",
+      "flagCode": "NEC"
+    },
+    "YEM": {
+      "id": "887",
+      "name": "Yemen Resûlî Sultanlığı",
+      "flagCode": "YEM"
+    },
+    "FUN": {
+      "id": "729",
+      "name": "Funj & Nubya Sultanlığı",
+      "flagCode": "NUB"
+    },
+    "AKK": {
+      "id": "031",
+      "name": "Karakoyunlu & Akkoyunlu",
+      "flagCode": "AKK"
+    },
+    "GEO": {
+      "id": "268",
+      "name": "Gürcistan & Trabzon",
+      "flagCode": "GUR"
+    },
+    "TIM": {
+      "id": "364",
+      "name": "Timur İmparatorluğu",
+      "flagCode": "TİM"
+    },
+    "UZB": {
+      "id": "860",
+      "name": "Özbek & Çağatay Hanlığı",
+      "flagCode": "ÖZB"
+    },
+    "MOS": {
+      "id": "643",
+      "name": "Moskova & Novgorod Knezliği",
+      "flagCode": "MOS"
+    },
+    "GOL": {
+      "id": "902",
+      "name": "Büyük Orda & Kazan Hanlığı",
+      "flagCode": "ORD"
+    },
+    "SIB": {
+      "id": "903",
+      "name": "Sibir & Mançurya Hanlığı",
+      "flagCode": "SİB"
+    },
+    "CRI": {
+      "id": "804",
+      "name": "Kırım Hanlığı",
+      "flagCode": "KIR"
+    },
+    "KAZ": {
+      "id": "398",
+      "name": "Kazak & Deşt-i Kıpçak Hanlığı",
+      "flagCode": "KAZ"
+    },
+    "HUN": {
+      "id": "348",
+      "name": "Macaristan Krallığı",
+      "flagCode": "MAC"
+    },
+    "CRO": {
+      "id": "191",
+      "name": "Hırvatistan Banlığı",
+      "flagCode": "HIR"
+    },
+    "WAL": {
+      "id": "642",
+      "name": "Eflak Voyvodalığı",
+      "flagCode": "EFL"
+    },
+    "MOL": {
+      "id": "498",
+      "name": "Boğdan Voyvodalığı",
+      "flagCode": "BOG"
+    },
+    "SER": {
+      "id": "688",
+      "name": "Sırbistan Despotluğu",
+      "flagCode": "SIR"
+    },
+    "BOS": {
+      "id": "070",
+      "name": "Bosna Krallığı",
+      "flagCode": "BOS"
+    },
+    "HRE": {
+      "id": "276",
+      "name": "Kutsal Roma İmparatorluğu",
+      "flagCode": "KRI"
+    },
+    "SWI": {
+      "id": "756",
+      "name": "İsviçre Konfederasyonu",
+      "flagCode": "ISV"
+    },
+    "BUR": {
+      "id": "528",
+      "name": "Burgonya & Felemenk Dükalığı",
+      "flagCode": "BRG"
+    },
+    "HAB": {
+      "id": "040",
+      "name": "Avusturya Arşidüklüğü",
+      "flagCode": "AVU"
+    },
+    "BOH": {
+      "id": "203",
+      "name": "Bohemya Krallığı",
+      "flagCode": "BOH"
+    },
+    "VEN": {
+      "id": "380",
+      "name": "Venedik & İtalya Devletleri",
+      "flagCode": "VEN"
+    },
+    "CYP": {
+      "id": "196",
+      "name": "Kıbrıs Lüzinyan Krallığı",
+      "flagCode": "KIB"
+    },
+    "POL": {
+      "id": "616",
+      "name": "Lehistan Krallığı",
+      "flagCode": "LEH"
+    },
+    "LIT": {
+      "id": "440",
+      "name": "Litvanya Büyük Dükalığı",
+      "flagCode": "LİT"
+    },
+    "TEU": {
+      "id": "428",
+      "name": "Töton & Livonya Şövalyeleri",
+      "flagCode": "TOT"
+    },
+    "FRA": {
+      "id": "250",
+      "name": "Fransa Krallığı",
+      "flagCode": "FRA"
+    },
+    "ENG": {
+      "id": "826",
+      "name": "İngiltere Krallığı",
+      "flagCode": "İNG"
+    },
+    "SCO": {
+      "id": "905",
+      "name": "İskoçya Krallığı",
+      "flagCode": "İSK"
+    },
+    "IRE": {
+      "id": "372",
+      "name": "İrlanda Klanları",
+      "flagCode": "İRL"
+    },
+    "CAS": {
+      "id": "724",
+      "name": "Kastilya & Aragon Krallığı",
+      "flagCode": "KAS"
+    },
+    "POR": {
+      "id": "620",
+      "name": "Portekiz Krallığı",
+      "flagCode": "POR"
+    },
+    "TLC": {
+      "id": "012",
+      "name": "Tilimsan & Cezayir Sultanlığı",
+      "flagCode": "CEZ"
+    },
+    "MOR": {
+      "id": "504",
+      "name": "Merînî Fas Sultanlığı",
+      "flagCode": "FAS"
+    },
+    "TUN": {
+      "id": "788",
+      "name": "Tunus Hafsî Sultanlığı",
+      "flagCode": "TUN"
+    },
+    "SWE": {
+      "id": "752",
+      "name": "İsveç & Finlandiya Birliği",
+      "flagCode": "KAL"
+    },
+    "DEN": {
+      "id": "208",
+      "name": "Danimarka Krallığı",
+      "flagCode": "DAN"
+    },
+    "NOR": {
+      "id": "578",
+      "name": "Norveç & İzlanda Krallığı",
+      "flagCode": "NOR"
+    },
+    "ETH": {
+      "id": "231",
+      "name": "Habeşistan İmparatorluğu",
+      "flagCode": "HAB"
+    },
+    "ADA": {
+      "id": "706",
+      "name": "Adal Sultanlığı",
+      "flagCode": "ADL"
+    },
+    "SON": {
+      "id": "566",
+      "name": "Songhay & Bornu İmparatorluğu",
+      "flagCode": "MAL"
+    },
+    "MLI": {
+      "id": "466",
+      "name": "Mali İmparatorluğu",
+      "flagCode": "MLI"
+    },
+    "KHO": {
+      "id": "710",
+      "name": "Güney Afrika & Khoisan Klanları",
+      "flagCode": "KHO"
+    },
+    "ZIM": {
+      "id": "716",
+      "name": "Büyük Zimbabve & Mutapa",
+      "flagCode": "ZİM"
+    },
+    "KIL": {
+      "id": "834",
+      "name": "Kilva Sultanlığı",
+      "flagCode": "KLV"
+    },
+    "KON": {
+      "id": "180",
+      "name": "Kongo Krallığı",
+      "flagCode": "KON"
+    },
+    "DEL": {
+      "id": "356",
+      "name": "Delhi Sultanlığı",
+      "flagCode": "DEL"
+    },
+    "VIJ": {
+      "id": "904",
+      "name": "Vijayanagara & Behmenî",
+      "flagCode": "VİJ"
+    },
+    "BEN": {
+      "id": "050",
+      "name": "Bengal Sultanlığı",
+      "flagCode": "BNG"
+    },
+    "KOT": {
+      "id": "144",
+      "name": "Kotte (Seylan) Krallığı",
+      "flagCode": "SEY"
+    },
+    "MAJ": {
+      "id": "360",
+      "name": "Majapahit İmparatorluğu",
+      "flagCode": "MAJ"
+    },
+    "AUS": {
+      "id": "036",
+      "name": "Avustralya & Pasifik Klanları",
+      "flagCode": "OKY"
+    },
+    "MLC": {
+      "id": "458",
+      "name": "Malakka Sultanlığı",
+      "flagCode": "MLK"
+    },
+    "SUL": {
+      "id": "608",
+      "name": "Tondo & Sulu Sultanlığı",
+      "flagCode": "SUL"
+    },
+    "AYU": {
+      "id": "764",
+      "name": "Ayutthaya Krallığı",
+      "flagCode": "AYU"
+    },
+    "DAI": {
+      "id": "704",
+      "name": "Dai Viet İmparatorluğu",
+      "flagCode": "DAI"
+    },
+    "AVA": {
+      "id": "104",
+      "name": "Ava (Burma) Krallığı",
+      "flagCode": "AVA"
+    },
+    "KHM": {
+      "id": "116",
+      "name": "Khmer (Angkor) Krallığı",
+      "flagCode": "KHM"
+    },
+    "MNG": {
+      "id": "156",
+      "name": "Ming Hanedanı (Çin)",
+      "flagCode": "MİN"
+    },
+    "OIR": {
+      "id": "496",
+      "name": "Oyrat & Moğol Hanlığı",
+      "flagCode": "MOG"
+    },
+    "JOS": {
+      "id": "410",
+      "name": "Joseon Krallığı (Kore)",
+      "flagCode": "JOS"
+    },
+    "ASH": {
+      "id": "392",
+      "name": "Ashikaga Şogunluğu (Japonya)",
+      "flagCode": "ŞOG"
+    },
+    "AZT": {
+      "id": "484",
+      "name": "Aztek & Maya Konfederasyonu",
+      "flagCode": "AZT"
+    },
+    "TAI": {
+      "id": "192",
+      "name": "Taíno & Karayip Kabileleri",
+      "flagCode": "KAR"
+    },
+    "IRQ": {
+      "id": "840",
+      "name": "İrokua Konfederasyonu",
+      "flagCode": "İRO"
+    },
+    "ALG": {
+      "id": "124",
+      "name": "Algonkin & Kuzey Orman Klanları",
+      "flagCode": "ALG"
+    },
+    "APA": {
+      "id": "906",
+      "name": "Bozkır & Apaçi Klanları",
+      "flagCode": "APA"
+    },
+    "INC": {
+      "id": "076",
+      "name": "İnka İmparatorluğu (Tawantinsuyu)",
+      "flagCode": "İNK"
+    },
+    "MUI": {
+      "id": "170",
+      "name": "Muisca & Karib Konfederasyonu",
+      "flagCode": "MUI"
+    },
+    "TUP": {
+      "id": "907",
+      "name": "Tupinambá (Brezilya Kabileleri)",
+      "flagCode": "TUP"
+    },
+    "GUA": {
+      "id": "032",
+      "name": "Guaraní & Patagonya Kabileleri",
+      "flagCode": "GUA"
+    }
+  },
+  "tags2026": {
+    "BGR": {
+      "id": "100",
+      "name": "Bulgaristan",
+      "flagCode": "BG"
+    },
+    "CAN": {
+      "id": "124",
+      "name": "Kanada",
+      "flagCode": "CA"
+    },
+    "CHL": {
+      "id": "152",
+      "name": "Şili",
+      "flagCode": "CL"
+    },
+    "CHN": {
+      "id": "156",
+      "name": "Çin Halk Cumhuriyeti",
+      "flagCode": "CN"
+    },
+    "COL": {
+      "id": "170",
+      "name": "Kolombiya",
+      "flagCode": "CO"
+    },
+    "FRA": {
+      "id": "250",
+      "name": "Fransa",
+      "flagCode": "FR"
+    },
+    "DEU": {
+      "id": "276",
+      "name": "Almanya",
+      "flagCode": "DE"
+    },
+    "GRC": {
+      "id": "300",
+      "name": "Yunanistan",
+      "flagCode": "GR"
+    },
+    "HUN": {
+      "id": "348",
+      "name": "Macaristan",
+      "flagCode": "HU"
+    },
+    "IND": {
+      "id": "356",
+      "name": "Hindistan",
+      "flagCode": "IN"
+    },
+    "IDN": {
+      "id": "360",
+      "name": "Endonezya",
+      "flagCode": "ID"
+    },
+    "IRN": {
+      "id": "364",
+      "name": "İran",
+      "flagCode": "IR"
+    },
+    "ISR": {
+      "id": "376",
+      "name": "İsrail",
+      "flagCode": "IL"
+    },
+    "ITA": {
+      "id": "380",
+      "name": "İtalya",
+      "flagCode": "IT"
+    },
+    "JPN": {
+      "id": "392",
+      "name": "Japonya",
+      "flagCode": "JP"
+    },
+    "KAZ": {
+      "id": "398",
+      "name": "Kazakistan",
+      "flagCode": "KZ"
+    },
+    "PRK": {
+      "id": "408",
+      "name": "Kuzey Kore",
+      "flagCode": "KP"
+    },
+    "KOR": {
+      "id": "410",
+      "name": "Güney Kore",
+      "flagCode": "KR"
+    },
+    "MEX": {
+      "id": "484",
+      "name": "Meksika",
+      "flagCode": "MX"
+    },
+    "MAR": {
+      "id": "504",
+      "name": "Fas",
+      "flagCode": "MA"
+    },
+    "NLD": {
+      "id": "528",
+      "name": "Hollanda",
+      "flagCode": "NL"
+    },
+    "NGA": {
+      "id": "566",
+      "name": "Nijerya",
+      "flagCode": "NG"
+    },
+    "NOR": {
+      "id": "578",
+      "name": "Norveç",
+      "flagCode": "NO"
+    },
+    "PAK": {
+      "id": "586",
+      "name": "Pakistan",
+      "flagCode": "PK"
+    },
+    "PER": {
+      "id": "604",
+      "name": "Peru",
+      "flagCode": "PE"
+    },
+    "POL": {
+      "id": "616",
+      "name": "Polonya",
+      "flagCode": "PL"
+    },
+    "PRT": {
+      "id": "620",
+      "name": "Portekiz",
+      "flagCode": "PT"
+    },
+    "ROU": {
+      "id": "642",
+      "name": "Romanya",
+      "flagCode": "RO"
+    },
+    "RUS": {
+      "id": "643",
+      "name": "Rusya Federasyonu",
+      "flagCode": "RU"
+    },
+    "SAU": {
+      "id": "682",
+      "name": "Suudi Arabistan",
+      "flagCode": "SA"
+    },
+    "SRB": {
+      "id": "688",
+      "name": "Sırbistan",
+      "flagCode": "RS"
+    },
+    "VNM": {
+      "id": "704",
+      "name": "Vietnam",
+      "flagCode": "VN"
+    },
+    "ZAF": {
+      "id": "710",
+      "name": "Güney Afrika",
+      "flagCode": "ZA"
+    },
+    "ESP": {
+      "id": "724",
+      "name": "İspanya",
+      "flagCode": "ES"
+    },
+    "SWE": {
+      "id": "752",
+      "name": "İsveç",
+      "flagCode": "SE"
+    },
+    "CHE": {
+      "id": "756",
+      "name": "İsviçre",
+      "flagCode": "CH"
+    },
+    "THA": {
+      "id": "764",
+      "name": "Tayland",
+      "flagCode": "TH"
+    },
+    "TUR": {
+      "id": "792",
+      "name": "Türkiye",
+      "flagCode": "TR"
+    },
+    "UKR": {
+      "id": "804",
+      "name": "Ukrayna",
+      "flagCode": "UA"
+    },
+    "EGY": {
+      "id": "818",
+      "name": "Mısır",
+      "flagCode": "EG"
+    },
+    "GBR": {
+      "id": "826",
+      "name": "Birleşik Krallık",
+      "flagCode": "GB"
+    },
+    "USA": {
+      "id": "840",
+      "name": "Amerika Birleşik Devletleri",
+      "flagCode": "US"
+    },
+    "BRA": {
+      "id": "076",
+      "name": "Brezilya",
+      "flagCode": "BR"
+    },
+    "AZE": {
+      "id": "031",
+      "name": "Azerbaycan",
+      "flagCode": "AZ"
+    },
+    "ARG": {
+      "id": "032",
+      "name": "Arjantin",
+      "flagCode": "AR"
+    },
+    "AUS": {
+      "id": "036",
+      "name": "Avustralya",
+      "flagCode": "AU"
+    },
+    "BEL": {
+      "id": "056",
+      "name": "Belçika",
+      "flagCode": "BE"
+    },
+    "AUT": {
+      "id": "040",
+      "name": "Avusturya",
+      "flagCode": "AT"
+    },
+    "DZA": {
+      "id": "012",
+      "name": "Cezayir",
+      "flagCode": "DZ"
+    }
+  }
+}

@@ -1,0 +1,1844 @@
+{
+  "rulerTraits": {
+    "CONQUEROR": {
+      "id": "CONQUEROR",
+      "name": "Fatih & Cihangir",
+      "shortEffect": "+%6 Taarruz · +%8 Kuşatma Hızı",
+      "description": "Seferlerde ordulara büyük ivme kazandırır, kaleleri hızla düşürür.",
+      "attackBonusPct": 6,
+      "siegeSpeedPct": 8
+    },
+    "JUST_LAWGIVER": {
+      "id": "JUST_LAWGIVER",
+      "name": "Kanuni & Adil",
+      "shortEffect": "+%6 Vergi · İstikrar Artışı",
+      "description": "Adil kanunnamelerle hazine düzenini ve halk güvenini pekiştirir.",
+      "taxBonusPct": 6,
+      "stabilityBonus": 0.08,
+      "coupResistance": 0.35
+    },
+    "MERCHANT_PRINCE": {
+      "id": "MERCHANT_PRINCE",
+      "name": "Tüccar Hükümdar",
+      "shortEffect": "+%10 Ticaret · +%3 Vergi",
+      "description": "Kervan yolları, limanlar ve gümrük gelirlerini büyütür.",
+      "tradeBonusPct": 10,
+      "taxBonusPct": 3
+    },
+    "SIEGE_MASTER": {
+      "id": "SIEGE_MASTER",
+      "name": "Kuşatma Ustası",
+      "shortEffect": "+%12 Kuşatma Hızı · +%4 Taarruz",
+      "description": "Topçu ve istihkâm düzeniyle surları çok daha çabuk kırar.",
+      "siegeSpeedPct": 12,
+      "attackBonusPct": 4
+    },
+    "MASTER_DIPLOMAT": {
+      "id": "MASTER_DIPLOMAT",
+      "name": "Usta Diplomat",
+      "shortEffect": "AE Soğuması +0.05/gün · +%5 Ticaret",
+      "description": "Komşu devletlerin tepkisini yumuşatır ve ittifak zemini kurar.",
+      "aeDecayBonus": 0.05,
+      "tradeBonusPct": 5
+    },
+    "REFORMER": {
+      "id": "REFORMER",
+      "name": "Islahatçı",
+      "shortEffect": "+%7 Araştırma · +%4 Vergi",
+      "description": "Devlet kurumlarını ve maliyeyi çağın gereğine göre yeniler.",
+      "researchBonusPct": 7,
+      "taxBonusPct": 4
+    },
+    "IRON_WILL": {
+      "id": "IRON_WILL",
+      "name": "Demir İrade",
+      "shortEffect": "+%6 Savunma · Darbe Direnci",
+      "description": "İç karışıklıklara ve dış kuşatmalara karşı sarsılmaz dirayet gösterir.",
+      "defenseBonusPct": 6,
+      "stabilityBonus": 0.05,
+      "coupResistance": 0.55
+    },
+    "SCHOLAR": {
+      "id": "SCHOLAR",
+      "name": "Âlim & Hâmi",
+      "shortEffect": "+%10 Araştırma · AE Soğuması",
+      "description": "Medrese, rasathane ve bilim insanlarını himaye eder.",
+      "researchBonusPct": 10,
+      "aeDecayBonus": 0.02
+    },
+    "AMBITIOUS": {
+      "id": "AMBITIOUS",
+      "name": "Hırslı & Cesur",
+      "shortEffect": "+%5 Taarruz · +%5 İnsan Gücü",
+      "description": "Büyük seferberliklerle cepheyi sürekli diri tutar.",
+      "attackBonusPct": 5,
+      "manpowerBonusPct": 5
+    },
+    "CAUTIOUS": {
+      "id": "CAUTIOUS",
+      "name": "Tedbirli Devlet Adamı",
+      "shortEffect": "+%5 Savunma · İstikrar Koruması",
+      "description": "Gereksiz maceralardan kaçınır, sınır savunmasını sağlam tutar.",
+      "defenseBonusPct": 5,
+      "stabilityBonus": 0.06,
+      "coupResistance": 0.25
+    }
+  },
+  "deathCauseLabels": {
+    "NATURAL_AGE": {
+      "label": "Doğal Vefat",
+      "chroniclePhrase": "ilerleyen yaşı ve tabii sebeplerle hayata gözlerini yumdu"
+    },
+    "ILLNESS": {
+      "label": "Salgın & Hastalık",
+      "chroniclePhrase": "başkentte baş gösteren ağır bir rahatsızlığa yenik düştü"
+    },
+    "CAMPAIGN_WOUNDS": {
+      "label": "Seferde Şehadet / Savaş Yarası",
+      "chroniclePhrase": "ordunun başında çıktığı seferde aldığı ağır yaralar sonucu vefat etti"
+    },
+    "PALACE_COUP": {
+      "label": "Saray Darbesi & Suikast",
+      "chroniclePhrase": "devletteki huzursuzluk ve saray içi komplo sonucu tahttan indirildi"
+    },
+    "HUNTING_ACCIDENT": {
+      "label": "Ani Rahatsızlık / Av Kazası",
+      "chroniclePhrase": "beklenmedik bir av kazası ve ani rahatsızlık neticesinde vefat etti"
+    },
+    "TERM_ENDED": {
+      "label": "Görev Süresi Doldu",
+      "chroniclePhrase": "anayasal görev süresini tamamlayarak makamı devretti"
+    },
+    "ELECTION_LOST": {
+      "label": "Seçimle Değişim",
+      "chroniclePhrase": "genel seçimler sonucunda görevi yeni yönetime devretti"
+    }
+  },
+  "dynasties1440ByTag": {
+    "MNG": [
+      {
+        "name": "Zhengtong (Zhu Qizhen)",
+        "title": "İmparator",
+        "dynastyName": "Ming",
+        "startAge": 18,
+        "admin": 3,
+        "diplomacy": 3,
+        "military": 4,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "Chenghua (Zhu Jianshen)",
+        "title": "İmparator",
+        "dynastyName": "Ming",
+        "startAge": 22,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "Hongzhi (Zhu Youcheng)",
+        "title": "İmparator",
+        "dynastyName": "Ming",
+        "startAge": 24,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "Jiajing (Zhu Houcong)",
+        "title": "İmparator",
+        "dynastyName": "Ming",
+        "startAge": 20,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "Wanli (Zhu Yijun)",
+        "title": "İmparator",
+        "dynastyName": "Ming",
+        "startAge": 22,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      }
+    ],
+    "FRA": [
+      {
+        "name": "VII. Charles",
+        "title": "Kral",
+        "dynastyName": "Valois",
+        "startAge": 37,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "XI. Louis",
+        "title": "Kral",
+        "dynastyName": "Valois",
+        "startAge": 36,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "MASTER_DIPLOMAT"
+      },
+      {
+        "name": "VIII. Charles",
+        "title": "Kral",
+        "dynastyName": "Valois",
+        "startAge": 20,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "I. François",
+        "title": "Kral",
+        "dynastyName": "Valois-Angoulême",
+        "startAge": 21,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "IV. Henri",
+        "title": "Kral",
+        "dynastyName": "Bourbon",
+        "startAge": 36,
+        "admin": 6,
+        "diplomacy": 6,
+        "military": 5,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "XIV. Louis",
+        "title": "Kral",
+        "dynastyName": "Bourbon",
+        "startAge": 22,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      }
+    ],
+    "HRE": [
+      {
+        "name": "III. Friedrich",
+        "title": "İmparator",
+        "dynastyName": "Habsburg",
+        "startAge": 25,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "I. Maximilian",
+        "title": "İmparator",
+        "dynastyName": "Habsburg",
+        "startAge": 34,
+        "admin": 5,
+        "diplomacy": 6,
+        "military": 5,
+        "traitId": "MASTER_DIPLOMAT"
+      },
+      {
+        "name": "V. Karl (Şarlken)",
+        "title": "İmparator",
+        "dynastyName": "Habsburg",
+        "startAge": 21,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "I. Ferdinand",
+        "title": "İmparator",
+        "dynastyName": "Habsburg",
+        "startAge": 35,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "II. Rudolf",
+        "title": "İmparator",
+        "dynastyName": "Habsburg",
+        "startAge": 26,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "II. Ferdinand",
+        "title": "İmparator",
+        "dynastyName": "Habsburg",
+        "startAge": 40,
+        "admin": 4,
+        "diplomacy": 3,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      }
+    ],
+    "BYZ": [
+      {
+        "name": "VIII. İoannis Paleologos",
+        "title": "İmparator",
+        "dynastyName": "Paleologos",
+        "startAge": 47,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "MASTER_DIPLOMAT"
+      },
+      {
+        "name": "XI. Konstantinos Paleologos",
+        "title": "İmparator",
+        "dynastyName": "Paleologos",
+        "startAge": 39,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Demetrios Paleologos",
+        "title": "İmparator",
+        "dynastyName": "Paleologos",
+        "startAge": 36,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "Andreas Paleologos",
+        "title": "İmparator",
+        "dynastyName": "Paleologos",
+        "startAge": 26,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "XII. Konstantinos Paleologos",
+        "title": "İmparator",
+        "dynastyName": "Paleologos",
+        "startAge": 28,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      }
+    ],
+    "HUN": [
+      {
+        "name": "I. Ulászló",
+        "title": "Kral",
+        "dynastyName": "Jagiellon",
+        "startAge": 20,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "János Hunyadi",
+        "title": "Naib-Kral",
+        "dynastyName": "Hunyadi",
+        "startAge": 39,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 6,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Matyas Corvinus",
+        "title": "Kral",
+        "dynastyName": "Hunyadi",
+        "startAge": 22,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "II. Ulászló",
+        "title": "Kral",
+        "dynastyName": "Jagiellon",
+        "startAge": 34,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "II. Lajos",
+        "title": "Kral",
+        "dynastyName": "Jagiellon",
+        "startAge": 20,
+        "admin": 3,
+        "diplomacy": 3,
+        "military": 4,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "János Szapolyai",
+        "title": "Kral",
+        "dynastyName": "Szapolyai",
+        "startAge": 39,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "MASTER_DIPLOMAT"
+      }
+    ],
+    "DEL": [
+      {
+        "name": "Alaaddin Alem Şah",
+        "title": "Sultan",
+        "dynastyName": "Seyyidler",
+        "startAge": 32,
+        "admin": 3,
+        "diplomacy": 3,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "Behlül Han Lûdî",
+        "title": "Sultan",
+        "dynastyName": "Lûdî",
+        "startAge": 38,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "İskender Lûdî",
+        "title": "Sultan",
+        "dynastyName": "Lûdî",
+        "startAge": 31,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "Ekber Şah",
+        "title": "Padişah",
+        "dynastyName": "Babürlüler",
+        "startAge": 22,
+        "admin": 6,
+        "diplomacy": 6,
+        "military": 6,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "Şah Cihan",
+        "title": "Padişah",
+        "dynastyName": "Babürlüler",
+        "startAge": 35,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "MERCHANT_PRINCE"
+      }
+    ],
+    "TIM": [
+      {
+        "name": "Şahruh Mirza",
+        "title": "Sultan",
+        "dynastyName": "Timuroğulları",
+        "startAge": 62,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "Uluğ Bey",
+        "title": "Sultan",
+        "dynastyName": "Timuroğulları",
+        "startAge": 50,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "Ebu Said Mirza",
+        "title": "Sultan",
+        "dynastyName": "Timuroğulları",
+        "startAge": 27,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Hüseyin Baykara",
+        "title": "Sultan",
+        "dynastyName": "Timuroğulları",
+        "startAge": 31,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "Zahirüddin Babür",
+        "title": "Şah",
+        "dynastyName": "Babürlüler",
+        "startAge": 23,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Şah I. Abbas",
+        "title": "Şah",
+        "dynastyName": "Safevi",
+        "startAge": 24,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "REFORMER"
+      }
+    ],
+    "VEN": [
+      {
+        "name": "Francesco Foscari",
+        "title": "Dük",
+        "dynastyName": "Foscari",
+        "startAge": 66,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "Cristoforo Moro",
+        "title": "Dük",
+        "dynastyName": "Moro",
+        "startAge": 58,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 3,
+        "traitId": "MASTER_DIPLOMAT"
+      },
+      {
+        "name": "Giovanni Mocenigo",
+        "title": "Dük",
+        "dynastyName": "Mocenigo",
+        "startAge": 56,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "Leonardo Loredan",
+        "title": "Dük",
+        "dynastyName": "Loredan",
+        "startAge": 60,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Andrea Gritti",
+        "title": "Dük",
+        "dynastyName": "Gritti",
+        "startAge": 55,
+        "admin": 5,
+        "diplomacy": 6,
+        "military": 4,
+        "traitId": "MASTER_DIPLOMAT"
+      }
+    ],
+    "ASH": [
+      {
+        "name": "Ashikaga Yoshinori",
+        "title": "Şogun",
+        "dynastyName": "Ashikaga",
+        "startAge": 46,
+        "admin": 4,
+        "diplomacy": 3,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Ashikaga Yoshimasa",
+        "title": "Şogun",
+        "dynastyName": "Ashikaga",
+        "startAge": 24,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "Oda Nobunaga",
+        "title": "Başkumandan",
+        "dynastyName": "Oda",
+        "startAge": 26,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Toyotomi Hideyoshi",
+        "title": "Kampaku",
+        "dynastyName": "Toyotomi",
+        "startAge": 45,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "SIEGE_MASTER"
+      },
+      {
+        "name": "Tokugawa Ieyasu",
+        "title": "Şogun",
+        "dynastyName": "Tokugawa",
+        "startAge": 48,
+        "admin": 6,
+        "diplomacy": 6,
+        "military": 5,
+        "traitId": "JUST_LAWGIVER"
+      }
+    ],
+    "JOS": [
+      {
+        "name": "Büyük Sejong",
+        "title": "Kral",
+        "dynastyName": "Yi (Joseon)",
+        "startAge": 43,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "Sejo",
+        "title": "Kral",
+        "dynastyName": "Yi (Joseon)",
+        "startAge": 38,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Seongjong",
+        "title": "Kral",
+        "dynastyName": "Yi (Joseon)",
+        "startAge": 24,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "Jungjong",
+        "title": "Kral",
+        "dynastyName": "Yi (Joseon)",
+        "startAge": 26,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "REFORMER"
+      }
+    ],
+    "TEU": [
+      {
+        "name": "Konrad von Erlichshausen",
+        "title": "Büyük Üstat",
+        "dynastyName": "Töton Tarikatı",
+        "startAge": 45,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "Ludwig von Erlichshausen",
+        "title": "Büyük Üstat",
+        "dynastyName": "Töton Tarikatı",
+        "startAge": 40,
+        "admin": 3,
+        "diplomacy": 3,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Albrecht von Hohenzollern",
+        "title": "Büyük Üstat",
+        "dynastyName": "Hohenzollern",
+        "startAge": 24,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "REFORMER"
+      }
+    ],
+    "LIT": [
+      {
+        "name": "IV. Kazimir",
+        "title": "Büyük Dük",
+        "dynastyName": "Jagiellon",
+        "startAge": 18,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "Aleksander Jagiellon",
+        "title": "Büyük Dük",
+        "dynastyName": "Jagiellon",
+        "startAge": 31,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "II. Zygmunt August",
+        "title": "Büyük Dük",
+        "dynastyName": "Jagiellon",
+        "startAge": 28,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "REFORMER"
+      }
+    ],
+    "POL": [
+      {
+        "name": "III. Władysław",
+        "title": "Kral",
+        "dynastyName": "Jagiellon",
+        "startAge": 18,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "IV. Kazimir",
+        "title": "Kral",
+        "dynastyName": "Jagiellon",
+        "startAge": 22,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "I. Zygmunt",
+        "title": "Kral",
+        "dynastyName": "Jagiellon",
+        "startAge": 38,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "Stefan Batory",
+        "title": "Kral",
+        "dynastyName": "Batory",
+        "startAge": 42,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 6,
+        "traitId": "SIEGE_MASTER"
+      },
+      {
+        "name": "III. Jan Sobieski",
+        "title": "Kral",
+        "dynastyName": "Sobieski",
+        "startAge": 44,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      }
+    ],
+    "POR": [
+      {
+        "name": "V. Afonso",
+        "title": "Kral",
+        "dynastyName": "Aviz",
+        "startAge": 18,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "II. João",
+        "title": "Kral",
+        "dynastyName": "Aviz",
+        "startAge": 26,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "I. Manuel",
+        "title": "Kral",
+        "dynastyName": "Aviz",
+        "startAge": 26,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "III. João",
+        "title": "Kral",
+        "dynastyName": "Aviz",
+        "startAge": 22,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      }
+    ],
+    "MOS": [
+      {
+        "name": "II. Vasili",
+        "title": "Büyük Knez",
+        "dynastyName": "Rurik",
+        "startAge": 25,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "III. İvan (Büyük İvan)",
+        "title": "Büyük Knez",
+        "dynastyName": "Rurik",
+        "startAge": 26,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "III. Vasili",
+        "title": "Büyük Knez",
+        "dynastyName": "Rurik",
+        "startAge": 28,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "IV. İvan (Korkunç İvan)",
+        "title": "Çar",
+        "dynastyName": "Rurik",
+        "startAge": 21,
+        "admin": 4,
+        "diplomacy": 3,
+        "military": 6,
+        "traitId": "SIEGE_MASTER"
+      },
+      {
+        "name": "Boris Godunov",
+        "title": "Çar",
+        "dynastyName": "Godunov",
+        "startAge": 46,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "I. Mihail Romanov",
+        "title": "Çar",
+        "dynastyName": "Romanov",
+        "startAge": 20,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "I. Petro (Büyük Petro)",
+        "title": "Çar",
+        "dynastyName": "Romanov",
+        "startAge": 22,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "REFORMER"
+      }
+    ],
+    "NAJ": [
+      {
+        "name": "Seyfeddin",
+        "title": "Emir",
+        "dynastyName": "Cebrî",
+        "startAge": 37,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "Ecvad bin Zamil",
+        "title": "Emir",
+        "dynastyName": "Cebrî",
+        "startAge": 32,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "Mukrin bin Zamil",
+        "title": "Emir",
+        "dynastyName": "Cebrî",
+        "startAge": 30,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      }
+    ],
+    "CAS": [
+      {
+        "name": "II. Juan",
+        "title": "Kral",
+        "dynastyName": "Trastámara",
+        "startAge": 35,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "Kraliçe I. Isabel & II. Fernando",
+        "title": "Katolik Hükümdarlar",
+        "dynastyName": "Trastámara",
+        "startAge": 24,
+        "admin": 6,
+        "diplomacy": 6,
+        "military": 5,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "I. Carlos (V. Karl)",
+        "title": "Kral",
+        "dynastyName": "Habsburg",
+        "startAge": 20,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "II. Felipe",
+        "title": "Kral",
+        "dynastyName": "Habsburg",
+        "startAge": 28,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "III. Felipe",
+        "title": "Kral",
+        "dynastyName": "Habsburg",
+        "startAge": 24,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      }
+    ],
+    "SWE": [
+      {
+        "name": "Bavyeralı Christopher",
+        "title": "Kral",
+        "dynastyName": "Wittelsbach",
+        "startAge": 24,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "MASTER_DIPLOMAT"
+      },
+      {
+        "name": "I. Christian",
+        "title": "Kral",
+        "dynastyName": "Oldenburg",
+        "startAge": 25,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "I. Gustav Vasa",
+        "title": "Kral",
+        "dynastyName": "Vasa",
+        "startAge": 27,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "Gustav II. Adolf",
+        "title": "Kral",
+        "dynastyName": "Vasa",
+        "startAge": 21,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      }
+    ],
+    "OTT": [
+      {
+        "name": "II. Murad",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 36,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Fatih Sultan Mehmed",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 19,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "SIEGE_MASTER"
+      },
+      {
+        "name": "II. Bayezid",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 34,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "Yavuz Sultan Selim",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 42,
+        "admin": 4,
+        "diplomacy": 3,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Kanuni Sultan Süleyman",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 26,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "II. Selim",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 42,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "III. Murad",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 28,
+        "admin": 3,
+        "diplomacy": 3,
+        "military": 4,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "III. Mehmed",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 29,
+        "admin": 3,
+        "diplomacy": 3,
+        "military": 4,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "I. Ahmed",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 18,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "Genç Osman (II. Osman)",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 17,
+        "admin": 4,
+        "diplomacy": 3,
+        "military": 5,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "IV. Murad",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 19,
+        "admin": 5,
+        "diplomacy": 3,
+        "military": 6,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "IV. Mehmed",
+        "title": "Sultan",
+        "dynastyName": "Osmanoğulları",
+        "startAge": 20,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "CAUTIOUS"
+      }
+    ],
+    "CRI": [
+      {
+        "name": "Hacı I. Giray",
+        "title": "Han",
+        "dynastyName": "Giray",
+        "startAge": 43,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Mengli I. Giray",
+        "title": "Han",
+        "dynastyName": "Giray",
+        "startAge": 26,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "MASTER_DIPLOMAT"
+      },
+      {
+        "name": "I. Mehmed Giray",
+        "title": "Han",
+        "dynastyName": "Giray",
+        "startAge": 45,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "I. Sahib Giray",
+        "title": "Han",
+        "dynastyName": "Giray",
+        "startAge": 31,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "I. Devlet Giray",
+        "title": "Han",
+        "dynastyName": "Giray",
+        "startAge": 39,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      }
+    ],
+    "MEM": [
+      {
+        "name": "Seyfeddin Çakmak",
+        "title": "Sultan",
+        "dynastyName": "Burcî Memlükleri",
+        "startAge": 62,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "Seyfeddin İnal",
+        "title": "Sultan",
+        "dynastyName": "Burcî Memlükleri",
+        "startAge": 48,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Kayıtbay",
+        "title": "Sultan",
+        "dynastyName": "Burcî Memlükleri",
+        "startAge": 45,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "Kansu Gavri",
+        "title": "Sultan",
+        "dynastyName": "Burcî Memlükleri",
+        "startAge": 52,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "II. Tomanbay",
+        "title": "Sultan",
+        "dynastyName": "Burcî Memlükleri",
+        "startAge": 41,
+        "admin": 4,
+        "diplomacy": 3,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      }
+    ],
+    "ENG": [
+      {
+        "name": "VI. Henry",
+        "title": "Kral",
+        "dynastyName": "Lancaster",
+        "startAge": 19,
+        "admin": 2,
+        "diplomacy": 3,
+        "military": 2,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "IV. Edward",
+        "title": "Kral",
+        "dynastyName": "York",
+        "startAge": 22,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "VII. Henry",
+        "title": "Kral",
+        "dynastyName": "Tudor",
+        "startAge": 28,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "VIII. Henry",
+        "title": "Kral",
+        "dynastyName": "Tudor",
+        "startAge": 20,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "I. Elizabeth",
+        "title": "Kraliçe",
+        "dynastyName": "Tudor",
+        "startAge": 25,
+        "admin": 6,
+        "diplomacy": 6,
+        "military": 5,
+        "traitId": "MASTER_DIPLOMAT"
+      },
+      {
+        "name": "I. James",
+        "title": "Kral",
+        "dynastyName": "Stuart",
+        "startAge": 36,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 3,
+        "traitId": "SCHOLAR"
+      }
+    ],
+    "UZB": [
+      {
+        "name": "Ebu’l-Hayr Han",
+        "title": "Han",
+        "dynastyName": "Şeybanî",
+        "startAge": 28,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Muhammed Şeybanî Han",
+        "title": "Han",
+        "dynastyName": "Şeybanî",
+        "startAge": 32,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 6,
+        "traitId": "SIEGE_MASTER"
+      },
+      {
+        "name": "Ubeydullah Han",
+        "title": "Han",
+        "dynastyName": "Şeybanî",
+        "startAge": 34,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      }
+    ],
+    "GOL": [
+      {
+        "name": "Uluğ Muhammed",
+        "title": "Han",
+        "dynastyName": "Cengizoğulları",
+        "startAge": 39,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Mahmudek Han",
+        "title": "Han",
+        "dynastyName": "Cengizoğulları",
+        "startAge": 29,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Seyid Ahmed Han",
+        "title": "Han",
+        "dynastyName": "Cengizoğulları",
+        "startAge": 35,
+        "admin": 3,
+        "diplomacy": 3,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      }
+    ],
+    "SIB": [
+      {
+        "name": "Hacı Muhammed",
+        "title": "Han",
+        "dynastyName": "Şeybanî",
+        "startAge": 42,
+        "admin": 4,
+        "diplomacy": 3,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "İbak Han",
+        "title": "Han",
+        "dynastyName": "Şeybanî",
+        "startAge": 30,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "Küçüm Han",
+        "title": "Han",
+        "dynastyName": "Şeybanî",
+        "startAge": 36,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      }
+    ],
+    "VIJ": [
+      {
+        "name": "II. Deva Raya",
+        "title": "İmparator",
+        "dynastyName": "Sangama",
+        "startAge": 36,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "Krishnadevaraya",
+        "title": "İmparator",
+        "dynastyName": "Tuluva",
+        "startAge": 30,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      }
+    ],
+    "SCO": [
+      {
+        "name": "II. James",
+        "title": "Kral",
+        "dynastyName": "Stuart",
+        "startAge": 18,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "SIEGE_MASTER"
+      },
+      {
+        "name": "III. James",
+        "title": "Kral",
+        "dynastyName": "Stuart",
+        "startAge": 22,
+        "admin": 3,
+        "diplomacy": 4,
+        "military": 3,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "IV. James",
+        "title": "Kral",
+        "dynastyName": "Stuart",
+        "startAge": 24,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "REFORMER"
+      }
+    ],
+    "AKK": [
+      {
+        "name": "Cihan Şah",
+        "title": "Sultan",
+        "dynastyName": "Karakoyunlu",
+        "startAge": 43,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "Uzun Hasan",
+        "title": "Sultan",
+        "dynastyName": "Akkoyunlu",
+        "startAge": 33,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Sultan Yakup",
+        "title": "Sultan",
+        "dynastyName": "Akkoyunlu",
+        "startAge": 24,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "SCHOLAR"
+      },
+      {
+        "name": "Şah İsmail",
+        "title": "Şah",
+        "dynastyName": "Safevi",
+        "startAge": 21,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Şah I. Tahmasb",
+        "title": "Şah",
+        "dynastyName": "Safevi",
+        "startAge": 20,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Şah I. Abbas",
+        "title": "Şah",
+        "dynastyName": "Safevi",
+        "startAge": 22,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "REFORMER"
+      }
+    ],
+    "HAB": [
+      {
+        "name": "III. Friedrich",
+        "title": "Arşidük",
+        "dynastyName": "Habsburg",
+        "startAge": 25,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 3,
+        "traitId": "CAUTIOUS"
+      },
+      {
+        "name": "I. Maximilian",
+        "title": "Arşidük",
+        "dynastyName": "Habsburg",
+        "startAge": 34,
+        "admin": 5,
+        "diplomacy": 6,
+        "military": 5,
+        "traitId": "MASTER_DIPLOMAT"
+      },
+      {
+        "name": "I. Ferdinand",
+        "title": "Arşidük",
+        "dynastyName": "Habsburg",
+        "startAge": 25,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 4,
+        "traitId": "JUST_LAWGIVER"
+      },
+      {
+        "name": "II. Maximilian",
+        "title": "Arşidük",
+        "dynastyName": "Habsburg",
+        "startAge": 36,
+        "admin": 4,
+        "diplomacy": 5,
+        "military": 3,
+        "traitId": "REFORMER"
+      },
+      {
+        "name": "I. Leopold",
+        "title": "İmparator",
+        "dynastyName": "Habsburg",
+        "startAge": 24,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      }
+    ],
+    "INC": [
+      {
+        "name": "Pachacuti",
+        "title": "Sapa İnka",
+        "dynastyName": "Hanan",
+        "startAge": 34,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "CONQUEROR"
+      },
+      {
+        "name": "Tupac İnka Yupanqui",
+        "title": "Sapa İnka",
+        "dynastyName": "Hanan",
+        "startAge": 30,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 6,
+        "traitId": "AMBITIOUS"
+      },
+      {
+        "name": "Huayna Capac",
+        "title": "Sapa İnka",
+        "dynastyName": "Hanan",
+        "startAge": 28,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 5,
+        "traitId": "IRON_WILL"
+      }
+    ],
+    "TLC": [
+      {
+        "name": "Ebu Said Osman",
+        "title": "Sultan",
+        "dynastyName": "Merînî",
+        "startAge": 40,
+        "admin": 4,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "Abdülhak II. el-Merînî",
+        "title": "Sultan",
+        "dynastyName": "Merînî",
+        "startAge": 28,
+        "admin": 4,
+        "diplomacy": 3,
+        "military": 4,
+        "traitId": "IRON_WILL"
+      },
+      {
+        "name": "Ahmed el-Mansur",
+        "title": "Sultan",
+        "dynastyName": "Saadî",
+        "startAge": 30,
+        "admin": 5,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "JUST_LAWGIVER"
+      }
+    ],
+    "BEN": [
+      {
+        "name": "Nasiruddin Mahmud",
+        "title": "Sultan",
+        "dynastyName": "İlyas Şahî",
+        "startAge": 38,
+        "admin": 5,
+        "diplomacy": 4,
+        "military": 4,
+        "traitId": "MERCHANT_PRINCE"
+      },
+      {
+        "name": "Alaaddin Hüseyin Şah",
+        "title": "Sultan",
+        "dynastyName": "Hüseyin Şahî",
+        "startAge": 34,
+        "admin": 6,
+        "diplomacy": 5,
+        "military": 5,
+        "traitId": "JUST_LAWGIVER"
+      }
+    ]
+  },
+  "modernPresetRulersByTag": {
+    "CHN": {
+      "name": "Wei Jianming",
+      "title": "Devlet Başkanı",
+      "age": 61
+    },
+    "FRA": {
+      "name": "Henri Moreau",
+      "title": "Cumhurbaşkanı",
+      "age": 48
+    },
+    "DEU": {
+      "name": "Lukas Weber",
+      "title": "Şansölye",
+      "age": 51
+    },
+    "GRC": {
+      "name": "Nikos Karamanlis",
+      "title": "Başbakan",
+      "age": 49
+    },
+    "IND": {
+      "name": "Arjun Deshmukh",
+      "title": "Başbakan",
+      "age": 57
+    },
+    "IRN": {
+      "name": "Rıza Şirazi",
+      "title": "Cumhurbaşkanı",
+      "age": 59
+    },
+    "ITA": {
+      "name": "Marco Conti",
+      "title": "Başbakan",
+      "age": 49
+    },
+    "JPN": {
+      "name": "Kenji Takahashi",
+      "title": "Başbakan",
+      "age": 56
+    },
+    "KOR": {
+      "name": "Min-Jun Park",
+      "title": "Devlet Başkanı",
+      "age": 52
+    },
+    "POL": {
+      "name": "Marek Kowalski",
+      "title": "Cumhurbaşkanı",
+      "age": 50
+    },
+    "RUS": {
+      "name": "Aleksey Volkov",
+      "title": "Devlet Başkanı",
+      "age": 58
+    },
+    "SAU": {
+      "name": "Selman bin Faysal",
+      "title": "Kral",
+      "age": 46
+    },
+    "ESP": {
+      "name": "Carlos Fernández",
+      "title": "Başbakan",
+      "age": 47
+    },
+    "TUR": {
+      "name": "Hakan Karahan",
+      "title": "Cumhurbaşkanı",
+      "age": 54
+    },
+    "UKR": {
+      "name": "Viktor Petrenko",
+      "title": "Devlet Başkanı",
+      "age": 48
+    },
+    "EGY": {
+      "name": "Tarık el-Mansur",
+      "title": "Cumhurbaşkanı",
+      "age": 56
+    },
+    "GBR": {
+      "name": "Arthur Sterling",
+      "title": "Başbakan",
+      "age": 50
+    },
+    "USA": {
+      "name": "Marcus Vance",
+      "title": "Başkan",
+      "age": 52
+    },
+    "BRA": {
+      "name": "Rafael Mendoza",
+      "title": "Devlet Başkanı",
+      "age": 53
+    },
+    "AZE": {
+      "name": "İlham Aydın",
+      "title": "Cumhurbaşkanı",
+      "age": 55
+    }
+  },
+  "culturePools": {
+    "TURKIC_OGHUZ": {
+      "monarchyTitle": "Sultan",
+      "republicTitle": "Cumhurbaşkanı",
+      "dynastyFallback": "Oğuzoğlu Hanedanı",
+      "givenNames": ["Murad", "Mehmed", "Bayezid", "Selim", "Süleyman", "Orhan", "Osman", "Alparslan", "Kılıçarslan", "Yıldırım", "Tuğrul", "Sancar"],
+      "modernSurnames": ["Karahan", "Demirtaş", "Yıldırım", "Özdemir", "Kaya", "Çelik", "Aydın", "Erdoğan", "Albayrak", "Bozkurt"]
+    },
+    "GREEK_BYZANTINE": {
+      "monarchyTitle": "İmparator",
+      "republicTitle": "Başbakan",
+      "dynastyFallback": "Palaiologos Hanedanı",
+      "givenNames": ["Konstantinos", "Ioannes", "Theodoros", "Alexios", "Manuel", "Andronikos", "Demetrios", "Georgios", "Nikephoros", "Basileios"],
+      "modernSurnames": ["Papadopoulos", "Nikolaidis", "Karamanlis", "Vasileiou", "Georgiou", "Christodoulou", "Stavros", "Makris"]
+    },
+    "ARABIC_LEVANT": {
+      "monarchyTitle": "Sultan",
+      "republicTitle": "Devlet Başkanı",
+      "dynastyFallback": "Haşimi Hanedanı",
+      "givenNames": ["Baybars", "Saladin", "Kansu", "Çakmak", "Eşref", "Mansur", "Nasır", "Tarik", "Halid", "Faysal", "Zeyd", "Ömer"],
+      "modernSurnames": ["El-Mansur", "El-Hakim", "El-Reşid", "Nasser", "Hamdan", "Khoury", "Haddad", "Suleiman"]
+    },
+    "PERSIAN_IRANIC": {
+      "monarchyTitle": "Şah",
+      "republicTitle": "Cumhurbaşkanı",
+      "dynastyFallback": "Safevi Hanedanı",
+      "givenNames": ["İsmail", "Abbas", "Tahmasp", "Nadir", "Kerim", "Dara", "Keyhüsrev", "Behram", "Rüstem", "Ferhad"],
+      "modernSurnames": ["Pehlevi", "Ruhani", "Rezai", "Ferhadi", "Şirazi", "Khorasani", "Zandi", "Naderi"]
+    },
+    "SLAVIC_EAST_SOUTH": {
+      "monarchyTitle": "Çar",
+      "republicTitle": "Devlet Başkanı",
+      "dynastyFallback": "Rurik Hanedanı",
+      "givenNames": ["İvan", "Vasili", "Dmitri", "Aleksandr", "Pyotr", "Kazimierz", "Władysław", "Stefan", "Lazar", "Vladislav", "Mihail", "Boris"],
+      "modernSurnames": ["Volkov", "Kowalski", "Nowak", "Morozov", "Popov", "Sokolov", "Kovalenko", "Petrov", "Novak", "Horvat"]
+    },
+    "GERMANIC_CENTRAL": {
+      "monarchyTitle": "Kral",
+      "republicTitle": "Şansölye",
+      "dynastyFallback": "Habsburg Hanedanı",
+      "givenNames": ["Friedrich", "Maximilian", "Karl", "Wilhelm", "Heinrich", "Otto", "Albrecht", "Ludwig", "Edward", "Henry", "Richard", "Arthur"],
+      "modernSurnames": ["Weber", "Müller", "Schmidt", "Fischer", "Richter", "Hoffmann", "Taylor", "Bennett", "Wright", "Walker"]
+    },
+    "ROMANCE_LATIN": {
+      "monarchyTitle": "Kral",
+      "republicTitle": "Başkan",
+      "dynastyFallback": "Valois Hanedanı",
+      "givenNames": ["Charles", "Louis", "François", "Henri", "Juan", "Ferdinand", "Afonso", "Lorenzo", "Filippo", "Francesco", "Carlos", "Pedro"],
+      "modernSurnames": ["Moreau", "Laurent", "Lefebvre", "Rossi", "Conti", "Moretti", "García", "Fernández", "Silva", "Mendoza"]
+    },
+    "MONGOL_STEPPE": {
+      "monarchyTitle": "Han",
+      "republicTitle": "Devlet Başkanı",
+      "dynastyFallback": "Cengizoğlu Hanedanı",
+      "givenNames": ["Uluğ", "Küçük", "Batu", "Berke", "Toktamış", "Esen", "Temür", "Timur", "Babür", "Şeybani", "Hacı", "Giray"],
+      "modernSurnames": ["Nazarbayev", "Tokayev", "Batur", "Cengiz", "Tumen", "Erdene", "Suleimenov", "Nurgaliyev"]
+    },
+    "SINIC_HAN": {
+      "monarchyTitle": "İmparator",
+      "republicTitle": "Başkan",
+      "dynastyFallback": "Zhu Hanedanı",
+      "givenNames": ["Zhu", "Yongle", "Xuande", "Chenghua", "Hongzhi", "Zhengde", "Wanli", "Wei", "Jian", "Hao"],
+      "modernSurnames": ["Zhang", "Wang", "Li", "Chen", "Liu", "Zhao", "Huang", "Zhou", "Lin", "Wu"]
+    },
+    "JAPANESE_YAMATO": {
+      "monarchyTitle": "Şogun",
+      "republicTitle": "Başbakan",
+      "dynastyFallback": "Ashikaga Klanı",
+      "givenNames": ["Yoshimasa", "Yoshinori", "Nobunaga", "Hideyoshi", "Ieyasu", "Kenshin", "Shingen", "Haruto", "Takashi", "Kenji"],
+      "modernSurnames": ["Tanaka", "Satō", "Suzuki", "Takahashi", "Watanabe", "Kobayashi", "Nakamura", "Yamamoto"]
+    },
+    "AMERINDIAN": {
+      "monarchyTitle": "İmparator",
+      "republicTitle": "Devlet Başkanı",
+      "dynastyFallback": "Tenoch Hanedanı",
+      "givenNames": ["Moctezuma", "Pachacuti", "Túpac", "Atahualpa", "Nezahualcóyotl", "Cuauhtémoc", "Itzcoatl", "Huayna", "Cacique", "Lautaro"],
+      "modernSurnames": ["Quispe", "Mamani", "Choque", "Xicoténcatl", "Tupac", "Guerrero", "Morales", "Hernández"]
+    }
+  }
+}

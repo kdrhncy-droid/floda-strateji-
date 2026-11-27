@@ -12,6 +12,7 @@ import {
 import {
   buildMapGeometryCache,
   getBaseProjectionScale,
+  getPrewarmedMapGeometryCache,
   hitTestTerritoryAtPoint,
   MapGeometryCache,
   queryVisibleFeatures,
@@ -38,11 +39,13 @@ import {
   MovementTweenMap,
   syncMovementTweens,
 } from '../map/armyInterpolation';
+import { getCalendarMonthForTick } from '../engine/seasonalWeatherEngine';
 import {
   ActiveBattle,
   ActiveWar,
   ArmyMovement,
   DiplomaticRelation,
+  GameModeId,
   MapMode,
   Nation,
   SeaArmy,
@@ -73,6 +76,8 @@ interface WorldMapCanvasProps {
   smoothArmyAnimations?: boolean;
   fogOfWarEnabled?: boolean;
   speed?: SpeedLevel;
+  tick?: number;
+  gameMode?: GameModeId;
   focusCapitalSignal?: number;
   focusCoordsSignal?: { coords: [number, number]; seq: number } | null;
   /** Imperative zoom from the AoH3 top-bar `-` / `+` plaque. */
@@ -81,6 +86,7 @@ interface WorldMapCanvasProps {
   showMinimap?: boolean;
   /** Optional HUD stack (notifications / chronicle) pinned directly above the bottom-right minimap. */
   minimapTopSlot?: React.ReactNode;
+  timelapseMode?: boolean;
   onSetMapMode?: (mode: MapMode) => void;
   onSelectTerritory: (territoryId: string | null) => void;
   onSelectSeaArmy?: (seaArmyId: string | null) => void;
@@ -119,11 +125,14 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   smoothArmyAnimations = true,
   fogOfWarEnabled = true,
   speed = 1,
+  tick = 0,
+  gameMode,
   focusCapitalSignal = 0,
   focusCoordsSignal = null,
   zoomCommand = null,
   showMinimap = true,
   minimapTopSlot,
+  timelapseMode = false,
   onSetMapMode,
   onSelectTerritory,
   onSelectSeaArmy,
@@ -161,6 +170,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     armyOrderSourceId: string | null;
     fogOfWarEnabled: boolean;
     borderThickness: BorderThicknessOption;
+    weatherMonth: number;
   } | null>(null);
   const lastCenteredKeyRef = useRef<string>('');
   const lastFocusCapitalSignalRef = useRef<number>(focusCapitalSignal);
@@ -201,6 +211,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     playerNationId,
     armyOrderSourceId,
     seaArmyOrderSourceId,
+    timelapseMode,
     onExecuteArmyMove,
     onSelectTerritory,
     onSelectSeaArmy,
@@ -210,6 +221,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
   });
 
   const handleCanvasTap = useCallback((clientX: number, clientY: number) => {
+    if (clickContextRef.current.timelapseMode) return;
     const canvas = canvasRef.current;
     const container = containerRef.current;
     const cache = geometryCacheRef.current;
@@ -333,6 +345,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     playerNationId,
     armyOrderSourceId,
     seaArmyOrderSourceId,
+    timelapseMode,
     onExecuteArmyMove,
     onSelectTerritory,
     onSelectSeaArmy,
@@ -451,11 +464,9 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       !geometryCacheRef.current ||
       geometryCacheRef.current.dimsKey !== dimsKey
     ) {
-      geometryCacheRef.current = buildMapGeometryCache(
-        dimsKey,
-        features,
-        projection
-      );
+      geometryCacheRef.current =
+        getPrewarmedMapGeometryCache(dimsKey) ||
+        buildMapGeometryCache(dimsKey, features, projection);
       centroidCacheRef.current = null;
     }
 
@@ -490,6 +501,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       baseCacheDepsRef.current = null;
     }
 
+    const weatherMonth = getCalendarMonthForTick(tick, gameMode);
+
     const prevDeps = baseCacheDepsRef.current;
     const canReuseBaseCanvas =
       prevDeps !== null &&
@@ -508,7 +521,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
       prevDeps.multiSelectedTerritoryIds === multiSelectedTerritoryIds &&
       prevDeps.armyOrderSourceId === armyOrderSourceId &&
       prevDeps.fogOfWarEnabled === fogOfWarEnabled &&
-      prevDeps.borderThickness === borderThickness;
+      prevDeps.borderThickness === borderThickness &&
+      prevDeps.weatherMonth === weatherMonth;
 
     // Sync smooth 60 FPS sub-tick movement tweens whenever movement state updates
     const nowMs = performance.now();
@@ -584,6 +598,8 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           visibleTerritoryIds,
           classifiedBorders,
           borderThicknessMultiplier: getBorderThicknessMultiplier(borderThickness),
+          tick,
+          gameMode,
         });
 
         baseCtx.restore();
@@ -603,6 +619,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
           armyOrderSourceId,
           fogOfWarEnabled,
           borderThickness,
+          weatherMonth,
         };
       }
     }
@@ -675,6 +692,7 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
         fogOfWarEnabled,
         visibleTerritoryIds,
         projectedCentroids,
+        timelapseMode,
       });
 
       ctx.restore();
@@ -715,6 +733,9 @@ export const WorldMapCanvas: React.FC<WorldMapCanvasProps> = ({
     smoothArmyAnimations,
     speed,
     territories,
+    tick,
+    timelapseMode,
+    gameMode,
     transform,
     viewportRevision,
     visibleTerritoryIds,

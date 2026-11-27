@@ -30,6 +30,10 @@ import {
 } from '../pashaAndFiefEngine';
 import { evaluateActiveStraits } from '../straitsAndTradeEngine';
 import { pickNextAutoResearchTech } from '../actions/techAndReformActions';
+import {
+  evaluateMonthlyDynastySuccession,
+  getRulerModifiers,
+} from '../dynastyAndSuccessionEngine';
 import { pickEligibleCrisisEvent, TickContext } from './tickContext';
 
 /**
@@ -203,14 +207,35 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
             Number(((pNation.warExhaustion || 0) - 0.85).toFixed(2))
           );
 
+    const playerRulerMods = getRulerModifiers(pNation);
+    const extraDipPt =
+      playerRulerMods.extraDiplomacyPoint && nextTick % 2 === 0 ? 1 : 0;
+    const nextStabilityWithRuler =
+      playerRulerMods.stabilityRecoveryBonus > 0 && pNation.stability < 95
+        ? Math.min(
+            95,
+            Number(
+              (
+                pNation.stability + playerRulerMods.stabilityRecoveryBonus
+              ).toFixed(2)
+            )
+          )
+        : pNation.stability;
+    const dailyAeDecay = Math.max(
+      0.04,
+      0.08 + playerRulerMods.aeDecayBonus
+    );
+
     ctx.writeNation(playerNationId, {
       ...pNation,
       treasury: Math.max(0, pNation.treasury + econ.netDailyGold),
+      stability: nextStabilityWithRuler,
       diplomacyPoints: Math.min(
         100,
         (pNation.diplomacyPoints ?? 100) +
           1 +
-          (unlockedTechs.includes('adm_2b') ? 1 : 0)
+          (unlockedTechs.includes('adm_2b') ? 1 : 0) +
+          extraDipPt
       ),
       manpower: nextPlayerManpower,
       researchPoints: Number(
@@ -229,7 +254,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
       warExhaustion: nextPlayerWarExhaustion,
       aggressiveExpansion: Math.max(
         0,
-        Number((pNation.aggressiveExpansion - 0.08).toFixed(2))
+        Number((pNation.aggressiveExpansion - dailyAeDecay).toFixed(2))
       ),
     });
 
@@ -339,7 +364,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
           nextQueue = waitingQueue;
           tModified = true;
           if (t.ownerId === playerNationId) {
-            ctx.sounds.push('TREATY');
+            ctx.sounds.push('BUILD');
             const facilityLabel = activeItem.specialtyName
               ? `${activeItem.specialtyName} (${bDef?.name || activeItem.building})`
               : bDef?.name || activeItem.building;
@@ -373,7 +398,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
           nextRecruitQueue = waitingRecruit;
           tModified = true;
           if (t.ownerId === playerNationId) {
-            ctx.sounds.push('SELECT_TERRITORY');
+            ctx.sounds.push('RECRUIT');
             ctx.toasts.push(
               `🪖 ${t.name}: +${activeRecruit.troops.toLocaleString('tr-TR')} ${activeRecruit.label} eğitimini tamamlayıp garnizona katıldı!`
             );
@@ -408,7 +433,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
           nextUnrest = Math.max(0, nextUnrest - 10);
           tModified = true;
           if (t.ownerId === playerNationId) {
-            ctx.sounds.push('TREATY');
+            ctx.sounds.push('BUILD');
             ctx.toasts.push(
               `🌟 ${t.name} eyaleti tamamen asimile edildi ve Öz Vatan (Core) oldu!`
             );
@@ -427,7 +452,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
           nextUnrest = Math.max(0, Number((nextUnrest - 8).toFixed(2)));
           tModified = true;
           if (t.ownerId === playerNationId) {
-            ctx.sounds.push('TREATY');
+            ctx.sounds.push('BUILD');
             const relDef = RELIGIONS[t.missionary.targetReligion];
             ctx.toasts.push(
               `☪ ${t.name} ahalisi başarıyla ${relDef?.name || 'Devlet Dini'} inancına geçti!`
@@ -463,12 +488,15 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
   if (nextTick % 7 === 0) {
     const allTerrsList = Object.values(ctx.nextTerritories);
     const liveStraits = evaluateActiveStraits(ctx.nextTerritories, ctx.nextWars);
-    // Precompute province counts, GDP, strait tolls, and active war counts in single linear passes
+    // Precompute province counts, GDP, garrisons, strait tolls, and active war counts in single linear passes
     const aiGdpByOwner: Record<string, number> = {};
     const aiCountByOwner: Record<string, number> = {};
+    const aiGarrisonByOwner: Record<string, number> = {};
     for (const t of allTerrsList) {
       if (!t) continue;
       aiCountByOwner[t.ownerId] = (aiCountByOwner[t.ownerId] || 0) + 1;
+      aiGarrisonByOwner[t.ownerId] =
+        (aiGarrisonByOwner[t.ownerId] || 0) + (t.garrison || 0);
       aiGdpByOwner[t.ownerId] =
         (aiGdpByOwner[t.ownerId] || 0) +
         t.baseGdp * (1 + t.buildings.factory * 0.25);
@@ -501,8 +529,18 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
       if (!ai || ai.isEliminated) continue;
       const provCount = aiCountByOwner[nId] || 0;
       const totalAiGdp = aiGdpByOwner[nId] || 0;
+      const totalAiGarrison = aiGarrisonByOwner[nId] || 0;
       const weeklyStraitTolls = weeklyStraitTollsByOwner[nId] || 0;
-      const dailyGain = Math.max(60, totalAiGdp * 1.15) + weeklyStraitTolls;
+      const grossWeeklyGain = Math.max(60, totalAiGdp * 0.92) + weeklyStraitTolls;
+      // Realistic military maintenance so large empires pay upkeep instead of hoarding 400k+ gold
+      const weeklyAiUpkeep = Math.round(totalAiGarrison * 0.0085);
+      let netWeeklyGain = Math.round(grossWeeklyGain - weeklyAiUpkeep);
+      if (netWeeklyGain > 0 && ai.treasury > 45_000) {
+        netWeeklyGain = Math.round(netWeeklyGain * 0.28);
+      } else if (netWeeklyGain > 0 && ai.treasury > 22_000) {
+        netWeeklyGain = Math.round(netWeeklyGain * 0.55);
+      }
+      const nextAiTreasury = Math.max(200, ai.treasury + netWeeklyGain);
       const weeklyAiResearch = 18 + provCount * 3.5;
 
       let aiActiveProj: ActiveResearchProject | null = ai.activeResearch
@@ -554,7 +592,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
 
       ctx.writeNation(nId, {
         ...ai,
-        treasury: ai.treasury + Math.round(dailyGain),
+        treasury: nextAiTreasury,
         manpower: nextAiManpower,
         researchPoints: Number(
           ((ai.researchPoints || 0) + weeklyAiResearch).toFixed(1)
@@ -588,7 +626,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
 
     bannerlordRes.investmentEvents?.forEach((inv) => {
       if (inv.nationId === playerNationId) {
-        ctx.sounds.push('TREATY');
+        ctx.sounds.push('BUILD');
         ctx.appendNews(
           `🔔 ${inv.lordName} Şehir Yatırımı`,
           `${inv.lordName}, ${inv.territoryName} eyaletinde ${inv.buildingName} (Sv.${inv.level}) inşa etti! İmparatorluk Kazancı: ${inv.incomeBoostLabel}.`,
@@ -632,7 +670,6 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
           ev.ownerId === playerNationId ||
           ev.restoredOwnerId === playerNationId
         ) {
-          ctx.sounds.push('WAR_HORN');
           ctx.toasts.push(
             `İSYAN! ${ev.territoryName} yüksek huzursuzluk nedeniyle ayaklandı ve ${restoredName} egemenliğine geçti!`
           );
@@ -661,14 +698,13 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
         'WAR'
       );
       if (reb.nationId === playerNationId) {
-        ctx.sounds.push('WAR_HORN');
         ctx.toasts.push(
           `🔥 PAŞA İSYANI! ${reb.lordName} düşük sadakat yüzünden tımarlarıyla (${provList}) ayaklandı!`
         );
       }
     });
 
-    // 2D. Weekly Supply Limit, Encirclement & Harsh-Season/Terrain Attrition
+    // 2D. Weekly Supply Limit, Encirclement & Seasonal Weather (Winter / Monsoon / Heatwave) Attrition
     const seasonInfo = getGameSeason(nextTick, gameMode);
     const attritionRes = evaluateWeeklySupplyAndSeasonAttrition({
       territories: ctx.nextTerritories,
@@ -676,6 +712,8 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
       season: seasonInfo,
       playerNationId,
       wars: ctx.nextWars,
+      tick: nextTick,
+      gameMode,
     });
     if (attritionRes.changed) {
       ctx.nextTerritories = attritionRes.updatedTerritories;
@@ -685,8 +723,9 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
       const provLabel = attritionRes.worstPlayerProvinceName
         ? `${attritionRes.worstPlayerProvinceName} başta olmak üzere `
         : '';
+      const weatherTag = attritionRes.worstPlayerWeatherLabel || seasonInfo.name;
       ctx.toasts.push(
-        `❄️ ${seasonInfo.name} İkmal/Çember Yıpranması: ${provLabel}-${attritionRes.playerTotalLoss.toLocaleString('tr-TR')} asker kaybı (İkmal hattını koruyun veya İkmal Deposu/Ambar kurun).`
+        `🌦️ ${weatherTag} Yıpranması: ${provLabel}-${attritionRes.playerTotalLoss.toLocaleString('tr-TR')} asker kaybı (İkmal hattını koruyun veya İkmal Deposu/Ambar kurun).`
       );
     }
 
@@ -719,7 +758,6 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
             'COALITION'
           );
           if (coal.isAgainstPlayer) {
-            ctx.sounds.push('WAR_HORN');
             ctx.toasts.push(
               `⚠️ KOALİSYON PAKTI! Yüksek agresif genişlememiz nedeniyle ${membersStr} bize karşı ortak savunma koalisyonu kurdu!`
             );
@@ -884,7 +922,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
                   .filter((name): name is string => Boolean(name)),
                 createdAtMs: Date.now(),
               });
-              ctx.sounds.push('WAR_HORN');
+              ctx.sounds.push('WAR_DRUM');
             }
           }
         }
@@ -896,7 +934,6 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
           );
         }
         if (aiRes.playerAlert) {
-          ctx.sounds.push('WAR_HORN');
           ctx.toasts.push(aiRes.playerAlert);
         }
         if (aiRes.incomingOffer) {
@@ -927,7 +964,6 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
       ctx.nextWars = coalitionRes.wars;
       ctx.nextRelations = coalitionRes.relations;
       ctx.nextNewsEvents = coalitionRes.newsEvents;
-      ctx.sounds.push('WAR_HORN');
       if (coalitionRes.toast) {
         ctx.toasts.push(coalitionRes.toast);
       }
@@ -999,6 +1035,39 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
     }
   }
 
+  // 3C. Monthly Dynamic Ruler Mortality & Election Succession Check (Every 30 days — zero FPS overhead)
+  if (nextTick > 0 && nextTick % 30 === 0) {
+    const currentSeason = getGameSeason(nextTick);
+    const succRes = evaluateMonthlyDynastySuccession({
+      nextTick,
+      gameMode,
+      playerNationId,
+      nations: ctx.nextNations,
+      territories: ctx.nextTerritories,
+      wars: ctx.nextWars,
+      movements: ctx.nextMovements,
+      isWinter: currentSeason.id === 'WINTER',
+      worldSeed: input.worldSeed ?? 1440,
+      suppressPlayerModal: Boolean(ctx.triggeredCrisis),
+    });
+
+    if (succRes.updatedNations) {
+      ctx.nextNations = succRes.updatedNations;
+      ctx.nationsCloned = true;
+    }
+    for (const item of succRes.newsItems) {
+      ctx.appendNews(item.title, item.description, item.type);
+    }
+    for (const alert of succRes.playerAlerts) {
+      ctx.toasts.push(alert);
+    }
+    if (succRes.playerSuccessionEvent) {
+      ctx.triggeredSuccession = succRes.playerSuccessionEvent;
+      ctx.shouldPause = true;
+      ctx.sounds.push('WAR_DRUM');
+    }
+  }
+
   // 4. Periodic Interactive Cabinet Crisis / Opportunity Event
   const latestPlayer = ctx.nextNations[playerNationId];
   const hasChallenges =
@@ -1009,6 +1078,7 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
       latestPlayer.stability < 80);
 
   if (
+    !ctx.triggeredSuccession &&
     settings.crisisFrequencyDays > 0 &&
     nextTick > 0 &&
     nextTick % settings.crisisFrequencyDays === 0 &&
@@ -1016,6 +1086,6 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
   ) {
     ctx.triggeredCrisis = pickEligibleCrisisEvent(gameMode);
     ctx.shouldPause = true;
-    ctx.sounds.push('SELECT_TERRITORY');
+    ctx.sounds.push('WAR_DRUM');
   }
 }

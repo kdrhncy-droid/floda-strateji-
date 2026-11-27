@@ -201,6 +201,16 @@
     line-height: 0.78rem;
     white-space: nowrap;
   }
+
+  .hud-mehter-dock {
+    bottom: 0.75rem !important;
+    left: 5.35rem !important;
+    z-index: 38 !important;
+  }
+
+  .hud-mehter-yield {
+    display: none !important;
+  }
 }
 
 /* Dual-Orientation: Mobile / iPhone Landscape (Yatay Ekran) Compact Safe-Area HUD */

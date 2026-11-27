@@ -7,6 +7,7 @@ import {
   Territory,
 } from '../types/game';
 import { getNationRulerName } from './pashaAndFiefEngine';
+import { getLiveNationRulerName } from './dynastyAndSuccessionEngine';
 import {
   getOrCreateRelation,
   getWarScoreForNation,
@@ -263,7 +264,10 @@ export function buildNationDiplomacySummary(params: {
 
   return {
     nation: targetNation,
-    rulerName: getNationRulerName(targetNationId, gameMode),
+    rulerName: getLiveNationRulerName(
+      targetNation,
+      getNationRulerName(targetNationId, gameMode)
+    ),
     provinceCount: provCountByNation[targetNationId] || 0,
     totalGarrison,
     marchingTroops,

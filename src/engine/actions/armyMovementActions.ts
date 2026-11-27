@@ -231,7 +231,7 @@ export function executeArmyMoveDomain(params: {
       },
       ...newsEvents.slice(0, 39),
     ];
-    sound.playWarHorn();
+    sound.playWarDrum();
     toast =
       defAllyNames.length > 0
         ? `${targetNation?.name} hedefine hareket başladı! Savunma Paktı (${defAllyNames.join(', ')}) savaşa dahil oldu!`

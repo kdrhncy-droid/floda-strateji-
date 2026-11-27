@@ -24,11 +24,115 @@ export function getBaseProjectionScale(width: number, height: number): number {
   return Math.max(150, Math.min(width / 4.2, height / 2.35));
 }
 
+let prewarmedGeometryCache: MapGeometryCache | null = null;
+
+export function getPrewarmedMapGeometryCache(
+  dimsKey: string
+): MapGeometryCache | null {
+  if (prewarmedGeometryCache && prewarmedGeometryCache.dimsKey === dimsKey) {
+    return prewarmedGeometryCache;
+  }
+  return null;
+}
+
+export function clearPrewarmedMapGeometryCache(): void {
+  prewarmedGeometryCache = null;
+}
+
+export async function prewarmMapGeometryCacheChunked(params: {
+  dimsKey: string;
+  features: GeoCountryFeature[];
+  projection: GeoProjection;
+  chunkSize: number;
+  onProgress?: (fraction: number) => void;
+  isCancelled?: () => boolean;
+  yieldFrame: () => Promise<void>;
+}): Promise<MapGeometryCache | null> {
+  const {
+    dimsKey,
+    features,
+    projection,
+    chunkSize,
+    onProgress,
+    isCancelled,
+    yieldFrame,
+  } = params;
+
+  if (prewarmedGeometryCache && prewarmedGeometryCache.dimsKey === dimsKey) {
+    onProgress?.(1);
+    return prewarmedGeometryCache;
+  }
+
+  const svgPathGen = geoPath(projection);
+  const paths: Record<string, Path2D> = {};
+  const spatialTree = new RBush<SpatialFeatureItem>();
+  const bulkItems: SpatialFeatureItem[] = [];
+  const hasPath2D = typeof Path2D !== 'undefined';
+  const safeChunk = Math.max(12, Math.round(chunkSize));
+  const total = Math.max(1, features.length);
+
+  for (let i = 0; i < features.length; i += safeChunk) {
+    if (isCancelled?.()) return null;
+    const end = Math.min(features.length, i + safeChunk);
+    for (let j = i; j < end; j++) {
+      const feat = features[j];
+      if (!feat) continue;
+      const dStr = svgPathGen(feat);
+      if (!dStr) continue;
+      if (hasPath2D) {
+        paths[feat.id] = new Path2D(dStr);
+      }
+
+      const bounds = svgPathGen.bounds(feat);
+      if (
+        bounds &&
+        Number.isFinite(bounds[0][0]) &&
+        Number.isFinite(bounds[0][1]) &&
+        Number.isFinite(bounds[1][0]) &&
+        Number.isFinite(bounds[1][1])
+      ) {
+        bulkItems.push({
+          minX: bounds[0][0],
+          minY: bounds[0][1],
+          maxX: bounds[1][0],
+          maxY: bounds[1][1],
+          id: feat.id,
+          feature: feat,
+        });
+      }
+    }
+    onProgress?.(Math.min(0.95, end / total));
+    await yieldFrame();
+  }
+
+  if (isCancelled?.()) return null;
+  spatialTree.load(bulkItems);
+
+  const sphereStr = svgPathGen({ type: 'Sphere' });
+  const gratStr = svgPathGen(geoGraticule10());
+
+  const built: MapGeometryCache = {
+    dimsKey,
+    paths,
+    spherePath: hasPath2D && sphereStr ? new Path2D(sphereStr) : null,
+    graticulePath: hasPath2D && gratStr ? new Path2D(gratStr) : null,
+    spatialTree,
+  };
+
+  prewarmedGeometryCache = built;
+  onProgress?.(1);
+  return built;
+}
+
 export function buildMapGeometryCache(
   dimsKey: string,
   features: GeoCountryFeature[],
   projection: GeoProjection
 ): MapGeometryCache {
+  if (prewarmedGeometryCache && prewarmedGeometryCache.dimsKey === dimsKey) {
+    return prewarmedGeometryCache;
+  }
+
   const svgPathGen = geoPath(projection);
   const paths: Record<string, Path2D> = {};
   const spatialTree = new RBush<SpatialFeatureItem>();
@@ -63,13 +167,15 @@ export function buildMapGeometryCache(
   const sphereStr = svgPathGen({ type: 'Sphere' });
   const gratStr = svgPathGen(geoGraticule10());
 
-  return {
+  const built: MapGeometryCache = {
     dimsKey,
     paths,
     spherePath: sphereStr ? new Path2D(sphereStr) : null,
     graticulePath: gratStr ? new Path2D(gratStr) : null,
     spatialTree,
   };
+  prewarmedGeometryCache = built;
+  return built;
 }
 
 export function queryVisibleFeatures(

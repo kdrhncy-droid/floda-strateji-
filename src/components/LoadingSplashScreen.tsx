@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { geoNaturalEarth1 } from 'd3-geo';
 import {
   BOOT_STAGES,
   BootStageDefinition,
@@ -9,9 +10,15 @@ import {
   STRATEGY_LOADING_TIPS,
 } from '../engine/bootLoader';
 import { initSaveStorage } from '../engine/saveManager';
+import { initTimelapseArchiveStorage } from '../engine/timelapseArchive';
 import { GeoCountryFeature } from '../engine/worldBuilder';
 import { Nation } from '../types/game';
 import { drawNationFlagOnCanvas } from '../map/nationFlagRenderer';
+import {
+  getBaseProjectionScale,
+  prewarmMapGeometryCacheChunked,
+} from '../map/spatialIndex';
+import { TECH_ARTWORK_MAP } from './drawers/techArtwork';
 
 import warRoomArt from '../assets/images/floda_main_menu_war_room_1795459892773.jpg';
 import siegeBastionArt from '../assets/images/floda_loading_siege_bastion_1795459892243.jpg';
@@ -68,10 +75,30 @@ function yieldFrame(): Promise<void> {
 function preloadImage(src: string): Promise<void> {
   return new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => resolve();
+    img.decoding = 'async';
+    img.onload = () => {
+      if (typeof img.decode === 'function') {
+        img.decode().then(() => resolve(), () => resolve());
+      } else {
+        resolve();
+      }
+    };
     img.onerror = () => resolve();
     img.src = src;
   });
+}
+
+function prefetchUiChunks(): Promise<void> {
+  const imports: Promise<unknown>[] = [
+    import('./CommandDrawers').catch(() => undefined),
+    import('./AoH3BattleOverviewModal').catch(() => undefined),
+    import('./modals/NationDiplomacyModal').catch(() => undefined),
+    import('./modals/WarDeclarationModal').catch(() => undefined),
+    import('./CrisisAndNewsModal').catch(() => undefined),
+    import('./SystemAndSaveModal').catch(() => undefined),
+    import('./modals/CampaignOutcomeModal').catch(() => undefined),
+  ];
+  return Promise.all(imports).then(() => undefined);
 }
 
 export const LoadingSplashScreen: React.FC<LoadingSplashScreenProps> = ({
@@ -113,6 +140,8 @@ export const LoadingSplashScreen: React.FC<LoadingSplashScreenProps> = ({
     let cancelled = false;
 
     const runRealBootWarmup = async () => {
+      const bootStartedAt =
+        typeof performance !== 'undefined' ? performance.now() : Date.now();
       const doneSet = new Set<BootStageDefinition['id']>();
 
       const markProgress = (
@@ -127,40 +156,56 @@ export const LoadingSplashScreen: React.FC<LoadingSplashScreenProps> = ({
       markProgress('HARDWARE', 0.5);
       await yieldFrame();
       doneSet.add('HARDWARE');
-      markProgress('SAVES', 0.1);
+      markProgress('SAVES', 0.15);
 
-      await initSaveStorage().catch(() => {});
+      await Promise.all([
+        initSaveStorage().catch(() => {}),
+        initTimelapseArchiveStorage().catch(() => {}),
+      ]);
       await yieldFrame();
       doneSet.add('SAVES');
       markProgress('WORLD_MAP', 0.05);
 
+      // 1. REAL map Path2D + RBush geometry prewarming matching WorldMapCanvas viewport key
       const chunkSize = hardwareProfile.warmupChunkSize;
-      const totalFeatures = Math.max(1, features.length);
-      for (let i = 0; i < features.length; i += chunkSize) {
-        if (cancelled) return;
-        const end = Math.min(features.length, i + chunkSize);
-        let checksumAcc = 0;
-        for (let j = i; j < end; j++) {
-          const geom = features[j]?.geometry;
-          if (geom && 'coordinates' in geom && Array.isArray(geom.coordinates)) {
-            checksumAcc += geom.coordinates.length;
-          }
-        }
-        if (checksumAcc < 0) break;
-        markProgress('WORLD_MAP', end / totalFeatures);
-        await yieldFrame();
-      }
-      doneSet.add('WORLD_MAP');
-      markProgress('FLAGS_ATLAS', 0.1);
+      try {
+        const vw =
+          typeof window !== 'undefined' ? window.innerWidth || 1024 : 1024;
+        const vh =
+          typeof window !== 'undefined' ? window.innerHeight || 640 : 640;
+        const dimsKey = `${vw}x${vh}_${features.length}`;
+        const projection = geoNaturalEarth1()
+          .scale(getBaseProjectionScale(vw, vh))
+          .translate([vw / 2, vh / 2]);
 
+        await prewarmMapGeometryCacheChunked({
+          dimsKey,
+          features,
+          projection,
+          chunkSize,
+          isCancelled: () => cancelled,
+          yieldFrame,
+          onProgress: (frac) => markProgress('WORLD_MAP', frac),
+        });
+      } catch {
+        // Fallback if headless environment lacks Path2D
+        markProgress('WORLD_MAP', 1);
+      }
+      if (cancelled) return;
+      doneSet.add('WORLD_MAP');
+      markProgress('FLAGS_ATLAS', 0.08);
+
+      // 2. Warm up ALL nation flags on an offscreen canvas + ensure display fonts are decoded
       try {
         const offscreen = document.createElement('canvas');
         offscreen.width = 48;
         offscreen.height = 32;
         const ctx = offscreen.getContext('2d');
-        const nationList = Object.values(nations).slice(0, 24);
-        if (ctx) {
+        const nationList = Object.values(nations);
+        if (ctx && nationList.length > 0) {
+          const flagStep = Math.max(6, Math.round(chunkSize / 12));
           for (let i = 0; i < nationList.length; i++) {
+            if (cancelled) return;
             const nat = nationList[i];
             drawNationFlagOnCanvas(
               ctx,
@@ -172,8 +217,8 @@ export const LoadingSplashScreen: React.FC<LoadingSplashScreenProps> = ({
               nat.flagCode,
               nat.color
             );
-            if (i % Math.max(6, Math.round(chunkSize / 12)) === 0) {
-              markProgress('FLAGS_ATLAS', (i + 1) / Math.max(1, nationList.length));
+            if (i % flagStep === 0 || i === nationList.length - 1) {
+              markProgress('FLAGS_ATLAS', (i + 1) / nationList.length);
               await yieldFrame();
             }
           }
@@ -181,24 +226,71 @@ export const LoadingSplashScreen: React.FC<LoadingSplashScreenProps> = ({
         if (document.fonts && document.fonts.ready) {
           await Promise.race([
             document.fonts.ready,
-            new Promise((r) => setTimeout(r, 240)),
+            new Promise((r) => setTimeout(r, 320)),
           ]);
         }
       } catch {
         // Canvas warmup is best-effort
       }
+      if (cancelled) return;
       doneSet.add('FLAGS_ATLAS');
-      markProgress('MEDIA_AUDIO', 0.25);
+      markProgress('MEDIA_AUDIO', 0.12);
 
+      // 3. Decode Title Menu art, historical oil paintings, all tech/building artworks, and lazy JS modal chunks
       const targetMenuArt =
         typeof window !== 'undefined' && window.innerHeight > window.innerWidth
           ? menuPortraitArt
           : menuLandscapeArt;
 
+      const mediaAssets = Array.from(
+        new Set<string>([
+          targetMenuArt,
+          ...HISTORICAL_ART_SLIDES.map((s) => s.src),
+          ...Object.values(TECH_ARTWORK_MAP).map((a) => a.src),
+        ])
+      );
+
+      let loadedMedia = 0;
+      const totalTasks = mediaAssets.length + 1; // +1 for lazy UI chunks bundle prefetch
+      const bumpMediaProgress = () => {
+        loadedMedia += 1;
+        markProgress(
+          'MEDIA_AUDIO',
+          Math.min(0.92, 0.12 + (loadedMedia / totalTasks) * 0.8)
+        );
+      };
+
       await Promise.race([
-        preloadImage(targetMenuArt),
-        new Promise((r) => setTimeout(r, 380)),
+        Promise.all([
+          ...mediaAssets.map((src) =>
+            preloadImage(src).finally(bumpMediaProgress)
+          ),
+          prefetchUiChunks().finally(bumpMediaProgress),
+        ]),
+        new Promise((r) => setTimeout(r, 1400)),
       ]);
+      if (cancelled) return;
+
+      // 4. Hardware-adaptive graceful pacing: on ultra-fast 120Hz phones (e.g. iPhone 14 Pro Max)
+      // ensure the splash never flashes away in 300ms while keeping "Menüye Geç" instant.
+      const nowMs =
+        typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const elapsedMs = nowMs - bootStartedAt;
+      const remainingMs = Math.max(0, hardwareProfile.minDisplayMs - elapsedMs);
+      if (remainingMs > 60) {
+        const startFrac = 0.88;
+        const waitStart =
+          typeof performance !== 'undefined' ? performance.now() : Date.now();
+        while (!cancelled) {
+          const tNow =
+            typeof performance !== 'undefined' ? performance.now() : Date.now();
+          const ratio = Math.min(1, (tNow - waitStart) / remainingMs);
+          markProgress('MEDIA_AUDIO', startFrac + ratio * (1 - startFrac));
+          if (ratio >= 1) break;
+          await yieldFrame();
+        }
+      }
+
       doneSet.add('MEDIA_AUDIO');
       if (cancelled) return;
       setProgress(100);

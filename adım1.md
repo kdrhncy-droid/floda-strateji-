@@ -164,7 +164,7 @@
 ### Faz 5 — Yenilenen Müzik, Ses Efektleri, Sefer Zaman Çizelgesi (Timelapse) ve Kademeli 1440 Harita Genişlemesi
 - [ ] **5.1. Geliştirilmiş Dönem Müziği & Yeni Besteler:** Mevcut çevrimdışı Web Audio müzik motoru çok katmanlı, daha sıcak enstrüman tonlarıyla yenilenecek; barış ve savaş durumuna göre dinamik müzik geçişi eklenecek.
 - [ ] **5.2. Yeni Oyun İçi Ses Efektleri (SFX):** Ordu yürüyüşü, kılıç/top çarpışması, kuşatma düşmesi, diplomasi mühür basımı, bina inşası, para/vergi sesi, uyarı borusu ve zarif arayüz tıklama sesleri.
-- [ ] **5.3. Sefer Zaman Çizelgesi (Timelapse Replay):** Her oyun yılının hafif sınır kaydı tutulup, seferin 1440'tan bugüne büyüme/çöküş animasyonunu tek tıkla izleme.
+- [x] **5.3. Sefer Zaman Çizelgesi (Timelapse Replay) & Çevrimdışı Ana Menü Arşivi:** Her oyun yılının delta tabanlı hafif sınır/devlet kaydı ve tarihî dönüm noktaları (`WAR`, `PEACE`, `COALITION`, `EMPIRE`, `SUCCESSION`, `REBELLION`) tutulup; kayıt yuvalarına gömülü olarak ve kalıcı çevrimdışı IndexedDB arşivinde (`Ana Menü -> Timelapse Arşivi` veya `Sistem -> Kayıt Merkezi -> Arşiv`) adlandırma, silme, `.JSON` dışa/içe aktarma ile birlikte `1x/2x/4x` oynatıcıda canlı harita üzerinde izlenebiliyor.
 - [ ] **5.4. Kademeli 1440 Dünya Genişlemesi (80–120 Tarihi Devlet, 600+ Şehir):** Anadolu beylikleri, Balkan prenslikleri, İtalyan şehir devletleri, Avrupa krallıkları/knezlikleri, Ortadoğu ve Asya devletleri tarihi başkent, bayrak, hükümdar ve sınırlarıyla eklenecek; mobil FPS korunacak.
 
 ### Faz 6 — Sona Bırakılan Kapsamlı Doğrulama, iPhone HUD Kontrolü ve Ekran Görüntülü Testler
@@ -174,4 +174,24 @@
   - [ ] iPhone dikey (`390×844`), iPhone yatay (`844×390`) ve iPhone SE yatay (`667×375`) ekranlarda tüm HUD, canlı savaş rozeti, tek merkezli savaş masası, butonlar, çekmeceler ve dokunma alanları (`≥ 44px`, sıfır üst üste binme).
   - [ ] 60 FPS ordu hareketi, yeni devlet dış sınırları, koyulaşan Ekonomi haritası, ikonlu Kaynak haritası, kıyı liman inşası, genişletilmiş araştırma/inşa, toplu yükseltme paneli, genişletilmiş ayarlar ve kayıt/yükleme döngüsü.
   - [ ] Sıfır tarayıcı konsol hatası ve yüksek performans teyidi.
+
+---
+
+### Faz 7 — Dinamik Hükümdar Ömrü, Tarihsel Taht Değişimi ve Alternatif Tarih Hanedan Sistemi *(Uygulandı)*
+
+> **Tasarım İlkesi:** "Tarih tekerrür etsin ama birebir ezberlenmesin." Her devlette gerçek tarihsel hükümdarlar sırasıyla tahta geçer (ör. Osmanlı'da *II. Murad → Fatih Sultan Mehmed → II. Bayezid → Yavuz Sultan Selim → Kanuni Sultan Süleyman*), ancak her hükümdarın **kaç yıl tahtta kalacağı, ne zaman ve hangi sebeple öleceği** her oyunda dinamik ve oynanışa bağlı olarak değişir.
+
+- [x] **7.1. Hükümdar Veri Modeli & Sıralı Tarihsel Hanedan Kuyruğu (`src/data/historicalDynasties.ts`):**
+  - [x] Her `Nation` nesnesine geriye dönük uyumlu (eski save'lerle sorunsuz açılan) `ruler`, `heir`, `dynastyHistory` ve `dynastyQueueIndex` alanları eklendi: ad, unvan, hanedan, doğum/tahta çıkış yılı, yaş, **3 temel beceri** (`İdare`, `Diplomasi`, `Askerlik` 1–6), **10 özel kişilik özelliği** ve veliaht bilgisi.
+  - [x] **Büyük Tarihsel Devletler İçin Gerçek Hükümdar Zinciri (1440):** Osmanlı, Bizans, Memlük, Karakoyunlu/Akkoyunlu/Safevi, Macaristan, Timur/İran, Moskova/Rusya, Kırım, Venedik, Habsburg/Kutsal Roma, Avusturya, Lehistan, Litvanya, Fransa, İngiltere, Kastilya/İspanya, Portekiz, Kalmar, Ming, Japonya, Joseon, Delhi/Babür, İnka, Büyük Orda, Özbek, İskoçya, Mağrip, Necid, Töton, Vijayanagara, Bengal ve Sibir için gerçek sıralı hanedan listeleri eklendi.
+  - [x] **Kültür Tabanlı Otomatik Halef Üretici (Fallback):** Tarihsel liste tükendiğinde veya küçük devletler için kültür ve unvana uygun gerçekçi halef üretimi kuruldu.
+- [x] **7.2. Dinamik Ölüm Olasılığı ve Oynanışa Bağlı Ölüm Nedenleri Motoru (`src/engine/dynastyAndSuccessionEngine.ts`):**
+  - [x] 30 günde bir hafif aylık kontrol (sıfır FPS maliyeti) ile yaşa bağlı doğal ölüm eğrisi ve bilim/tıp teknolojileriyle ömür uzaması kuruldu.
+  - [x] **Sabit Tarih Yerine Dinamik Ölüm Nedenleri:** Doğal Vefat, Salgın/Hastalık (kış/kuşatma), Seferde Savaş Yarası (aktif savaş/harekât), Saray Darbesi/Suikast (düşük istikrar/paşa sadakatsizliği) ve Av Kazası / Ani Rahatsızlık.
+- [x] **7.3. Tahta Çıkış (Cülus), Devlet Etkileri ve 5x Anti-Spam Bildirim Kuralları:**
+  - [x] Yeni hükümdar tahta çıktığında dengeli/hissedilir beceri ve kişilik bonusları (vergi, ticaret, bilim, insan gücü, muharebe, kuşatma hızı, AE soğuması, istikrar) devreye giriyor; oyuncuya tarihî **Cülus Bahşişi / Görkemli Taç Giyme** vs **Hazineyi Koru** karar penceresi (`SuccessionModal`) açılıyor.
+  - [x] Komşu/büyük güçlerde üst bildirim + *Dünya Gazetesi*, uzak küçük AI ülkelerinde yalnızca sessiz *Dünya Gazetesi* akışı (5x hızda spam yok).
+  - [x] **2026 Modern Senaryo Uyumu:** Demokrasi ve seçimli rejimlerde 4–5 yıllık **Genel Seçim / Görev Süresi** döngüsü (yeniden seçilme veya yeni lidere devir), monarşi/otokrasilerde ise ömür boyu dinamik yönetim eklendi.
+  - [x] **Hanedan Kartı & Şecere Arayüzü (`RulerDynastyCard`):** Ülke Bayrağı (Diplomasi) penceresinde ve Yönetim → Saray/Divan sekmesinde canlı hükümdar kartı, 3 beceri, kişilik özelliği, sıradaki veliaht ve açılabilir Hanedan Şeceresi eklendi.
+
 

@@ -3,6 +3,7 @@ import {
   Calendar,
   Coins,
   Download,
+  Film,
   History,
   Play,
   Save,
@@ -11,6 +12,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import { CampaignTimelapse } from '../../types/game';
 import {
   deleteSaveSlot,
   exportSaveRecordToJson,
@@ -35,6 +37,7 @@ interface SaveManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoadRecord: (record: SaveSlotRecord) => void;
+  onPlayTimelapse?: (timelapse: CampaignTimelapse, title?: string) => void;
   onShowToast?: (msg: string) => void;
 }
 
@@ -42,6 +45,7 @@ export const SaveManagerModal: React.FC<SaveManagerModalProps> = ({
   isOpen,
   onClose,
   onLoadRecord,
+  onPlayTimelapse,
   onShowToast,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -268,6 +272,30 @@ export const SaveManagerModal: React.FC<SaveManagerModalProps> = ({
                           <Play className="w-3.5 h-3.5 fill-current" />
                           <span>Yükle</span>
                         </button>
+
+                        {onPlayTimelapse && (() => {
+                          const slotTl = loadGameFromSlot(def.id)?.payload?.timelapse;
+                          if (!slotTl) return null;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                sound.playWarHorn();
+                                onClose();
+                                onPlayTimelapse(
+                                  slotTl,
+                                  `${cleanNationName(meta.nationName)} (${def.title})`
+                                );
+                              }}
+                              aria-label={`${def.title} timelapse izle`}
+                              title="Sefer Zaman Çizelgesi (Timelapse)"
+                              className="aoh3-menu-btn min-h-[40px] px-2.5 py-1.5 rounded-lg text-[#e0bc78] text-xs font-semibold flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                            >
+                              <Film className="w-3.5 h-3.5" />
+                              <span>İzle</span>
+                            </button>
+                          );
+                        })()}
 
                         {canRollback && rollbackMeta && (
                           <button

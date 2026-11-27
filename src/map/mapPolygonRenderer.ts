@@ -20,10 +20,12 @@ import {
   isTerritoryCoastal,
   relationKey,
 } from '../engine/worldBuilder';
+import { getProvinceWeather } from '../engine/seasonalWeatherEngine';
 import {
   ActiveWar,
   ArmyMovement,
   DiplomaticRelation,
+  GameModeId,
   MapMode,
   Nation,
   SeaArmy,
@@ -32,6 +34,7 @@ import {
 import { ClassifiedBorderMap } from './borderClassifier';
 import { MapGeometryCache } from './spatialIndex';
 import { drawNationFlagOnCanvas } from './nationFlagRenderer';
+import { renderCartographicOceanLayer } from './oceanCartographyRenderer';
 
 /** Deterministic 0..1 hash so each province keeps its shade between frames. */
 function hashStringToUnit(id: string): number {
@@ -80,6 +83,8 @@ export function resolveTerritoryFillColor(params: {
   wars: ActiveWar[];
   playerNationId: string;
   selectedTerritoryId: string | null;
+  tick?: number;
+  gameMode?: GameModeId;
 }): string {
   const {
     territory: t,
@@ -90,6 +95,8 @@ export function resolveTerritoryFillColor(params: {
     wars,
     playerNationId,
     selectedTerritoryId,
+    tick = 0,
+    gameMode,
   } = params;
 
   const owner = nations[t.ownerId];
@@ -98,6 +105,9 @@ export function resolveTerritoryFillColor(params: {
   if (mapMode === 'POLITICAL') return provinceTint(owner.color, t.id);
   if (mapMode === 'TERRAIN') {
     return TERRAIN_INFO[t.terrain || 'OVA']?.color || '#4ADE80';
+  }
+  if (mapMode === 'WEATHER') {
+    return getProvinceWeather(t, tick, gameMode).mapColor;
   }
 
   if (mapMode === 'DIPLOMATIC') {
@@ -187,6 +197,8 @@ export function renderOceanAndPolygons(params: {
   visibleTerritoryIds: Set<string>;
   classifiedBorders?: ClassifiedBorderMap | null;
   borderThicknessMultiplier?: number;
+  tick?: number;
+  gameMode?: GameModeId;
 }): void {
   const {
     ctx,
@@ -209,47 +221,29 @@ export function renderOceanAndPolygons(params: {
     visibleTerritoryIds,
     classifiedBorders,
     borderThicknessMultiplier = 1.0,
+    tick = 0,
+    gameMode,
   } = params;
 
-  // 1. Sapphire & Deep Azure Ocean Background (Screen Space)
-  const oceanGrad = ctx.createRadialGradient(
-    width * 0.5,
-    height * 0.45,
-    30,
-    width * 0.5,
-    height * 0.5,
-    Math.max(width, height) * 0.85
-  );
-  oceanGrad.addColorStop(0, '#14497D');
-  oceanGrad.addColorStop(0.55, '#0D335B');
-  oceanGrad.addColorStop(1, '#071B34');
-  ctx.fillStyle = oceanGrad;
-  ctx.fillRect(0, 0, width, height);
+  // 1. Cartographic Deep-Atlas Ocean, Bathymetry Shelf, Compass Roses, Sea Names & Maritime Lanes
+  renderCartographicOceanLayer({
+    ctx,
+    width,
+    height,
+    transform,
+    cache,
+    visibleFeatures,
+    classifiedBorders,
+    projection,
+    mapMode,
+    tick,
+    gameMode,
+  });
 
-  // Enter World Space
+  // Enter World Space for Land Polygons, Borders & Overlays
   ctx.save();
   ctx.translate(transform.x, transform.y);
   ctx.scale(transform.k, transform.k);
-
-  // 1B. Projected Globe Basin & Graticule Grid
-  if (cache.spherePath) {
-    const globeWaterGrad = ctx.createLinearGradient(0, 0, 0, height);
-    globeWaterGrad.addColorStop(0, '#0E3966');
-    globeWaterGrad.addColorStop(0.5, '#154D85');
-    globeWaterGrad.addColorStop(1, '#0C3159');
-    ctx.fillStyle = globeWaterGrad;
-    ctx.fill(cache.spherePath);
-
-    ctx.lineWidth = 1.4 / transform.k;
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
-    ctx.stroke(cache.spherePath);
-  }
-
-  if (cache.graticulePath) {
-    ctx.lineWidth = 0.55 / transform.k;
-    ctx.strokeStyle = 'rgba(125, 211, 252, 0.08)';
-    ctx.stroke(cache.graticulePath);
-  }
 
   const _unusedOrderId = armyOrderSourceId;
   void _unusedOrderId;
@@ -293,11 +287,21 @@ export function renderOceanAndPolygons(params: {
       wars,
       playerNationId,
       selectedTerritoryId,
+      tick,
+      gameMode,
     });
+    // Seal land opaquely against ocean bathymetry/sea-lanes: fogged territories get a dark slate
+    // undercoat first so Fog of War darkens countries cleanly without letting ocean halos bleed inside land.
+    if (!hasIntel) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#0B1D31';
+      ctx.fill(path2d);
+      ctx.lineWidth = seamLineW;
+      ctx.strokeStyle = '#0B1D31';
+      ctx.stroke(path2d);
+    }
     ctx.fillStyle = fillColor;
-    // AoH3 land is opaque: letting the ocean tint through turned every country
-    // muddy and made the hairline cracks between subdivided provinces obvious.
-    ctx.globalAlpha = hasIntel ? 1 : 0.55;
+    ctx.globalAlpha = hasIntel ? 1 : 0.62;
     ctx.fill(path2d);
 
     // Seal the sub-pixel seams between adjacent provinces by dilating each fill

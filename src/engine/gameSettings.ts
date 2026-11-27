@@ -181,6 +181,7 @@ export interface GameSettings {
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
+  dynamicWarMusic: boolean;
   capitulationThresholdPct: CapitulationThresholdOption;
 }
 
@@ -201,6 +202,7 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   masterVolume: 85,
   musicVolume: 65,
   sfxVolume: 80,
+  dynamicWarMusic: true,
   capitulationThresholdPct: 75,
 };
 
@@ -303,6 +305,10 @@ export function loadGameSettings(): GameSettings {
       masterVolume: clampPct(parsed.masterVolume, DEFAULT_GAME_SETTINGS.masterVolume),
       musicVolume: clampPct(parsed.musicVolume, DEFAULT_GAME_SETTINGS.musicVolume),
       sfxVolume: clampPct(parsed.sfxVolume, DEFAULT_GAME_SETTINGS.sfxVolume),
+      dynamicWarMusic:
+        typeof parsed.dynamicWarMusic === 'boolean'
+          ? parsed.dynamicWarMusic
+          : DEFAULT_GAME_SETTINGS.dynamicWarMusic,
     };
   } catch {
     return DEFAULT_GAME_SETTINGS;

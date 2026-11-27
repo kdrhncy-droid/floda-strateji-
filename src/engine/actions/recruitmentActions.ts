@@ -28,12 +28,12 @@ import { sound } from '../../utils/soundEngine';
 import { EmpireActionPatch } from './empireActionTypes';
 
 export const RECRUIT_GOLD_PER_1K: Record<UnitType, number> = {
-  infantry: 280,
-  armor: 440,
-  airDrone: 760,
+  infantry: 420,
+  armor: 680,
+  airDrone: 1150,
 };
 
-export const MIXED_2K_BASE_GOLD = 760;
+export const MIXED_2K_BASE_GOLD = 1150;
 
 export function calculateRecruitGoldCost(
   unitType: UnitType | 'MIXED',

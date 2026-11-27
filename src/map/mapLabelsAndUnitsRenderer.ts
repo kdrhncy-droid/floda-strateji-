@@ -45,6 +45,7 @@ export interface RenderLabelsParams {
   fogOfWarEnabled: boolean;
   visibleTerritoryIds: Set<string>;
   projectedCentroids?: Record<string, [number, number]>;
+  timelapseMode?: boolean;
 }
 
 function formatTroopBadgeNumber(garrison: number, zoomK: number): string {
@@ -283,6 +284,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
     mapLabelDensity = 'BALANCED',
     mapLabelScaleMultiplier = 1.0,
     projectedCentroids,
+    timelapseMode = false,
   } = params;
 
   const isMobileViewport = width < 768 || height < 540;
@@ -611,6 +613,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
       );
 
     const canSeeSiege =
+      !timelapseMode &&
       Boolean(t.siege) &&
       !inBattle &&
       (hasIntel ||
@@ -620,6 +623,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
         isNationPlayerOrAlly(t.siege?.defenderId, playerNationId, nations, relations));
 
     const wantsResourceBadge =
+      !timelapseMode &&
       isResourceOrEcoLens &&
       !inBattle &&
       !canSeeSiege &&
@@ -630,6 +634,7 @@ export function renderMapLabelsAndBattles(params: RenderLabelsParams): void {
 
     const garrison = t.garrison || 0;
     const wantsArmyShield =
+      !timelapseMode &&
       !isResourceOrEcoLens &&
       !inBattle &&
       !canSeeSiege &&

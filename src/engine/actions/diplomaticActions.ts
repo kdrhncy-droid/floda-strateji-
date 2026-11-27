@@ -584,7 +584,7 @@ export function executeDiplomaticActionDomain(params: {
       DIPLOMACY_POINT_COSTS.DECLARE_WAR || 0
     );
     if ('error' in spent) return { toast: spent.error };
-    sound.playWarHorn();
+    sound.playWarDrum();
     const resolution = resolveWarParticipants(
       playerNationId,
       targetNationId,
@@ -948,7 +948,7 @@ export function executeDiplomaticActionDomain(params: {
     );
     const stolenResearch = 35;
 
-    sound.playTreaty();
+    sound.playCoin();
     return {
       nations: {
         ...nations,

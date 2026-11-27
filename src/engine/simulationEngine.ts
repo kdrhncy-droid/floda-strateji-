@@ -22,6 +22,8 @@ import {
   calculateNationTradeAndStraits,
   NationTradeAndStraitsSummary,
 } from './straitsAndTradeEngine';
+import { getProvinceWeather } from './seasonalWeatherEngine';
+import { getRulerModifiers } from './dynastyAndSuccessionEngine';
 
 type NationTechState = Pick<Nation, 'unlockedTechs'> | null | undefined;
 
@@ -596,8 +598,9 @@ export function calculateNationEconomy(
         )
       : 1.0;
 
+  const rulerMods = getRulerModifiers(nation);
   const taxRateFactor = (nation.taxRate || 25) / 25;
-  let taxTechMult = 1 + ideology.taxBonus / 100;
+  let taxTechMult = 1 + ideology.taxBonus / 100 + rulerMods.taxMultDelta;
   taxTechMult += resourceEffects.taxPct / 100;
   if (unlockedTechs.includes('eco_1')) taxTechMult += 0.15;
   if (unlockedTechs.includes('eco_3b')) taxTechMult += 0.12;
@@ -650,7 +653,8 @@ export function calculateNationEconomy(
     tradeHubBonus +
     shipyardBonus +
     tradeAgreementCount * 0.14 +
-    resourceEffects.tradePct / 100;
+    resourceEffects.tradePct / 100 +
+    rulerMods.tradeMultDelta;
   if (unlockedTechs.includes('eco_3')) tradeMult += 0.3;
   if (unlockedTechs.includes('eco_4b')) tradeMult += 0.18;
   if (unlockedTechs.includes('eco_6b')) tradeMult += 0.25;
@@ -755,7 +759,7 @@ export function calculateNationEconomy(
     (budget.research || 15) * 0.11 +
     resourceEffects.researchFlat;
   if (enactedReforms.includes('ref_welfare_state')) researchBase += 5;
-  let researchMult = 1 + ideology.researchBonus / 100;
+  let researchMult = 1 + ideology.researchBonus / 100 + rulerMods.researchMultDelta;
   if (unlockedTechs.includes('sci_1')) researchMult += 0.2;
   if (unlockedTechs.includes('sci_2b')) researchMult += 0.18;
   if (unlockedTechs.includes('sci_3')) researchMult += 0.25;
@@ -780,7 +784,10 @@ export function calculateNationEconomy(
     popDailyManpower +
     Math.round((barracksManpower + granaryManpower) * empireScale);
   let manpowerMult =
-    1 + ideology.manpowerGrowthBonus / 100 + resourceEffects.manpowerPct / 100;
+    1 +
+    ideology.manpowerGrowthBonus / 100 +
+    resourceEffects.manpowerPct / 100 +
+    rulerMods.manpowerMultDelta;
   if (unlockedTechs.includes('eco_1b')) manpowerMult += 0.1;
   if (unlockedTechs.includes('sci_1b')) manpowerMult += 0.15;
   if (unlockedTechs.includes('adm_3')) manpowerMult += 0.35;
@@ -943,10 +950,16 @@ export function computeCombatStrength(
   nation: Nation,
   territory: Territory,
   isDefender: boolean,
-  unitComp?: UnitComposition
+  unitComp?: UnitComposition,
+  tick?: number,
+  gameMode?: GameModeId
 ): number {
   const ideology = IDEOLOGIES[nation?.ideology] || IDEOLOGIES.MONARCHY;
-  let mult = 1 + ideology.militaryAttackBonus / 100;
+  const rulerMods = getRulerModifiers(nation);
+  let mult =
+    1 +
+    ideology.militaryAttackBonus / 100 +
+    (isDefender ? rulerMods.combatDefenseDelta : rulerMods.combatAttackDelta);
 
   // Budget effect
   mult += ((nation?.budget?.military ?? 25) - 25) * 0.006;
@@ -1033,7 +1046,15 @@ export function computeCombatStrength(
     mult *= Math.max(0.58, 1 - (warEx / 100) * 0.42);
   }
 
-  return Math.max(0.45, mult);
+  // Seasonal weather troop efficiency (winter blizzards, monsoon rains, heatwaves)
+  if (typeof tick === 'number' && territory) {
+    const weather = getProvinceWeather(territory, tick, gameMode);
+    mult *= isDefender
+      ? weather.defenderEfficiencyMultiplier
+      : weather.attackerEfficiencyMultiplier;
+  }
+
+  return Math.max(0.4, mult);
 }
 
 export function formatGameDate(
