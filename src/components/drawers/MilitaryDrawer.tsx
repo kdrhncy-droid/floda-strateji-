@@ -5,7 +5,6 @@ import { ArmyModernizationCard } from "./ArmyModernizationCard";
 import {
   ARMY_GENERATIONS_1440,
   ARMY_GENERATIONS_2026,
-  computeNationTechMetrics,
   getArmyGenerationInfo,
   getCommandersForMode,
   getNationModernizedTier,
@@ -22,10 +21,7 @@ import {
   getLordLoyaltySummary,
   getLordRetinueTroops,
 } from "../../engine/pashaAndFiefEngine";
-import {
-  computeNationEconomySummary,
-  computeNationManpowerCap,
-} from "../../engine/simulationEngine";
+import { computeNationManpowerCap } from "../../engine/simulationEngine";
 import { NationFlagCanvasBadge } from "../../map/nationFlagRenderer";
 import { cleanNationName, cleanProvinceName } from "../../utils/formatters";
 import { sound } from "../../utils/soundEngine";
@@ -38,6 +34,7 @@ import {
   UnitTypeIllustrationSvg,
 } from "../illustrations/AoH3Illustrations";
 import { Nation } from "../../types/game";
+import { computeWorldPowerRankings } from "../../engine/worldRankings";
 
 type MilitaryTab = "TREE" | "FORCES" | "RECRUIT" | "COMMANDERS" | "RANKINGS";
 
@@ -70,8 +67,18 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
   onInspectNation,
   onClose,
   gameMode = "EMPIRES_1440",
+  openRankingsSignal = 0,
 }) => {
-  const [militaryTab, setMilitaryTab] = useState<MilitaryTab>("TREE");
+  const [militaryTab, setMilitaryTab] = useState<MilitaryTab>(() =>
+    openRankingsSignal > 0 ? "RANKINGS" : "TREE"
+  );
+  const lastRankingsSignalRef = useRef<number>(openRankingsSignal);
+  useEffect(() => {
+    if (openRankingsSignal > 0 && openRankingsSignal !== lastRankingsSignalRef.current) {
+      lastRankingsSignalRef.current = openRankingsSignal;
+      setMilitaryTab("RANKINGS");
+    }
+  }, [openRankingsSignal]);
   const [inspectedEconomyNation, setInspectedEconomyNation] =
     useState<Nation | null>(null);
   const rankHoldTimerRef = useRef<number | null>(null);
@@ -184,93 +191,18 @@ export const MilitaryDrawer: React.FC<CommandDrawersProps> = ({
 
   const { fiefCountByCommander, rankedList, playerRankIndex } = useMemo(() => {
     const fiefCounts = new Map<string, number>();
-    const statsByNation = new Map<
-      string,
-      { ownedCount: number; army: number; gdp: number }
-    >();
-
     for (const t of Object.values(territories)) {
-      if (!t) continue;
-      if (t.ownerId === playerNation.id && t.fiefLordId) {
+      if (t && t.ownerId === playerNation.id && t.fiefLordId) {
         fiefCounts.set(t.fiefLordId, (fiefCounts.get(t.fiefLordId) || 0) + 1);
       }
-      const prev = statsByNation.get(t.ownerId) || {
-        ownedCount: 0,
-        army: 0,
-        gdp: 0,
-      };
-      prev.ownedCount += 1;
-      prev.army += t.garrison || 0;
-      prev.gdp +=
-        t.baseGdp *
-        (1 +
-          (t.buildings.factory || 0) * 0.25 +
-          (t.buildings.capitalPalace || 0) * 0.15);
-      statsByNation.set(t.ownerId, prev);
     }
-    for (const mv of movements) {
-      if (!mv?.ownerId) continue;
-      const prev = statsByNation.get(mv.ownerId) || {
-        ownedCount: 0,
-        army: 0,
-        gdp: 0,
-      };
-      prev.army += mv.troops || 0;
-      statsByNation.set(mv.ownerId, prev);
-    }
-
-    const list = Object.values(nations)
-      .filter((n) => !n.isEliminated)
-      .map((n) => {
-        const st = statsByNation.get(n.id) || {
-          ownedCount: 0,
-          army: 0,
-          gdp: 0,
-        };
-        const metrics = computeNationTechMetrics(n, territories, gameMode);
-        const econSum = computeNationEconomySummary(n, territories);
-        const economyScore = Math.round(econSum.totalEconomy * 1.9 + n.treasury * 0.08);
-        const armyScore = Math.round(st.army / 180);
-        const techScore = Math.round(metrics.techLevel * 120);
-        const prestigeScore = Math.round(metrics.prestige * 1.15);
-        const capitalTerritoryScore = Math.round(
-          metrics.capitalLevel * 95 + st.ownedCount * 48
-        );
-        const score =
-          economyScore +
-          armyScore +
-          techScore +
-          prestigeScore +
-          capitalTerritoryScore;
-        return {
-          nation: n,
-          ownedCount: st.ownedCount,
-          army: st.army,
-          gdp: st.gdp,
-          totalEconomy: econSum.totalEconomy,
-          techLevel: metrics.techLevel,
-          maxTechLevel: metrics.maxTechLevel,
-          capitalLevel: metrics.capitalLevel,
-          prestige: metrics.prestige,
-          score,
-        };
-      })
-      .sort((a, b) => {
-        if (rankingSortBy === "GDP")
-          return b.totalEconomy - a.totalEconomy || b.score - a.score;
-        if (rankingSortBy === "ARMY") return b.army - a.army;
-        if (rankingSortBy === "TECH")
-          return b.techLevel - a.techLevel || b.score - a.score;
-        if (rankingSortBy === "PRESTIGE")
-          return b.prestige - a.prestige || b.score - a.score;
-        if (rankingSortBy === "CAPITAL")
-          return (
-            b.capitalLevel * 10 +
-            b.ownedCount -
-            (a.capitalLevel * 10 + a.ownedCount) || b.score - a.score
-          );
-        return b.score - a.score;
-      });
+    const list = computeWorldPowerRankings(
+      nations,
+      territories,
+      movements,
+      gameMode,
+      rankingSortBy
+    );
 
     return {
       fiefCountByCommander: fiefCounts,

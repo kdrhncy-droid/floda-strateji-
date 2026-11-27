@@ -48,6 +48,8 @@ interface TopHudBarProps {
   onOpenNewsDrawer: () => void;
   onFocusCapital?: () => void;
   onInspectNation?: (nationId: string) => void;
+  playerWorldRank?: number;
+  onOpenWorldRankings?: () => void;
 }
 
 const signed = (value: number, digits = 0) => {
@@ -86,6 +88,8 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
   onOpenNewsDrawer,
   onFocusCapital,
   onInspectNation,
+  playerWorldRank,
+  onOpenWorldRankings,
 }) => {
   const [visibleRecruitBadge, setVisibleRecruitBadge] =
     useState<RecruitFeedbackEvent | null>(null);
@@ -136,32 +140,44 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
       ? `${(playerEconomy.dailyManpower / 1000).toFixed(1)}B`
       : `${Math.round(playerEconomy.dailyManpower)}`;
 
+  const rankDisplay = playerWorldRank ?? 1;
+
+  const handleOpenRankings = () => {
+    sound.playClick();
+    if (onOpenWorldRankings) {
+      onOpenWorldRankings();
+    } else {
+      onSetActiveTab('MILITARY');
+    }
+  };
+
   const cellClass = (tab: BottomDrawerTab) =>
     `aoh3-stat ${activeTab === tab ? 'is-active' : ''}`;
 
   return (
     <header className="hud-header aoh3-topbar hud-surface px-2 sm:px-3 py-1.5 sm:py-0 sm:h-14 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 z-30 shrink-0">
       <div className="flex items-center justify-between gap-2 w-full sm:contents">
-        {/* Imperial flag plate + two counters, exactly like the reference corner */}
-        <div className="flex items-center gap-2 min-w-0 order-1">
-          <button
-            onClick={() => {
-              sound.playClick();
-              if (onInspectNation) {
-                onInspectNation(playerNation.id);
-              } else {
-                onSetActiveTab(
-                  activeTab === 'GOVERNMENT' ? 'NONE' : 'GOVERNMENT'
-                );
-              }
-            }}
-            aria-label="Ülke diplomasisi ve ittifak özetini aç"
-            title={`${nationTitle} · İstikrar %${Math.round(
-              playerNation.stability
-            )} · ${playerEconomy.territoryCount} eyalet`}
-            className="flex flex-col items-center shrink-0 rounded-[3px] transition-colors hover:brightness-110"
-          >
-            <span className="aoh3-crest block">
+        {/* Imperial flag plate + clickable star rank & territory counter */}
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 order-1">
+          <div className="flex flex-col items-center shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                if (onInspectNation) {
+                  onInspectNation(playerNation.id);
+                } else {
+                  onSetActiveTab(
+                    activeTab === 'GOVERNMENT' ? 'NONE' : 'GOVERNMENT'
+                  );
+                }
+              }}
+              aria-label="Ülke diplomasisi ve ittifak özetini aç"
+              title={`${nationTitle} · İstikrar %${Math.round(
+                playerNation.stability
+              )} · ${playerEconomy.territoryCount} eyalet`}
+              className="aoh3-crest block rounded-[3px] transition-colors hover:brightness-110 cursor-pointer"
+            >
               <NationFlagCanvasBadge
                 nationId={playerNation.id}
                 flagCode={playerNation.flagCode}
@@ -169,14 +185,41 @@ export const TopHudBar: React.FC<TopHudBarProps> = ({
                 width={38}
                 height={26}
               />
-            </span>
+            </button>
             <span className="aoh3-crest-ribbon">
-              <Star className="h-2 w-2 fill-[#e0b86e] text-[#e0b86e]" />
-              {Math.round(playerNation.stability)}
+              <button
+                type="button"
+                data-testid="hud-world-rank-btn"
+                onClick={handleOpenRankings}
+                aria-label={`En güçlü ülkeler sıralamasını aç (Sıra #${rankDisplay})`}
+                title={`Dünya Güç Sıralaması: #${rankDisplay} — Açmak için dokun`}
+                className="inline-flex items-center gap-0.5 text-[#f3ead7] hover:text-[#e0b86e] transition-colors cursor-pointer"
+              >
+                <Star className="h-2.5 w-2.5 fill-[#e0b86e] text-[#e0b86e] shrink-0" />
+                <span>{rankDisplay}</span>
+              </button>
               <span className="aoh3-crest-ribbon-sep" />
-              <Flag className="h-2 w-2 text-[#d8b471]" />
-              {playerEconomy.territoryCount}
+              <span
+                title={`${playerEconomy.territoryCount} eyalet`}
+                className="inline-flex items-center gap-0.5"
+              >
+                <Flag className="h-2 w-2 text-[#d8b471] shrink-0" />
+                <span>{playerEconomy.territoryCount}</span>
+              </span>
             </span>
+          </div>
+
+          {/* Short-landscape fallback star rank button (ribbon below flag is hidden under 540px height) */}
+          <button
+            type="button"
+            data-testid="hud-world-rank-landscape-btn"
+            onClick={handleOpenRankings}
+            aria-label={`En güçlü ülkeler sıralamasını aç (Sıra #${rankDisplay})`}
+            title={`Dünya Güç Sıralaması: #${rankDisplay}`}
+            className="hidden [@media(max-height:540px)_and_(orientation:landscape)]:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#14100c] border border-[#caa15a]/45 text-[10px] font-mono-num font-bold text-[#e0b86e] hover:border-[#e0b86e] cursor-pointer shrink-0"
+          >
+            <Star className="h-2.5 w-2.5 fill-[#e0b86e] text-[#e0b86e] shrink-0" />
+            <span>{rankDisplay}</span>
           </button>
         </div>
 

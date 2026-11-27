@@ -18,6 +18,7 @@ import {
 import { music } from './engine/musicEngine';
 import { sound } from './utils/soundEngine';
 import { TopHudBar } from './components/hud/TopHudBar';
+import { computeWorldPowerRankings } from './engine/worldRankings';
 import { AoH3ChronicleLog } from './components/hud/AoH3ChronicleLog';
 import { AoH3SelectionChips } from './components/hud/AoH3SelectionChips';
 import { DiplomaticOfferBanner } from './components/hud/DiplomaticOfferBanner';
@@ -204,6 +205,7 @@ function GameAppInner() {
     music.isPlaying
   );
   const [idbReadyVersion, setIdbReadyVersion] = useState<number>(0);
+  const [openRankingsSignal, setOpenRankingsSignal] = useState<number>(0);
   const [showBootSplash, setShowBootSplash] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -641,6 +643,18 @@ function GameAppInner() {
     [playerNation, territories]
   );
 
+  const playerWorldRank = useMemo(() => {
+    const list = computeWorldPowerRankings(
+      nations,
+      territories,
+      movements,
+      gameMode,
+      'SCORE'
+    );
+    const idx = list.findIndex((r) => r.nation.id === playerNation.id);
+    return idx >= 0 ? idx + 1 : 1;
+  }, [nations, territories, movements, gameMode, playerNation.id]);
+
   const selectedTerritory = selectedTerritoryId
     ? territories[selectedTerritoryId] || null
     : null;
@@ -1043,6 +1057,11 @@ function GameAppInner() {
         onOpenNewsDrawer={() => store.setShowNewsDrawer(true)}
         onFocusCapital={() => setFocusCapitalSignal((v) => v + 1)}
         onInspectNation={(nId) => setInspectedNationId(nId)}
+        playerWorldRank={playerWorldRank}
+        onOpenWorldRankings={() => {
+          setOpenRankingsSignal((v) => v + 1);
+          store.setActiveTab('MILITARY');
+        }}
         showZoomControls={settings.showZoomControls}
         onZoomIn={() => handleMapZoom(1.3)}
         onZoomOut={() => handleMapZoom(0.77)}
@@ -1300,6 +1319,7 @@ function GameAppInner() {
             <CommandDrawers
               activeTab={activeTab}
               onClose={() => store.setActiveTab('NONE')}
+              openRankingsSignal={openRankingsSignal}
               playerNation={playerNation}
               playerEconomy={playerEconomy}
               selectedTerritory={selectedTerritory}

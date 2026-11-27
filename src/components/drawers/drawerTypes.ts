@@ -113,4 +113,5 @@ export interface CommandDrawersProps {
   tick?: number;
   gameMode?: GameModeId;
   fogOfWarEnabled?: boolean;
+  openRankingsSignal?: number;
 }
