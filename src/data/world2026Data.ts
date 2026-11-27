@@ -22,9 +22,9 @@ export const GAME_MODES: {
   {
     id: 'EMPIRES_1440',
     name: '1440: İmparatorluklar Çağı',
-    subtitle: 'Odaklı 16 Büyük Krallık (Yüksek Performans)',
+    subtitle: '76 Devlet · Tüm Avrasya, Afrika ve Asya',
     description:
-      '1440 yılı Avrasya ve Akdeniz coğrafyasında sadece 16 büyük imparatorluk (Osmanlı, Memlük, Timur, Kutsal Roma, Fransa vb.). Kolay yönetim ve hızlı test odaklı.',
+      'Osmanlı, Bizans, Memlük, Timur, Ming, Kutsal Roma, Fransa ve daha fazlası.',
     startingGoldMultiplier: 1.25,
     startingTension: 20,
   },

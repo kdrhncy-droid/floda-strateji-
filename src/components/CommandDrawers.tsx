@@ -80,7 +80,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
                   className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
                 />
                 <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
-                  İmparatorluk Hazinesi, Vergi ve Bütçe
+                  Hazine &amp; Bütçe
                 </h2>
               </>
             )}
@@ -91,7 +91,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
                   className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
                 />
                 <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
-                  Diplomasi, Koalisyonlar ve Barış Masası
+                  Diplomasi
                 </h2>
               </>
             )}
@@ -102,7 +102,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
                   className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
                 />
                 <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
-                  İdeoloji, Reformlar ve Teknoloji Ağacı
+                  Yönetim &amp; Teknoloji
                 </h2>
               </>
             )}
@@ -113,7 +113,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
                   className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
                 />
                 <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
-                  Birlik Ağacı, Ordularım &amp; Güç Sıralaması
+                  Ordugâh
                 </h2>
               </>
             )}
@@ -124,7 +124,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
                   className="w-4 h-4 sm:w-5 sm:h-5 text-[#e0b86e] shrink-0"
                 />
                 <h2 className="font-display text-xs sm:text-base font-bold text-[#f3ead7] truncate">
-                  İnşaat &amp; Yatırım Atölyesi
+                  İnşaat
                 </h2>
               </>
             )}
@@ -142,7 +142,7 @@ export const CommandDrawers: React.FC<CommandDrawersProps> = (props) => {
               ) : (
                 <ChevronDown className="w-3.5 h-3.5 shrink-0" />
               )}
-              <span>
+              <span className="hidden min-[430px]:inline">
                 {drawerSizeMode === 'FULL'
                   ? 'Yarım Panel'
                   : drawerSizeMode === 'COMPACT'

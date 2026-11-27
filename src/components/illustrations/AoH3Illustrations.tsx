@@ -466,7 +466,7 @@ export const AoH3MenuBanner: React.FC<{
   subtitle,
   icon = 'crown',
   rightSlot,
-  className = 'h-16 sm:h-[72px]',
+  className = 'h-16 sm:h-[72px] [@media(max-height:500px)]:hidden',
 }) => {
   const artwork = getTechArtwork(artKey, branch);
 

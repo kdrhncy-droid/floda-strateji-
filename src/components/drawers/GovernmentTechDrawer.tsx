@@ -591,7 +591,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
         <div
           role="tablist"
           aria-label="Hükümet ve Teknoloji Sekmeleri"
-          className="flex items-center gap-1 bg-[#120f0c] p-1 rounded-xl border border-[#caa15a]/30 w-full sm:w-auto max-w-full overflow-x-auto"
+          className="grid grid-cols-3 lg:flex items-center gap-1 bg-[#120f0c] p-1 rounded-xl border border-[#caa15a]/30 w-full lg:w-auto max-w-full overflow-x-auto"
         >
           <button
             type="button"
@@ -599,7 +599,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={drawerSection === "TECH"}
             data-testid="gov-tab-tech"
             onClick={() => setDrawerSection("TECH")}
-            className={`min-h-[44px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] flex-1 lg:flex-initial px-2 lg:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               drawerSection === "TECH"
                 ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
                 : "text-[#d8cbb5] hover:text-white"
@@ -608,7 +608,7 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             <FlaskConical className="w-3.5 h-3.5 shrink-0" />
             <span>Teknoloji</span>
             <span
-              className={`font-mono-num text-[10px] font-extrabold ${
+              className={`hidden lg:inline font-mono-num text-[10px] font-extrabold ${
                 drawerSection === "TECH" ? "text-[#14110e]/80" : "text-amber-300"
               }`}
             >
@@ -622,20 +622,21 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={drawerSection === "DIVAN"}
             data-testid="gov-tab-divan"
             onClick={() => setDrawerSection("DIVAN")}
-            className={`min-h-[44px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] flex-1 lg:flex-initial px-2 lg:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               drawerSection === "DIVAN"
                 ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
                 : "text-[#d8cbb5] hover:text-white"
             }`}
           >
             <Crown className="w-3.5 h-3.5 shrink-0" />
-            <span>
+            <span className="lg:hidden">Divan</span>
+            <span className="hidden lg:inline">
               {gameMode === "EMPIRES_1440"
                 ? "Divan & Başkent"
                 : "Başkent & Eğitim"}
             </span>
             <span
-              className={`font-mono-num text-[10px] font-extrabold ${
+              className={`hidden lg:inline font-mono-num text-[10px] font-extrabold ${
                 drawerSection === "DIVAN" ? "text-[#14110e]/80" : "text-[#e0b86e]"
               }`}
             >
@@ -649,15 +650,15 @@ export const GovernmentTechDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={drawerSection === "STATE"}
             data-testid="gov-tab-state"
             onClick={() => setDrawerSection("STATE")}
-            className={`min-h-[44px] flex-1 sm:flex-initial px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] flex-1 lg:flex-initial px-2 lg:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               drawerSection === "STATE"
                 ? "bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14110e] shadow"
                 : "text-[#d8cbb5] hover:text-white"
             }`}
           >
             <ScrollText className="w-3.5 h-3.5 shrink-0" />
-            <span className="sm:hidden">Reform</span>
-            <span className="hidden sm:inline">Rejim &amp; İmparatorluk</span>
+            <span className="lg:hidden">Reform</span>
+            <span className="hidden lg:inline">Rejim &amp; İmparatorluk</span>
           </button>
         </div>
 

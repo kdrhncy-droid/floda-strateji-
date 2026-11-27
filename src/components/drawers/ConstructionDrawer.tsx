@@ -385,7 +385,7 @@ export const ConstructionDrawer: React.FC<CommandDrawersProps> = ({
                 sound.playClick();
                 setCategory(tab.id);
               }}
-              className={`min-h-[38px] px-2 py-1 rounded-lg text-[11px] font-bold transition-colors truncate cursor-pointer ${
+              className={`min-h-[38px] px-1 sm:px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-colors truncate cursor-pointer ${
                 active
                   ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow'
                   : 'text-[#d8cbb5] hover:text-white'
@@ -406,7 +406,7 @@ export const ConstructionDrawer: React.FC<CommandDrawersProps> = ({
               <span>İnşa Edilebilir Yapılar ({filteredItems.length})</span>
             </span>
             <span className="text-[10px] text-[#9b8e78]">
-              Yapı seçip sağdan şehir tıklayın
+              Yapı seçip şehir tıklayın
             </span>
           </div>
 

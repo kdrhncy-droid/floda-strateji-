@@ -166,11 +166,11 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
       <AoH3MenuBanner
         artKey="COURT"
         branch="ADMINISTRATION"
-        title="İmparatorluk Diplomasisi & İttifak Ağı"
-        subtitle={`${pactSummary.allies.length} Müttefik · ${playerWars.length} Aktif Savaş`}
+        title="Diplomasi"
+        subtitle={`${pactSummary.allies.length} İttifak · ${playerWars.length} Savaş`}
         icon="handshake"
         rightSlot={
-          <div className="flex items-center gap-2.5 px-2.5 py-1 rounded-xl bg-[#14100c]/85 border border-[#caa15a]/35 font-mono-num text-[11px]">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-2.5 py-1 rounded-xl bg-[#14100c]/85 border border-[#caa15a]/35 font-mono-num text-[10.5px] sm:text-[11px]">
             <span className="text-[#e0b86e] font-bold">
               {(playerNation.diplomacyPoints ?? 100).toFixed(0)} DP
             </span>
@@ -185,7 +185,9 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                   : 'text-emerald-400 font-bold'
               }
             >
-              Koalisyon {Math.round(playerNation.aggressiveExpansion)}/100
+              <span className="sm:hidden">AE </span>
+              <span className="hidden sm:inline">Koalisyon </span>
+              {Math.round(playerNation.aggressiveExpansion)}/100
             </span>
           </div>
         }
@@ -385,9 +387,9 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
         {(
           [
             { id: 'ALL', label: `Tümü (${Object.values(nations).filter((n) => !n.isEliminated).length})` },
-            { id: 'ALLIES', label: `İttifaklar (${pactSummary.allies.length})` },
-            { id: 'NEIGHBORS', label: 'Komşular' },
-            { id: 'WARS', label: 'Savaş & Gerginlik' },
+            { id: 'ALLIES', label: `İttifak (${pactSummary.allies.length})` },
+            { id: 'NEIGHBORS', label: 'Komşu' },
+            { id: 'WARS', label: 'Savaş' },
           ] as const
         ).map((f) => (
           <button
@@ -395,7 +397,7 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
             type="button"
             data-testid={`diplo-filter-${f.id}`}
             onClick={() => setDiploFilter(f.id)}
-            className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`min-h-[38px] px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               diploFilter === f.id
                 ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] font-bold'
                 : 'bg-[#16120e] text-[#d8cbb5] border border-[#caa15a]/30 hover:border-[#caa15a]/60'
@@ -473,10 +475,10 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                       )}
                     </div>
                     <div className="text-[10.5px] text-[#b8a990] font-mono-num flex items-center gap-x-1.5 truncate">
-                      <span className="font-sans text-[#d8cbb5] truncate max-w-[115px] sm:max-w-[160px]">
+                      <span className="hidden lg:inline font-sans text-[#d8cbb5] truncate max-w-[115px] lg:max-w-[160px]">
                         {rulerTitle}
                       </span>
-                      <span aria-hidden="true">·</span>
+                      <span aria-hidden="true" className="hidden lg:inline">·</span>
                       <span
                         data-testid={`diplo-army-${realm.id}`}
                         className="inline-flex items-center gap-1 text-[#f3ead7] font-semibold shrink-0"
@@ -589,10 +591,11 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
                       type="button"
                       data-testid={`diplo-inspect-${realm.id}`}
                       onClick={() => onInspectNation(realm.id)}
-                      className="min-h-[44px] px-3 rounded-lg bg-[#231c15] hover:bg-[#30261d] border border-[#caa15a]/45 text-[#f3ead7] text-[11px] font-bold flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] justify-center sm:px-3 rounded-lg bg-[#231c15] hover:bg-[#30261d] border border-[#caa15a]/45 text-[#f3ead7] text-[11px] font-bold flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                      aria-label={`${cleanNationName(realm.name)} ülke özetini aç`}
                     >
-                      <span>İncele</span>
-                      <ChevronRight className="w-3.5 h-3.5 text-[#caa15a]" />
+                      <span className="hidden sm:inline">İncele</span>
+                      <ChevronRight className="w-4 h-4 text-[#caa15a]" />
                     </button>
                   )}
 

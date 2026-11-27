@@ -149,11 +149,11 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
       />
 
       {/* AoH3 3-Tab Economy Switcher + Live Treasury Strip */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#caa15a]/25">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 pb-2 border-b border-[#caa15a]/25">
         <div
           role="tablist"
           aria-label="Ekonomi ve Hazine Sekmeleri"
-          className="grid grid-cols-3 gap-1 bg-[#120e0a] p-1 rounded-xl border border-[#caa15a]/30 w-full sm:w-auto"
+          className="grid grid-cols-3 gap-1 bg-[#120e0a] p-1 rounded-xl border border-[#caa15a]/30 w-full lg:w-auto"
         >
           <button
             type="button"
@@ -161,7 +161,7 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={activeTab === 'BUDGET'}
             data-testid="eco-tab-budget"
             onClick={() => setActiveTab('BUDGET')}
-            className={`min-h-[44px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] px-1.5 lg:px-3 py-1.5 rounded-lg text-[11px] lg:text-xs font-bold flex items-center justify-center gap-1 lg:gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'BUDGET'
                 ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow'
                 : 'text-[#d8cbb5] hover:text-[#faf3e3]'
@@ -177,7 +177,7 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={activeTab === 'BATCH'}
             data-testid="eco-tab-batch"
             onClick={() => setActiveTab('BATCH')}
-            className={`min-h-[44px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] px-1.5 lg:px-3 py-1.5 rounded-lg text-[11px] lg:text-xs font-bold flex items-center justify-center gap-1 lg:gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'BATCH'
                 ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow'
                 : 'text-[#d8cbb5] hover:text-[#faf3e3]'
@@ -193,14 +193,15 @@ export const EconomyDrawer: React.FC<CommandDrawersProps> = ({
             aria-selected={activeTab === 'CITIES'}
             data-testid="eco-tab-cities"
             onClick={() => setActiveTab('CITIES')}
-            className={`min-h-[44px] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
+            className={`min-h-[44px] px-1.5 lg:px-3 py-1.5 rounded-lg text-[11px] lg:text-xs font-bold flex items-center justify-center gap-1 lg:gap-1.5 transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === 'CITIES'
                 ? 'bg-gradient-to-r from-[#caa15a] to-[#e0b86e] text-[#14100c] shadow'
                 : 'text-[#d8cbb5] hover:text-[#faf3e3]'
             }`}
           >
             <AoH3GlyphSvg name="anchor" className="w-3.5 h-3.5 shrink-0" />
-            <span>Boğaz &amp; Şehir</span>
+            <span className="lg:hidden">Şehirler</span>
+            <span className="hidden lg:inline">Boğaz &amp; Şehir</span>
           </button>
         </div>
 
