@@ -733,21 +733,28 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
               ))}
             </select>
 
-            <div className="grid grid-cols-3 gap-1 w-full bg-[#1d1813] p-1 rounded-xl border border-[#342d24]">
+            <div
+              role="tablist"
+              aria-label="Ülke inceleme sekmeleri"
+              className="grid grid-cols-3 gap-1 w-full bg-[#1d1813] p-1 rounded-xl border border-[#342d24]"
+            >
               {(
                 [
                   {
                     id: 'OVERVIEW',
+                    shortLabel: 'Özet',
                     label: isPlayerNation ? 'Özet & Paktlar' : 'Özet & Eylemler',
                     icon: <Landmark className="w-3.5 h-3.5 shrink-0" />,
                   },
                   {
                     id: 'DIPLOMACY',
+                    shortLabel: `İlişki (${totalActiveDiplomacyCount})`,
                     label: `İlişki Ağı (${totalActiveDiplomacyCount})`,
                     icon: <Handshake className="w-3.5 h-3.5 shrink-0" />,
                   },
                   {
                     id: 'ECONOMY',
+                    shortLabel: 'Ekonomi',
                     label: 'Ekonomi & Bilim',
                     icon: <TrendingUp className="w-3.5 h-3.5 shrink-0" />,
                   },
@@ -759,6 +766,8 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                   <button
                     key={tab.id}
                     type="button"
+                    role="tab"
+                    aria-selected={active}
                     data-testid={`modal-tab-${tab.id.toLowerCase()}`}
                     onPointerDown={isEconomyTab ? economyLongPress.onPointerDown : undefined}
                     onPointerUp={isEconomyTab ? economyLongPress.onPointerUp : undefined}
@@ -770,14 +779,15 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
                       setModalTab(tab.id);
                     }}
                     title={isEconomyTab ? 'Ekonomi kaynakları için basılı tutabilirsiniz' : undefined}
-                    className={`min-h-[36px] px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer select-none ${
+                    className={`min-h-[38px] px-1.5 sm:px-2 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 transition-colors cursor-pointer select-none ${
                       active
                         ? 'bg-[#c89d54] text-[#14100c] shadow'
                         : 'text-[#cfc3ae] hover:text-white hover:bg-[#272019]'
                     }`}
                   >
                     {tab.icon}
-                    <span className="truncate">{tab.label}</span>
+                    <span className="sm:hidden truncate">{tab.shortLabel}</span>
+                    <span className="hidden sm:inline truncate">{tab.label}</span>
                   </button>
                 );
               })}
@@ -793,7 +803,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
             icon={activePlayerWar ? 'sword' : 'crown'}
             title={`${cleanName} · ${summary.rulerName}`}
             subtitle={`${IDEOLOGIES[summary.nation.ideology]?.name ?? 'Monarşi'} · ${summary.provinceCount} Eyalet · #${worldRank} Güç Sırası`}
-            className="h-14 sm:h-16"
+            className="hidden sm:block h-16 [@media(max-height:500px)]:hidden"
           />
 
           {/* Overlord Banner if vassal */}
