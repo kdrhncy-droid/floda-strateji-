@@ -7,7 +7,7 @@ import {
   Territory,
 } from '../../types/game';
 import { AiAggressivenessLevel } from '../gameSettings';
-import { findArmyRouteAStar } from '../pathfindingEngine';
+import { findArmyRouteAStar, sphericalDegDist } from '../pathfindingEngine';
 import { resolveNationAiPersonality } from '../seasonSupplyAndAiProfile';
 import { isTerritoryCoastal } from '../worldBuilder';
 import {
@@ -50,10 +50,11 @@ export function evaluateWartimeAiOperations(params: {
 
   if (wars.length === 0) return null;
 
-  // Build O(1) enemy lookup sets and collect all non-eliminated AI nations currently in an active war
+  // Build O(1) enemy lookup sets and distinguish primary war leaders from secondary co-belligerent allies
   const warAiSet = new Set<string>();
   const enemyIdsByNation = new Map<string, Set<string>>();
-  const addEnemyEdge = (a: string, b: string) => {
+  const primaryEnemyIdsByNation = new Map<string, Set<string>>();
+  const addEnemyEdge = (a: string, b: string, isPrimary = false) => {
     if (!a || !b || a === b) return;
     let set = enemyIdsByNation.get(a);
     if (!set) {
@@ -61,6 +62,14 @@ export function evaluateWartimeAiOperations(params: {
       enemyIdsByNation.set(a, set);
     }
     set.add(b);
+    if (isPrimary) {
+      let pSet = primaryEnemyIdsByNation.get(a);
+      if (!pSet) {
+        pSet = new Set<string>();
+        primaryEnemyIdsByNation.set(a, pSet);
+      }
+      pSet.add(b);
+    }
   };
 
   for (const w of wars) {
@@ -70,19 +79,25 @@ export function evaluateWartimeAiOperations(params: {
       if (a && a !== playerNationId && nations[a] && !nations[a].isEliminated) {
         warAiSet.add(a);
       }
+      if (w.defenderId) {
+        addEnemyEdge(a, w.defenderId, true);
+      }
       for (const d of defSide) {
-        addEnemyEdge(a, d);
-        addEnemyEdge(d, a);
+        addEnemyEdge(a, d, d === w.defenderId && a === w.attackerId);
+        addEnemyEdge(d, a, a === w.attackerId && d === w.defenderId);
       }
     }
     for (const d of defSide) {
       if (d && d !== playerNationId && nations[d] && !nations[d].isEliminated) {
         warAiSet.add(d);
       }
+      if (w.attackerId) {
+        addEnemyEdge(d, w.attackerId, true);
+      }
     }
     if (w.attackerId && w.defenderId) {
-      addEnemyEdge(w.attackerId, w.defenderId);
-      addEnemyEdge(w.defenderId, w.attackerId);
+      addEnemyEdge(w.attackerId, w.defenderId, true);
+      addEnemyEdge(w.defenderId, w.attackerId, true);
       if (
         w.attackerId !== playerNationId &&
         nations[w.attackerId] &&
@@ -435,42 +450,67 @@ export function evaluateWartimeAiOperations(params: {
     }
 
     // Step 2: Strategic Border Counter-Attack / Offensive Sortie
-    const scoreEnemyTarget = (enemyTerr: Territory): number => {
-      let priority = -enemyTerr.garrison;
-      if (enemyTerr.coreOwnerId === actorId) priority += 5500; // Reclaim occupied homeland first
-      if (
-        enemyTerr.isCapital ||
-        enemyTerr.id === nextNations[enemyTerr.ownerId]?.capitalTerritoryId
-      ) {
-        priority += 5000;
-      }
-      if (straitShoreSet.has(enemyTerr.id)) priority += 2800;
-      if (enemyTerr.ownerId === playerNationId) priority += 2200;
-      if (enemyTerr.terrain === 'DAGLIK') priority -= 2600;
-      priority -= (enemyTerr.buildings?.fortress || 0) * 1800;
-      return priority;
-    };
+    const actorPrimaryEnemies =
+      primaryEnemyIdsByNation.get(actorId) || actorEnemies;
+    const actorHomelandCenter =
+      nextTerritories[actorNation.capitalTerritoryId]?.centroid ||
+      refreshedOwned[0]?.centroid;
 
     const allEnemyWarProvs: Territory[] = [];
+    const primaryEnemyWarProvs: Territory[] = [];
     for (const enemyId of actorEnemies) {
       const eList = provsByOwner.get(enemyId);
       if (!eList) continue;
       for (const ep of eList) {
-        allEnemyWarProvs.push(nextTerritories[ep.id]);
+        const liveEp = nextTerritories[ep.id];
+        if (!liveEp) continue;
+        allEnemyWarProvs.push(liveEp);
+        if (actorPrimaryEnemies.has(enemyId)) {
+          primaryEnemyWarProvs.push(liveEp);
+        }
       }
     }
+    const strategicEnemyWarProvs =
+      primaryEnemyWarProvs.length > 0 ? primaryEnemyWarProvs : allEnemyWarProvs;
+
+    const scoreEnemyTarget = (
+      enemyTerr: Territory,
+      refCoords?: [number, number]
+    ): number => {
+      const isPrimary = actorPrimaryEnemies.has(enemyTerr.ownerId);
+      // Dampen raw garrison weight so distant 0-garrison provinces never outweigh close primary targets!
+      let priority = -Math.min(12000, enemyTerr.garrison) * 0.45;
+      priority += isPrimary ? 9000 : -5500;
+      if (enemyTerr.coreOwnerId === actorId) priority += 6500; // Reclaim occupied homeland first
+      if (
+        enemyTerr.isCapital ||
+        enemyTerr.id === nextNations[enemyTerr.ownerId]?.capitalTerritoryId
+      ) {
+        priority += isPrimary ? 5200 : 1200;
+      }
+      if (straitShoreSet.has(enemyTerr.id)) priority += 2400;
+      if (enemyTerr.ownerId === playerNationId && isPrimary) priority += 2200;
+      if (enemyTerr.terrain === 'DAGLIK') priority -= 2200;
+      priority -= (enemyTerr.buildings?.fortress || 0) * 1600;
+      const origin = refCoords || actorHomelandCenter;
+      if (origin && enemyTerr.centroid) {
+        priority -= sphericalDegDist(origin, enemyTerr.centroid) * 520;
+      }
+      return priority;
+    };
+
     const actorTotalGarrison = refreshedOwned.reduce(
       (sum, p) => sum + (p?.garrison || 0),
       0
     );
-    const enemyTotalGarrison = allEnemyWarProvs.reduce(
+    const enemyTotalGarrison = strategicEnemyWarProvs.reduce(
       (sum, p) => sum + (p?.garrison || 0),
       0
     );
     const isEnemyMopUp =
-      allEnemyWarProvs.length > 0 &&
-      allEnemyWarProvs.length <= 3 &&
-      refreshedOwned.length > allEnemyWarProvs.length &&
+      strategicEnemyWarProvs.length > 0 &&
+      strategicEnemyWarProvs.length <= 3 &&
+      refreshedOwned.length > strategicEnemyWarProvs.length &&
       actorTotalGarrison >= Math.max(6000, enemyTotalGarrison * 2.2);
 
     let launchedSortie = false;
@@ -484,13 +524,30 @@ export function evaluateWartimeAiOperations(params: {
 
       const enemyNeighbors = srcProv.neighbors
         .map((nId) => nextTerritories[nId])
-        .filter(
-          (nTerr): nTerr is Territory =>
-            Boolean(nTerr) &&
-            nTerr.ownerId !== actorId &&
-            actorEnemies.has(nTerr.ownerId)
-        )
-        .sort((a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a));
+        .filter((nTerr): nTerr is Territory => {
+          if (
+            !nTerr ||
+            nTerr.ownerId === actorId ||
+            !actorEnemies.has(nTerr.ownerId)
+          ) {
+            return false;
+          }
+          // Do NOT waste armies capturing empty (0-garrison) provinces of a secondary war ally while primary enemies still stand
+          if (
+            !actorPrimaryEnemies.has(nTerr.ownerId) &&
+            nTerr.coreOwnerId !== actorId &&
+            primaryEnemyWarProvs.length > 0 &&
+            nTerr.garrison <= 0
+          ) {
+            return false;
+          }
+          return true;
+        })
+        .sort(
+          (a, b) =>
+            scoreEnemyTarget(b, srcProv.centroid) -
+            scoreEnemyTarget(a, srcProv.centroid)
+        );
 
       if (enemyNeighbors.length === 0) continue;
 
@@ -591,8 +648,8 @@ export function evaluateWartimeAiOperations(params: {
     }
 
     // Step 2B: Multi-Province Coordinated Pincer on Remaining Enemy Holdouts
-    if (!launchedSortie && isEnemyMopUp && allEnemyWarProvs.length > 0) {
-      const sortedHoldouts = [...allEnemyWarProvs].sort(
+    if (!launchedSortie && isEnemyMopUp && strategicEnemyWarProvs.length > 0) {
+      const sortedHoldouts = [...strategicEnemyWarProvs].sort(
         (a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a)
       );
       for (const enemyHoldout of sortedHoldouts) {
@@ -659,13 +716,23 @@ export function evaluateWartimeAiOperations(params: {
 
     if (rearStrongProvs.length > 0) {
       const srcRear = rearStrongProvs[0];
-      const enemyTerritories = [...allEnemyWarProvs].sort(
-        (a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a)
+      const primaryFrontlineProvs = frontlineProvs.filter((p) =>
+        p.neighbors.some((nbId) => {
+          const nb = nextTerritories[nbId];
+          return Boolean(nb && actorPrimaryEnemies.has(nb.ownerId));
+        })
+      );
+      const preferredFrontline =
+        primaryFrontlineProvs.length > 0 ? primaryFrontlineProvs : frontlineProvs;
+      const enemyTerritories = [...strategicEnemyWarProvs].sort(
+        (a, b) =>
+          scoreEnemyTarget(b, srcRear.centroid) -
+          scoreEnemyTarget(a, srcRear.centroid)
       );
       const targetDest =
         threatenedProvs[0] ||
         (isEnemyMopUp && enemyTerritories[0] ? enemyTerritories[0] : null) ||
-        frontlineProvs.sort((a, b) => a.garrison - b.garrison)[0] ||
+        [...preferredFrontline].sort((a, b) => a.garrison - b.garrison)[0] ||
         enemyTerritories[0];
 
       if (targetDest && targetDest.id !== srcRear.id) {
@@ -677,7 +744,7 @@ export function evaluateWartimeAiOperations(params: {
           nations: nextNations,
           relations,
           wars,
-          allowTargetWarDeclaration: true,
+          allowTargetWarDeclaration: false,
         });
 
         if (route.reachable && route.hops.length > 0) {
@@ -798,9 +865,19 @@ export function evaluateWartimeAiOperations(params: {
       continue;
     }
 
-    // 4B. Amphibious Assault: cross open water to invade a vulnerable enemy coastal province
+    // 4B. Amphibious Assault: cross open water to invade a vulnerable PRIMARY enemy coastal province
+    // Never sail across the world to attack distant undefended provinces of a secondary war ally!
+    const hasPrimaryLandFront = frontlineProvs.some((p) =>
+      p.neighbors.some((nbId) => {
+        const nb = nextTerritories[nbId];
+        return Boolean(nb && actorPrimaryEnemies.has(nb.ownerId));
+      })
+    );
+    const maxAmphibRange = hasPrimaryLandFront ? 7.5 : 26;
+    const coastalEnemyPool =
+      primaryEnemyWarProvs.length > 0 ? actorPrimaryEnemies : actorEnemies;
     const enemyCoastalTargets: Territory[] = [];
-    for (const enemyId of actorEnemies) {
+    for (const enemyId of coastalEnemyPool) {
       const eCoast = coastalProvsByOwner.get(enemyId);
       if (!eCoast) continue;
       for (const rawT of eCoast) {
@@ -811,13 +888,18 @@ export function evaluateWartimeAiOperations(params: {
           srcCoast.centroid[0] - t.centroid[0],
           srcCoast.centroid[1] - t.centroid[1]
         );
-        if (dist <= 28 && navalTroops >= Math.max(3000, t.garrison * 1.05)) {
+        if (
+          dist <= maxAmphibRange &&
+          navalTroops >= Math.max(3000, t.garrison * 1.05)
+        ) {
           enemyCoastalTargets.push(t);
         }
       }
     }
     enemyCoastalTargets.sort(
-      (a, b) => scoreEnemyTarget(b) - scoreEnemyTarget(a)
+      (a, b) =>
+        scoreEnemyTarget(b, srcCoast.centroid) -
+        scoreEnemyTarget(a, srcCoast.centroid)
     );
 
     const amphibTarget = enemyCoastalTargets[0];

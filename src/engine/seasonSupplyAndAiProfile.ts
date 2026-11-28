@@ -719,7 +719,7 @@ export function evaluateAutomaticCapitulations(params: {
           t &&
           winnerSideIds.includes(t.ownerId) &&
           t.isOccupied &&
-          t.coreOwnerId === loserId
+          (t.occupiedFromId ?? t.coreOwnerId) === loserId
       );
 
       const originalCount = ownedByLoser.length + occupiedFromLoser.length;
@@ -734,20 +734,60 @@ export function evaluateAutomaticCapitulations(params: {
 
       ensureCloned();
 
-      // Finalize annexation of all occupied provinces held by winner's coalition
+      // Finalize annexation ONLY of primary loser's occupied provinces (never annex secondary allies' territories!)
       let finalizedCount = 0;
+      const finalizedIds = new Set<string>();
       for (const occ of occupiedFromLoser) {
         const isCoreForHolder = occ.coreOwnerId === occ.ownerId;
+        finalizedIds.add(occ.id);
         nextTerritories[occ.id] = {
           ...occ,
+          ownerId: winnerId,
           isOccupied: false,
           occupiedById: undefined,
+          occupiedFromId: undefined,
           siege: null,
           assimilation: isCoreForHolder ? 100 : Math.min(occ.assimilation ?? 25, 35),
           isAssimilating: false,
           unrest: isCoreForHolder ? Math.max(0, occ.unrest - 8) : Math.min(72, occ.unrest + 14),
         };
         finalizedCount += 1;
+      }
+
+      // Restore any secondary-ally occupied provinces (and any winner-side provinces occupied by loser coalition)
+      const allWarSideIds = new Set<string>([
+        war.attackerId,
+        war.defenderId,
+        ...war.attackers,
+        ...war.defenders,
+      ]);
+      for (const [tId, prov] of Object.entries(nextTerritories)) {
+        if (!prov || finalizedIds.has(tId)) continue;
+        const rightfulOwner = prov.occupiedFromId ?? prov.coreOwnerId;
+        if (
+          prov.isOccupied &&
+          rightfulOwner &&
+          allWarSideIds.has(prov.ownerId) &&
+          allWarSideIds.has(rightfulOwner)
+        ) {
+          nextTerritories[tId] = {
+            ...prov,
+            ownerId: rightfulOwner,
+            isOccupied: false,
+            occupiedById: undefined,
+            occupiedFromId: undefined,
+            siege: null,
+          };
+        } else if (
+          prov.siege &&
+          allWarSideIds.has(prov.ownerId) &&
+          allWarSideIds.has(prov.siege.attackerId)
+        ) {
+          nextTerritories[tId] = {
+            ...prov,
+            siege: null,
+          };
+        }
       }
 
       // If loser is left with 0 provinces, mark eliminated; else pay indemnity & sign truce

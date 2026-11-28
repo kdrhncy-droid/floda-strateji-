@@ -5,7 +5,6 @@ import { DiplomaticActionType, PeaceDealType } from "./drawerTypes";
 import {
   computeNationEconomySummary,
   getOrCreateRelation,
-  getWarScoreForNation,
   isAtWar,
   isNationEmbargoing,
 } from "../../engine/simulationEngine";
@@ -16,6 +15,7 @@ import {
 import {
   calculateProvincePurchasePrice,
   calculateVassalAnnexCost,
+  calculateWarPeaceBudget,
   canAcceptLandPurchase,
 } from "../../engine/diplomacyAndWarActions";
 import { computeNationTechMetrics } from "../../data/world2026Data";
@@ -67,7 +67,8 @@ export const ProvinceForeignDiplomacyPanel: React.FC<ProvinceForeignDiplomacyPan
   const targetEmbargoActive = isNationEmbargoing(rel, selectedOwner.id);
   const activeWar = isAtWar(wars, playerNation.id, selectedOwner.id);
   const playerWarScore = activeWar
-    ? getWarScoreForNation(activeWar, playerNation.id)
+    ? calculateWarPeaceBudget(activeWar, playerNation.id, territories)
+        .warBalanceScore
     : null;
   const ownerPersonality = resolveNationAiPersonality(selectedOwner, territories);
   const personalityMeta = AI_PERSONALITY_META[ownerPersonality];

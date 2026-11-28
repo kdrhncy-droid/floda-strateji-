@@ -151,7 +151,7 @@ export function executeEmbarkToSeaDomain(params: {
     };
   }
 
-  const sendableTroops = Math.max(0, Math.floor(fromT.garrison - 500));
+  const sendableTroops = Math.max(0, Math.floor(fromT.garrison));
   const sendTroops = Math.min(
     sendableTroops,
     Math.round(sendableTroops * normalizedRatio)
@@ -159,7 +159,7 @@ export function executeEmbarkToSeaDomain(params: {
   if (sendTroops < 1000) {
     return {
       toastMessage:
-        'Denize açılmak için en az 1.000 asker sevk edilmeli; kıyı şehrinde 500 savunma askeri kalır.',
+        'Denize açılmak için en az 1.000 asker sevk edilmelidir.',
     };
   }
 

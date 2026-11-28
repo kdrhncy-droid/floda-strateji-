@@ -33,8 +33,6 @@ export const MIN_MARCH_TROOPS = 300;
 export function computeSendableTroops(garrison: number): number {
   const g = Math.max(0, Math.floor(garrison || 0));
   if (g < MIN_MARCH_TROOPS) return 0;
-  if (g >= 1500) return Math.max(0, g - 500);
-  if (g >= 600) return Math.max(0, g - 200);
   return g;
 }
 
@@ -877,9 +875,9 @@ export function mergeNeighborArmiesDomain(params: {
           isAtWar(wars, playerNationId, n2.ownerId)
       );
     });
-    const reserve = bordersActiveEnemy ? 1000 : 500;
+    const reserve = bordersActiveEnemy ? 1000 : 0;
     const sendable = Math.floor(nb.garrison - reserve);
-    if (sendable < 500) continue;
+    if (sendable < MIN_MARCH_TROOPS) continue;
 
     const ratio = sendable / Math.max(1, nb.garrison);
     const srcUnits = nb.units || { infantry: nb.garrison, armor: 0, airDrone: 0 };

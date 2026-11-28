@@ -6,6 +6,7 @@ import {
   getWarScoreForNation,
   isAtWar,
 } from "../../engine/simulationEngine";
+import { calculateWarPeaceBudget } from "../../engine/diplomacyAndWarActions";
 import { getNationRulerName } from "../../engine/pashaAndFiefEngine";
 import { NationFlagCanvasBadge } from "../../map/nationFlagRenderer";
 import { cleanNationName, formatTroopsShort } from "../../utils/formatters";
@@ -40,6 +41,13 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
       const list = provMap.get(t.ownerId);
       if (list) list.push(t);
       else provMap.set(t.ownerId, [t]);
+
+      if (t.siege?.attackerId && t.siege.attackerTroops > 0) {
+        troopMap.set(
+          t.siege.attackerId,
+          (troopMap.get(t.siege.attackerId) || 0) + t.siege.attackerTroops
+        );
+      }
 
       if (t.ownerId === playerNation.id) {
         for (const nbId of t.neighbors) {
@@ -337,8 +345,10 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
               const isPlayerInvolved =
                 w.attackers.includes(playerNation.id) ||
                 w.defenders.includes(playerNation.id);
-              const playerWarScore =
-                getWarScoreForNation(w, playerNation.id) ?? w.attackerWarScore;
+              const playerWarScore = isPlayerInvolved
+                ? calculateWarPeaceBudget(w, playerNation.id, territories)
+                    .warBalanceScore
+                : getWarScoreForNation(w, playerNation.id) ?? w.attackerWarScore;
               return (
                 <div
                   key={w.id}
@@ -463,7 +473,8 @@ export const DiplomacyDrawer: React.FC<CommandDrawersProps> = ({
               ? null
               : isAtWar(wars, playerNation.id, realm.id);
             const playerWarScore = war
-              ? getWarScoreForNation(war, playerNation.id)
+              ? calculateWarPeaceBudget(war, playerNation.id, territories)
+                  .warBalanceScore
               : null;
 
             return (

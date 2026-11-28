@@ -670,6 +670,8 @@ function GameAppInner() {
               territories={territories}
               relations={relations}
               movements={movements}
+              battles={battles}
+              seaArmies={seaArmies}
               tick={tick}
               onSelectWar={(warId) => store.setActiveWarModalId(warId)}
               onClose={() => store.setActiveWarModalId(null)}

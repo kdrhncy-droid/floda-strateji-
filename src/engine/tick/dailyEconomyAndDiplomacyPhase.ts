@@ -979,7 +979,10 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
     const occupiedCoreOwners = new Set<string>();
     for (const t of Object.values(ctx.nextTerritories)) {
       if (t?.ownerId) livingOwners.add(t.ownerId);
-      if (t?.isOccupied && t.coreOwnerId) occupiedCoreOwners.add(t.coreOwnerId);
+      if (t?.isOccupied) {
+        if (t.coreOwnerId) occupiedCoreOwners.add(t.coreOwnerId);
+        if (t.occupiedFromId) occupiedCoreOwners.add(t.occupiedFromId);
+      }
     }
     const isAlive = (nId: string) =>
       Boolean(
@@ -997,14 +1000,22 @@ export function runDailyEconomyAndDiplomacyPhase(ctx: TickContext): void {
       const hasLivingAttacker = attackersList.some(isAlive);
       const hasLivingDefender = defendersList.some(isAlive);
       if (hasLivingAttacker && hasLivingDefender) {
-        const attackerOwnsAny = attackersList.some((id) => livingOwners.has(id));
-        const defenderOwnsAny = defendersList.some((id) => livingOwners.has(id));
-        if (!defenderOwnsAny && attackerOwnsAny && w.attackerWarScore < 100) {
+        const primaryAttackerOwnsAny = w.attackerId
+          ? livingOwners.has(w.attackerId)
+          : attackersList.some((id) => livingOwners.has(id));
+        const primaryDefenderOwnsAny = w.defenderId
+          ? livingOwners.has(w.defenderId)
+          : defendersList.some((id) => livingOwners.has(id));
+        if (
+          !primaryDefenderOwnsAny &&
+          primaryAttackerOwnsAny &&
+          w.attackerWarScore < 100
+        ) {
           activeWars.push({ ...w, attackerWarScore: 100 });
           warScoreUpdated = true;
         } else if (
-          !attackerOwnsAny &&
-          defenderOwnsAny &&
+          !primaryAttackerOwnsAny &&
+          primaryDefenderOwnsAny &&
           w.attackerWarScore > -100
         ) {
           activeWars.push({ ...w, attackerWarScore: -100 });

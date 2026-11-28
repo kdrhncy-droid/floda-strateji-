@@ -122,7 +122,10 @@ export function findAlliedLiberationBeneficiary(params: {
   nations: Record<string, Nation>;
 }): string | null {
   const { target, conquerorId, previousOwnerId, wars, relations, nations } = params;
-  const coreId = target.coreOwnerId;
+  const coreId =
+    target.isOccupied && target.occupiedFromId
+      ? target.occupiedFromId
+      : target.coreOwnerId;
   if (!coreId || coreId === conquerorId || coreId === previousOwnerId) return null;
   if (!nations[coreId]) return null;
   if (isAtWar(wars, conquerorId, coreId)) return null;
@@ -352,6 +355,7 @@ export function createTickContext(input: GameTickInput): TickContext {
           isAssimilating: false,
           isOccupied: false,
           occupiedById: undefined,
+          occupiedFromId: undefined,
           ...(typeof wallHp === 'number' ? { castleWallHp: wallHp } : {}),
           ...(clearSiege ? { siege: null } : {}),
         });
@@ -406,20 +410,31 @@ export function createTickContext(input: GameTickInput): TickContext {
         };
       }
 
+      const preOccupationOwnerId =
+        target.isOccupied && target.occupiedFromId
+          ? target.occupiedFromId
+          : previousOwnerId;
       const isCoreForConqueror = target.coreOwnerId === conquerorId;
+      const isRightfulOwner =
+        isCoreForConqueror || preOccupationOwnerId === conquerorId;
       ctx.writeTerritory(target.id, {
         ...target,
         ownerId: conquerorId,
         isCapital: false,
         garrison: survivors,
         units: survivingUnits,
-        unrest: isCoreForConqueror
+        unrest: isRightfulOwner
           ? Math.max(0, target.unrest - 10)
           : Math.min(80, target.unrest + unrestSpike),
-        assimilation: isCoreForConqueror ? 100 : 25,
+        assimilation: isCoreForConqueror
+          ? 100
+          : isRightfulOwner
+          ? Math.max(25, target.assimilation ?? 50)
+          : 25,
         isAssimilating: false,
-        isOccupied: !isCoreForConqueror,
-        occupiedById: isCoreForConqueror ? undefined : conquerorId,
+        isOccupied: !isRightfulOwner,
+        occupiedById: isRightfulOwner ? undefined : conquerorId,
+        occupiedFromId: isRightfulOwner ? undefined : preOccupationOwnerId,
         ...(typeof wallHp === 'number' ? { castleWallHp: wallHp } : {}),
         ...(clearSiege ? { siege: null } : {}),
       });

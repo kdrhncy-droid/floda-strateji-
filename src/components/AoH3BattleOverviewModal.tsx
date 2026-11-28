@@ -23,6 +23,7 @@ import {
   DiplomaticRelation,
   GameModeId,
   Nation,
+  SeaArmy,
   Territory,
 } from '../types/game';
 import { NationFlagCanvasBadge } from '../map/nationFlagRenderer';
@@ -634,6 +635,8 @@ export interface UnifiedWarAndPeaceModalProps {
   territories: Record<string, Territory>;
   relations: Record<string, DiplomaticRelation>;
   movements: ArmyMovement[];
+  battles?: ActiveBattle[];
+  seaArmies?: SeaArmy[];
   tick: number;
   onSelectWar: (warId: string) => void;
   onCallAllyToWar: (warId: string, allyNationId: string) => void;
@@ -649,6 +652,8 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
   territories,
   relations,
   movements,
+  battles = [],
+  seaArmies = [],
   tick,
   onSelectWar,
   onCallAllyToWar,
@@ -663,7 +668,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
   );
 
   const {
-    signedWarScore,
+    warBalanceScore,
     occupiedEnemyProvinces,
     claimableEnemyProvinces,
     availableBudget,
@@ -682,21 +687,66 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
   const playerNation = nations[playerNationId];
   const enemyNation = nations[enemyNationId];
 
-  const playerSideIds = isPlayerAttackerSide ? war.attackers : war.defenders;
-  const enemySideIds = isPlayerAttackerSide ? war.defenders : war.attackers;
+  const playerSideIds = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          playerNationId,
+          ...(isPlayerAttackerSide ? war.attackers : war.defenders),
+        ])
+      ),
+    [playerNationId, isPlayerAttackerSide, war.attackers, war.defenders]
+  );
+  const enemySideIds = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          enemyNationId,
+          ...(isPlayerAttackerSide ? war.defenders : war.attackers),
+        ])
+      ),
+    [enemyNationId, isPlayerAttackerSide, war.attackers, war.defenders]
+  );
 
+  // Sum ALL active forces per nation: garrisons, marching armies, besieging armies, field battle attackers, and fleets!
   const armyByNation = useMemo(() => {
     const map: Record<string, number> = {};
+    const battleTerrIds = new Set(battles.map((b) => b.territoryId));
     for (const t of Object.values(territories)) {
-      if (!t?.ownerId) continue;
-      map[t.ownerId] = (map[t.ownerId] || 0) + (t.garrison || 0);
+      if (!t) continue;
+      if (t.ownerId) {
+        map[t.ownerId] = (map[t.ownerId] || 0) + (t.garrison || 0);
+      }
+      if (
+        t.siege &&
+        t.siege.attackerId &&
+        t.siege.attackerTroops > 0 &&
+        !battleTerrIds.has(t.id)
+      ) {
+        map[t.siege.attackerId] =
+          (map[t.siege.attackerId] || 0) + t.siege.attackerTroops;
+      }
     }
     for (const mv of movements) {
       if (!mv?.ownerId) continue;
       map[mv.ownerId] = (map[mv.ownerId] || 0) + (mv.troops || 0);
     }
+    for (const btl of battles) {
+      if (!btl) continue;
+      if (btl.attackerId && btl.attackerTroops > 0) {
+        map[btl.attackerId] = (map[btl.attackerId] || 0) + btl.attackerTroops;
+      }
+      const terrOwner = territories[btl.territoryId]?.ownerId;
+      if (btl.defenderId && btl.defenderId !== terrOwner && btl.defenderTroops > 0) {
+        map[btl.defenderId] = (map[btl.defenderId] || 0) + btl.defenderTroops;
+      }
+    }
+    for (const sa of seaArmies) {
+      if (!sa?.ownerId || sa.troops <= 0) continue;
+      map[sa.ownerId] = (map[sa.ownerId] || 0) + sa.troops;
+    }
     return map;
-  }, [territories, movements]);
+  }, [territories, movements, battles, seaArmies]);
 
   const ourTotalArmy = playerSideIds.reduce(
     (sum, id) => sum + (armyByNation[id] || 0),
@@ -706,11 +756,17 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
     (sum, id) => sum + (armyByNation[id] || 0),
     0
   );
-  const combinedArmy = Math.max(1, ourTotalArmy + enemyTotalArmy);
-  const ourPowerPct = Math.max(
-    8,
-    Math.min(92, Math.round((ourTotalArmy / combinedArmy) * 100))
-  );
+  const combinedArmy = ourTotalArmy + enemyTotalArmy;
+  const ourPowerPct =
+    combinedArmy <= 0 ? 50 : Math.round((ourTotalArmy / combinedArmy) * 100);
+  const ourBarWidthPct =
+    combinedArmy <= 0
+      ? 50
+      : ourTotalArmy <= 0
+      ? 0
+      : enemyTotalArmy <= 0
+      ? 100
+      : Math.max(6, Math.min(94, ourPowerPct));
 
   const ourCasualties = isPlayerAttackerSide
     ? war.casualtiesAttacker
@@ -866,10 +922,7 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
 
   if (!playerNation || !enemyNation) return null;
 
-  const displayScore =
-    signedWarScore >= 0
-      ? Math.max(signedWarScore, availableBudget)
-      : signedWarScore;
+  const displayScore = warBalanceScore;
 
   return (
     <div
@@ -981,11 +1034,11 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
           <div className="w-full h-2.5 rounded-full bg-rose-900/70 overflow-hidden flex border border-black/50">
             <div
               className="h-full bg-gradient-to-r from-[#8f6a34] to-[#e0b86e] transition-all duration-300"
-              style={{ width: `${ourPowerPct}%` }}
+              style={{ width: `${ourBarWidthPct}%` }}
             />
             <div
               className="h-full bg-gradient-to-r from-rose-600 to-rose-800 transition-all duration-300"
-              style={{ width: `${100 - ourPowerPct}%` }}
+              style={{ width: `${100 - ourBarWidthPct}%` }}
             />
           </div>
         </div>
@@ -1119,7 +1172,14 @@ export const UnifiedWarAndPeaceModal: React.FC<UnifiedWarAndPeaceModalProps> = (
                   <span>Savaş Puanı Bütçeli Barış Konferansı</span>
                 </h3>
                 <p className="text-[11px] text-[#c5b79e]">
-                  Savaşta kazandığınız puan bütçesi kadar şehir talep edebilir, komple ilhak, vasal veya haraç şartlarını birleştirebilirsiniz.
+                  Savaşta kazandığınız puan bütçesi kadar ana savaş hedefi{' '}
+                  <strong className="text-[#f3ead7]">
+                    {enemyNation.name.replace(/\s*\((1440|2026)\)\s*$/, '')}
+                  </strong>{' '}
+                  şehirlerini talep edebilirsiniz
+                  {enemySideIds.length > 1
+                    ? ' (savaşa katılan müttefiklerin toprakları ilhak edilemez ve barışta iade edilir).'
+                    : ', komple ilhak, vasal veya haraç şartlarını birleştirebilirsiniz.'}
                 </p>
               </div>
 

@@ -1,4 +1,5 @@
 import {
+  ActiveBattle,
   ActiveWar,
   ArmyMovement,
   DiplomaticActionType,
@@ -18,6 +19,7 @@ export interface DomainActionPatch {
   relations?: Record<string, DiplomaticRelation>;
   wars?: ActiveWar[];
   movements?: ArmyMovement[];
+  battles?: ActiveBattle[];
   newsEvents?: WorldNewsEvent[];
   startEnvoy?: Omit<DiplomaticEnvoy, 'id' | 'startedTick'>;
   warAnnouncement?: WarAnnouncement;

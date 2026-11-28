@@ -149,10 +149,7 @@ export const LiveWarHudBadges: React.FC<{
           playerNationId,
           territories
         );
-        const displayScore =
-          budgetInfo.signedWarScore >= 0
-            ? Math.max(budgetInfo.signedWarScore, budgetInfo.availableBudget)
-            : budgetInfo.signedWarScore;
+        const displayScore = budgetInfo.warBalanceScore;
         const colorStyle = getWarScoreColorStyle(displayScore);
         const cleanEnemyName = enemy.name.replace(/\s*\((1440|2026)\)\s*$/, '');
 
@@ -272,15 +269,48 @@ export const AoH3OutlinerWidget: React.FC<AoH3OutlinerWidgetProps> = ({
     [seaArmies, playerNationId]
   );
 
-  const totalStandingArmy = useMemo(
-    () =>
-      allPlayerArmies.reduce((sum, t) => sum + (t.garrison || 0), 0) +
+  const totalStandingArmy = useMemo(() => {
+    const battleTerrIds = new Set(battles.map((b) => b.territoryId));
+    let garrisonAndSiegeSum = 0;
+    for (const t of Object.values(territories)) {
+      if (!t) continue;
+      if (t.ownerId === playerNationId) {
+        garrisonAndSiegeSum += t.garrison || 0;
+      }
+      if (
+        t.siege &&
+        t.siege.attackerId === playerNationId &&
+        !battleTerrIds.has(t.id)
+      ) {
+        garrisonAndSiegeSum += t.siege.attackerTroops || 0;
+      }
+    }
+    const battleAttackerSum = relevantBattles.reduce((sum, b) => {
+      if (b.attackerId === playerNationId) {
+        return sum + (b.attackerTroops || 0);
+      }
+      const terrOwner = territories[b.territoryId]?.ownerId;
+      if (b.defenderId === playerNationId && terrOwner !== playerNationId) {
+        return sum + (b.defenderTroops || 0);
+      }
+      return sum;
+    }, 0);
+    return (
+      garrisonAndSiegeSum +
+      battleAttackerSum +
       playerSeaArmies.reduce((sum, s) => sum + (s.troops || 0), 0) +
       relevantMovements
         .filter((m) => m.ownerId === playerNationId)
-        .reduce((sum, m) => sum + (m.troops || 0), 0),
-    [allPlayerArmies, playerSeaArmies, relevantMovements, playerNationId]
-  );
+        .reduce((sum, m) => sum + (m.troops || 0), 0)
+    );
+  }, [
+    territories,
+    battles,
+    relevantBattles,
+    playerSeaArmies,
+    relevantMovements,
+    playerNationId,
+  ]);
 
   const totalArmyUnitsCount = allPlayerArmies.length + playerSeaArmies.length;
 

@@ -294,6 +294,10 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
           }
         }
 
+        const battleScoreGain = Math.max(
+          4,
+          Math.min(16, Math.round(4 + (attLosses + defLosses) / 1100))
+        );
         ctx.nextWars = ctx.nextWars.map((w) => {
           const involvesBoth =
             (w.attackers.includes(btl.attackerId) &&
@@ -305,10 +309,11 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
           return {
             ...w,
             attackerWarScore: Math.max(
-              -100,
+              -99,
               Math.min(
-                100,
-                w.attackerWarScore + (isAttackerSide ? 12 : -12)
+                99,
+                w.attackerWarScore +
+                  (isAttackerSide ? battleScoreGain : -battleScoreGain)
               )
             ),
             casualtiesAttacker:
@@ -354,6 +359,10 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
           }
         }
 
+        const defScoreGain = Math.max(
+          4,
+          Math.min(16, Math.round(5 + (attLosses + defLosses) / 1100))
+        );
         ctx.nextWars = ctx.nextWars.map((w) => {
           const involvesBoth =
             (w.attackers.includes(btl.attackerId) &&
@@ -365,10 +374,11 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
           return {
             ...w,
             attackerWarScore: Math.max(
-              -100,
+              -99,
               Math.min(
-                100,
-                w.attackerWarScore + (isAttackerSide ? -15 : 15)
+                99,
+                w.attackerWarScore +
+                  (isAttackerSide ? -defScoreGain : defScoreGain)
               )
             ),
             casualtiesAttacker:
@@ -511,29 +521,28 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
         (t) => t && t.ownerId === previousOwnerId
       );
       const prevNation = ctx.nextNations[previousOwnerId];
+      const wasCapitalOfPrev = Boolean(
+        terr.isCapital || prevNation?.capitalTerritoryId === terr.id
+      );
       if (prevNation) {
         if (remainingPrevProvs.length === 0) {
           // Do NOT auto-annex or eliminate a nation while it is still fighting an active war!
-          // Keep it alive in occupied status at 100% war score so the victor settles terms at the Peace Conference.
-          const activeWarWithPrev = ctx.nextWars.find(
+          // Only set ±100% war score on wars where previousOwnerId is a PRIMARY war leader (attackerId / defenderId),
+          // so occupying a minor 1-province ally never falsely declares 100% war victory over the main war target!
+          const matchingWars = ctx.nextWars.filter(
             (w) =>
               (w.attackers.includes(siege.attackerId) &&
                 w.defenders.includes(previousOwnerId)) ||
               (w.defenders.includes(siege.attackerId) &&
                 w.attackers.includes(previousOwnerId))
           );
-          if (activeWarWithPrev) {
-            const attackerIsAttackerSide =
-              activeWarWithPrev.attackers.includes(siege.attackerId);
-            ctx.nextWars = ctx.nextWars.map((w) =>
-              w.id === activeWarWithPrev.id
-                ? {
-                    ...w,
-                    attackerWarScore: attackerIsAttackerSide ? 100 : -100,
-                  }
-                : w
+          if (matchingWars.length > 0) {
+            const primaryMatchingWar = matchingWars.find(
+              (w) =>
+                w.defenderId === previousOwnerId ||
+                w.attackerId === previousOwnerId
             );
-            if (siege.attackerId === playerNationId) {
+            if (primaryMatchingWar && siege.attackerId === playerNationId) {
               ctx.toasts.push(
                 `🏳️ ${prevNation.name} tüm şehirleri işgal edildi (%100 Savaş Skoru)! Barış Konferansından antlaşma şartlarını belirleyebilirsiniz.`
               );
@@ -600,6 +609,7 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
         );
       }
 
+      const allTerrsAfterSiege = Object.values(ctx.nextTerritories);
       ctx.nextWars = ctx.nextWars.map((w) => {
         const involvesBoth =
           (w.attackers.includes(siege.attackerId) &&
@@ -608,11 +618,49 @@ export function runCombatAndSiegeTickPhase(ctx: TickContext): void {
             w.defenders.includes(siege.attackerId));
         if (!involvesBoth) return w;
         const isAttackerSide = w.attackers.includes(siege.attackerId);
+        const isPrimaryVictim =
+          previousOwnerId === w.defenderId || previousOwnerId === w.attackerId;
+        const isPrimaryConqueror =
+          siege.attackerId === w.defenderId ||
+          siege.attackerId === w.attackerId;
+
+        if (isPrimaryVictim && remainingPrevProvs.length === 0) {
+          return {
+            ...w,
+            attackerWarScore: isAttackerSide ? 100 : -100,
+          };
+        }
+
+        const refNationId = isPrimaryVictim
+          ? previousOwnerId
+          : isPrimaryConqueror
+          ? siege.attackerId
+          : previousOwnerId;
+        const refTotalProvs = Math.max(
+          1,
+          allTerrsAfterSiege.filter(
+            (t) =>
+              Boolean(t) &&
+              (t.ownerId === refNationId ||
+                (t.isOccupied &&
+                  (t.occupiedFromId ?? t.coreOwnerId) === refNationId))
+          ).length
+        );
+
+        const siegeDelta =
+          isPrimaryVictim || isPrimaryConqueror
+            ? Math.max(4, Math.min(35, Math.round(78 / refTotalProvs))) +
+              (wasCapitalOfPrev ? 10 : 0)
+            : Math.max(2, Math.min(6, Math.round(18 / refTotalProvs)));
+
         return {
           ...w,
           attackerWarScore: Math.max(
-            -100,
-            Math.min(100, w.attackerWarScore + (isAttackerSide ? 25 : -25))
+            -99,
+            Math.min(
+              99,
+              w.attackerWarScore + (isAttackerSide ? siegeDelta : -siegeDelta)
+            )
           ),
         };
       });

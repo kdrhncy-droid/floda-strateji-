@@ -254,6 +254,8 @@ export interface Territory {
   unrest: number; // 0-100
   isOccupied: boolean;
   occupiedById?: string;
+  /** Pre-war / pre-occupation owner id so co-belligerent ally provinces return to their actual owner at peace */
+  occupiedFromId?: string;
   centroid: [number, number]; // [lon, lat]
   neighbors: string[]; // adjacent territory IDs
   siege?: ActiveSiege | null;

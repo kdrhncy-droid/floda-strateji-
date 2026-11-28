@@ -63,7 +63,10 @@ export function resolveTacticalBattleOutcomeDomain(params: {
   if (cur) {
     if (isAttackerWinner) {
       const previousOwnerId = cur.ownerId;
-      const coreId = cur.coreOwnerId;
+      const coreId =
+        cur.isOccupied && cur.occupiedFromId
+          ? cur.occupiedFromId
+          : cur.coreOwnerId;
       const allyBeneficiary =
         coreId &&
         coreId !== finalBattle.attackerNationId &&
@@ -102,6 +105,7 @@ export function resolveTacticalBattleOutcomeDomain(params: {
           isAssimilating: false,
           isOccupied: false,
           occupiedById: undefined,
+          occupiedFromId: undefined,
           castleWallHp: finalBattle.castleWallHp,
         };
         const surviving = Math.max(1000, outcome.attackerSurvivingTroops);
@@ -125,7 +129,13 @@ export function resolveTacticalBattleOutcomeDomain(params: {
           };
         }
       } else {
+        const preOccOwnerId =
+          cur.isOccupied && cur.occupiedFromId
+            ? cur.occupiedFromId
+            : previousOwnerId;
         const isCoreForConqueror = cur.coreOwnerId === finalBattle.attackerNationId;
+        const isRightfulOwner =
+          isCoreForConqueror || preOccOwnerId === finalBattle.attackerNationId;
         nextTerrs[finalBattle.territoryId] = {
           ...cur,
           ownerId: finalBattle.attackerNationId,
@@ -136,11 +146,12 @@ export function resolveTacticalBattleOutcomeDomain(params: {
             armor: Math.round(outcome.attackerSurvivingTroops * 0.2),
             airDrone: Math.round(outcome.attackerSurvivingTroops * 0.1),
           },
-          unrest: isCoreForConqueror ? Math.max(0, cur.unrest - 10) : Math.min(80, cur.unrest + 25),
-          assimilation: isCoreForConqueror ? 100 : 25,
+          unrest: isRightfulOwner ? Math.max(0, cur.unrest - 10) : Math.min(80, cur.unrest + 25),
+          assimilation: isCoreForConqueror ? 100 : isRightfulOwner ? Math.max(25, cur.assimilation ?? 50) : 25,
           isAssimilating: false,
-          isOccupied: !isCoreForConqueror,
-          occupiedById: isCoreForConqueror ? undefined : finalBattle.attackerNationId,
+          isOccupied: !isRightfulOwner,
+          occupiedById: isRightfulOwner ? undefined : finalBattle.attackerNationId,
+          occupiedFromId: isRightfulOwner ? undefined : preOccOwnerId,
           castleWallHp: finalBattle.castleWallHp,
         };
       }
@@ -152,10 +163,19 @@ export function resolveTacticalBattleOutcomeDomain(params: {
       const prevDefNation = nextNations[previousOwnerId];
       if (prevDefNation) {
         if (remainingDefProvs.length === 0) {
-          nextNations[previousOwnerId] = {
-            ...prevDefNation,
-            isEliminated: true,
-          };
+          const stillInActiveWar = wars.some(
+            (w) =>
+              (w.attackers.includes(finalBattle.attackerNationId) &&
+                w.defenders.includes(previousOwnerId)) ||
+              (w.defenders.includes(finalBattle.attackerNationId) &&
+                w.attackers.includes(previousOwnerId))
+          );
+          if (!stillInActiveWar) {
+            nextNations[previousOwnerId] = {
+              ...prevDefNation,
+              isEliminated: true,
+            };
+          }
         } else if (prevDefNation.capitalTerritoryId === finalBattle.territoryId) {
           const newCap = remainingDefProvs[0];
           nextNations[previousOwnerId] = {
@@ -211,9 +231,9 @@ export function resolveTacticalBattleOutcomeDomain(params: {
     }
   }
 
-  const defenderFullyEliminated = Boolean(
-    isAttackerWinner && nextNations[finalBattle.defenderNationId]?.isEliminated
-  );
+  const defenderRemainingCount = Object.values(nextTerrs).filter(
+    (t) => t && t.ownerId === finalBattle.defenderNationId
+  ).length;
 
   const nextWars = wars.map((w) => {
     const involvesBoth =
@@ -223,14 +243,25 @@ export function resolveTacticalBattleOutcomeDomain(params: {
         w.defenders.includes(finalBattle.attackerNationId));
     if (!involvesBoth) return w;
     const isAttackerSide = w.attackers.includes(finalBattle.attackerNationId);
-    const baseDelta = defenderFullyEliminated ? 100 : isAttackerWinner ? 28 : -28;
+    const isPrimaryWarLeaderDefeated =
+      isAttackerWinner &&
+      defenderRemainingCount === 0 &&
+      (finalBattle.defenderNationId === w.defenderId ||
+        finalBattle.defenderNationId === w.attackerId);
+    const baseDelta = isPrimaryWarLeaderDefeated
+      ? 200
+      : isAttackerWinner
+      ? 28
+      : -28;
     const scoreDelta = baseDelta * (isAttackerSide ? 1 : -1);
+    const maxClamp = isPrimaryWarLeaderDefeated ? 100 : 99;
+    const minClamp = isPrimaryWarLeaderDefeated ? -100 : -99;
 
     return {
       ...w,
       attackerWarScore: Math.max(
-        -100,
-        Math.min(100, w.attackerWarScore + scoreDelta)
+        minClamp,
+        Math.min(maxClamp, w.attackerWarScore + scoreDelta)
       ),
       casualtiesAttacker: w.casualtiesAttacker + outcome!.attackerTotalLosses,
       casualtiesDefender: w.casualtiesDefender + outcome!.defenderTotalLosses,

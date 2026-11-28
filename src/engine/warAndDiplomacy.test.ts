@@ -191,17 +191,17 @@ test('executeArmyMoveDomain blocks unauthorized entry into neutral foreign provi
   assert.ok((confirmedRes.movements?.length || 0) >= 1);
   const halfMove = confirmedRes.movements?.[0];
   const halfDeparture = confirmedRes.territories?.['792'];
-  assert.equal(halfMove?.troops, 5750);
-  assert.equal(halfDeparture?.garrison, 6250);
+  assert.equal(halfMove?.troops, 6000);
+  assert.equal(halfDeparture?.garrison, 6000);
   assert.equal(
     halfMove?.units.infantry + halfMove?.units.armor + halfMove?.units.airDrone,
-    5750
+    6000
   );
   assert.equal(
     halfDeparture?.units.infantry +
       halfDeparture?.units.armor +
       halfDeparture?.units.airDrone,
-    6250
+    6000
   );
 
   const fullMoveRes = executeArmyMoveDomain({
@@ -220,8 +220,8 @@ test('executeArmyMoveDomain blocks unauthorized entry into neutral foreign provi
     speed: 1,
     forceDeclareWar: true,
   });
-  assert.equal(fullMoveRes.movements?.[0].troops, 11500);
-  assert.equal(fullMoveRes.territories?.['792'].garrison, 500);
+  assert.equal(fullMoveRes.movements?.[0].troops, 12000);
+  assert.equal(fullMoveRes.territories?.['792'].garrison, 0);
 });
 
 test('formEmpireDomain prevents instant day-1 Turan formation until province, tech, city, and gold requirements are met', () => {
@@ -1166,7 +1166,7 @@ test('mergeNeighborArmiesDomain and disbandArmyDomain respect safety reserves, b
   });
 
   assert.equal(merged.movements?.length, 2, 'Should gather safe troops from P2 and P4 while skipping besieged P3');
-  assert.equal(merged.territories?.P2.garrison, 500);
+  assert.equal(merged.territories?.P2.garrison, 0);
   assert.equal(merged.territories?.P3.garrison, 3000);
   assert.equal(merged.territories?.P4.garrison, 1000);
 
@@ -1499,8 +1499,8 @@ test('executeBatchArmyMoveDomain coordinates multi-city dispatch, gates neutral 
   });
   assert.equal(confirmed.wars?.length, 1);
   assert.equal(confirmed.movements?.length, 2);
-  assert.equal(confirmed.territories?.edi.garrison, 4500);
-  assert.equal(confirmed.territories?.bur.garrison, 3500);
+  assert.equal(confirmed.territories?.edi.garrison, 4250);
+  assert.equal(confirmed.territories?.bur.garrison, 3250);
   assert.equal(confirmed.territories?.low.garrison, 250);
 });
 
@@ -3495,7 +3495,7 @@ test('Siege mechanic: small armies (>=300) can march and any army arriving at a 
     speed: 1,
   });
   assert.equal(movePatch.movements?.length, 1, '850-troop army should dispatch cleanly without hitting 1500 ceiling');
-  assert.equal(movePatch.movements?.[0].troops, 650);
+  assert.equal(movePatch.movements?.[0].troops, 850);
 
   // 2. Arrive at 0-garrison unfortified enemy city -> MUST initiate siege (progress: 0 -> stepped) instead of failing or skipping siege
   const arrivingMove = { ...movePatch.movements![0], progress: 99 };
@@ -4327,4 +4327,242 @@ test('Peacetime ends active battles & sieges returning troops home, and save hyd
   assert.equal(hydrated.battles.length, 0, 'Orphan battles referencing missing territories must be filtered out');
   assert.equal(hydrated.diplomaticEnvoys?.length, 1, 'Valid diplomaticEnvoys must survive save hydration');
   assert.equal(hydrated.diplomaticEnvoys?.[0].id, 'env_ok');
+});
+
+test('Peace treaties NEVER annex secondary war-ally territories and safely evacuate occupying troops home', () => {
+  const nations: Record<string, Nation> = {
+    PLR: mkFaz3Nation('PLR', { name: 'Osmanlı', capitalTerritoryId: 'P_HOME' }),
+    ENM: mkFaz3Nation('ENM', { name: 'Sırbistan', capitalTerritoryId: 'E_CAP' }),
+    ALLY: mkFaz3Nation('ALLY', { name: 'Bosna', capitalTerritoryId: 'A_CAP' }),
+  };
+
+  // Player declared war on ENM; ALLY joined alongside ENM (`defenders: ['ENM', 'ALLY']`).
+  // Player occupied E_CAP (primary enemy) AND A_OCC (secondary ally), with 5000 player soldiers sitting in A_OCC!
+  const territories: Record<string, Territory> = {
+    P_HOME: mkFaz3Territory('P_HOME', {
+      name: 'Edirne',
+      ownerId: 'PLR',
+      coreOwnerId: 'PLR',
+      isCapital: true,
+      garrison: 4000,
+      neighbors: ['E_CAP', 'A_OCC'],
+    }),
+    E_CAP: mkFaz3Territory('E_CAP', {
+      name: 'Belgrad',
+      ownerId: 'PLR',
+      coreOwnerId: 'ENM',
+      occupiedFromId: 'ENM',
+      isOccupied: true,
+      occupiedById: 'PLR',
+      isCapital: true,
+      garrison: 3000,
+      neighbors: ['P_HOME'],
+    }),
+    A_CAP: mkFaz3Territory('A_CAP', {
+      name: 'Saraybosna',
+      ownerId: 'ALLY',
+      coreOwnerId: 'ALLY',
+      isCapital: true,
+      garrison: 2500,
+      neighbors: ['A_OCC'],
+    }),
+    A_OCC: mkFaz3Territory('A_OCC', {
+      name: 'Travnik',
+      ownerId: 'PLR',
+      coreOwnerId: 'ALLY',
+      occupiedFromId: 'ALLY',
+      isOccupied: true,
+      occupiedById: 'PLR',
+      garrison: 5000,
+      neighbors: ['P_HOME', 'A_CAP'],
+    }),
+  };
+
+  const war: ActiveWar = {
+    id: 'w_no_ally_annex',
+    name: 'Osmanlı - Sırbistan Savaşı',
+    attackerId: 'PLR',
+    defenderId: 'ENM',
+    attackers: ['PLR'],
+    defenders: ['ENM', 'ALLY'],
+    startedTick: 1,
+    attackerWarScore: 100,
+    casualtiesAttacker: 500,
+    casualtiesDefender: 4000,
+  };
+
+  // 1. `calculateWarPeaceBudget` must ONLY list primary enemy (`ENM`) provinces as claimable
+  const budget = calculateWarPeaceBudget(war, 'PLR', territories);
+  assert.deepEqual(
+    budget.claimableEnemyProvinces.map((t) => t.id),
+    ['E_CAP'],
+    'Secondary war-ally territories must never appear in claimableEnemyProvinces'
+  );
+
+  // 2. Peace Conference (`fullAnnexation: true` or explicit `demandedTerritoryIds` with A_OCC) annexes E_CAP ONLY,
+  // restores A_OCC to ALLY, and evacuates the 5000 player soldiers from A_OCC back to P_HOME!
+  const confRes = resolvePeaceConferenceDomain({
+    request: {
+      warId: war.id,
+      mode: 'PEACE_DEMANDS',
+      fullAnnexation: true,
+      demandedTerritoryIds: ['E_CAP', 'A_OCC'],
+    },
+    playerNationId: 'PLR',
+    tick: 25,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    territories,
+    relations: {},
+    wars: [war],
+    movements: [],
+    battles: [],
+    newsEvents: [],
+  });
+
+  assert.equal(confRes.wars?.length, 0);
+  assert.equal(confRes.territories?.E_CAP.ownerId, 'PLR', 'Primary enemy territory should be annexed');
+  assert.equal(confRes.territories?.E_CAP.isOccupied, false);
+  assert.equal(confRes.territories?.A_OCC.ownerId, 'ALLY', 'Secondary ally territory MUST be returned to ALLY');
+  assert.equal(confRes.territories?.A_OCC.isOccupied, false);
+  assert.equal(confRes.territories?.A_CAP.ownerId, 'ALLY', 'Unoccupied secondary ally territory stays with ALLY');
+  assert.equal(
+    confRes.territories?.P_HOME.garrison,
+    9000,
+    '5000 player occupying soldiers from restored A_OCC must return safely to P_HOME (4000 + 5000)'
+  );
+  assert.equal(confRes.nations?.ALLY.isEliminated, false);
+
+  // 3. Quick peace deal (`ANNEX_OCCUPIED`) ALSO spares secondary ally territories and restores A_OCC to ALLY
+  const quickDealRes = resolvePeaceDealDomain({
+    warId: war.id,
+    dealType: 'ANNEX_OCCUPIED',
+    playerNationId: 'PLR',
+    tick: 25,
+    gameMode: 'EMPIRES_1440',
+    nations,
+    territories,
+    relations: {},
+    wars: [war],
+    newsEvents: [],
+  });
+  assert.equal(quickDealRes.territories?.E_CAP.ownerId, 'PLR');
+  assert.equal(quickDealRes.territories?.A_OCC.ownerId, 'ALLY', 'ANNEX_OCCUPIED must never annex secondary ally territory');
+  assert.equal(quickDealRes.territories?.A_OCC.isOccupied, false);
+});
+
+test('War balance percentage (`warBalanceScore`) starts at 0%, scales proportionally without double-counting, and stays symmetric', () => {
+  const territories: Record<string, Territory> = {};
+  for (let i = 1; i <= 10; i++) {
+    territories[`P_${i}`] = mkFaz3Territory(`P_${i}`, {
+      name: `Oyuncu ${i}`,
+      ownerId: 'PLR',
+      coreOwnerId: 'PLR',
+      garrison: 2000,
+    });
+    territories[`E_${i}`] = mkFaz3Territory(`E_${i}`, {
+      name: `Düşman ${i}`,
+      ownerId: 'ENM',
+      coreOwnerId: 'ENM',
+      garrison: 2000,
+    });
+  }
+  territories.ALLY_1 = mkFaz3Territory('ALLY_1', {
+    name: 'Müttefik 1',
+    ownerId: 'ALLY',
+    coreOwnerId: 'ALLY',
+    garrison: 1000,
+  });
+
+  const baseWar: ActiveWar = {
+    id: 'w_balance_pct',
+    name: 'Denge Testi',
+    attackerId: 'PLR',
+    defenderId: 'ENM',
+    attackers: ['PLR'],
+    defenders: ['ENM', 'ALLY'],
+    startedTick: 1,
+    attackerWarScore: 0,
+    casualtiesAttacker: 0,
+    casualtiesDefender: 0,
+  };
+
+  // 1. At war start (tick 1, 0 battles, 0 occupations): warBalanceScore MUST be 0%
+  const startInfo = calculateWarPeaceBudget(baseWar, 'PLR', territories);
+  assert.equal(startInfo.warBalanceScore, 0);
+
+  // 2. Occupying 1 of 10 primary enemy provinces (with proportional siege score +8) yields ~+9..+12%, NOT +39%!
+  const oneOccTerrs: Record<string, Territory> = {
+    ...territories,
+    E_1: {
+      ...territories.E_1,
+      ownerId: 'PLR',
+      occupiedFromId: 'ENM',
+      isOccupied: true,
+    },
+  };
+  const oneOccInfo = calculateWarPeaceBudget(
+    { ...baseWar, attackerWarScore: 8 },
+    'PLR',
+    oneOccTerrs
+  );
+  assert.ok(
+    oneOccInfo.warBalanceScore >= 8 && oneOccInfo.warBalanceScore <= 15,
+    `1/10 occupied should give ~9..15% warBalanceScore, got ${oneOccInfo.warBalanceScore}%`
+  );
+
+  // 3. Symmetric when enemy occupies 1 of 10 player provinces (-8 war score)
+  const oneLostTerrs: Record<string, Territory> = {
+    ...territories,
+    P_1: {
+      ...territories.P_1,
+      ownerId: 'ENM',
+      occupiedFromId: 'PLR',
+      isOccupied: true,
+    },
+  };
+  const oneLostInfo = calculateWarPeaceBudget(
+    { ...baseWar, attackerWarScore: -8 },
+    'PLR',
+    oneLostTerrs
+  );
+  assert.equal(
+    oneLostInfo.warBalanceScore,
+    -oneOccInfo.warBalanceScore,
+    'War balance percentage must be 100% symmetric between winning and losing'
+  );
+
+  // 4. Occupying a secondary ally's sole province does NOT trigger +100% war score against primary enemy
+  const allyOccTerrs: Record<string, Territory> = {
+    ...territories,
+    ALLY_1: {
+      ...territories.ALLY_1,
+      ownerId: 'PLR',
+      occupiedFromId: 'ALLY',
+      isOccupied: true,
+    },
+  };
+  const allyOccInfo = calculateWarPeaceBudget(
+    { ...baseWar, attackerWarScore: 5 },
+    'PLR',
+    allyOccTerrs
+  );
+  assert.equal(allyOccInfo.warBalanceScore, 5);
+
+  // 5. Occupying all 10 of 10 primary enemy provinces reaches +100% even while secondary ally still holds ALLY_1
+  const allEnemyOccTerrs: Record<string, Territory> = { ...territories };
+  for (let i = 1; i <= 10; i++) {
+    allEnemyOccTerrs[`E_${i}`] = {
+      ...territories[`E_${i}`],
+      ownerId: 'PLR',
+      occupiedFromId: 'ENM',
+      isOccupied: true,
+    };
+  }
+  const fullOccInfo = calculateWarPeaceBudget(
+    { ...baseWar, attackerWarScore: 88 },
+    'PLR',
+    allEnemyOccTerrs
+  );
+  assert.equal(fullOccInfo.warBalanceScore, 100);
 });

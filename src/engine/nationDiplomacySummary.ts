@@ -10,11 +10,11 @@ import { getNationRulerName } from './pashaAndFiefEngine';
 import { getLiveNationRulerName } from './dynastyAndSuccessionEngine';
 import {
   getOrCreateRelation,
-  getWarScoreForNation,
   isAtWar,
   isNationEmbargoed,
   isNationEmbargoing,
 } from './simulationEngine';
+import { calculateWarPeaceBudget } from './actions/peaceActions';
 
 export interface DiplomacyPeerEntry {
   nation: Nation;
@@ -144,6 +144,12 @@ export function buildNationDiplomacySummary(params: {
     marchingByNation[mv.ownerId] =
       (marchingByNation[mv.ownerId] || 0) + (mv.troops || 0);
   }
+  for (const t of Object.values(territories)) {
+    if (t?.siege?.attackerId && t.siege.attackerTroops > 0) {
+      marchingByNation[t.siege.attackerId] =
+        (marchingByNation[t.siege.attackerId] || 0) + t.siege.attackerTroops;
+    }
+  }
 
   const makeBaseEntry = (other: Nation, score: number): DiplomacyPeerEntry => ({
     nation: other,
@@ -174,17 +180,21 @@ export function buildNationDiplomacySummary(params: {
 
   for (const other of Object.values(nations)) {
     if (!other || other.id === targetNationId || other.isEliminated) continue;
-    if ((provCountByNation[other.id] || 0) === 0) continue;
+    const war = isAtWar(wars, targetNationId, other.id);
+    if ((provCountByNation[other.id] || 0) === 0 && !war) continue;
 
     const rel = getOrCreateRelation(relations, targetNationId, other.id);
-    const war = isAtWar(wars, targetNationId, other.id);
 
     if (other.vassalOf === targetNationId) {
       vassals.push(makeBaseEntry(other, rel.score));
     }
 
     if (war) {
-      const warScore = getWarScoreForNation(war, targetNationId) ?? 0;
+      const warScore = calculateWarPeaceBudget(
+        war,
+        targetNationId,
+        territories
+      ).warBalanceScore;
       activeWars.push({
         ...makeBaseEntry(other, rel.score),
         warId: war.id,

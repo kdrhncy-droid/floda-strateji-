@@ -1178,3 +1178,150 @@ test('Late-game 5x world-war load balancing stays within tick frame budget and s
     `Expected average 5x world-war tick to stay under 65ms (got ${avgMsPerTick.toFixed(1)}ms)`
   );
 });
+
+test('Delegated AI commander sends 100% of army without leaving 500 soldiers behind and ignores empty secondary-ally provinces', async () => {
+  const { evaluatePlayerAiCommander } = await import('./playerAiCommander');
+
+  const nations: Record<string, Nation> = {
+    PLR: mkFaz3Nation('PLR', { name: 'Oyuncu', capitalTerritoryId: 'P_REAR' }),
+    ENM: mkFaz3Nation('ENM', { name: 'Ana Hedef', capitalTerritoryId: 'E_MAIN' }),
+    ALLY: mkFaz3Nation('ALLY', { name: 'Düşman Müttefiki', capitalTerritoryId: 'A_EMPTY' }),
+  };
+
+  // P_REAR (500 soldiers!) -> P_FRONT (8000 soldiers) -> E_MAIN (primary enemy, 3000 garrison, close)
+  // P_FRONT also borders A_EMPTY (secondary ally with 0 garrison, farther away), and A_FAR_COAST is a distant empty coastal tile!
+  const territories: Record<string, Territory> = {
+    P_REAR: mkFaz3Territory('P_REAR', {
+      name: 'İç Şehir',
+      ownerId: 'PLR',
+      coreOwnerId: 'PLR',
+      isCapital: true,
+      garrison: 500,
+      neighbors: ['P_FRONT'],
+      centroid: [28.0, 40.5],
+      isCoastal: true,
+    }),
+    P_FRONT: mkFaz3Territory('P_FRONT', {
+      name: 'Cephe Şehri',
+      ownerId: 'PLR',
+      coreOwnerId: 'PLR',
+      garrison: 8000,
+      neighbors: ['P_REAR', 'E_MAIN', 'A_EMPTY'],
+      centroid: [29.0, 41.0],
+    }),
+    E_MAIN: mkFaz3Territory('E_MAIN', {
+      name: 'Ana Düşman Başkenti',
+      ownerId: 'ENM',
+      coreOwnerId: 'ENM',
+      isCapital: true,
+      garrison: 3000,
+      neighbors: ['P_FRONT'],
+      centroid: [29.8, 41.2],
+    }),
+    A_EMPTY: mkFaz3Territory('A_EMPTY', {
+      name: 'Boş Müttefik Şehri',
+      ownerId: 'ALLY',
+      coreOwnerId: 'ALLY',
+      isCapital: true,
+      garrison: 0,
+      neighbors: ['P_FRONT'],
+      centroid: [38.0, 47.0],
+    }),
+    A_FAR_COAST: mkFaz3Territory('A_FAR_COAST', {
+      name: 'Uzak Kıyı',
+      ownerId: 'ALLY',
+      coreOwnerId: 'ALLY',
+      garrison: 0,
+      neighbors: [],
+      centroid: [12.0, 54.0],
+      isCoastal: true,
+    }),
+  };
+
+  const war: ActiveWar = {
+    id: 'w_primary_focus',
+    name: 'Oyuncu - Ana Hedef Savaşı',
+    attackerId: 'PLR',
+    defenderId: 'ENM',
+    attackers: ['PLR'],
+    defenders: ['ENM', 'ALLY'],
+    startedTick: 1,
+    attackerWarScore: 0,
+    casualtiesAttacker: 0,
+    casualtiesDefender: 0,
+  };
+
+  const res = evaluatePlayerAiCommander({
+    tick: 10,
+    playerNationId: 'PLR',
+    stance: 'BALANCED',
+    nations,
+    territories,
+    relations: {},
+    wars: [war],
+    movements: [],
+  });
+
+  assert.ok(res, 'Delegated AI commander should issue wartime orders');
+
+  // 1. P_FRONT (8000) must attack E_MAIN (primary enemy) with ALL 8000 troops (0 left behind, NOT 500!)
+  // and must NOT waste its army marching into A_EMPTY (0-garrison secondary ally)!
+  const frontMove = res.newMovements.find((m) => m.fromTerritoryId === 'P_FRONT');
+  assert.ok(frontMove, 'Frontline city must launch an attack');
+  assert.equal(frontMove!.toTerritoryId, 'E_MAIN', 'Must attack primary war target instead of empty secondary ally');
+  assert.equal(frontMove!.troops, 8000, 'Must dispatch 100% of frontline army without leaving 500 behind');
+  assert.equal(res.updatedTerritories.P_FRONT.garrison, 0, 'Zero soldiers left behind in P_FRONT');
+
+  // 2. P_REAR had exactly 500 soldiers — previously frozen forever by the old 500-soldier reserve rule!
+  // Now all 500 march forward to reinforce the front, leaving 0 behind!
+  const rearMove = res.newMovements.find((m) => m.fromTerritoryId === 'P_REAR');
+  assert.ok(rearMove, '500-soldier rear city must also be mobilized instead of staying stuck at 500');
+  assert.equal(rearMove!.troops, 500);
+  assert.equal(res.updatedTerritories.P_REAR.garrison, 0, 'Zero soldiers left behind in P_REAR');
+
+  // 3. General AI (`evaluateWartimeAiOperations`) also focuses on primary enemy instead of distant 0-garrison secondary allies
+  const aiWar: ActiveWar = {
+    ...war,
+    id: 'w_ai_focus',
+    attackerId: 'AI_ATT',
+    attackers: ['AI_ATT'],
+  };
+  const aiNations: Record<string, Nation> = {
+    PLR: nations.PLR,
+    AI_ATT: mkFaz3Nation('AI_ATT', { name: 'AI Saldıran', capitalTerritoryId: 'AI_FRONT' }),
+    ENM: nations.ENM,
+    ALLY: nations.ALLY,
+  };
+  const aiTerrs: Record<string, Territory> = {
+    AI_FRONT: mkFaz3Territory('AI_FRONT', {
+      name: 'AI Cephe',
+      ownerId: 'AI_ATT',
+      coreOwnerId: 'AI_ATT',
+      isCapital: true,
+      garrison: 14000,
+      neighbors: ['E_MAIN', 'A_EMPTY'],
+      centroid: [29.0, 41.0],
+      isCoastal: true,
+    }),
+    E_MAIN: { ...territories.E_MAIN, neighbors: ['AI_FRONT'] },
+    A_EMPTY: { ...territories.A_EMPTY, neighbors: ['AI_FRONT'] },
+    A_FAR_COAST: territories.A_FAR_COAST,
+  };
+
+  const aiOps = evaluateWartimeAiOperations({
+    nextTick: 12,
+    playerNationId: 'PLR',
+    nations: aiNations,
+    territories: aiTerrs,
+    relations: {},
+    wars: [aiWar],
+    movements: [],
+    aiAggressiveness: 'NORMAL',
+  });
+  assert.ok(aiOps && aiOps.newMovements.length > 0, 'General AI should launch wartime attack');
+  assert.equal(
+    aiOps!.newMovements[0].toTerritoryId,
+    'E_MAIN',
+    'General AI must target nearby primary war enemy instead of empty secondary ally territory'
+  );
+});

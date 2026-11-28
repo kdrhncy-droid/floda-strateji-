@@ -270,6 +270,8 @@ export const createDiplomacyAndWarSlice: GameStoreSlice<
       territories: s.territories,
       relations: s.relations,
       wars: s.wars,
+      movements: s.movements,
+      battles: s.battles,
       newsEvents: s.newsEvents,
     });
 
@@ -285,6 +287,8 @@ export const createDiplomacyAndWarSlice: GameStoreSlice<
       ...(patch.territories ? { territories: patch.territories } : {}),
       ...(patch.relations ? { relations: patch.relations } : {}),
       ...(patch.wars ? { wars: patch.wars } : {}),
+      ...(patch.movements ? { movements: patch.movements } : {}),
+      ...(patch.battles ? { battles: patch.battles } : {}),
       ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
       ...(patch.warAnnouncement
         ? { activeWarAnnouncement: patch.warAnnouncement }
@@ -341,6 +345,8 @@ export const createDiplomacyAndWarSlice: GameStoreSlice<
       territories: s.territories,
       relations: s.relations,
       wars: s.wars,
+      movements: s.movements,
+      battles: s.battles,
       newsEvents: s.newsEvents,
     });
 
@@ -356,6 +362,8 @@ export const createDiplomacyAndWarSlice: GameStoreSlice<
       ...(patch.territories ? { territories: patch.territories } : {}),
       ...(patch.relations ? { relations: patch.relations } : {}),
       ...(patch.wars ? { wars: patch.wars, activeWarModalId: null } : {}),
+      ...(patch.movements ? { movements: patch.movements } : {}),
+      ...(patch.battles ? { battles: patch.battles } : {}),
       ...(patch.newsEvents ? { newsEvents: patch.newsEvents } : {}),
       ...(patch.warAnnouncement
         ? { activeWarAnnouncement: patch.warAnnouncement }

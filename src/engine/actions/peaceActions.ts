@@ -1,4 +1,5 @@
 import {
+  ActiveBattle,
   ActiveWar,
   ArmyMovement,
   DiplomaticRelation,
@@ -6,6 +7,7 @@ import {
   Nation,
   PeaceDealType,
   Territory,
+  UnitComposition,
   WorldNewsEvent,
 } from '../../types/game';
 import {
@@ -24,6 +26,310 @@ import {
   prependNews,
 } from './diplomacyActionHelpers';
 
+function mergeUnitsSafe(
+  a: UnitComposition | undefined,
+  aFallbackInf: number,
+  b: UnitComposition | undefined,
+  bFallbackInf: number
+): UnitComposition {
+  const ua = a || { infantry: aFallbackInf, armor: 0, airDrone: 0 };
+  const ub = b || { infantry: bFallbackInf, armor: 0, airDrone: 0 };
+  return {
+    infantry: Math.max(0, ua.infantry + ub.infantry),
+    armor: Math.max(0, ua.armor + ub.armor),
+    airDrone: Math.max(0, ua.airDrone + ub.airDrone),
+  };
+}
+
+/**
+ * Safely returns an occupied province to its rightful pre-occupation owner while
+ * evacuating any occupying garrison/units back to a friendly territory (or capital)
+ * of the occupier so armies neither vanish nor get gifted to the restored nation.
+ */
+function restoreOccupiedTerritoryToOwner(
+  nextTerritories: Record<string, Territory>,
+  nextNations: Record<string, Nation>,
+  terr: Territory,
+  rightfulOwnerId: string
+): void {
+  const occupierId = terr.ownerId;
+  if (occupierId && occupierId !== rightfulOwnerId && terr.garrison > 0) {
+    const occupierCapId = nextNations[occupierId]?.capitalTerritoryId;
+    const adjHome = terr.neighbors
+      .map((nId) => nextTerritories[nId])
+      .find((nt) => nt && nt.id !== terr.id && nt.ownerId === occupierId);
+    const capHome =
+      occupierCapId &&
+      occupierCapId !== terr.id &&
+      nextTerritories[occupierCapId]?.ownerId === occupierId
+        ? nextTerritories[occupierCapId]
+        : undefined;
+    const anyHome =
+      adjHome ||
+      capHome ||
+      Object.values(nextTerritories).find(
+        (nt) => nt && nt.id !== terr.id && nt.ownerId === occupierId
+      );
+
+    if (anyHome) {
+      nextTerritories[anyHome.id] = {
+        ...anyHome,
+        garrison: anyHome.garrison + terr.garrison,
+        units: mergeUnitsSafe(
+          anyHome.units,
+          anyHome.garrison,
+          terr.units,
+          terr.garrison
+        ),
+      };
+    }
+  }
+
+  const restoredGarrison =
+    occupierId === rightfulOwnerId ? terr.garrison : 800;
+  const restoredUnits: UnitComposition =
+    occupierId === rightfulOwnerId && terr.units
+      ? terr.units
+      : { infantry: restoredGarrison, armor: 0, airDrone: 0 };
+
+  nextTerritories[terr.id] = {
+    ...terr,
+    ownerId: rightfulOwnerId,
+    isOccupied: false,
+    occupiedById: undefined,
+    occupiedFromId: undefined,
+    siege: null,
+    garrison: restoredGarrison,
+    units: restoredUnits,
+  };
+
+  const rightfulNation = nextNations[rightfulOwnerId];
+  if (rightfulNation) {
+    const capOwned =
+      nextTerritories[rightfulNation.capitalTerritoryId]?.ownerId ===
+      rightfulOwnerId;
+    if (rightfulNation.isEliminated || !capOwned) {
+      const nextCapId = capOwned ? rightfulNation.capitalTerritoryId : terr.id;
+      nextNations[rightfulOwnerId] = {
+        ...rightfulNation,
+        isEliminated: false,
+        capitalTerritoryId: nextCapId,
+      };
+      if (nextTerritories[nextCapId]) {
+        nextTerritories[nextCapId] = {
+          ...nextTerritories[nextCapId],
+          isCapital: true,
+        };
+      }
+    }
+  }
+}
+
+/**
+ * Restores all non-annexed occupied territories (especially secondary war allies' territories,
+ * which must NEVER be annexed in peace!) and clears active sieges between the two war sides.
+ */
+function settleRemainingWarOccupationsAndSieges(
+  nextTerritories: Record<string, Territory>,
+  nextNations: Record<string, Nation>,
+  sideAIds: string[],
+  sideBIds: string[],
+  annexedIdsSet: Set<string>
+): void {
+  const setA = new Set(sideAIds);
+  const setB = new Set(sideBIds);
+  const allWarIds = new Set([...sideAIds, ...sideBIds]);
+
+  for (const t of Object.values(nextTerritories)) {
+    if (!t || annexedIdsSet.has(t.id)) continue;
+    const rightfulOwner = t.occupiedFromId ?? t.coreOwnerId;
+
+    if (t.isOccupied && rightfulOwner) {
+      const aOccupiedB = setA.has(t.ownerId) && setB.has(rightfulOwner);
+      const bOccupiedA = setB.has(t.ownerId) && setA.has(rightfulOwner);
+      if (aOccupiedB || bOccupiedA) {
+        // First evacuate any active siege troops on this tile before restoring
+        if (t.siege && t.siege.attackerTroops > 0) {
+          const sAttId = t.siege.attackerId;
+          const sHome = Object.values(nextTerritories).find(
+            (nt) => nt && nt.id !== t.id && nt.ownerId === sAttId
+          );
+          if (sHome) {
+            nextTerritories[sHome.id] = {
+              ...sHome,
+              garrison: sHome.garrison + t.siege.attackerTroops,
+              units: mergeUnitsSafe(
+                sHome.units,
+                sHome.garrison,
+                t.siege.attackerUnits,
+                t.siege.attackerTroops
+              ),
+            };
+          }
+        }
+        restoreOccupiedTerritoryToOwner(
+          nextTerritories,
+          nextNations,
+          nextTerritories[t.id],
+          rightfulOwner
+        );
+        continue;
+      }
+    }
+
+    if (
+      t.siege &&
+      allWarIds.has(t.ownerId) &&
+      allWarIds.has(t.siege.attackerId) &&
+      ((setA.has(t.ownerId) && setB.has(t.siege.attackerId)) ||
+        (setB.has(t.ownerId) && setA.has(t.siege.attackerId)))
+    ) {
+      const sAttId = t.siege.attackerId;
+      const sHome = Object.values(nextTerritories).find(
+        (nt) => nt && nt.id !== t.id && nt.ownerId === sAttId
+      );
+      if (sHome && t.siege.attackerTroops > 0) {
+        nextTerritories[sHome.id] = {
+          ...sHome,
+          garrison: sHome.garrison + t.siege.attackerTroops,
+          units: mergeUnitsSafe(
+            sHome.units,
+            sHome.garrison,
+            t.siege.attackerUnits,
+            t.siege.attackerTroops
+          ),
+        };
+      }
+      nextTerritories[t.id] = {
+        ...nextTerritories[t.id],
+        siege: null,
+      };
+    }
+  }
+}
+
+function applyCoalitionTruces(
+  workingRelations: Record<string, DiplomaticRelation>,
+  sideAIds: string[],
+  sideBIds: string[],
+  truceUntilTick: number
+): void {
+  for (const aId of sideAIds) {
+    for (const bId of sideBIds) {
+      if (!aId || !bId || aId === bId) continue;
+      const k = relationKey(aId, bId);
+      const rel = getOrCreateRelation(workingRelations, aId, bId);
+      workingRelations[k] = {
+        ...rel,
+        truceUntilTick: Math.max(rel.truceUntilTick || 0, truceUntilTick),
+      };
+    }
+  }
+}
+
+function cancelPostPeaceHostileOperations(
+  nextTerritories: Record<string, Territory>,
+  sideAIds: string[],
+  sideBIds: string[],
+  remainingWars: ActiveWar[],
+  movements?: ArmyMovement[],
+  battles?: ActiveBattle[]
+): { nextMovements?: ArmyMovement[]; nextBattles?: ActiveBattle[] } {
+  const setA = new Set(sideAIds);
+  const setB = new Set(sideBIds);
+  const areStillAtWar = (x: string, y: string) =>
+    remainingWars.some(
+      (w) =>
+        (w.attackers.includes(x) && w.defenders.includes(y)) ||
+        (w.defenders.includes(x) && w.attackers.includes(y))
+    );
+  const isPeacePair = (x: string, y: string) =>
+    ((setA.has(x) && setB.has(y)) || (setB.has(x) && setA.has(y))) &&
+    !areStillAtWar(x, y);
+
+  let nextMovements: ArmyMovement[] | undefined;
+  if (movements && movements.length > 0) {
+    let changed = false;
+    const kept: ArmyMovement[] = [];
+    for (const mv of movements) {
+      const destOwner =
+        nextTerritories[mv.finalDestinationId || mv.toTerritoryId]?.ownerId ||
+        nextTerritories[mv.toTerritoryId]?.ownerId;
+      const hopOwner = nextTerritories[mv.toTerritoryId]?.ownerId;
+      if (
+        (destOwner && isPeacePair(mv.ownerId, destOwner)) ||
+        (hopOwner && isPeacePair(mv.ownerId, hopOwner))
+      ) {
+        changed = true;
+        const origin =
+          nextTerritories[mv.fromTerritoryId]?.ownerId === mv.ownerId
+            ? nextTerritories[mv.fromTerritoryId]
+            : Object.values(nextTerritories).find(
+                (nt) => nt && nt.ownerId === mv.ownerId
+              );
+        if (origin && mv.troops > 0) {
+          nextTerritories[origin.id] = {
+            ...origin,
+            garrison: origin.garrison + mv.troops,
+            units: mergeUnitsSafe(
+              origin.units,
+              origin.garrison,
+              mv.units,
+              mv.troops
+            ),
+          };
+        }
+      } else {
+        kept.push(mv);
+      }
+    }
+    if (changed) nextMovements = kept;
+  }
+
+  let nextBattles: ActiveBattle[] | undefined;
+  if (battles && battles.length > 0) {
+    let changed = false;
+    const kept: ActiveBattle[] = [];
+    for (const btl of battles) {
+      if (isPeacePair(btl.attackerId, btl.defenderId)) {
+        changed = true;
+        const defTerr = nextTerritories[btl.territoryId];
+        if (defTerr && defTerr.ownerId === btl.defenderId) {
+          nextTerritories[defTerr.id] = {
+            ...defTerr,
+            garrison: Math.max(defTerr.garrison, btl.defenderTroops),
+          };
+        }
+        const attOrigin =
+          (btl.fromTerritoryId &&
+          nextTerritories[btl.fromTerritoryId]?.ownerId === btl.attackerId
+            ? nextTerritories[btl.fromTerritoryId]
+            : undefined) ||
+          Object.values(nextTerritories).find(
+            (nt) => nt && nt.ownerId === btl.attackerId
+          );
+        if (attOrigin && btl.attackerTroops > 0) {
+          nextTerritories[attOrigin.id] = {
+            ...attOrigin,
+            garrison: attOrigin.garrison + btl.attackerTroops,
+            units: mergeUnitsSafe(
+              attOrigin.units,
+              attOrigin.garrison,
+              btl.attackerUnits,
+              btl.attackerTroops
+            ),
+          };
+        }
+      } else {
+        kept.push(btl);
+      }
+    }
+    if (changed) nextBattles = kept;
+  }
+
+  return { nextMovements, nextBattles };
+}
+
 export function resolvePeaceDealDomain(params: {
   warId: string;
   dealType: PeaceDealType;
@@ -34,6 +340,8 @@ export function resolvePeaceDealDomain(params: {
   territories: Record<string, Territory>;
   relations: Record<string, DiplomaticRelation>;
   wars: ActiveWar[];
+  movements?: ArmyMovement[];
+  battles?: ActiveBattle[];
   newsEvents: WorldNewsEvent[];
 }): DomainActionPatch {
   const {
@@ -46,6 +354,8 @@ export function resolvePeaceDealDomain(params: {
     territories,
     relations,
     wars,
+    movements,
+    battles,
     newsEvents,
   } = params;
 
@@ -53,31 +363,41 @@ export function resolvePeaceDealDomain(params: {
   const playerNation = nations[playerNationId];
   if (!war || !playerNation) return {};
 
-  const isPlayerAttackerSide = war.attackers.includes(playerNationId);
+  const isPlayerAttackerSide =
+    war.attackerId === playerNationId || war.attackers.includes(playerNationId);
   const enemyId = isPlayerAttackerSide ? war.defenderId : war.attackerId;
   const enemy = nations[enemyId];
-  const key = relationKey(playerNationId, enemyId);
+  const playerSideIds = Array.from(
+    new Set([
+      playerNationId,
+      ...(isPlayerAttackerSide ? war.attackers : war.defenders),
+    ])
+  );
+  const enemySideIds = Array.from(
+    new Set([
+      enemyId,
+      ...(isPlayerAttackerSide ? war.defenders : war.attackers),
+    ])
+  );
 
   // Effective war score from the player's perspective (-100 to +100)
   const playerWarScore = isPlayerAttackerSide
     ? war.attackerWarScore
     : -war.attackerWarScore;
 
-  // Count enemy territories currently occupied by the player
-  const occupiedProvs = Object.values(territories).filter(
+  // Count ONLY primary enemy territories currently occupied by the player's side (never secondary allies!)
+  const occupiedPrimaryEnemyProvs = Object.values(territories).filter(
     (t) =>
       t &&
-      t.ownerId === playerNationId &&
+      playerSideIds.includes(t.ownerId) &&
       t.isOccupied &&
-      (t.coreOwnerId === enemyId ||
-        war.attackers.includes(t.coreOwnerId) ||
-        war.defenders.includes(t.coreOwnerId))
+      (t.occupiedFromId ?? t.coreOwnerId) === enemyId
   );
 
-  // Effective war score including occupied provinces (+25 required for peace deals!)
+  // Effective war score including occupied primary enemy provinces (+25 required for peace deals!)
   const effectiveDealScore = Math.max(
     playerWarScore,
-    Math.round(Math.max(0, playerWarScore) + occupiedProvs.length * 14)
+    Math.round(Math.max(0, playerWarScore) + occupiedPrimaryEnemyProvs.length * 14)
   );
 
   // Enforce realistic AoH3 +25 War Score threshold before accepting peace demands or white peace!
@@ -118,22 +438,32 @@ export function resolvePeaceDealDomain(params: {
   let workingRelations = { ...relations };
   let nextNews = newsEvents;
   let toast = `${enemy?.name} ile Beyaz Barış imzalandı.`;
+  const annexedSet = new Set<string>();
 
   if (dealType === 'ANNEX_OCCUPIED') {
     const extraProvincesAllowed =
       playerWarScore >= 75 ? 2 : playerWarScore >= 45 ? 1 : 0;
     let annexedCount = 0;
-
     const annexedIds: string[] = [];
+
+    // ONLY annex occupied provinces belonging to the primary war target (`enemyId`), NEVER secondary allies!
     Object.values(nextTerritories).forEach((t) => {
-      if (t.ownerId === playerNationId && t.isOccupied) {
+      if (
+        t &&
+        t.ownerId === playerNationId &&
+        t.isOccupied &&
+        (t.occupiedFromId ?? t.coreOwnerId) === enemyId
+      ) {
         const isCore = t.coreOwnerId === playerNationId;
         annexedCount++;
         annexedIds.push(t.id);
+        annexedSet.add(t.id);
         nextTerritories[t.id] = {
           ...t,
           isOccupied: false,
           occupiedById: undefined,
+          occupiedFromId: undefined,
+          siege: null,
           assimilation: isCore ? 100 : Math.min(t.assimilation ?? 25, 85),
           isAssimilating: false,
         };
@@ -141,26 +471,38 @@ export function resolvePeaceDealDomain(params: {
     });
 
     const remainingEnemyTerrs = Object.values(nextTerritories).filter(
-      (t) => t.ownerId === enemyId
+      (t) => t && t.ownerId === enemyId
     );
     remainingEnemyTerrs.slice(0, extraProvincesAllowed).forEach((t) => {
       const isCore = t.coreOwnerId === playerNationId;
       annexedCount++;
       annexedIds.push(t.id);
+      annexedSet.add(t.id);
       nextTerritories[t.id] = {
         ...t,
         ownerId: playerNationId,
         isCapital: false,
         isOccupied: false,
         occupiedById: undefined,
+        occupiedFromId: undefined,
+        siege: null,
         assimilation: isCore ? 100 : 25,
         isAssimilating: false,
         unrest: isCore ? Math.max(0, t.unrest - 10) : Math.min(75, t.unrest + 20),
       };
     });
 
+    // Restore any occupied secondary-ally territories (and any occupied player-side territories)
+    settleRemainingWarOccupationsAndSieges(
+      nextTerritories,
+      nextNations,
+      playerSideIds,
+      enemySideIds,
+      annexedSet
+    );
+
     const stillOwned = Object.values(nextTerritories).filter(
-      (t) => t.ownerId === enemyId
+      (t) => t && t.ownerId === enemyId
     );
     const fullAnnex = stillOwned.length === 0;
     if (fullAnnex && nextNations[enemyId]) {
@@ -223,9 +565,17 @@ export function resolvePeaceDealDomain(params: {
     );
     toast = `📜 ${enemy?.name} ile Barış: ${Math.max(1, annexedCount)} eyalet ilhak edildi (+${aeCalc.adjustedGain} Agresiflik).${diploSuffix}`;
   } else if (dealType === 'VASSALIZE') {
+    settleRemainingWarOccupationsAndSieges(
+      nextTerritories,
+      nextNations,
+      playerSideIds,
+      enemySideIds,
+      annexedSet
+    );
     if (nextNations[enemyId]) {
       nextNations[enemyId] = {
         ...nextNations[enemyId],
+        isEliminated: false,
         vassalOf: playerNationId,
       };
     }
@@ -262,13 +612,20 @@ export function resolvePeaceDealDomain(params: {
     );
     toast = `👑 ${enemy?.name} barış antlaşmasıyla Vasal Devlet statüsüne alındı!`;
   } else if (dealType === 'REPARATIONS') {
+    settleRemainingWarOccupationsAndSieges(
+      nextTerritories,
+      nextNations,
+      playerSideIds,
+      enemySideIds,
+      annexedSet
+    );
     const indemnity = Math.min(
       1100,
       Math.max(400, Math.round((enemy?.treasury || 700) * 0.45))
     );
     nextNations[playerNationId] = {
-      ...playerNation,
-      treasury: playerNation.treasury + indemnity,
+      ...nextNations[playerNationId],
+      treasury: nextNations[playerNationId].treasury + indemnity,
     };
     if (nextNations[enemyId]) {
       nextNations[enemyId] = {
@@ -277,29 +634,40 @@ export function resolvePeaceDealDomain(params: {
       };
     }
     toast = `🪙 ${enemy?.name} devletinden +${indemnity} Altın savaş tazminatı tahsil edildi!`;
-  } else if (dealType === 'WHITE_PEACE' && playerWarScore < -35) {
-    nextNations[playerNationId] = {
-      ...playerNation,
-      treasury: Math.max(0, playerNation.treasury - 350),
-    };
-    toast = `${enemy?.name} ile 350 Altın tazminat ödenerek ateşkes imzalandı.`;
+  } else if (dealType === 'WHITE_PEACE') {
+    settleRemainingWarOccupationsAndSieges(
+      nextTerritories,
+      nextNations,
+      playerSideIds,
+      enemySideIds,
+      annexedSet
+    );
+    if (playerWarScore < -35) {
+      nextNations[playerNationId] = {
+        ...nextNations[playerNationId],
+        treasury: Math.max(0, nextNations[playerNationId].treasury - 350),
+      };
+      toast = `${enemy?.name} ile 350 Altın tazminat ödenerek ateşkes imzalandı.`;
+    }
   }
 
-  const curRel = getOrCreateRelation(workingRelations, playerNationId, enemyId);
-  const nextRelations = {
-    ...workingRelations,
-    [key]: {
-      ...curRel,
-      truceUntilTick: tick + 90,
-    },
-  };
+  applyCoalitionTruces(workingRelations, playerSideIds, enemySideIds, tick + 90);
 
   const remainingWars = wars.filter((w) => w.id !== warId);
+  const { nextMovements, nextBattles } = cancelPostPeaceHostileOperations(
+    nextTerritories,
+    playerSideIds,
+    enemySideIds,
+    remainingWars,
+    movements,
+    battles
+  );
+
   const coalitionRes = evaluateWorldCoalitionAt100AE({
     targetNationId: playerNationId,
     nations: nextNations,
     territories: nextTerritories,
-    relations: nextRelations,
+    relations: workingRelations,
     wars: remainingWars,
     tick,
     gameMode,
@@ -312,6 +680,8 @@ export function resolvePeaceDealDomain(params: {
     territories: nextTerritories,
     relations: coalitionRes.relations,
     wars: coalitionRes.wars,
+    ...(nextMovements ? { movements: nextMovements } : {}),
+    ...(nextBattles ? { battles: nextBattles } : {}),
     newsEvents: coalitionRes.newsEvents,
     ...(coalitionRes.warAnnouncement
       ? { warAnnouncement: coalitionRes.warAnnouncement }
@@ -354,8 +724,11 @@ export function calculateProvincePeaceScoreCost(
 
 export interface WarPeaceBudgetInfo {
   signedWarScore: number;
+  /** Symmetric, non-double-counted war balance percentage (-100 to +100) for HUD & War Overview UI */
+  warBalanceScore: number;
   occupiedEnemyProvinces: Territory[];
   claimableEnemyProvinces: Territory[];
+  occupiedPlayerProvinces: Territory[];
   availableBudget: number;
   enemyNationId: string;
   isPlayerAttackerSide: boolean;
@@ -371,21 +744,33 @@ export function calculateWarPeaceBudget(
     war.attackerId === playerNationId || war.attackers.includes(playerNationId);
   const enemyNationId =
     explicitEnemyId || (isPlayerAttackerSide ? war.defenderId : war.attackerId);
-  const playerSideIds = isPlayerAttackerSide ? war.attackers : war.defenders;
-  const enemySideIds = isPlayerAttackerSide ? war.defenders : war.attackers;
+  const playerSideIds = Array.from(
+    new Set([
+      playerNationId,
+      ...(isPlayerAttackerSide ? war.attackers : war.defenders),
+    ])
+  );
+  const enemySideIds = Array.from(
+    new Set([
+      enemyNationId,
+      ...(isPlayerAttackerSide ? war.defenders : war.attackers),
+    ])
+  );
 
   const signedWarScore = isPlayerAttackerSide
     ? war.attackerWarScore
     : -war.attackerWarScore;
 
-  // Claimable enemy provinces: any province currently owned by enemy coalition OR occupied by our coalition from enemy core
+  // Claimable enemy provinces: STRICTLY provinces belonging to the primary war opponent (`enemyNationId`).
+  // Secondary allies who joined alongside `enemyNationId` cannot have their territories annexed in peace!
   const claimableEnemyProvinces = Object.values(territories).filter((t) => {
     if (!t) return false;
-    if (enemySideIds.includes(t.ownerId)) return true;
+    if (t.ownerId === enemyNationId) return true;
+    const preOccOwner = t.occupiedFromId ?? t.coreOwnerId;
     if (
       playerSideIds.includes(t.ownerId) &&
       t.isOccupied &&
-      (enemySideIds.includes(t.coreOwnerId) || t.coreOwnerId === enemyNationId)
+      preOccOwner === enemyNationId
     ) {
       return true;
     }
@@ -396,10 +781,34 @@ export function calculateWarPeaceBudget(
     (t) => playerSideIds.includes(t.ownerId) && Boolean(t.isOccupied)
   );
 
+  // Player's own homeland provinces (owned or currently occupied by enemy coalition) for symmetric war balance
+  const playerOriginalProvinces = Object.values(territories).filter((t) => {
+    if (!t) return false;
+    if (t.ownerId === playerNationId && !t.isOccupied) return true;
+    const preOccOwner = t.occupiedFromId ?? t.coreOwnerId;
+    if (
+      enemySideIds.includes(t.ownerId) &&
+      t.isOccupied &&
+      preOccOwner === playerNationId
+    ) {
+      return true;
+    }
+    return false;
+  });
+
+  const occupiedPlayerProvinces = playerOriginalProvinces.filter(
+    (t) => enemySideIds.includes(t.ownerId) && Boolean(t.isOccupied)
+  );
+
   const occupationBonus = occupiedEnemyProvinces.length * 14;
   const totalEnemyOriginalCount = Math.max(1, claimableEnemyProvinces.length);
-  const allOccupiedBonus =
-    occupiedEnemyProvinces.length >= totalEnemyOriginalCount ? 100 : 0;
+  const allEnemyOccupied =
+    claimableEnemyProvinces.length > 0 &&
+    occupiedEnemyProvinces.length >= claimableEnemyProvinces.length;
+  const allPlayerOccupied =
+    playerOriginalProvinces.length > 0 &&
+    occupiedPlayerProvinces.length >= playerOriginalProvinces.length;
+  const allOccupiedBonus = allEnemyOccupied ? 100 : 0;
 
   const availableBudget = Math.max(
     0,
@@ -412,10 +821,52 @@ export function calculateWarPeaceBudget(
     )
   );
 
+  // Compute symmetric, non-double-counted war status percentage (-100..+100):
+  // - 0% at war start when no battles or occupations have occurred
+  // - Scales proportionally to share of primary enemy vs player provinces occupied + battle/siege score
+  // - Reaches +100% / -100% ONLY when 100% of primary enemy or player provinces are occupied (or signedWarScore === ±100)
+  let warBalanceScore = 0;
+  if (allEnemyOccupied || signedWarScore >= 100) {
+    warBalanceScore = 100;
+  } else if (allPlayerOccupied || signedWarScore <= -100) {
+    warBalanceScore = -100;
+  } else {
+    const enemyOccRatio =
+      claimableEnemyProvinces.length > 0
+        ? occupiedEnemyProvinces.length / totalEnemyOriginalCount
+        : 0;
+    const playerOccRatio =
+      playerOriginalProvinces.length > 0
+        ? occupiedPlayerProvinces.length / Math.max(1, playerOriginalProvinces.length)
+        : 0;
+    const netOccScore = Math.round((enemyOccRatio - playerOccRatio) * 85);
+
+    if (netOccScore === 0) {
+      warBalanceScore = Math.max(-99, Math.min(99, Math.round(signedWarScore)));
+    } else if (
+      signedWarScore === 0 ||
+      Math.sign(signedWarScore) === Math.sign(netOccScore)
+    ) {
+      const sign = Math.sign(netOccScore);
+      const blendedMag = Math.max(
+        Math.abs(netOccScore),
+        Math.round(Math.abs(signedWarScore) * 0.65 + Math.abs(netOccScore) * 0.45)
+      );
+      warBalanceScore = sign * Math.min(99, blendedMag);
+    } else {
+      warBalanceScore = Math.max(
+        -99,
+        Math.min(99, Math.round(signedWarScore * 0.6 + netOccScore * 0.6))
+      );
+    }
+  }
+
   return {
     signedWarScore,
+    warBalanceScore,
     occupiedEnemyProvinces,
     claimableEnemyProvinces,
+    occupiedPlayerProvinces,
     availableBudget,
     enemyNationId,
     isPlayerAttackerSide,
@@ -431,7 +882,7 @@ export function resolvePeaceConferenceDomain(params: {
   territories: Record<string, Territory>;
   relations: Record<string, DiplomaticRelation>;
   wars: ActiveWar[];
-  battles?: unknown[];
+  battles?: ActiveBattle[];
   movements?: ArmyMovement[];
   newsEvents: WorldNewsEvent[];
 }): DomainActionPatch {
@@ -444,6 +895,8 @@ export function resolvePeaceConferenceDomain(params: {
     territories,
     relations,
     wars,
+    battles,
+    movements,
     newsEvents,
   } = params;
 
@@ -453,7 +906,7 @@ export function resolvePeaceConferenceDomain(params: {
 
   const budgetInfo = calculateWarPeaceBudget(war, playerNationId, territories);
   const {
-    signedWarScore,
+    warBalanceScore,
     claimableEnemyProvinces,
     availableBudget,
     enemyNationId,
@@ -463,66 +916,55 @@ export function resolvePeaceConferenceDomain(params: {
   const enemy = nations[enemyNationId];
   if (!enemy) return {};
 
-  const playerSideIds = isPlayerAttackerSide ? war.attackers : war.defenders;
-  const enemySideIds = isPlayerAttackerSide ? war.defenders : war.attackers;
-  const key = relationKey(playerNationId, enemyNationId);
+  const playerSideIds = Array.from(
+    new Set([
+      playerNationId,
+      ...(isPlayerAttackerSide ? war.attackers : war.defenders),
+    ])
+  );
+  const enemySideIds = Array.from(
+    new Set([
+      enemyNationId,
+      ...(isPlayerAttackerSide ? war.defenders : war.attackers),
+    ])
+  );
 
   const nextNations = { ...nations };
   const nextTerritories = { ...territories };
   let workingRelations = { ...relations };
   let nextNews = newsEvents;
 
-  const effectivePeaceScore =
-    signedWarScore >= 0
-      ? Math.max(signedWarScore, availableBudget)
-      : signedWarScore;
+  const effectivePeaceScore = warBalanceScore;
 
   // 1. WHITE PEACE (Galipsiz Barış) — requires +25 effective war score
   if (request.mode === 'WHITE_PEACE') {
     if (effectivePeaceScore < 25) {
       sound.playClick();
       return {
-        toast: `🛑 Savaş ilan edildikten hemen sonra barış yapılamaz! Barış anlaşması için Savaş Skorunda en az +25 önde olmalısınız (Mevcut: %${effectivePeaceScore}).`,
+        toast: `🛑 Savaş ilan edildikten hemen sonra barış yapılamaz! Barış anlaşması için Savaş Skorunda en az +25 önde olmalısınız (Mevcut: %${warBalanceScore}).`,
       };
     }
 
     sound.playTreaty();
 
-    // Return any temporarily occupied provinces on both sides to their pre-war core owners
-    Object.values(nextTerritories).forEach((t) => {
-      if (!t || !t.isOccupied) return;
-      if (
-        playerSideIds.includes(t.ownerId) &&
-        enemySideIds.includes(t.coreOwnerId)
-      ) {
-        nextTerritories[t.id] = {
-          ...t,
-          ownerId: t.coreOwnerId,
-          isOccupied: false,
-          occupiedById: undefined,
-        };
-      } else if (
-        enemySideIds.includes(t.ownerId) &&
-        playerSideIds.includes(t.coreOwnerId)
-      ) {
-        nextTerritories[t.id] = {
-          ...t,
-          ownerId: t.coreOwnerId,
-          isOccupied: false,
-          occupiedById: undefined,
-        };
-      }
-    });
-
-    const curRel = getOrCreateRelation(
-      workingRelations,
-      playerNationId,
-      enemyNationId
+    settleRemainingWarOccupationsAndSieges(
+      nextTerritories,
+      nextNations,
+      playerSideIds,
+      enemySideIds,
+      new Set<string>()
     );
-    workingRelations[key] = {
-      ...curRel,
-      truceUntilTick: tick + 90,
-    };
+    applyCoalitionTruces(workingRelations, playerSideIds, enemySideIds, tick + 90);
+
+    const remainingWars = wars.filter((w) => w.id !== war.id);
+    const { nextMovements, nextBattles } = cancelPostPeaceHostileOperations(
+      nextTerritories,
+      playerSideIds,
+      enemySideIds,
+      remainingWars,
+      movements,
+      battles
+    );
 
     nextNews = prependNews(
       newsEvents,
@@ -537,7 +979,9 @@ export function resolvePeaceConferenceDomain(params: {
       nations: nextNations,
       territories: nextTerritories,
       relations: workingRelations,
-      wars: wars.filter((w) => w.id !== war.id),
+      wars: remainingWars,
+      ...(nextMovements ? { movements: nextMovements } : {}),
+      ...(nextBattles ? { battles: nextBattles } : {}),
       newsEvents: nextNews,
       toast: `🕊️ ${enemy.name} ile Galipsiz Barış imzalandı (90 gün ateşkes).`,
     };
@@ -547,54 +991,57 @@ export function resolvePeaceConferenceDomain(params: {
   if (request.mode === 'SURRENDER') {
     sound.playDefeat();
 
-    // Enemy keeps any player provinces they occupied; player returns any occupied enemy provinces
+    // Primary enemy (`enemyNationId`) keeps any player provinces occupied; secondary allies do NOT annex land,
+    // and player returns all occupied enemy & secondary-ally provinces safely.
     let lostCount = 0;
+    const surrenderedKeptIds = new Set<string>();
     Object.values(nextTerritories).forEach((t) => {
       if (!t || !t.isOccupied) return;
-      if (
-        playerSideIds.includes(t.ownerId) &&
-        enemySideIds.includes(t.coreOwnerId)
-      ) {
-        nextTerritories[t.id] = {
-          ...t,
-          ownerId: t.coreOwnerId,
-          isOccupied: false,
-          occupiedById: undefined,
-        };
-      } else if (
-        enemySideIds.includes(t.ownerId) &&
-        playerSideIds.includes(t.coreOwnerId)
-      ) {
+      const preOccOwner = t.occupiedFromId ?? t.coreOwnerId;
+      if (t.ownerId === enemyNationId && preOccOwner === playerNationId) {
         lostCount++;
+        surrenderedKeptIds.add(t.id);
         nextTerritories[t.id] = {
           ...t,
           isOccupied: false,
           occupiedById: undefined,
-          assimilation: 25,
+          occupiedFromId: undefined,
+          siege: null,
+          assimilation: t.coreOwnerId === enemyNationId ? 100 : 25,
         };
       }
     });
 
+    settleRemainingWarOccupationsAndSieges(
+      nextTerritories,
+      nextNations,
+      playerSideIds,
+      enemySideIds,
+      surrenderedKeptIds
+    );
+
     const indemnity = Math.round(Math.max(150, playerNation.treasury * 0.3));
     nextNations[playerNationId] = {
-      ...playerNation,
-      treasury: Math.max(0, playerNation.treasury - indemnity),
-      stability: Math.max(15, playerNation.stability - 10),
+      ...nextNations[playerNationId],
+      treasury: Math.max(0, nextNations[playerNationId].treasury - indemnity),
+      stability: Math.max(15, nextNations[playerNationId].stability - 10),
     };
     nextNations[enemyNationId] = {
-      ...enemy,
-      treasury: enemy.treasury + indemnity,
+      ...nextNations[enemyNationId],
+      treasury: nextNations[enemyNationId].treasury + indemnity,
     };
 
-    const curRel = getOrCreateRelation(
-      workingRelations,
-      playerNationId,
-      enemyNationId
+    applyCoalitionTruces(workingRelations, playerSideIds, enemySideIds, tick + 120);
+
+    const remainingWars = wars.filter((w) => w.id !== war.id);
+    const { nextMovements, nextBattles } = cancelPostPeaceHostileOperations(
+      nextTerritories,
+      playerSideIds,
+      enemySideIds,
+      remainingWars,
+      movements,
+      battles
     );
-    workingRelations[key] = {
-      ...curRel,
-      truceUntilTick: tick + 120,
-    };
 
     nextNews = prependNews(
       newsEvents,
@@ -609,7 +1056,9 @@ export function resolvePeaceConferenceDomain(params: {
       nations: nextNations,
       territories: nextTerritories,
       relations: workingRelations,
-      wars: wars.filter((w) => w.id !== war.id),
+      wars: remainingWars,
+      ...(nextMovements ? { movements: nextMovements } : {}),
+      ...(nextBattles ? { battles: nextBattles } : {}),
       newsEvents: nextNews,
       toast: `🏳️ ${enemy.name} ile teslim antlaşması imzalandı (-${indemnity} Altın).`,
     };
@@ -619,7 +1068,7 @@ export function resolvePeaceConferenceDomain(params: {
   if (effectivePeaceScore < 25) {
     sound.playClick();
     return {
-      toast: `🛑 Barış antlaşması imzalamak için Savaş Skorunda en az +25 önde olmalısınız (Mevcut: %${effectivePeaceScore}).`,
+      toast: `🛑 Barış antlaşması imzalamak için Savaş Skorunda en az +25 önde olmalısınız (Mevcut: %${warBalanceScore}).`,
     };
   }
   const claimableMap = new Map<string, Territory>();
@@ -686,7 +1135,7 @@ export function resolvePeaceConferenceDomain(params: {
 
   const demandedSet = new Set(demandedIds);
 
-  // Transfer demanded provinces to player as permanent non-occupied territories (assimilation 25 if foreign core)
+  // Transfer demanded provinces (strictly belonging to primary enemy `enemyNationId`) to player
   for (const id of demandedIds) {
     const t = nextTerritories[id];
     if (!t) continue;
@@ -697,23 +1146,23 @@ export function resolvePeaceConferenceDomain(params: {
       isCapital: false,
       isOccupied: false,
       occupiedById: undefined,
+      occupiedFromId: undefined,
+      siege: null,
       assimilation: isCore ? 100 : 25,
       isAssimilating: false,
       unrest: isCore ? Math.max(0, t.unrest - 10) : Math.min(75, t.unrest + 18),
     };
   }
 
-  // Return any occupied enemy provinces that were NOT demanded in the peace deal
-  for (const t of claimableEnemyProvinces) {
-    if (!demandedSet.has(t.id) && playerSideIds.includes(t.ownerId) && t.isOccupied) {
-      nextTerritories[t.id] = {
-        ...t,
-        ownerId: enemyNationId,
-        isOccupied: false,
-        occupiedById: undefined,
-      };
-    }
-  }
+  // Restore ALL un-demanded primary enemy provinces AND ALL secondary-ally provinces (plus any enemy-occupied player provinces),
+  // evacuating occupying troops safely back to their home nation!
+  settleRemainingWarOccupationsAndSieges(
+    nextTerritories,
+    nextNations,
+    playerSideIds,
+    enemySideIds,
+    demandedSet
+  );
 
   const stillOwnedByEnemy = Object.values(nextTerritories).filter(
     (t) => t && t.ownerId === enemyNationId
@@ -722,7 +1171,7 @@ export function resolvePeaceConferenceDomain(params: {
 
   if (fullAnnexationAchieved) {
     nextNations[enemyNationId] = {
-      ...enemy,
+      ...nextNations[enemyNationId],
       isEliminated: true,
     };
   } else if (
@@ -731,7 +1180,8 @@ export function resolvePeaceConferenceDomain(params: {
     const newCap = stillOwnedByEnemy[0];
     if (newCap) {
       nextNations[enemyNationId] = {
-        ...enemy,
+        ...nextNations[enemyNationId],
+        isEliminated: false,
         capitalTerritoryId: newCap.id,
       };
       nextTerritories[newCap.id] = {
@@ -741,7 +1191,7 @@ export function resolvePeaceConferenceDomain(params: {
     }
   }
 
-  let updatedPlayer = { ...playerNation };
+  let updatedPlayer = { ...nextNations[playerNationId] };
   let updatedEnemy = { ...nextNations[enemyNationId] };
   const clauseLabels: string[] = [];
 
@@ -826,15 +1276,7 @@ export function resolvePeaceConferenceDomain(params: {
     workingRelations = penaltyRes.updatedRelations;
   }
 
-  const curRel = getOrCreateRelation(
-    workingRelations,
-    playerNationId,
-    enemyNationId
-  );
-  workingRelations[key] = {
-    ...curRel,
-    truceUntilTick: tick + 120,
-  };
+  applyCoalitionTruces(workingRelations, playerSideIds, enemySideIds, tick + 120);
 
   const summaryStr = clauseLabels.join(', ');
   nextNews = prependNews(
@@ -847,6 +1289,15 @@ export function resolvePeaceConferenceDomain(params: {
   );
 
   const remainingWars = wars.filter((w) => w.id !== war.id);
+  const { nextMovements, nextBattles } = cancelPostPeaceHostileOperations(
+    nextTerritories,
+    playerSideIds,
+    enemySideIds,
+    remainingWars,
+    movements,
+    battles
+  );
+
   const coalitionRes = evaluateWorldCoalitionAt100AE({
     targetNationId: playerNationId,
     nations: nextNations,
@@ -866,6 +1317,8 @@ export function resolvePeaceConferenceDomain(params: {
     territories: nextTerritories,
     relations: coalitionRes.relations,
     wars: coalitionRes.wars,
+    ...(nextMovements ? { movements: nextMovements } : {}),
+    ...(nextBattles ? { battles: nextBattles } : {}),
     newsEvents: coalitionRes.newsEvents,
     ...(coalitionRes.warAnnouncement
       ? { warAnnouncement: coalitionRes.warAnnouncement }

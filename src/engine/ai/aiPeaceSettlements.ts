@@ -103,7 +103,7 @@ export function evaluateAiVsAiPeaceSettlement(params: {
         t &&
         t.ownerId === winner.id &&
         t.isOccupied &&
-        t.coreOwnerId === loser.id
+        (t.occupiedFromId ?? t.coreOwnerId) === loser.id
     );
 
     const candidatePool: Territory[] = [
@@ -172,6 +172,7 @@ export function evaluateAiVsAiPeaceSettlement(params: {
         isCapital: false,
         isOccupied: false,
         occupiedById: undefined,
+        occupiedFromId: undefined,
         siege: undefined,
         unrest: Math.min(65, (prov.unrest || 15) + 20),
         garrison: Math.max(3000, prov.garrison),
@@ -190,21 +191,23 @@ export function evaluateAiVsAiPeaceSettlement(params: {
     const allWarSideIds = new Set<string>([...attSideIds, ...defSideIds]);
     for (const [tId, prov] of Object.entries(workingTerrs)) {
       if (!prov || demandedSet.has(tId)) continue;
+      const rightfulOwner = prov.occupiedFromId ?? prov.coreOwnerId;
       const isOccupiedBetweenSides =
         prov.isOccupied &&
-        prov.coreOwnerId &&
+        rightfulOwner &&
         allWarSideIds.has(prov.ownerId) &&
-        allWarSideIds.has(prov.coreOwnerId);
+        allWarSideIds.has(rightfulOwner);
       const hasWarSiege =
         prov.siege &&
         allWarSideIds.has(prov.ownerId) &&
         allWarSideIds.has(prov.siege.attackerId);
-      if (isOccupiedBetweenSides) {
+      if (isOccupiedBetweenSides && rightfulOwner) {
         workingTerrs[tId] = {
           ...prov,
-          ownerId: prov.coreOwnerId,
+          ownerId: rightfulOwner,
           isOccupied: false,
           occupiedById: undefined,
+          occupiedFromId: undefined,
           siege: undefined,
         };
         terrsChanged = true;
@@ -312,11 +315,12 @@ export function evaluateAiVsAiPeaceSettlement(params: {
     let whitePeaceTerrs: Record<string, Territory> | undefined;
     for (const [tId, prov] of Object.entries(territories)) {
       if (!prov) continue;
+      const rightfulOwner = prov.occupiedFromId ?? prov.coreOwnerId;
       const occupiedByWarSide =
         prov.isOccupied &&
-        prov.coreOwnerId &&
+        rightfulOwner &&
         allWarSideIds.has(prov.ownerId) &&
-        allWarSideIds.has(prov.coreOwnerId);
+        allWarSideIds.has(rightfulOwner);
       const siegeByWarSide =
         prov.siege &&
         allWarSideIds.has(prov.ownerId) &&
@@ -325,9 +329,11 @@ export function evaluateAiVsAiPeaceSettlement(params: {
         if (!whitePeaceTerrs) whitePeaceTerrs = { ...territories };
         whitePeaceTerrs[tId] = {
           ...prov,
-          ownerId: occupiedByWarSide ? prov.coreOwnerId : prov.ownerId,
+          ownerId:
+            occupiedByWarSide && rightfulOwner ? rightfulOwner : prov.ownerId,
           isOccupied: false,
           occupiedById: undefined,
+          occupiedFromId: undefined,
           siege: undefined,
         };
       }
