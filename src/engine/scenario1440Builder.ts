@@ -108,9 +108,9 @@ export function transformBundleTo1440Scenario(
       color: emp.color,
       ideology: emp.ideology,
       capitalTerritoryId: resolvedCapId,
-      treasury: Math.round(emp.treasury * 0.45),
-      manpower: emp.manpower,
-      researchPoints: isOttoman ? 65 : 50,
+      treasury: Math.round(emp.treasury * 0.32),
+      manpower: Math.round(emp.manpower * 0.45),
+      researchPoints: isOttoman ? 18 : 12,
       researchProgressByTech: {},
       unlockedTechs: ['eco_1'],
       modernizedArmyTier: 0,
@@ -201,28 +201,38 @@ export function transformBundleTo1440Scenario(
   });
 
   Object.entries(provsByEmpire).forEach(([empId, provs]) => {
+    if (provs.length === 0) return;
     const scaleTarget = TARGET_1440_EMPIRE_SCALE[empId];
-    if (!scaleTarget || provs.length === 0) return;
-
-    const currentArmy = provs.reduce((s, p) => s + p.garrison, 0) || 1;
     const currentGdp = provs.reduce((s, p) => s + p.baseGdp, 0) || 1;
-    const armyFactor = scaleTarget.targetArmy / currentArmy;
-    const gdpFactor = scaleTarget.targetGdp / currentGdp;
+    const gdpFactor = scaleTarget ? scaleTarget.targetGdp / currentGdp : 1;
+
+    // Ensure exactly one capital province receives the starting standing army
+    let capitalProv = provs.find((p) => p.isCapital);
+    if (!capitalProv) {
+      capitalProv = provs[0];
+      capitalProv.isCapital = true;
+    }
+    const capitalArmy = scaleTarget
+      ? Math.max(4000, Math.round(scaleTarget.targetArmy * 0.16))
+      : Math.max(3500, Math.round(capitalProv.garrison || 5000));
 
     provs.forEach((p) => {
-      const nextGarrison = Math.max(
-        p.isCapital ? 6500 : 2800,
-        Math.round(p.garrison * armyFactor)
-      );
-      const armor = Math.round(nextGarrison * 0.18);
-      const airDrone = Math.round(nextGarrison * 0.08);
-      const infantry = Math.max(1000, nextGarrison - armor - airDrone);
-      p.garrison = infantry + armor + airDrone;
-      p.units = { infantry, armor, airDrone };
-      p.baseGdp = Math.max(
-        p.isCapital ? 55 : 22,
-        Math.round(p.baseGdp * gdpFactor)
-      );
+      if (p.id === capitalProv!.id) {
+        const armor = Math.round(capitalArmy * 0.18);
+        const airDrone = Math.round(capitalArmy * 0.08);
+        const infantry = Math.max(1000, capitalArmy - armor - airDrone);
+        p.garrison = infantry + armor + airDrone;
+        p.units = { infantry, armor, airDrone };
+      } else {
+        p.garrison = 0;
+        p.units = { infantry: 0, armor: 0, airDrone: 0 };
+      }
+      if (scaleTarget) {
+        p.baseGdp = Math.max(
+          p.isCapital ? 55 : 22,
+          Math.round(p.baseGdp * gdpFactor)
+        );
+      }
     });
   });
 

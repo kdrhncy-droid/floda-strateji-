@@ -14,8 +14,8 @@ import { cleanProvinceName } from "../../../utils/formatters";
 import {
   AoH3GlyphName,
   AoH3GlyphSvg,
-  UnitTypeIllustrationSvg,
 } from "../../illustrations/AoH3Illustrations";
+import { UnitEraArtworkThumb } from "../UnitEraArtworkThumb";
 
 export interface RecruitMercenarySectionProps {
   playerNation: Nation;
@@ -271,10 +271,13 @@ export const RecruitMercenarySection: React.FC<RecruitMercenarySectionProps> = (
                     className="p-2.5 rounded-xl border border-[#caa15a]/35 bg-[#1b1510] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <UnitTypeIllustrationSvg
+                      <UnitEraArtworkThumb
                         unitType={row.unitType}
-                        modeId={gameMode}
-                        className="w-10 h-10 shrink-0"
+                        gameMode={gameMode}
+                        tier={modernizedTier}
+                        alt={row.title}
+                        showEraPill
+                        className="w-16 h-12 rounded-xl"
                       />
                       <div className="min-w-0">
                         <div className="text-[9.5px] font-extrabold uppercase tracking-wider text-[#e0b86e]">
@@ -647,10 +650,12 @@ export const RecruitMercenarySection: React.FC<RecruitMercenarySectionProps> = (
         {/* Visual National Army Composition Strip */}
         <div className="grid grid-cols-3 gap-2 bg-[#14100c] border border-[#caa15a]/30 rounded-2xl p-2.5">
           <div className="flex items-center gap-2 bg-[#1b1510] border border-[#caa15a]/30 rounded-xl p-2 min-w-0">
-            <UnitTypeIllustrationSvg
+            <UnitEraArtworkThumb
               unitType="infantry"
-              modeId={gameMode}
-              className="w-8 h-8 shrink-0"
+              gameMode={gameMode}
+              tier={modernizedTier}
+              alt={activeArmyGen.infantryShort}
+              className="w-9 h-9 rounded-lg"
             />
             <div className="min-w-0">
               <div className="text-[10px] text-[#d8cbb5] truncate">
@@ -662,10 +667,12 @@ export const RecruitMercenarySection: React.FC<RecruitMercenarySectionProps> = (
             </div>
           </div>
           <div className="flex items-center gap-2 bg-[#1b1510] border border-[#caa15a]/30 rounded-xl p-2 min-w-0">
-            <UnitTypeIllustrationSvg
+            <UnitEraArtworkThumb
               unitType="armor"
-              modeId={gameMode}
-              className="w-8 h-8 shrink-0"
+              gameMode={gameMode}
+              tier={modernizedTier}
+              alt={activeArmyGen.armorShort}
+              className="w-9 h-9 rounded-lg"
             />
             <div className="min-w-0">
               <div className="text-[10px] text-[#d8cbb5] truncate">
@@ -677,10 +684,12 @@ export const RecruitMercenarySection: React.FC<RecruitMercenarySectionProps> = (
             </div>
           </div>
           <div className="flex items-center gap-2 bg-[#1b1510] border border-[#caa15a]/30 rounded-xl p-2 min-w-0">
-            <UnitTypeIllustrationSvg
+            <UnitEraArtworkThumb
               unitType="airDrone"
-              modeId={gameMode}
-              className="w-8 h-8 shrink-0"
+              gameMode={gameMode}
+              tier={modernizedTier}
+              alt={activeArmyGen.airArtilleryShort}
+              className="w-9 h-9 rounded-lg"
             />
             <div className="min-w-0">
               <div className="text-[10px] text-[#d8cbb5] truncate">

@@ -6,7 +6,7 @@ import { ArmyModernizationCard } from "../ArmyModernizationCard";
 import { ARMY_GENERATIONS_1440 } from "../../../data/world2026Data";
 import { calculateRecruitGoldCost } from "../../../engine/empireAndArmyActions";
 import { cleanProvinceName } from "../../../utils/formatters";
-import { UnitTypeIllustrationSvg } from "../../illustrations/AoH3Illustrations";
+import { UnitEraArtworkThumb } from "../UnitEraArtworkThumb";
 
 export interface UnitTreeSectionProps {
   playerNation: Nation;
@@ -187,11 +187,13 @@ export const UnitTreeSection: React.FC<UnitTreeSectionProps> = ({
                 gridTemplateColumns: `110px repeat(${generationList.length}, minmax(135px, 1fr))`,
               }}
             >
-              <div className="rounded-xl bg-[#18130e] border border-[#caa15a]/25 p-2 flex flex-col items-center justify-center text-center gap-1">
-                <UnitTypeIllustrationSvg
+              <div className="rounded-xl bg-[#18130e] border border-[#caa15a]/25 p-2 flex flex-col items-center justify-center text-center gap-1.5">
+                <UnitEraArtworkThumb
                   unitType={line.unitType}
-                  modeId={gameMode}
-                  className="w-8 h-8"
+                  gameMode={gameMode}
+                  tier={modernizedTier}
+                  alt={line.rowLabel}
+                  className="w-14 h-10 rounded-lg"
                 />
                 <span className="text-[10px] font-bold text-[#e0b86e] leading-tight">
                   {line.rowLabel}
@@ -211,7 +213,7 @@ export const UnitTreeSection: React.FC<UnitTreeSectionProps> = ({
                   <div
                     key={gen.tier}
                     data-testid={`unit-tree-card-${line.unitType}-${gen.tier}`}
-                    className={`relative rounded-xl p-2 border flex flex-col justify-between gap-1.5 transition-all ${
+                    className={`relative rounded-xl p-2 border flex flex-col justify-between gap-1.5 transition-all group ${
                       isCurrent
                         ? "bg-gradient-to-b from-[#2b2013] to-[#1a140d] border-[#e0b86e] shadow-md"
                         : unlocked
@@ -219,25 +221,30 @@ export const UnitTreeSection: React.FC<UnitTreeSectionProps> = ({
                         : "bg-[#13100c] border-[#2d251d] opacity-65"
                     }`}
                   >
-                    <div className="flex items-start gap-1.5">
-                      <UnitTypeIllustrationSvg
+                    <div className="relative">
+                      <UnitEraArtworkThumb
                         unitType={line.unitType}
-                        modeId={gameMode}
-                        className="w-8 h-8 shrink-0"
+                        gameMode={gameMode}
+                        tier={gen.tier}
+                        alt={line.getName(gen)}
+                        showEraPill
+                        className="w-full h-14 rounded-lg"
                       />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[10.5px] font-bold text-[#f3ead7] leading-tight line-clamp-2">
-                          {line.getName(gen)}
-                        </div>
-                        <div className="text-[9px] text-[#b8a990] truncate">
-                          {line.getClass(gen)}
-                        </div>
+                      <span className="absolute top-1 right-1 p-0.5 rounded bg-black/75 border border-[#caa15a]/35">
+                        {unlocked ? (
+                          <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                        ) : (
+                          <Lock className="w-3 h-3 text-[#7c6f5b] shrink-0" />
+                        )}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10.5px] font-bold text-[#f3ead7] leading-tight line-clamp-2">
+                        {line.getName(gen)}
                       </div>
-                      {unlocked ? (
-                        <Check className="w-3 h-3 text-emerald-400 shrink-0" />
-                      ) : (
-                        <Lock className="w-3 h-3 text-[#7c6f5b] shrink-0" />
-                      )}
+                      <div className="text-[9px] text-[#b8a990] truncate">
+                        {line.getClass(gen)}
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between text-[9.5px] font-mono-num text-[#d8cbb5] bg-black/35 rounded-md px-1.5 py-0.5">

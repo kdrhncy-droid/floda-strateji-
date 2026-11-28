@@ -953,6 +953,7 @@ function GameAppInner() {
                   playerNationId={playerNationId}
                   territories={territories}
                   gameMode={gameMode}
+                  modernizedTier={playerNation?.modernizedArmyTier ?? 0}
                   onSelectTerritory={(id) => {
                     store.selectTerritoryOnMap(id);
                   }}

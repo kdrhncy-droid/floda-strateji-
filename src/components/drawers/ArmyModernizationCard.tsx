@@ -8,6 +8,7 @@ import {
 } from '../../data/world2026Data';
 import { AoH3GlyphSvg } from '../illustrations/AoH3Illustrations';
 import { getTechArtwork } from './techArtwork';
+import { UnitEraArtworkThumb } from './UnitEraArtworkThumb';
 
 interface ArmyModernizationCardProps {
   playerNation: Nation;
@@ -41,6 +42,7 @@ export const ArmyModernizationCard: React.FC<ArmyModernizationCardProps> = ({
 
   const classCards = [
     {
+      unitType: 'infantry' as const,
       role: '1. Hat · Asker Sınıfı',
       classLabel: activeArmyGen.infantryClassLabel,
       unitName: activeArmyGen.infantryShort,
@@ -48,6 +50,7 @@ export const ArmyModernizationCard: React.FC<ArmyModernizationCardProps> = ({
       icon: 'sword' as const,
     },
     {
+      unitType: 'armor' as const,
       role: 'Kanat · Asker Sınıfı',
       classLabel: activeArmyGen.armorClassLabel,
       unitName: activeArmyGen.armorShort,
@@ -55,6 +58,7 @@ export const ArmyModernizationCard: React.FC<ArmyModernizationCardProps> = ({
       icon: 'cavalry' as const,
     },
     {
+      unitType: 'airDrone' as const,
       role: 'Destek · Asker Sınıfı',
       classLabel: activeArmyGen.airArtilleryClassLabel,
       unitName: activeArmyGen.airArtilleryShort,
@@ -109,24 +113,33 @@ export const ArmyModernizationCard: React.FC<ArmyModernizationCardProps> = ({
         {classCards.map((c) => (
           <div
             key={c.role}
-            className="rounded-xl px-2.5 py-1.5 border border-[#caa15a]/30 bg-[#1b1510]"
+            className="rounded-xl px-2.5 py-2 border border-[#caa15a]/30 bg-[#1b1510] flex items-center gap-2.5 min-w-0"
           >
-            <div className="text-[9px] uppercase tracking-wider text-[#b8a990] font-bold flex items-center gap-1">
-              <AoH3GlyphSvg name={c.icon} className="w-2.5 h-2.5 text-[#e0b86e]" />
-              <span>{c.role}</span>
-            </div>
-            <div className="text-[11px] font-extrabold text-[#e0b86e] truncate mt-0.5">
-              {c.classLabel}
-            </div>
-            <div className="text-[10px] text-[#d8cbb5] truncate">
-              {hasPendingArmyUpgrade ? (
-                <>
-                  <span className="opacity-75">{c.unitName}</span>{' '}
-                  <span className="text-[#f3ead7] font-bold">→ {c.nextUnitName}</span>
-                </>
-              ) : (
-                <span>Aktif: {c.unitName}</span>
-              )}
+            <UnitEraArtworkThumb
+              unitType={c.unitType}
+              gameMode={gameMode}
+              tier={hasPendingArmyUpgrade ? unlockedMilTier : modernizedTier}
+              alt={hasPendingArmyUpgrade ? c.nextUnitName : c.unitName}
+              className="w-11 h-11 rounded-lg"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="text-[9px] uppercase tracking-wider text-[#b8a990] font-bold flex items-center gap-1">
+                <AoH3GlyphSvg name={c.icon} className="w-2.5 h-2.5 text-[#e0b86e]" />
+                <span className="truncate">{c.role}</span>
+              </div>
+              <div className="text-[11px] font-extrabold text-[#e0b86e] truncate mt-0.5">
+                {c.classLabel}
+              </div>
+              <div className="text-[10px] text-[#d8cbb5] truncate">
+                {hasPendingArmyUpgrade ? (
+                  <>
+                    <span className="opacity-75">{c.unitName}</span>{' '}
+                    <span className="text-[#f3ead7] font-bold">→ {c.nextUnitName}</span>
+                  </>
+                ) : (
+                  <span>Aktif: {c.unitName}</span>
+                )}
+              </div>
             </div>
           </div>
         ))}

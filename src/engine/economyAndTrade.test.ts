@@ -2425,3 +2425,36 @@ test('Province constructionQueue and recruitmentQueue progress strictly sequenti
   assert.equal(curTerritories.P_CAP.units.armor, 500);
   assert.equal(curTerritories.P_CAP.recruitmentQueue?.length, 0);
 });
+
+test('1440 campaign starts with slower research speed and tighter treasury/manpower pacing that rewards building investments', () => {
+  const world = initializeWorld2026('EMPIRES_1440');
+  const ott = world.nations['792'];
+  assert.ok(ott, 'Ottoman Empire must exist in 1440 scenario');
+
+  assert.ok(
+    ott.researchPoints <= 25,
+    `Starting researchPoints (${ott.researchPoints}) should stay modest (<=25)`
+  );
+  assert.ok(
+    ott.manpower <= 95_000,
+    `Starting Ottoman manpower (${ott.manpower}) should stay tight (<=95k)`
+  );
+
+  const econ = calculateNationEconomy(
+    ott,
+    world.territories,
+    world.nations,
+    world.relations,
+    [],
+    []
+  );
+  assert.ok(
+    econ.dailyResearch >= 1.5 && econ.dailyResearch <= 8.5,
+    `Day-1 Ottoman dailyResearch (${econ.dailyResearch}) should be paced cleanly between 1.5 and 8.5 RP/day`
+  );
+  assert.ok(
+    econ.dailyManpower >= 150 && econ.dailyManpower <= 950,
+    `Day-1 Ottoman dailyManpower (${econ.dailyManpower}) should stay tight so barracks/granaries matter`
+  );
+});
+

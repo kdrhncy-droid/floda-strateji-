@@ -41,8 +41,8 @@ import {
   ReligionSvg,
   ResourceSvg,
   TerrainPanoramaSvg,
-  UnitTypeIllustrationSvg,
 } from "../illustrations/AoH3Illustrations";
+import { UnitEraArtworkThumb } from "./UnitEraArtworkThumb";
 
 export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
   onClose,
@@ -662,14 +662,17 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         {/* Infantry Card */}
-                        <div className="p-2 rounded-xl bg-[#1b1510] border border-[#caa15a]/35 flex flex-col items-center justify-between gap-1.5 text-center">
-                          <div className="flex flex-col items-center gap-0.5">
-                            <UnitTypeIllustrationSvg
+                        <div className="p-2 rounded-xl bg-[#1b1510] border border-[#caa15a]/35 flex flex-col items-center justify-between gap-1.5 text-center group">
+                          <div className="flex flex-col items-center gap-1 w-full">
+                            <UnitEraArtworkThumb
                               unitType="infantry"
-                              modeId={gameMode}
-                              className="w-7 h-7"
+                              gameMode={gameMode}
+                              tier={modernizedTier}
+                              alt={activeArmyGen.infantryShort}
+                              showEraPill
+                              className="w-full h-14 rounded-lg"
                             />
-                            <span className="text-[11px] font-bold text-[#f3ead7] truncate">
+                            <span className="text-[11px] font-bold text-[#f3ead7] truncate w-full">
                               {activeArmyGen.infantryShort}
                             </span>
                           </div>
@@ -722,14 +725,17 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                         </div>
 
                         {/* Armor / Cavalry Card */}
-                        <div className="p-2 rounded-xl bg-[#1b1510] border border-[#caa15a]/35 flex flex-col items-center justify-between gap-1.5 text-center">
-                          <div className="flex flex-col items-center gap-0.5">
-                            <UnitTypeIllustrationSvg
+                        <div className="p-2 rounded-xl bg-[#1b1510] border border-[#caa15a]/35 flex flex-col items-center justify-between gap-1.5 text-center group">
+                          <div className="flex flex-col items-center gap-1 w-full">
+                            <UnitEraArtworkThumb
                               unitType="armor"
-                              modeId={gameMode}
-                              className="w-7 h-7"
+                              gameMode={gameMode}
+                              tier={modernizedTier}
+                              alt={activeArmyGen.armorShort}
+                              showEraPill
+                              className="w-full h-14 rounded-lg"
                             />
-                            <span className="text-[11px] font-bold text-[#f3ead7] truncate">
+                            <span className="text-[11px] font-bold text-[#f3ead7] truncate w-full">
                               {activeArmyGen.armorShort}
                             </span>
                           </div>
@@ -782,14 +788,17 @@ export const ProvinceDrawer: React.FC<CommandDrawersProps> = ({
                         </div>
 
                         {/* Air / Artillery Card */}
-                        <div className="p-2 rounded-xl bg-[#1b1510] border border-[#caa15a]/35 flex flex-col items-center justify-between gap-1.5 text-center">
-                          <div className="flex flex-col items-center gap-0.5">
-                            <UnitTypeIllustrationSvg
+                        <div className="p-2 rounded-xl bg-[#1b1510] border border-[#caa15a]/35 flex flex-col items-center justify-between gap-1.5 text-center group">
+                          <div className="flex flex-col items-center gap-1 w-full">
+                            <UnitEraArtworkThumb
                               unitType="airDrone"
-                              modeId={gameMode}
-                              className="w-7 h-7"
+                              gameMode={gameMode}
+                              tier={modernizedTier}
+                              alt={activeArmyGen.airArtilleryShort}
+                              showEraPill
+                              className="w-full h-14 rounded-lg"
                             />
-                            <span className="text-[11px] font-bold text-[#f3ead7] truncate">
+                            <span className="text-[11px] font-bold text-[#f3ead7] truncate w-full">
                               {activeArmyGen.airArtilleryShort}
                             </span>
                           </div>

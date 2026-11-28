@@ -274,8 +274,10 @@ export function calculateProvinceSupplyLimit(
       ? getProvinceWeather(territory, tick, gameMode).supplyMultiplier
       : season.supplyMultiplier;
 
+  const capitalLogisticsBonus =
+    territory.isCapital && (bld.supplyDepot || 0) > 0 ? 18_000 : 0;
   const raw =
-    (18_000 + popFactor + buildingSupply) *
+    (18_000 + capitalLogisticsBonus + popFactor + buildingSupply) *
     terrainFactor *
     weatherSupplyMult *
     techMult;

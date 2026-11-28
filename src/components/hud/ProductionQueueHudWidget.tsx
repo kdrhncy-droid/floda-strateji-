@@ -14,6 +14,7 @@ interface ProductionQueueHudWidgetProps {
   playerNationId: string;
   territories: Record<string, Territory>;
   gameMode: GameModeId;
+  modernizedTier?: number;
   onSelectTerritory: (id: string) => void;
 }
 
@@ -34,7 +35,13 @@ interface UnifiedQueueEntry {
 
 export const ProductionQueueHudWidget: React.FC<
   ProductionQueueHudWidgetProps
-> = ({ playerNationId, territories, gameMode, onSelectTerritory }) => {
+> = ({
+  playerNationId,
+  territories,
+  gameMode,
+  modernizedTier = 0,
+  onSelectTerritory,
+}) => {
   const [expanded, setExpanded] = useState(false);
   const [brokenImgIds, setBrokenImgIds] = useState<Record<string, boolean>>({});
   const is1440 = gameMode === 'EMPIRES_1440';
@@ -99,7 +106,11 @@ export const ProductionQueueHudWidget: React.FC<
               pct: idx === 0 ? pct : 0,
               remainingDays: Math.max(1, total - prog),
               queueIndex: idx,
-              artwork: getRecruitUnitArtwork(job.unitMode ?? 'infantry'),
+              artwork: getRecruitUnitArtwork(
+                job.unitMode ?? 'infantry',
+                gameMode,
+                modernizedTier
+              ),
             };
             if (idx === 0) active.push(entry);
             else waiting.push(entry);
@@ -129,7 +140,7 @@ export const ProductionQueueHudWidget: React.FC<
         constructionCount: cCount,
         recruitCount: rCount,
       };
-    }, [territories, playerNationId, is1440]);
+    }, [territories, playerNationId, is1440, gameMode, modernizedTier]);
 
   if (allItems.length === 0) return null;
 

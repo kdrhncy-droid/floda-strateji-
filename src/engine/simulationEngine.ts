@@ -527,12 +527,12 @@ export function calculateNationEconomy(
       : dev.effectiveDailyGdp;
     baseProduction += effectiveProd;
     universityOutput +=
-      (bld.university || 0) * 4.5 +
-      (bld.highSchool || 0) * 3.2 +
-      (bld.school || 0) * 2.0 +
-      (bld.capitalPalace || 0) * 1.5;
-    barracksManpower += (bld.barracks || 0) * 350;
-    granaryManpower += (bld.granary || 0) * 220;
+      (bld.university || 0) * 2.8 +
+      (bld.highSchool || 0) * 2.0 +
+      (bld.school || 0) * 1.2 +
+      (bld.capitalPalace || 0) * 0.9;
+    barracksManpower += (bld.barracks || 0) * 260;
+    granaryManpower += (bld.granary || 0) * 175;
     tradeHubBonus += (bld.tradeHub || 0) * (isBlockadedByFleet ? 0.1 : 0.2);
     shipyardBonus += (bld.shipyard || 0) * (isBlockadedByFleet ? 0.08 : 0.22);
     tradeHubLevels += bld.tradeHub || 0;
@@ -614,7 +614,7 @@ export function calculateNationEconomy(
   if (enactedReforms.includes('ref_free_trade_zones')) taxTechMult += 0.2;
 
   const taxIncome = Math.round(
-    (baseProduction + mintTaxBase) * 0.55 * taxRateFactor * taxTechMult * warEconomyDrag
+    (baseProduction + mintTaxBase) * 0.44 * taxRateFactor * taxTechMult * warEconomyDrag
   );
 
   let prodMult = 1 + ((budget.economy || 25) - 25) * 0.008;
@@ -635,7 +635,7 @@ export function calculateNationEconomy(
   if (unlockedTechs.includes('sci_10')) prodMult += 0.25;
 
   const productionIncome = Math.round(
-    baseProduction * 0.48 * prodMult * warEconomyDrag
+    baseProduction * 0.39 * prodMult * warEconomyDrag
   );
 
   let tradeAgreementCount = 0;
@@ -669,7 +669,7 @@ export function calculateNationEconomy(
   );
 
   const baseDomesticTrade = Math.round(
-    baseProduction * 0.2 * tradeMult * embargoFactor
+    baseProduction * 0.16 * tradeMult * embargoFactor
   );
   const tradeDetails = calculateNationTradeAndStraits({
     nationId: nation.id,
@@ -719,7 +719,7 @@ export function calculateNationEconomy(
 
   const vassalTributeOut = nation.vassalOf ? Math.round(taxIncome * 0.25) : 0;
 
-  let upkeepPerThousand = 2.65 * (0.75 + (budget.military || 35) / 100);
+  let upkeepPerThousand = 3.05 * (0.75 + (budget.military || 35) / 100);
   upkeepPerThousand *=
     1 - Math.min(0.3, resourceEffects.militaryUpkeepReductionPct / 100);
   if (unlockedTechs.includes('mil_5')) {
@@ -753,12 +753,12 @@ export function calculateNationEconomy(
   const netDailyGold = incomeAfterTribute - militaryUpkeep - inflationPenalty;
 
   let researchBase =
-    2.5 +
-    Math.min(7.5, ownedTerritories.length * 0.55) +
+    0.75 +
+    Math.min(1.8, ownedTerritories.length * 0.12) +
     universityOutput +
-    (budget.research || 15) * 0.11 +
-    resourceEffects.researchFlat;
-  if (enactedReforms.includes('ref_welfare_state')) researchBase += 5;
+    (budget.research || 15) * 0.04 +
+    resourceEffects.researchFlat * 0.4;
+  if (enactedReforms.includes('ref_welfare_state')) researchBase += 2.0;
   let researchMult = 1 + ideology.researchBonus / 100 + rulerMods.researchMultDelta;
   if (unlockedTechs.includes('sci_1')) researchMult += 0.2;
   if (unlockedTechs.includes('sci_2b')) researchMult += 0.18;
@@ -774,13 +774,13 @@ export function calculateNationEconomy(
   const dailyResearch = Number((researchBase * researchMult).toFixed(1));
 
   // totalPopulation is stored in thousands (e.g. 86,500 = 86.5M). Use a damped power curve so
-  // small, mid-sized, and large empires all get realistic, clearly visible daily manpower recovery.
+  // manpower recovery is tighter and requires active investment in Kışla (barracks) and Tahıl Ambarı (granary).
   const popDailyManpower = Math.min(
-    2400,
-    Math.round(Math.pow(Math.max(0, totalPopulation), 0.72) * 0.24)
+    1850,
+    Math.round(Math.pow(Math.max(0, totalPopulation), 0.72) * 0.135)
   );
   const manpowerBase =
-    180 +
+    95 +
     popDailyManpower +
     Math.round((barracksManpower + granaryManpower) * empireScale);
   let manpowerMult =

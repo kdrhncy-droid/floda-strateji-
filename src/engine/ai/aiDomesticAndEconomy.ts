@@ -473,8 +473,8 @@ export function evaluateAiDomesticGovernanceAndBuild(params: {
 
   if (
     needsGarrison &&
-    actorNation.treasury >= 780 &&
-    actorNation.manpower >= 5500
+    actorNation.treasury >= 480 &&
+    actorNation.manpower >= 3200
   ) {
     const targetProv = [weakestBorder, ...ownedProvinces].find(
       (p) => p && !p.siege
@@ -627,12 +627,6 @@ export function evaluateAiBorderOffensiveOrBuildup(params: {
       actorPersonality === 'CONQUEROR' || actorPersonality === 'REVANCHIST'
         ? 14000
         : 19000;
-    const interiorRichProv = ownedProvinces.find(
-      (p) =>
-        (activeTerrs[p.id]?.garrison || 0) >= minInteriorThreshold &&
-        p.neighbors.every((nId) => activeTerrs[nId]?.ownerId === actorId)
-    );
-
     const scoreBorderUrgency = (p: Territory): number => {
       let urgency = -p.garrison;
       for (const nId of p.neighbors) {
@@ -659,8 +653,22 @@ export function evaluateAiBorderOffensiveOrBuildup(params: {
       )
       .sort((a, b) => scoreBorderUrgency(b) - scoreBorderUrgency(a));
 
-    if (interiorRichProv && frontlineTargets.length > 0) {
-      const destFront = frontlineTargets[0];
+    const destFront = frontlineTargets[0];
+    const interiorRichProv =
+      ownedProvinces.find(
+        (p) =>
+          (activeTerrs[p.id]?.garrison || 0) >= minInteriorThreshold &&
+          p.neighbors.every((nId) => activeTerrs[nId]?.ownerId === actorId)
+      ) ||
+      (destFront && destFront.garrison < 4500
+        ? ownedProvinces.find(
+            (p) =>
+              p.id !== destFront.id &&
+              (activeTerrs[p.id]?.garrison || 0) >= 12000
+          )
+        : undefined);
+
+    if (interiorRichProv && destFront && interiorRichProv.id !== destFront.id) {
       const route = findArmyRouteAStar({
         fromId: interiorRichProv.id,
         toId: destFront.id,
@@ -673,7 +681,7 @@ export function evaluateAiBorderOffensiveOrBuildup(params: {
 
       if (route.reachable && route.hops.length >= 1) {
         const srcCurr = activeTerrs[interiorRichProv.id];
-        const moveTroops = Math.round(srcCurr.garrison * 0.48);
+        const moveTroops = Math.round(srcCurr.garrison * 0.42);
         const bordersPlayerHostilely =
           !actorInAnyWar &&
           destFront.neighbors.some((nId) => {

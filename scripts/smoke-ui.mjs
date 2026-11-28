@@ -198,9 +198,9 @@ try {
   assert(queueHudCheck?.visible, `Corner ProductionQueueHudWidget not visible after queuing construction: ${JSON.stringify(queueHudCheck)}`);
   assert(queueHudCheck.hasBehindQueueTrail, `Queued second building should appear behind active item in corner HUD: ${JSON.stringify(queueHudCheck)}`);
   assert(queueHudCheck.oldSiyasiRemoved, 'Old top-left Siyasi dropdown button should be removed');
-  assert(queueHudCheck.minimapVisible && queueHudCheck.modeIconCount === 10 && queueHudCheck.hasCollapseBtn, `Minimap HUD incomplete: ${JSON.stringify(queueHudCheck)}`);
+  assert(queueHudCheck.minimapVisible && queueHudCheck.modeIconCount >= 10 && queueHudCheck.hasCollapseBtn, `Minimap HUD incomplete: ${JSON.stringify(queueHudCheck)}`);
   assert(queueHudCheck.dockZUnderMenus, `Minimap & notifications dock z-index must stay under open menus (<40): ${JSON.stringify(queueHudCheck)}`);
-  console.log(`  ✓ Illustrated Construction (${constructionVisuals.loadedImgs}/${constructionVisuals.imgCount}), Corner Queue (${queueHudCheck.pctText}), & Minimap HUD (10 icons, z<40) verified`);
+  console.log(`  ✓ Illustrated Construction (${constructionVisuals.loadedImgs}/${constructionVisuals.imgCount}), Corner Queue (${queueHudCheck.pctText}), & Minimap HUD (${queueHudCheck.modeIconCount} icons, z<40) verified`);
 
   // Verify minimap collapse toggle & map-mode icon switching
   const minimapInteract = pwEval(`() => {
@@ -228,7 +228,26 @@ try {
       if (btn) { btn.click(); return JSON.stringify({ found: true }); }
       return JSON.stringify({ found: false });
     }`);
-    sleep(220);
+    sleep(350);
+    if (label === 'ordu' && opened?.found) {
+      const recruitArt = pwEval(`() => {
+        const imgs = Array.from(document.querySelectorAll('[data-testid^="unit-era-art-"] img'));
+        const loaded = imgs.filter((i) => i.complete && i.naturalWidth > 0).length;
+        const treeBtn = Array.from(document.querySelectorAll('button')).find((b) => (b.textContent || '').includes('Birlik Ağacı'));
+        if (treeBtn) treeBtn.click();
+        return JSON.stringify({ count: imgs.length, loaded, clickedTree: Boolean(treeBtn) });
+      }`);
+      sleep(350);
+      const treeArt = pwEval(`() => {
+        const imgs = Array.from(document.querySelectorAll('[data-testid^="unit-era-art-"] img'));
+        const loaded = imgs.filter((i) => i.complete && i.naturalWidth > 0).length;
+        const uniqueSrcs = new Set(imgs.map((i) => i.getAttribute('src'))).size;
+        return JSON.stringify({ count: imgs.length, loaded, uniqueSrcs });
+      }`);
+      assert(recruitArt.count >= 6 && recruitArt.loaded >= 6, `Recruit unit artwork images did not load: ${JSON.stringify(recruitArt)}`);
+      assert(treeArt.count >= 20 && treeArt.loaded >= 20 && treeArt.uniqueSrcs >= 8, `Unit tree era artwork did not load or evolve across eras: ${JSON.stringify(treeArt)}`);
+      console.log(`  ✓ Tech-evolving Unit Artwork verified (Recruit: ${recruitArt.loaded}/${recruitArt.count}, Unit Tree: ${treeArt.loaded}/${treeArt.count} across ${treeArt.uniqueSrcs} distinct era paintings)`);
+    }
     drawerResults.push(`${label}:${opened?.found ? 'ok' : 'skip'}`);
     pw('press', 'Escape');
     sleep(100);

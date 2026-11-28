@@ -496,29 +496,6 @@ export function computeCoastalTerritoryIds(
   return coastalIds;
 }
 
-
-/**
- * Splits a country-level total (e.g. starting garrison) across provinces by
- * normalized share so the sum stays equal to the country total. The minimum is
- * applied first and then corrected back, preventing small districts from
- * inflating a country's global army weight.
- */
-function allocateProportionalTotal(
-  total: number,
-  shares: number[],
-  minimumPerProvince: number
-): number[] {
-  const raw = shares.map((share) =>
-    Math.max(minimumPerProvince, Math.round(total * share))
-  );
-  const rawSum = raw.reduce((sum, v) => sum + v, 0);
-  if (rawSum <= 0) return raw;
-  const factor = total / rawSum;
-  return raw.map((v) =>
-    Math.max(minimumPerProvince, Math.round(v * factor))
-  );
-}
-
 function pointInOuterRing(
   lon: number,
   lat: number,
@@ -685,14 +662,18 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
       color: seed.color,
       capitalTerritoryId: cf.id,
       ideology: seed.ideology,
-      treasury: Math.round(seed.treasury * mode.startingGoldMultiplier),
+      treasury: Math.round(
+        seed.treasury *
+          mode.startingGoldMultiplier *
+          (modeId === 'SANDBOX_EMPIRE' ? 1 : 0.72)
+      ),
       manpower: Math.round(
-        seed.manpower * (modeId === 'SANDBOX_EMPIRE' ? 2.5 : 1)
+        seed.manpower * (modeId === 'SANDBOX_EMPIRE' ? 2.0 : 0.58)
       ),
       stability: 78,
       inflation: 4.2,
       researchPoints:
-        modeId === 'SANDBOX_EMPIRE' ? 500 : isMajorPower ? 65 : 30,
+        modeId === 'SANDBOX_EMPIRE' ? 400 : isMajorPower ? 18 : 10,
       researchProgressByTech: {},
       taxRate: 25,
       budget: {
@@ -724,15 +705,11 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
       // Normalize shares to 1.00 so adding districts never changes the
       // country's total population, GDP or starting army.
       const normalizedShares = getNormalizedProvinceShares(subSeeds);
-      const garrisonAllocations = allocateProportionalTotal(
-        totalCountryGarrison,
-        normalizedShares,
-        500
-      );
       countryToProvinces[cf.id] = [];
 
       pieces.forEach((piece, pieceIndex) => {
-        const provId = piece.seed.isCapital
+        const isCapitalProvince = Boolean(piece.seed.isCapital);
+        const provId = isCapitalProvince
           ? cf.id
           : `${cf.id}_${piece.seed.suffixId}`;
         countryToProvinces[cf.id].push(provId);
@@ -746,18 +723,17 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
         provinceFeatures.push(provFeature);
 
         const share = normalizedShares[pieceIndex] ?? 1 / pieces.length;
-        const provGarrison =
-          garrisonAllocations[pieceIndex] ?? Math.round(totalCountryGarrison * share);
-        const armorCount = Math.round(
-          provGarrison * (isMajorPower ? 0.22 : 0.15)
-        );
-        const airDroneCount = Math.round(
-          provGarrison * (isMajorPower ? 0.1 : 0.05)
-        );
-        const infantryCount = Math.max(
-          300,
-          provGarrison - armorCount - airDroneCount
-        );
+        // Spawn starting national army ONLY in the capital province; all other cities start at 0 garrison
+        const provGarrison = isCapitalProvince ? totalCountryGarrison : 0;
+        const armorCount = isCapitalProvince
+          ? Math.round(provGarrison * (isMajorPower ? 0.22 : 0.15))
+          : 0;
+        const airDroneCount = isCapitalProvince
+          ? Math.round(provGarrison * (isMajorPower ? 0.1 : 0.05))
+          : 0;
+        const infantryCount = isCapitalProvince
+          ? Math.max(300, provGarrison - armorCount - airDroneCount)
+          : 0;
 
         const computedCentroid = resolveProvinceCentroid(
           provFeature,
@@ -788,13 +764,12 @@ export function initializeWorld2026(modeId: GameModeId): InitialWorldBundle {
           provId,
           piece.seed.resource || seed.resource,
           terrain,
-          Boolean(piece.seed.isCapital),
+          isCapitalProvince,
           validCentroid[0],
           validCentroid[1],
           piece.seed.resource !== undefined
         );
 
-        const isCapitalProvince = Boolean(piece.seed.isCapital);
         // Tier-3 districts are rural admin units: they hold no factories,
         // barracks or depots, so doubling the province count does not double
         // the country's building capacity or manpower ceiling.

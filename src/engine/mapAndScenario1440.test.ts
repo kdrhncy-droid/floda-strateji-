@@ -1044,3 +1044,36 @@ test('JSON nation tag registry resolves readable tags bidirectionally and popula
   );
   assert.equal(hydrated2026.nations['792'].tag, 'TUR');
 });
+
+test('starting armies spawn exclusively in capital provinces while non-capital provinces start with 0 garrison in 1440 and 2026', () => {
+  for (const mode of ['EMPIRES_1440', 'STANDARD_2026'] as const) {
+    const world = initializeWorld2026(mode);
+    const allProvs = Object.values(world.territories);
+    const capitalProvs = allProvs.filter((t) => t.isCapital);
+    const nonCapitalProvs = allProvs.filter((t) => !t.isCapital);
+
+    assert.ok(
+      capitalProvs.length > 0 && nonCapitalProvs.length > 0,
+      `${mode} must have both capital and non-capital provinces`
+    );
+
+    for (const cap of capitalProvs) {
+      assert.ok(
+        cap.garrison > 0,
+        `${mode} capital province ${cap.id} (${cap.name}) must start with a standing garrison > 0`
+      );
+    }
+
+    for (const nonCap of nonCapitalProvs) {
+      assert.equal(
+        nonCap.garrison,
+        0,
+        `${mode} non-capital province ${nonCap.id} (${nonCap.name}) must start with 0 garrison`
+      );
+      assert.equal(nonCap.units?.infantry ?? 0, 0);
+      assert.equal(nonCap.units?.armor ?? 0, 0);
+      assert.equal(nonCap.units?.airDrone ?? 0, 0);
+    }
+  }
+});
+
