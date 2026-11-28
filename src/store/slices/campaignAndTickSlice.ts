@@ -50,6 +50,7 @@ type CampaignAndTickSliceKeys =
   | 'movements'
   | 'seaArmies'
   | 'newsEvents'
+  | 'lastSeenNewsId'
   | 'tick'
   | 'hour'
   | 'speed'
@@ -85,6 +86,7 @@ type CampaignAndTickSliceKeys =
   | 'updateSettings'
   | 'showToast'
   | 'setShowNewsDrawer'
+  | 'markNewsAsRead'
   | 'setShowSystemModal'
   | 'setActiveBattleOverviewTerritoryId'
   | 'setActiveWarModalId'
@@ -115,13 +117,14 @@ export const createCampaignAndTickSlice: GameStoreSlice<
   movements: [],
   seaArmies: [],
   newsEvents: [],
+  lastSeenNewsId: null,
   tick: 0,
   hour: 8,
   speed: 0,
 
   mapMode: 'POLITICAL',
   activeTab: 'NONE',
-  selectedTerritoryId: '792',
+  selectedTerritoryId: null,
   selectedSeaArmyId: null,
   armyOrderSourceId: null,
   seaArmyOrderSourceId: null,
@@ -137,7 +140,25 @@ export const createCampaignAndTickSlice: GameStoreSlice<
   dismissedVictoryBanner: false,
   timelapse: null,
 
-  setScreenState: (screenState) => set({ screenState }),
+  setScreenState: (screenState) =>
+    set((s) =>
+      screenState === 'TITLE_MENU'
+        ? {
+            screenState,
+            activeTab: 'NONE',
+            selectedTerritoryId: null,
+            selectedSeaArmyId: null,
+            armyOrderSourceId: null,
+            seaArmyOrderSourceId: null,
+            pendingWarMove: null,
+            activeBattleOverviewTerritoryId: null,
+            activeWarModalId: null,
+            showNewsDrawer: false,
+            lastSeenNewsId: null,
+            showSystemModal: false,
+          }
+        : { ...s, screenState }
+    ),
   continueAfterVictory: () =>
     set({
       dismissedVictoryBanner: true,
@@ -197,7 +218,18 @@ export const createCampaignAndTickSlice: GameStoreSlice<
       return { settings: next };
     }),
   showToast: (toastMessage) => set({ toastMessage }),
-  setShowNewsDrawer: (showNewsDrawer) => set({ showNewsDrawer }),
+  setShowNewsDrawer: (showNewsDrawer) =>
+    set((s) => ({
+      showNewsDrawer,
+      lastSeenNewsId:
+        showNewsDrawer || s.showNewsDrawer
+          ? (s.newsEvents[0]?.id ?? s.lastSeenNewsId)
+          : s.lastSeenNewsId,
+    })),
+  markNewsAsRead: () =>
+    set((s) => ({
+      lastSeenNewsId: s.newsEvents[0]?.id ?? s.lastSeenNewsId,
+    })),
   setShowSystemModal: (showSystemModal) => set({ showSystemModal }),
   setActiveBattleOverviewTerritoryId: (activeBattleOverviewTerritoryId) =>
     set({ activeBattleOverviewTerritoryId }),
@@ -338,6 +370,8 @@ export const createCampaignAndTickSlice: GameStoreSlice<
         tick: 0,
       }),
       screenState: 'PLAYING',
+      showNewsDrawer: false,
+      lastSeenNewsId: null,
       newsEvents: [
         {
           id: 'init_1',
@@ -431,6 +465,8 @@ export const createCampaignAndTickSlice: GameStoreSlice<
       seaArmies: hydrated.seaArmies || [],
       diplomaticEnvoys: hydrated.diplomaticEnvoys || [],
       newsEvents: hydrated.newsEvents,
+      showNewsDrawer: false,
+      lastSeenNewsId: hydrated.newsEvents[0]?.id ?? null,
       tick: hydrated.tick,
       hour: hydrated.hour ?? 8,
       worldSeed: hydrated.worldSeed ?? generateWorldSeed(),
@@ -552,6 +588,9 @@ export const createCampaignAndTickSlice: GameStoreSlice<
       seaArmies: out.seaArmies,
       selectedSeaArmyId: stillSelectedSea,
       newsEvents: out.newsEvents,
+      ...(s.showNewsDrawer && out.newsEvents[0]?.id
+        ? { lastSeenNewsId: out.newsEvents[0].id }
+        : {}),
       timelapse: nextTimelapse,
       ...(out.diplomaticEnvoys !== undefined
         ? { diplomaticEnvoys: out.diplomaticEnvoys }

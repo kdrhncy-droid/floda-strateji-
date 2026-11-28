@@ -758,7 +758,7 @@ export const TechTreeSection: React.FC<TechTreeSectionProps> = ({
       {/* Grand Illustrated 40-Tech Horizontal Tree Canvas */}
       <div
         data-testid="aoh3-tech-tree-canvas"
-        className="rounded-xl bg-[#0f0c09] border border-[#caa15a]/45 p-2 sm:p-3 overflow-x-auto overflow-y-auto max-h-[45vh] sm:max-h-[49vh] shadow-inner"
+        className="rounded-xl bg-[#0f0c09] border border-[#caa15a]/45 p-2 sm:p-3 overflow-x-auto overflow-y-auto max-h-[25vh] sm:max-h-[37vh] landscape:max-h-[24vh] lg:landscape:max-h-[37vh] shadow-inner"
       >
         <div
           className="space-y-3"
@@ -1133,7 +1133,7 @@ export const TechTreeSection: React.FC<TechTreeSectionProps> = ({
       {inspectedTech && inspectedState && (
         <div
           data-testid="aoh3-tech-inspector"
-          className="rounded-xl bg-[#17130f] border border-[#caa15a]/45 px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+          className="sticky bottom-0 z-30 rounded-xl bg-[#17130f]/98 backdrop-blur-sm border border-[#caa15a]/45 px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-[0_-10px_24px_rgba(10,8,5,0.9)]"
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div

@@ -19,6 +19,7 @@ import { music } from './engine/musicEngine';
 import { sound } from './utils/soundEngine';
 import { TopHudBar } from './components/hud/TopHudBar';
 import { computeWorldPowerRankings } from './engine/worldRankings';
+import { countUnreadNewsEvents } from './engine/newsNotifications';
 import { AoH3ChronicleLog } from './components/hud/AoH3ChronicleLog';
 import { AoH3SelectionChips } from './components/hud/AoH3SelectionChips';
 import { DiplomaticOfferBanner } from './components/hud/DiplomaticOfferBanner';
@@ -105,6 +106,7 @@ function GameAppInner() {
     movements,
     seaArmies,
     newsEvents,
+    lastSeenNewsId,
     tick,
     hour,
     speed,
@@ -226,6 +228,11 @@ function GameAppInner() {
     if (macroMode === 'BATCH_MARCH') return batchMarchSourceIds;
     return undefined;
   }, [macroMode, batchMarchSourceIds]);
+
+  const unreadNewsCount = useMemo(
+    () => countUnreadNewsEvents(newsEvents, lastSeenNewsId),
+    [newsEvents, lastSeenNewsId]
+  );
 
   // Warm up IndexedDB (idb-keyval) save payloads & timelapse archives once on boot
   useEffect(() => {
@@ -545,12 +552,14 @@ function GameAppInner() {
               }
               onReturnToTitleMenu={() => {
                 store.setSpeed(0);
+                setInspectedNationId(null);
+                setShowTimelapseArchiveModal(false);
                 store.setScreenState('TITLE_MENU');
               }}
             />
           )}
 
-        {!isTimelapseActive && (activeCrisis || showNewsDrawer) && (
+        {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && (activeCrisis || showNewsDrawer) && (
           <CrisisAndNewsModal
             activeCrisis={activeCrisis}
             onResolveCrisis={store.resolveCrisis}
@@ -561,7 +570,7 @@ function GameAppInner() {
           />
         )}
 
-        {!isTimelapseActive && activeSuccession && (
+        {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && activeSuccession && (
           <SuccessionModal
             activeSuccession={activeSuccession}
             playerNation={playerNation}
@@ -571,7 +580,7 @@ function GameAppInner() {
           />
         )}
 
-        {!isTimelapseActive && showSystemModal && (
+        {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && showSystemModal && (
           <SystemAndSaveModal
             isOpen={showSystemModal}
             onClose={() => store.setShowSystemModal(false)}
@@ -581,6 +590,8 @@ function GameAppInner() {
             onToggleSound={store.toggleSound}
             onReturnToTitleMenu={() => {
               store.setSpeed(0);
+              setInspectedNationId(null);
+              setShowTimelapseArchiveModal(false);
               store.setScreenState('TITLE_MENU');
             }}
             onSaveToSlot={store.saveToSlot}
@@ -594,7 +605,7 @@ function GameAppInner() {
           />
         )}
 
-        {!isTimelapseActive && showTimelapseArchiveModal && (
+        {!showBootSplash && !isTimelapseActive && showTimelapseArchiveModal && (
           <TimelapseArchiveModal
             isOpen={showTimelapseArchiveModal}
             onClose={() => setShowTimelapseArchiveModal(false)}
@@ -605,7 +616,7 @@ function GameAppInner() {
           />
         )}
 
-        {inspectedNationId && (
+        {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && inspectedNationId && (
           <NationDiplomacyModal
             isOpen={Boolean(inspectedNationId)}
             inspectedNationId={inspectedNationId}
@@ -639,7 +650,10 @@ function GameAppInner() {
           />
         )}
 
-        {activeWarModalId &&
+        {!showBootSplash &&
+          !isTimelapseActive &&
+          screenState !== 'TITLE_MENU' &&
+          activeWarModalId &&
           wars.some((w) => w.id === activeWarModalId) && (
             <UnifiedWarAndPeaceModal
               key={activeWarModalId}
@@ -664,7 +678,7 @@ function GameAppInner() {
             />
           )}
 
-        {pendingWarDeclarationTargetId && (
+        {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && pendingWarDeclarationTargetId && (
           <WarDeclarationModal
             targetNationId={pendingWarDeclarationTargetId}
             playerNationId={playerNationId}
@@ -680,7 +694,7 @@ function GameAppInner() {
         )}
       </Suspense>
 
-      {!isTimelapseActive && screenState === 'PLAYING' && (
+      {!showBootSplash && !isTimelapseActive && screenState === 'PLAYING' && (
         <WarAnnouncementBanner
           announcement={activeWarAnnouncement}
           playerNationId={playerNationId}
@@ -689,18 +703,20 @@ function GameAppInner() {
         />
       )}
 
-      <WarMoveConfirmationModal
-        pendingWarMove={pendingWarMove}
-        nations={nations}
-        territories={territories}
-        seaArmies={seaArmies}
-        hidden={isTimelapseActive}
-        onConfirmWarMove={store.confirmPendingWarMove}
-        onRequestMilitaryAccess={store.diplomaticAction}
-        onDismiss={() => store.setPendingWarMove(null)}
-      />
+      {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && (
+        <WarMoveConfirmationModal
+          pendingWarMove={pendingWarMove}
+          nations={nations}
+          territories={territories}
+          seaArmies={seaArmies}
+          hidden={isTimelapseActive}
+          onConfirmWarMove={store.confirmPendingWarMove}
+          onRequestMilitaryAccess={store.diplomaticAction}
+          onDismiss={() => store.setPendingWarMove(null)}
+        />
+      )}
 
-      {!isTimelapseActive && (
+      {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && (
         <TopHudBar
           playerNation={playerNation}
           playerEconomy={playerEconomy}
@@ -711,7 +727,7 @@ function GameAppInner() {
           hour={hour}
           speed={speed}
           gameMode={gameMode}
-          newsCount={newsEvents.length}
+          newsCount={unreadNewsCount}
           isMusicPlaying={isMusicPlaying}
           onSetActiveTab={store.setActiveTab}
           onSetSpeed={store.setSpeed}
@@ -797,21 +813,25 @@ function GameAppInner() {
               focusCapitalSignal={focusCapitalSignal}
               focusCoordsSignal={focusCoordsSignal}
               onSetMapMode={store.setMapMode}
+              showMinimap={screenState !== 'TITLE_MENU'}
               minimapTopSlot={
-                <>
-                  <AoH3ChronicleLog
-                    newsEvents={newsEvents}
-                    onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
-                    hidden={activeTab !== 'NONE'}
-                  />
-                  <WorldEventToastStack
-                    newsEvents={newsEvents}
-                    toastMessage={toastMessage}
-                    isDrawerOpen={activeTab !== 'NONE'}
-                    onDismissToast={() => store.showToast(null)}
-                    onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
-                  />
-                </>
+                screenState !== 'TITLE_MENU' ? (
+                  <>
+                    <AoH3ChronicleLog
+                      newsEvents={newsEvents}
+                      unreadCount={unreadNewsCount}
+                      onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
+                      hidden={activeTab !== 'NONE'}
+                    />
+                    <WorldEventToastStack
+                      newsEvents={newsEvents}
+                      toastMessage={toastMessage}
+                      isDrawerOpen={activeTab !== 'NONE'}
+                      onDismissToast={() => store.showToast(null)}
+                      onOpenNewsFeed={() => store.setShowNewsDrawer(true)}
+                    />
+                  </>
+                ) : null
               }
               onSelectTerritory={handleMapSelectTerritory}
               onSelectSeaArmy={(id) => store.setSelectedSeaArmyId(id)}
@@ -848,7 +868,7 @@ function GameAppInner() {
           />
         )}
 
-        {!isTimelapseActive && (
+        {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && (
           <>
             <EnvoyHudOverlay
               envoys={diplomaticEnvoys}
@@ -1151,7 +1171,7 @@ function GameAppInner() {
         )}
       </div>
 
-      {!isTimelapseActive && (
+      {!showBootSplash && !isTimelapseActive && screenState !== 'TITLE_MENU' && (
         <>
           <MehterhaneDock
             hideCompactOnMobile={Boolean(

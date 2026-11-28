@@ -46,15 +46,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   onSetActiveTab,
 }) => {
   const tabs = [
-    { id: 'TERRITORY' as const, label: 'Eyalet', icon: Globe },
-    { id: 'ECONOMY' as const, label: 'Ekonomi', icon: TrendingUp },
-    { id: 'CONSTRUCTION' as const, label: 'İnşaat', icon: Hammer },
+    { id: 'TERRITORY' as const, label: 'Eyalet', icon: Globe, badge: 0 },
+    { id: 'ECONOMY' as const, label: 'Ekonomi', icon: TrendingUp, badge: 0 },
+    { id: 'CONSTRUCTION' as const, label: 'İnşaat', icon: Hammer, badge: 0 },
     {
       id: 'DIPLOMACY' as const,
-      label: `Diplomasi${activeWarCount > 0 ? ` (${activeWarCount})` : ''}`,
+      label: 'Diplomasi',
       icon: Handshake,
+      badge: activeWarCount,
     },
-    { id: 'GOVERNMENT' as const, label: 'Yönetim', icon: Landmark },
+    { id: 'GOVERNMENT' as const, label: 'Yönetim', icon: Landmark, badge: 0 },
   ];
 
   return (
@@ -62,16 +63,18 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
+        const ariaText =
+          tab.badge > 0 ? `${tab.label} (${tab.badge} savaş)` : tab.label;
         return (
           <button
             key={tab.id}
-            title={tab.label}
-            aria-label={tab.label}
+            title={ariaText}
+            aria-label={ariaText}
             onClick={() => {
               sound.playClick();
               onSetActiveTab(isActive ? 'NONE' : tab.id);
             }}
-            className={`hud-bottom-nav-btn min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
+            className={`hud-bottom-nav-btn relative min-h-[48px] flex flex-col items-center justify-center rounded-xl transition-colors ${
               isActive
                 ? 'hud-nav-active'
                 : 'hud-nav-idle'
@@ -79,7 +82,15 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             aria-pressed={isActive}
           >
             <Icon className="w-5 h-5 shrink-0" />
-            <span className="text-[10px] font-semibold tracking-tight mt-1 whitespace-nowrap truncate max-w-[90%]">
+            {tab.badge > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-mono-num font-bold leading-none flex items-center justify-center border border-[#14100c]"
+              >
+                {tab.badge}
+              </span>
+            )}
+            <span className="text-[10px] font-semibold tracking-tight mt-1 whitespace-nowrap truncate max-w-[92%]">
               {tab.label}
             </span>
           </button>

@@ -38,6 +38,7 @@ import {
   resolveNationAiPersonality,
 } from '../../engine/seasonSupplyAndAiProfile';
 import { calculateVassalAnnexCost } from '../../engine/diplomacyAndWarActions';
+import { computeWorldPowerRankings } from '../../engine/worldRankings';
 import { NationFlagCanvasBadge } from '../../map/nationFlagRenderer';
 import { useAccessibleDialog } from '../../hooks/useAccessibleDialog';
 import { sound } from '../../utils/soundEngine';
@@ -167,37 +168,22 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
 
   const { livingNations, worldRankings } = useMemo(() => {
     const provCount: Record<string, number> = {};
-    const armySum: Record<string, number> = {};
-    const popSum: Record<string, number> = {};
-
     for (const t of Object.values(territories)) {
       if (!t?.ownerId) continue;
       provCount[t.ownerId] = (provCount[t.ownerId] || 0) + 1;
-      armySum[t.ownerId] = (armySum[t.ownerId] || 0) + (t.garrison || 0);
-      popSum[t.ownerId] = (popSum[t.ownerId] || 0) + (t.population || 0);
-    }
-    for (const mv of movements) {
-      if (mv?.ownerId) {
-        armySum[mv.ownerId] = (armySum[mv.ownerId] || 0) + (mv.troops || 0);
-      }
     }
 
     const alive = Object.values(nations).filter(
       (n) => n && !n.isEliminated && (provCount[n.id] || 0) > 0
     );
 
-    const ranked = [...alive]
-      .map((n) => {
-        const provs = provCount[n.id] || 0;
-        const army = armySum[n.id] || 0;
-        const pop = popSum[n.id] || 0;
-        const techCount = (n.unlockedTechs || []).length;
-        const score = Math.round(
-          army / 500 + provs * 18 + pop / 250 + techCount * 20
-        );
-        return { nation: n, provs, army, pop, score };
-      })
-      .sort((a, b) => b.score - a.score);
+    const ranked = computeWorldPowerRankings(
+      nations,
+      territories,
+      movements,
+      gameMode,
+      'SCORE'
+    );
 
     const sortedSelect = [...alive].sort((a, b) => {
       if (a.id === playerNationId) return -1;
@@ -209,7 +195,7 @@ export const NationDiplomacyModal: React.FC<NationDiplomacyModalProps> = ({
     });
 
     return { livingNations: sortedSelect, worldRankings: ranked };
-  }, [nations, territories, movements, playerNationId]);
+  }, [nations, territories, movements, gameMode, playerNationId]);
 
   if (!isOpen || !summary) return null;
 

@@ -22,12 +22,14 @@ const TYPE_META: Record<
 
 interface AoH3ChronicleLogProps {
   newsEvents: WorldNewsEvent[];
+  unreadCount?: number;
   onOpenNewsFeed: () => void;
   hidden?: boolean;
 }
 
 export const AoH3ChronicleLog: React.FC<AoH3ChronicleLogProps> = ({
   newsEvents,
+  unreadCount = 0,
   onOpenNewsFeed,
   hidden = false,
 }) => {
@@ -49,9 +51,22 @@ export const AoH3ChronicleLog: React.FC<AoH3ChronicleLogProps> = ({
         >
           <span className="aoh3-panel-title-text">Dünya Gazetesi</span>
           <span className="aoh3-panel-title-rule" />
-          <span className="font-mono-num text-[9px] font-bold text-[#e0b86e] shrink-0">
-            {newsEvents.length}
-          </span>
+          {unreadCount > 0 ? (
+            <span
+              data-testid="chronicle-unread-badge"
+              className="inline-flex items-center gap-1 font-mono-num text-[9px] font-bold text-[#f3ead7] shrink-0"
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-[#d1746b]"
+                aria-hidden="true"
+              />
+              {unreadCount}
+            </span>
+          ) : (
+            <span className="font-mono-num text-[9px] font-bold text-[#9b8e78] shrink-0">
+              {newsEvents.length}
+            </span>
+          )}
         </button>
 
         <ul className="divide-y divide-[#caa15a]/12">

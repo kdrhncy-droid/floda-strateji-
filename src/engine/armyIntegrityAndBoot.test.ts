@@ -657,3 +657,108 @@ test('SoundEngine playWarDrum and playTickCues execute safely in headless Node w
   });
 });
 
+test('Audit fixes: initial selectedTerritoryId is null, TITLE_MENU clears transient UI state, and computeWorldPowerRankings is deterministic', async () => {
+  const { computeWorldPowerRankings } = await import('./worldRankings');
+  const ott = makeNation('OTT', 'Osmanlı', 'p_ott', { treasury: 1500 });
+  const ven = makeNation('VEN', 'Venedik', 'p_ven', { treasury: 400 });
+  const pOtt1 = makeTerritory('p_ott', 'Edirne', 'OTT', ['p_ott2'], {
+    isCapital: true,
+    baseGdp: 120,
+    garrison: 25000,
+  });
+  const pOtt2 = makeTerritory('p_ott2', 'Bursa', 'OTT', ['p_ott'], {
+    baseGdp: 90,
+    garrison: 18000,
+  });
+  const pVen = makeTerritory('p_ven', 'Venedik', 'VEN', [], {
+    isCapital: true,
+    baseGdp: 80,
+    garrison: 9000,
+  });
+
+  const ranked = computeWorldPowerRankings(
+    { OTT: ott, VEN: ven },
+    { p_ott: pOtt1, p_ott2: pOtt2, p_ven: pVen },
+    [],
+    'EMPIRES_1440',
+    'SCORE'
+  );
+  assert.equal(ranked.length, 2);
+  assert.equal(ranked[0].nation.id, 'OTT');
+  assert.equal(ranked[0].ownedCount, 2);
+  assert.equal(ranked[1].nation.id, 'VEN');
+
+  const { useGameStore } = await import('../store/useGameStore');
+  const initialState = useGameStore.getState();
+  assert.equal(initialState.selectedTerritoryId, null);
+
+  useGameStore.setState({
+    screenState: 'PLAYING',
+    selectedTerritoryId: 'p_ott',
+    activeTab: 'DIPLOMACY',
+    showNewsDrawer: true,
+    showSystemModal: true,
+    activeWarModalId: 'war-1',
+  });
+
+  useGameStore.getState().setScreenState('TITLE_MENU');
+  const cleaned = useGameStore.getState();
+  assert.equal(cleaned.screenState, 'TITLE_MENU');
+  assert.equal(cleaned.selectedTerritoryId, null);
+  assert.equal(cleaned.activeTab, 'NONE');
+  assert.equal(cleaned.showNewsDrawer, false);
+  assert.equal(cleaned.showSystemModal, false);
+  assert.equal(cleaned.activeWarModalId, null);
+});
+
+test('countUnreadNewsEvents and store lastSeenNewsId clear unread indicators when opening Haberler or loading saves', async () => {
+  const { countUnreadNewsEvents } = await import('./newsNotifications');
+  const { useGameStore } = await import('../store/useGameStore');
+
+  const mkEvent = (id: string, tick: number) => ({
+    id,
+    tick,
+    dateStr: `1444-${tick}`,
+    title: `Olay ${id}`,
+    description: 'Açıklama',
+    type: 'WAR' as const,
+  });
+
+  assert.equal(countUnreadNewsEvents([], null), 0);
+  const events = [mkEvent('ev3', 3), mkEvent('ev2', 2), mkEvent('ev1', 1)];
+  assert.equal(countUnreadNewsEvents(events, null), 3);
+  assert.equal(countUnreadNewsEvents(events, 'ev1'), 2);
+  assert.equal(countUnreadNewsEvents(events, 'ev3'), 0);
+  assert.equal(countUnreadNewsEvents(events, 'rotated_out'), 3);
+
+  // Store lifecycle: new campaign starts with init_1 unread, opening Haberler clears it
+  useGameStore.getState().startNewGame();
+  let st = useGameStore.getState();
+  assert.equal(st.newsEvents.length, 1);
+  assert.equal(st.lastSeenNewsId, null);
+  assert.equal(countUnreadNewsEvents(st.newsEvents, st.lastSeenNewsId), 1);
+
+  st.setShowNewsDrawer(true);
+  st = useGameStore.getState();
+  assert.equal(st.showNewsDrawer, true);
+  assert.equal(st.lastSeenNewsId, 'init_1');
+  assert.equal(countUnreadNewsEvents(st.newsEvents, st.lastSeenNewsId), 0);
+
+  st.setShowNewsDrawer(false);
+  st = useGameStore.getState();
+  assert.equal(st.showNewsDrawer, false);
+  assert.equal(countUnreadNewsEvents(st.newsEvents, st.lastSeenNewsId), 0);
+
+  // Incoming newer news bumps unread count until read
+  useGameStore.setState({
+    newsEvents: [mkEvent('ev_new', 5), ...st.newsEvents],
+  });
+  st = useGameStore.getState();
+  assert.equal(countUnreadNewsEvents(st.newsEvents, st.lastSeenNewsId), 1);
+
+  st.markNewsAsRead();
+  st = useGameStore.getState();
+  assert.equal(st.lastSeenNewsId, 'ev_new');
+  assert.equal(countUnreadNewsEvents(st.newsEvents, st.lastSeenNewsId), 0);
+});
+

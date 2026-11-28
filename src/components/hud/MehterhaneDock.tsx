@@ -33,13 +33,13 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
 
   return (
     <div
-      className={`hud-mehter-dock fixed bottom-16 left-3 z-30 flex flex-col items-start gap-1.5 pointer-events-none ${
+      className={`hud-mehter-dock fixed bottom-[4.35rem] left-2 sm:bottom-16 sm:left-3 z-30 flex flex-col items-start gap-1.5 pointer-events-none ${
         hideCompactOnMobile && !isExpanded ? 'hud-mehter-yield' : ''
       }`}
     >
       {/* Expanded Offline Mehterhane Selector */}
       {isExpanded && (
-        <div className="pointer-events-auto w-68 sm:w-76 rounded-2xl bg-[#14100c]/98 border border-[#caa15a]/50 shadow-2xl p-3 space-y-2.5 text-xs text-[#f3ead7]">
+        <div className="pointer-events-auto w-68 sm:w-76 max-w-[calc(100vw-1rem)] rounded-2xl bg-[#14100c]/98 border border-[#caa15a]/50 shadow-2xl p-3 space-y-2.5 text-xs text-[#f3ead7]">
           <div className="flex items-center justify-between border-b border-[#caa15a]/25 pb-2 gap-2">
             <div className="flex items-center gap-1.5 font-display font-bold text-[#e0b86e] min-w-0">
               <Music className="w-4 h-4 text-[#e0b86e] shrink-0" />
@@ -129,10 +129,10 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
       )}
 
       {/* Compact Floating Offline Mehter Pill */}
-      <div className="pointer-events-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#14100c]/95 border border-[#caa15a]/45 shadow-xl text-xs">
+      <div className="pointer-events-auto flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-[#14100c]/95 border border-[#caa15a]/45 shadow-xl text-xs">
         <button
           onClick={() => setIsExpanded((v) => !v)}
-          className="flex items-center gap-1.5 text-left max-w-[140px] cursor-pointer"
+          className="flex items-center gap-1 sm:gap-1.5 text-left max-w-[78px] sm:max-w-[140px] cursor-pointer"
           title="Müzik Seçiciyi Aç"
         >
           <Music className="w-3.5 h-3.5 text-[#e0b86e] shrink-0" />
@@ -145,7 +145,7 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
           onClick={() => music.nextTrack()}
           title="Sonraki Parça"
           aria-label="Sonraki Parça"
-          className="w-6 h-6 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#e0b86e] cursor-pointer"
+          className="w-6 h-6 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#e0b86e] cursor-pointer shrink-0"
         >
           <SkipForward className="w-3 h-3" />
         </button>
@@ -154,7 +154,7 @@ export const MehterhaneDock: React.FC<MehterhaneDockProps> = ({
           onClick={() => music.toggle()}
           title={isPlaying ? 'Müziği Durdur' : 'Müziği Çal'}
           aria-label={isPlaying ? 'Müziği Durdur' : 'Müziği Çal'}
-          className="w-6 h-6 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#e0b86e] cursor-pointer"
+          className="w-6 h-6 rounded-lg bg-[#1b1510] hover:bg-[#2a2117] border border-[#caa15a]/25 flex items-center justify-center text-[#e0b86e] cursor-pointer shrink-0"
         >
           {isPlaying ? (
             <Volume2 className="w-3.5 h-3.5" />

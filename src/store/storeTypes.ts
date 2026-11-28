@@ -54,6 +54,7 @@ export interface GameStoreState {
   movements: ArmyMovement[];
   seaArmies: SeaArmy[];
   newsEvents: WorldNewsEvent[];
+  lastSeenNewsId: string | null;
   tick: number;
   hour: number;
   speed: SpeedLevel;
@@ -107,6 +108,7 @@ export interface GameStoreState {
   updateSettings: (partial: Partial<GameSettings>) => void;
   showToast: (msg: string | null) => void;
   setShowNewsDrawer: (open: boolean) => void;
+  markNewsAsRead: () => void;
   setShowSystemModal: (open: boolean) => void;
   setActiveBattleOverviewTerritoryId: (id: string | null) => void;
   setActiveWarModalId: (id: string | null) => void;

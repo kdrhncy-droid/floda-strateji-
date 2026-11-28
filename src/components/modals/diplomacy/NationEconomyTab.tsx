@@ -10,15 +10,8 @@ import { useLongPress } from '../../common/EconomySourcesPopover';
 import { NationFlagCanvasBadge } from '../../../map/nationFlagRenderer';
 import { sound } from '../../../utils/soundEngine';
 import { cleanNationName, formatTroopsShort } from '../../../utils/formatters';
+import { NationPowerRankingEntry } from '../../../engine/worldRankings';
 import { AoH3GlyphSvg } from '../../illustrations/AoH3Illustrations';
-
-export interface WorldRankingRow {
-  nation: Nation;
-  provs: number;
-  army: number;
-  pop: number;
-  score: number;
-}
 
 export interface NationEconomyTabProps {
   inspectedNation: Nation;
@@ -32,7 +25,7 @@ export interface NationEconomyTabProps {
   grossDailyIncome: number;
   totalDailyExpense: number;
   worldRank: number;
-  worldRankings: WorldRankingRow[];
+  worldRankings: NationPowerRankingEntry[];
   economyLongPress: ReturnType<typeof useLongPress>;
   onOpenEconomyPopover: () => void;
   onSelectInspectedNation: (nationId: string) => void;
@@ -304,7 +297,7 @@ export const NationEconomyTab: React.FC<NationEconomyTabProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-[11px] font-mono-num shrink-0">
-                  <span className="text-[#cfc3ae]">{item.provs} Ey.</span>
+                  <span className="text-[#cfc3ae]">{item.ownedCount} Ey.</span>
                   <span className="text-[#e0b86e] font-bold">
                     {formatTroopsShort(item.army)}
                   </span>

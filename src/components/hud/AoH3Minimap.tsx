@@ -431,7 +431,7 @@ export const AoH3Minimap: React.FC<AoH3MinimapProps> = ({
                 data-testid="minimap-mapmode-frame"
                 role="toolbar"
                 aria-label="Harita katman ikonları"
-                className="grid grid-cols-5 gap-1 p-1 border-t border-[#caa15a]/35 bg-[#120e0a]/95"
+                className="grid grid-cols-6 gap-1 p-1 border-t border-[#caa15a]/35 bg-[#120e0a]/95"
               >
                 {MINIMAP_MODE_ICONS.map((m) => {
                   const isActive = mapMode === m.id;

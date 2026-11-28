@@ -435,10 +435,10 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
           {/* Landscape Bottom-Right Subtle Historical Caption */}
           <div className="hidden lg:landscape:flex relative z-10 mt-auto ml-auto p-7 flex-col items-end text-right pointer-events-none">
             <div className="font-display text-sm font-bold tracking-wider text-[#f0e6d2]/90 drop-shadow">
-              1440 · İmparatorluklar Çağı
+              {activeScenarioDef.name}
             </div>
             <div className="text-xs text-[#d6cbb8]/80 drop-shadow">
-              Diplomasi, sefer lojistiği ve tarihî devlet yönetimi
+              {activeScenarioDef.subtitle}
             </div>
           </div>
         </div>
@@ -799,7 +799,7 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
               </div>
 
               {/* Right Column: Nation Roster */}
-              <section className="lg:col-span-7 aoh3-menu-panel rounded-xl p-4 sm:p-5 flex flex-col gap-3.5 max-h-[75vh] lg:max-h-none">
+              <section className="lg:col-span-7 aoh3-menu-panel rounded-xl p-4 sm:p-5 flex flex-col gap-3.5 max-h-[75vh] lg:max-h-none lg:h-0 lg:min-h-full">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <h2 className="font-display text-lg sm:text-xl font-bold text-[#f0e6d2]">
@@ -854,7 +854,7 @@ export const TitleMenuModal: React.FC<TitleMenuModalProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 overflow-y-auto pr-1 flex-1 max-h-[480px]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[480px] lg:max-h-none content-start">
                   {nationList.map((nation) => {
                     const nStats = nationStatsMap[nation.id] || {
                       provinces: 1,

@@ -188,7 +188,7 @@ export const AoH3TopMenu: React.FC<AoH3TopMenuProps> = ({
             <MenuRow
               icon={Newspaper}
               label="Haberler"
-              trailing={newsCount}
+              trailing={newsCount > 0 ? newsCount : undefined}
               onClick={() => {
                 sound.playClick();
                 onOpenNewsDrawer();
